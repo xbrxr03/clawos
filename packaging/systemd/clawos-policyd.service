@@ -1,0 +1,16 @@
+[Unit]
+Description=ClawOS policyd — Permission Gate
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m services.policyd.main
+WorkingDirectory=/opt/clawos
+Restart=always
+RestartSec=3
+Environment=PYTHONPATH=/opt/clawos
+
+[Install]
+WantedBy=default.target

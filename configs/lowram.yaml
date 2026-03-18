@@ -1,0 +1,23 @@
+# ClawOS Low RAM profile — 8-16GB systems, CPU-first
+# Inherits from defaults.yaml
+
+_profile: lowram
+_description: "8-16GB RAM, CPU inference, conservative settings"
+_tier: "A"
+
+model:
+  chat: "gemma3:4b"
+  ctx_window: 2048
+  max_loaded: 1
+  keep_alive: "2m"
+
+voice:
+  enabled: false
+  mode: "off"
+
+memory:
+  recall_n: 3
+
+dashboard:
+  enabled: true
+  poll_interval_s: 30    # less aggressive polling

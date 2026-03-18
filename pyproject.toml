@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "clawos"
+version = "0.1.0"
+description = "ClawOS — local-first AI agent OS"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["ai", "agent", "llm", "ollama", "local", "offline"]
+
+dependencies = [
+    "pyyaml>=6.0",
+    "aiohttp>=3.9",
+    "fastapi>=0.100",
+    "uvicorn>=0.24",
+    "ollama>=0.1",
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+voice = [
+    "openai-whisper>=20231117",
+    "piper-tts>=1.2",
+    "pyaudio>=0.2",
+]
+memory = [
+    "chromadb>=0.4",
+    "json-repair>=0.20",
+]
+full = [
+    "clawos[voice]",
+    "clawos[memory]",
+]
+
+[project.scripts]
+clawctl = "clawctl.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "clawos_core*",
+    "bootstrap*",
+    "setup*",
+    "runtimes*",
+    "services*",
+    "adapters*",
+    "tools*",
+    "clawctl*",
+    "clients*",
+    "openclaw_integration*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

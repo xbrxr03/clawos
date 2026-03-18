@@ -1,0 +1,14 @@
+[Unit]
+Description=ClawOS agentd — Agent Lifecycle Manager
+After=clawos-modeld.service clawos-memd.service clawos-policyd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m services.agentd.main
+WorkingDirectory=/opt/clawos
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONPATH=/opt/clawos
+
+[Install]
+WantedBy=default.target

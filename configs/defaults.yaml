@@ -1,0 +1,70 @@
+# ClawOS default configuration
+# All other profiles inherit and override these values
+
+clawos:
+  version: "0.1.0"
+  edition: "desktop"       # desktop | server
+
+model:
+  provider: "ollama"
+  chat: "gemma3:4b"
+  embed: "nomic-embed-text"
+  host: "http://localhost:11434"
+  ctx_window: 4096
+  temperature: 0.3
+  max_loaded: 1
+  keep_alive: "5m"
+
+memory:
+  layers:
+    - pinned       # PINNED.md — always injected
+    - workflow     # WORKFLOW.md — if task in progress
+    - vector       # ChromaDB semantic
+    - fts5         # SQLite keyword
+    - history      # HISTORY.md tail
+  recall_n: 5
+  async_writes: true
+  dedup_threshold: 0.8
+
+voice:
+  enabled: false
+  mode: "push_to_talk"     # push_to_talk | always_on | off
+  stt_model: "base"        # whisper model size
+  record_rate: 44100
+  silence_rms: 300
+  silence_secs: 1.8
+
+policy:
+  mode: "recommended"      # recommended | developer
+  approval_timeout_s: 120
+  default_grants:
+    - fs.read
+    - fs.write
+    - fs.list
+    - web.search
+    - memory.read
+    - memory.write
+
+workspace:
+  default: "jarvis_default"
+  root: "~/clawos/workspace"
+
+dashboard:
+  enabled: true
+  port: 7070
+  host: "0.0.0.0"
+
+whatsapp:
+  enabled: false
+  session_dir: "~/clawos/config/whatsapp"
+
+services:
+  policyd:  { port: 7074, restart: "always" }
+  memd:     { port: 7073, restart: "always" }
+  modeld:   { port: 7075, restart: "always" }
+  toolbridge: { port: 0,  restart: "always" }
+  agentd:   { port: 7072, restart: "on-failure" }
+  voiced:   { port: 0,    restart: "on-failure" }
+  clawd:    { port: 7071, restart: "always" }
+  dashd:    { port: 7070, restart: "always" }
+  gatewayd: { port: 7076, restart: "on-failure" }

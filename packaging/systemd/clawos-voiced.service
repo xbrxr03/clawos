@@ -1,0 +1,14 @@
+[Unit]
+Description=ClawOS voiced — Voice Pipeline
+After=clawos-agentd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m services.voiced.main
+WorkingDirectory=/opt/clawos
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONPATH=/opt/clawos
+
+[Install]
+WantedBy=default.target

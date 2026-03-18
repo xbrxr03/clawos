@@ -1,0 +1,18 @@
+# ClawOS Performance profile — 32GB+ or GPU systems
+# Inherits from defaults.yaml
+
+_profile: performance
+_description: "32GB+ RAM or GPU, larger model, voice enabled"
+_tier: "C"
+
+model:
+  chat: "gemma3:12b"
+  ctx_window: 8192
+  keep_alive: "10m"
+
+voice:
+  enabled: true
+  mode: "push_to_talk"
+
+memory:
+  recall_n: 8

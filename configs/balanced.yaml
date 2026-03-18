@@ -1,0 +1,18 @@
+# ClawOS Balanced profile — 16-32GB systems
+# Inherits from defaults.yaml
+
+_profile: balanced
+_description: "16-32GB RAM, moderate model, voice optional"
+_tier: "B"
+
+model:
+  chat: "gemma3:4b"
+  ctx_window: 4096
+  keep_alive: "5m"
+
+voice:
+  enabled: true
+  mode: "push_to_talk"
+
+memory:
+  recall_n: 5

@@ -1,0 +1,14 @@
+[Unit]
+Description=ClawOS modeld — Model Service
+After=clawos-memd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m services.modeld.main
+WorkingDirectory=/opt/clawos
+Restart=always
+RestartSec=5
+Environment=PYTHONPATH=/opt/clawos
+
+[Install]
+WantedBy=default.target

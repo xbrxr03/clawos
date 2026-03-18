@@ -1,0 +1,15 @@
+[Unit]
+Description=ClawOS memd — Memory Service
+After=clawos-policyd.service
+Requires=clawos-policyd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m services.memd.main
+WorkingDirectory=/opt/clawos
+Restart=always
+RestartSec=3
+Environment=PYTHONPATH=/opt/clawos
+
+[Install]
+WantedBy=default.target
