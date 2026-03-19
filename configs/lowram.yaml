@@ -6,7 +6,7 @@ _description: "8-16GB RAM, CPU inference, conservative settings"
 _tier: "A"
 
 model:
-  chat: "gemma3:4b"
+  chat: "qwen2.5:7b"
   ctx_window: 2048
   max_loaded: 1
   keep_alive: "2m"

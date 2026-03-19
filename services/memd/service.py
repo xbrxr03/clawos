@@ -207,10 +207,15 @@ class MemoryService:
         except Exception as e:
             log.debug(f"FTS5 recall: {e}")
 
-        # Recent history
-        hist = self.read_history_tail(workspace_id, lines=5)
-        if hist:
-            results.append(f"[RECENT]\n{hist}")
+        # Recent history — skip for greetings/acks to prevent session bleed
+        _skip_words = {"ok", "okay", "hi", "hello", "hey", "yes", "no",
+                       "sure", "thanks", "k", "yep", "good", "great",
+                       "cool", "done", "alright", "nice", "got it"}
+        _q = query.strip().lower().rstrip("!.,?")
+        if _q not in _skip_words and len(query.split()) > 2:
+            hist = self.read_history_tail(workspace_id, lines=5)
+            if hist:
+                results.append(f"[RECENT]\n{hist}")
 
         return results[:n + 3]
 

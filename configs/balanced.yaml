@@ -6,7 +6,7 @@ _description: "16-32GB RAM, moderate model, voice optional"
 _tier: "B"
 
 model:
-  chat: "gemma3:4b"
+  chat: "qwen2.5:7b"
   ctx_window: 4096
   keep_alive: "5m"
 

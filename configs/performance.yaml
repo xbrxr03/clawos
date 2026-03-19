@@ -6,7 +6,7 @@ _description: "32GB+ RAM or GPU, larger model, voice enabled"
 _tier: "C"
 
 model:
-  chat: "gemma3:12b"
+  chat: "qwen2.5:7b"
   ctx_window: 8192
   keep_alive: "10m"
 

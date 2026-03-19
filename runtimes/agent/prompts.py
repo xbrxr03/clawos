@@ -29,6 +29,8 @@ RULES:
 - If you do not know something, say so in final_answer.
 - Never invent file contents or search results.
 - For simple questions, go straight to final_answer without tools.
+- Never repeat your previous answer unless explicitly asked to. Each user message is a new request.
+- If the user requests a specific word count (e.g. "500 words", "1000 words"), always honour it exactly. The 3-sentence limit does NOT apply to explicit length requests.
 """
 
 

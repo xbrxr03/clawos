@@ -62,13 +62,13 @@ PORT_OLLAMA   = 11434
 OLLAMA_HOST   = "http://localhost:11434"
 
 # ── Models ────────────────────────────────────────────────────────────────────
-DEFAULT_MODEL        = "gemma3:4b"
+DEFAULT_MODEL        = "qwen2.5:7b"
 DEFAULT_EMBED_MODEL  = "nomic-embed-text"
 
 MODEL_PROFILES = {
-    "lowram":      {"chat": "gemma3:4b",   "ctx": 2048, "voice": False},
-    "balanced":    {"chat": "gemma3:4b",   "ctx": 4096, "voice": True},
-    "performance": {"chat": "gemma3:12b",  "ctx": 8192, "voice": True},
+    "lowram":      {"chat": "qwen2.5:7b",   "ctx": 2048, "voice": False},
+    "balanced":    {"chat": "qwen2.5:7b",   "ctx": 4096, "voice": True},
+    "performance": {"chat": "qwen2.5:7b",  "ctx": 8192, "voice": True},
 }
 
 # ── Agent loop ────────────────────────────────────────────────────────────────

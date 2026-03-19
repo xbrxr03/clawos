@@ -38,7 +38,7 @@ echo -e "${D}  ─────────────────────�
 echo ""
 
 # ── Config ────────────────────────────────────────────────────────────────────
-CLAWOS_REPO="${CLAWOS_REPO:-https://github.com/xbrxr03/clawos}"
+CLAWOS_REPO="${CLAWOS_REPO:-https://github.com/abrarh27/clawos}"
 INSTALL_DIR="${CLAWOS_DIR:-$HOME/clawos}"
 CLAWOS_BRANCH="${CLAWOS_BRANCH:-main}"
 SKIP_MODEL="${SKIP_MODEL:-false}"
@@ -207,10 +207,26 @@ else
     sleep 4
   fi
 
-  if ollama pull "$MODEL" 2>&1 | tail -1; then
+  if ollama pull "$MODEL" 2>/dev/null; then
     ok "Model ready: $MODEL"
   else
     warn "Model pull failed — run manually: ollama pull $MODEL"
+  fi
+fi
+
+# ── Node.js ───────────────────────────────────────────────────────────────────
+step "Installing Node.js"
+
+if command -v node &>/dev/null; then
+  ok "Node.js already installed ($(node --version))"
+else
+  info "Installing Node.js LTS..."
+  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - >/dev/null 2>&1     || warn "NodeSource setup failed — trying apt"
+  sudo apt-get install -y -qq nodejs 2>/dev/null     || warn "Node.js install failed — OpenClaw will be skipped"
+  if command -v node &>/dev/null; then
+    ok "Node.js $(node --version)"
+  else
+    warn "Node.js not installed — OpenClaw will be skipped"
   fi
 fi
 
@@ -220,7 +236,7 @@ step "Configuring OpenClaw for offline use"
 if [ "$SKIP_OPENCLAW" = "true" ]; then
   info "Skipping OpenClaw (SKIP_OPENCLAW=true)"
 elif ! command -v node &>/dev/null; then
-  warn "Node.js not found — skipping OpenClaw. Install later: clawctl openclaw install"
+  warn "Node.js not available — skipping OpenClaw"
 else
   # Check if openclaw is installed
   if command -v openclaw &>/dev/null; then
@@ -301,7 +317,7 @@ JSON
   # Pull OpenClaw model if we have the RAM for it
   if [ "$RAM_GB" -ge 14 ]; then
     info "Pulling OpenClaw model: $OC_MODEL"
-    if ollama pull "$OC_MODEL" 2>&1 | tail -1; then
+    if ollama pull "$OC_MODEL" 2>/dev/null; then
       ok "OpenClaw model ready: $OC_MODEL"
     else
       warn "Pull failed — run: ollama pull $OC_MODEL"
@@ -396,6 +412,6 @@ echo -e "  ${B}  openclaw onboard${RESET}      connect WhatsApp"
 echo ""
 echo -e "  ${D}Restart your shell or run: source ~/.bashrc${RESET}"
 echo ""
-echo -e "  ${D}GitHub:  https://github.com/xbrxr03/clawos${RESET}"
+echo -e "  ${D}GitHub:  https://github.com/abrarh27/clawos${RESET}"
 echo -e "  ${D}Docs:    https://clawos.dev${RESET}"
 echo ""

@@ -1,68 +1,67 @@
 # ClawOS
-**Local AI agent OS. One command. No API keys. No monthly bill.**
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+**Flash it. Boot it. Your AI is ready.**
+
+```
+sudo dd if=clawos.iso of=/dev/sdX bs=4M status=progress
 ```
 
-Installs OpenClaw + Ollama on any Ubuntu/Debian machine in ~10 minutes.
-Everything runs on your hardware. Nothing leaves your machine.
+OpenClaw + Ollama on any machine. No API keys. No monthly bill. No setup.
 
 ---
+
+## What it is
+
+ClawOS is a bootable Linux ISO that turns any machine into a local AI agent computer.
+
+Boot from USB and you have OpenClaw running offline — with memory, tools, WhatsApp,
+and a dashboard — before you've opened a terminal.
 
 ## Why this exists
 
 OpenClaw costs $300–750/month in API tokens. The creator left for OpenAI.
-CVE-2026-25253 lets anyone steal your keys in one click. Cisco found 17% of
-ClawHub skills are malicious.
+CVE-2026-25253 lets anyone steal your keys in one click.
 
-ClawOS runs the full OpenClaw ecosystem on your hardware, with local models,
-for the cost of electricity.
+ClawOS runs OpenClaw on your hardware, with your models, for the cost of electricity.
 
-## What you get
+## What nobody else has
 
-- **OpenClaw** — pre-configured for offline Ollama, no API keys, no cloud
-- **Claw Core** — lightweight native agent for 8GB machines (gemma3:4b)
-- **Memory** — 4-layer memory that survives reboots (PINNED + vector + FTS5)
-- **policyd** — every tool call gated and audited before execution
-- **Voice** — Whisper STT + Piper TTS, fully offline
-- **WhatsApp** — message your agent from your phone
-- **Dashboard** — operations console at `http://localhost:7070`
+| Feature | OpenClaw | Everything else | ClawOS |
+|---------|----------|-----------------|--------|
+| Bootable ISO | ❌ | ❌ | ✅ |
+| Works offline | ❌ | ❌ | ✅ |
+| No API keys ever | ❌ | ❌ | ✅ |
+| OpenClaw ecosystem | ✅ | ❌ | ✅ |
+| Zero monthly cost | ❌ | ✅ | ✅ |
 
 ## Hardware
 
-Any x86_64 machine with 8GB+ RAM running Ubuntu 22.04/24.04 or Debian 12.
+Any x86_64 machine with 8GB+ RAM. Tested on: ROG Ally, Intel NUC, old laptops, mini PCs.
 
 | RAM | What works |
-|-----|------------|
+|-----|-----------|
 | 8GB | Claw Core — gemma3:4b, full agent, voice |
-| 16GB | + OpenClaw — qwen2.5:7b, WhatsApp, 13,700+ skills |
+| 16GB | + OpenClaw — qwen2.5:7b, WhatsApp, skills |
 | 32GB+ | Larger models, faster inference |
 
-Tested on: ROG Ally, Intel NUC, old laptops, mini PCs, Raspberry Pi 5.
+## Get it
 
-## Install
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
-```
-
-The installer:
-1. Detects your hardware and picks the right profile
-2. Installs Ollama and pulls the best model for your RAM
-3. Sets up ClawOS services and memory
-4. Configures OpenClaw for offline Ollama (no API keys ever)
-5. Adds `claw` and `clawctl` to your PATH
-
-## Usage
+Download the ISO from the [releases page](../../releases), then:
 
 ```bash
-claw                    # start chatting immediately
-clawctl start           # start all services + dashboard
-clawctl status          # check service health
+# Flash to USB (Linux/Mac)
+sudo dd if=clawos-0.1.0-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+
+# Windows — use Balena Etcher
 ```
 
-Dashboard at `http://localhost:7070`
+## First boot
+
+Boot from USB. Wait 2 minutes (pulls model on first run). Then:
+
+```bash
+clawctl chat
+```
 
 ```
 you › what can you do?
@@ -71,71 +70,43 @@ jarvis › I can read and write files, search the web, remember facts
          runs locally — nothing leaves this computer.
 ```
 
-## OpenClaw (16GB+ RAM)
+## OpenClaw
+
+Pre-configured for offline Ollama. No config editing required.
 
 ```bash
-clawctl openclaw install    # install and configure for offline Ollama
+clawctl openclaw install    # install and configure
 clawctl openclaw start      # start the gateway
 openclaw onboard            # connect WhatsApp via QR scan
 ```
 
-Full OpenClaw ecosystem — 13,700+ skills, WhatsApp, Telegram, voice — offline.
+Full OpenClaw ecosystem — 13,700+ skills, WhatsApp, Telegram, voice — works offline.
+
+## Build from source
+
+```bash
+git clone https://github.com/you/clawos
+cd clawos
+pip install pyyaml aiohttp fastapi uvicorn ollama click --break-system-packages
+python3 -m bootstrap.bootstrap
+clawctl chat
+```
 
 ## Architecture
 
 ```
 User (WhatsApp / Terminal / Dashboard :7070)
-  → agentd       task queue + sessions
-  → Ollama        local inference — no cloud
-  → policyd       every tool call gated + audited
-  → toolbridge    files, shell, web, memory
-  → memd          4-layer memory: PINNED + WORKFLOW + vector + FTS5
+  → agentd (task queue + sessions)
+  → Ollama (local inference — no cloud)
+  → policyd (every tool call gated + audited)
+  → toolbridge (files, shell, web, memory)
 ```
 
 ## Security
 
-Every action goes through `policyd`. Sensitive operations pause for human
-approval. Full tamper-evident Merkle-chained audit log. No API keys anywhere.
-Nothing talks to the internet unless you explicitly allow it.
-
-Meets 6/7 enterprise AI security requirements (IBM ADLC / NIST AI RMF).
-No other open-source agent meets more than 3.
-
-## What nobody else has
-
-| Feature | OpenClaw | Alternatives | ClawOS |
-|---------|----------|--------------|--------|
-| One-command install | ❌ | partial | ✅ |
-| Works offline | ❌ | ❌ | ✅ |
-| No API keys ever | ❌ | ❌ | ✅ |
-| OpenClaw ecosystem | ✅ | ❌ | ✅ |
-| Human approval queue | ❌ | ❌ | ✅ |
-| Merkle audit trail | ❌ | ❌ | ✅ |
-| Voice (offline) | ❌ | ❌ | ✅ |
-| Zero monthly cost | ❌ | ✅ | ✅ |
-
-## Roadmap
-
-- [x] Core agent runtime (56/56 tests passing)
-- [x] 4-layer memory architecture
-- [x] policyd permission gate + Merkle audit
-- [x] Voice pipeline (Whisper + Piper)
-- [x] OpenClaw offline configuration
-- [x] One-command installer
-- [ ] Dashboard (Phase 3)
-- [ ] WhatsApp gateway (Phase 3)
-- [ ] systemd services (Phase 4)
-- [ ] Bootable ISO (Phase 7)
-
-## Build from source
-
-```bash
-git clone https://github.com/xbrxr03/clawos
-cd clawos
-pip install pyyaml aiohttp fastapi uvicorn ollama click chromadb json_repair --break-system-packages
-python3 -m bootstrap.bootstrap
-claw
-```
+Every action goes through `policyd`. Sensitive operations pause for approval.
+Full tamper-evident Merkle-chained audit log. Nothing talks to the internet
+unless you allow it.
 
 ## License
 

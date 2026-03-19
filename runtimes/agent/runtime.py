@@ -74,8 +74,20 @@ class AgentRuntime:
                 parts.append(tool_list)
         return "\n\n".join(parts)
 
+    # Short inputs that should NOT trigger memory recall
+    _SKIP_RECALL = {
+        "ok", "okay", "k", "yes", "no", "sure", "thanks", "thank you",
+        "hi", "hello", "hey", "good", "great", "nice", "cool", "got it",
+        "done", "alright", "yep", "nope", "please", "go ahead", "continue",
+    }
+
     def _get_memory_context(self, user_input: str) -> str:
         if not self.memory:
+            return ""
+        # Skip memory recall for greetings and short acknowledgements —
+        # prevents previous session tool results bleeding into new turns.
+        stripped = user_input.strip().lower().rstrip("!.,?")
+        if stripped in self._SKIP_RECALL or len(user_input.split()) <= 2:
             return ""
         return self.memory.build_context_block(user_input, self.workspace_id)
 

@@ -4,7 +4,7 @@ try:
     from pydantic import BaseModel
     class ModelConfig(BaseModel):
         provider: str = "ollama"
-        chat: str = "gemma3:4b"
+        chat: str = "qwen2.5:7b"
         embed: str = "nomic-embed-text"
         host: str = "http://localhost:11434"
         ctx_window: int = 4096
