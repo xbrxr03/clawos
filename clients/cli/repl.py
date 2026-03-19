@@ -16,9 +16,9 @@ def _supports_colour():
     return hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
 C = _supports_colour()
-RESET  = "\033[0m"      if C else ""
-BOLD   = "\033[1m"      if C else ""
-DIM    = "\033[2m"      if C else ""
+RESET  = "\033[0m"       if C else ""
+BOLD   = "\033[1m"       if C else ""
+DIM    = "\033[2m"       if C else ""
 PURPLE = "\033[38;5;141m" if C else ""
 GREEN  = "\033[38;5;84m"  if C else ""
 AMBER  = "\033[38;5;220m" if C else ""
@@ -51,6 +51,8 @@ HELP = f"""
   {_p(CYAN, '/status')}           model + service health
   {_p(CYAN, '/workspace')} {_d('<w>')}   switch workspace
   {_p(CYAN, '/forget')} {_d('<id>')}     delete a memory
+  {_p(CYAN, '/skills')}           list loaded skills
+  {_p(CYAN, '/skills reload')}    rescan skill directories
   {_p(CYAN, '/help')}             show this help
   {_p(CYAN, '/quit')}             exit
 """
@@ -84,7 +86,6 @@ class ThinkingIndicator:
             self._task.cancel()
             try: await self._task
             except asyncio.CancelledError: pass
-        # Clear the line
         sys.stdout.write("\r" + " " * 30 + "\r")
         sys.stdout.flush()
 
@@ -101,8 +102,9 @@ class ThinkingIndicator:
 async def run_repl(workspace: str = DEFAULT_WORKSPACE):
     print(BANNER)
 
-    from runtimes.agent.runtime import build_runtime
+    from runtimes.agent.runtime  import build_runtime
     from services.memd.service   import MemoryService
+    from services.skilld.service import get_loader, reload_skills
 
     # Loading indicator
     print(f"  {_p(AMBER, '◆')} Loading workspace {_b(AMBER, workspace)} ...", end="", flush=True)
@@ -114,11 +116,16 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
         print(f"  {_d('Make sure Ollama is running: ollama serve')}\n")
         return
 
+    skills     = get_loader()
     model_name = agent.model
     turn       = 0
     spinner    = ThinkingIndicator()
 
-    print(f"\r  {_p(GREEN, '✓')} Ready  {_d('—')} {_d('type /help for commands')}")
+    skill_count = skills.count
+    skill_hint  = (f" {_d('·')} {_p(CYAN, str(skill_count))} {_d('skill' + ('' if skill_count == 1 else 's') + ' loaded')}"
+                   if skill_count else "")
+
+    print(f"\r  {_p(GREEN, '✓')} Ready  {_d('—')} {_d('type /help for commands')}{skill_hint}")
     print(_hr())
     print(_status_line(workspace, model_name, turn))
     print()
@@ -197,6 +204,28 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
                 print(f"  {_p(BLUE, '◆')} Turn:      {_d(str(turn))}")
                 print()
 
+            elif cmd == "/skills":
+                if arg.strip().lower() == "reload":
+                    n = reload_skills()
+                    skills = get_loader()
+                    print(f"  {_p(GREEN, '✓')} Reloaded — {_p(CYAN, str(n))} skills found.\n")
+                else:
+                    skill_list = skills.list_all()
+                    if not skill_list:
+                        print(f"\n  {_d('No skills loaded.')}")
+                        print(f"  {_d('Add SKILL.md packages to ~/.claw/skills/ or ~/.openclaw/skills/')}\n")
+                    else:
+                        print(f"\n  {_b(PURPLE, 'Skills')}  {_d(str(len(skill_list)) + ' loaded')}\n")
+                        for s in skill_list:
+                            pin_tag = f" {_p(AMBER, '[pinned]')}" if s["pinned"] else ""
+                            src_tag = _d(f"({s['source']})")
+                            print(f"  {_p(CYAN, '◆')} {_b(PURPLE, s['name'])}{pin_tag}  {src_tag}")
+                            if s["description"]:
+                                print(f"    {_d(s['description'][:80])}")
+                            if s["triggers"]:
+                                print(f"    {_d('triggers: ' + ', '.join(s['triggers'][:5]))}")
+                        print()
+
             else:
                 print(f"  {_p(RED, '?')} Unknown: {_d(cmd)}  {_d('(type /help)')}\n")
             continue
@@ -217,7 +246,6 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
 
         # Print reply with nice formatting
         print(f"  {_b(GREEN, 'jarvis')} {_d('›')}", end=" ")
-        # Word-wrap at ~70 chars
         words = reply.split()
         line  = ""
         first = True

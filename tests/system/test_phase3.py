@@ -75,10 +75,10 @@ except Exception as e:
 
 try:
     from openclaw_integration.config_gen import GOOD_MODELS
-    assert "gemma3:4b" not in GOOD_MODELS, "gemma3:4b must NOT be in GOOD_MODELS"
+    assert "qwen2.5:7b" not in GOOD_MODELS, "qwen2.5:7b must NOT be in GOOD_MODELS"
     assert "qwen2.5:7b" in GOOD_MODELS
     assert "qwen3:8b" in GOOD_MODELS
-    ok("GOOD_MODELS excludes gemma3:4b, includes qwen2.5:7b and qwen3:8b")
+    ok("GOOD_MODELS excludes qwen2.5:7b, includes qwen2.5:7b and qwen3:8b")
 except Exception as e:
     fail("GOOD_MODELS contents", str(e))
 

@@ -7,6 +7,7 @@ ReAct (Reason + Act) loop. All competitive upgrades from S1 research:
   - 4-layer memory injection (Nanobot + MemOS)
   - Agent tool filtering (OpenFang #532)
   - SOUL.md + AGENTS.md workspace personality
+  - Skill loader (skilld) — SKILL.md packages from ~/.claw/skills + ~/.openclaw/skills
 """
 import asyncio
 import logging
@@ -19,6 +20,7 @@ from clawos_core.util.ids import task_id, session_id
 from clawos_core.models import Session
 from runtimes.agent.prompts import SYSTEM_PROMPT, build_user_message
 from runtimes.agent.parser import parse_response
+from services.skilld.service import get_loader, format_skills_block
 
 log = logging.getLogger("agentd")
 
@@ -46,6 +48,13 @@ class AgentRuntime:
     Single agent session. One per workspace/contact.
     """
 
+    # Short inputs that should NOT trigger memory recall or skill scoring
+    _SKIP_INPUTS = {
+        "ok", "okay", "k", "yes", "no", "sure", "thanks", "thank you",
+        "hi", "hello", "hey", "good", "great", "nice", "cool", "got it",
+        "done", "alright", "yep", "nope", "please", "go ahead", "continue",
+    }
+
     def __init__(self, workspace_id: str = DEFAULT_WORKSPACE,
                  model: str = DEFAULT_MODEL,
                  memory=None, tool_bridge=None, policy_client=None):
@@ -57,9 +66,11 @@ class AgentRuntime:
         self.session       = Session(workspace_id=workspace_id)
         self._history:     list = []
         self._turn:        int  = 0
+        self._skills       = get_loader()
 
     def _build_system_prompt(self) -> str:
-        """Static system prompt + SOUL.md + AGENTS.md + tool list."""
+        """Static system prompt + SOUL.md + AGENTS.md + tool list.
+        No dynamic fields here — keeps this static for prompt cache hits."""
         parts = [SYSTEM_PROMPT]
         if self.memory:
             soul   = self.memory.read_soul(self.workspace_id)
@@ -74,37 +85,43 @@ class AgentRuntime:
                 parts.append(tool_list)
         return "\n\n".join(parts)
 
-    # Short inputs that should NOT trigger memory recall
-    _SKIP_RECALL = {
-        "ok", "okay", "k", "yes", "no", "sure", "thanks", "thank you",
-        "hi", "hello", "hey", "good", "great", "nice", "cool", "got it",
-        "done", "alright", "yep", "nope", "please", "go ahead", "continue",
-    }
+    def _is_trivial(self, user_input: str) -> bool:
+        """True for greetings/acks that should skip recall and skill scoring."""
+        stripped = user_input.strip().lower().rstrip("!.,?")
+        return stripped in self._SKIP_INPUTS or len(user_input.split()) <= 2
 
     def _get_memory_context(self, user_input: str) -> str:
-        if not self.memory:
-            return ""
-        # Skip memory recall for greetings and short acknowledgements —
-        # prevents previous session tool results bleeding into new turns.
-        stripped = user_input.strip().lower().rstrip("!.,?")
-        if stripped in self._SKIP_RECALL or len(user_input.split()) <= 2:
+        if not self.memory or self._is_trivial(user_input):
             return ""
         return self.memory.build_context_block(user_input, self.workspace_id)
+
+    def _get_skills_block(self, user_input: str) -> str:
+        """Score skills against this input and return the injection block.
+        Empty string for trivial inputs — no point loading skills for 'ok'."""
+        if self._is_trivial(user_input) or self._skills.count == 0:
+            return ""
+        top = self._skills.top(user_input)
+        return format_skills_block(top)
 
     async def chat(self, user_input: str) -> str:
         self._turn       += 1
         self.session.turn = self._turn
-        sys_prompt        = self._build_system_prompt()
-        mem_ctx           = self._get_memory_context(user_input)
-        user_msg          = build_user_message(
-            user_input, self.session.session_id, self._turn, mem_ctx
+
+        sys_prompt  = self._build_system_prompt()
+        mem_ctx     = self._get_memory_context(user_input)
+        skills_block = self._get_skills_block(user_input)
+
+        user_msg = build_user_message(
+            user_input, self.session.session_id, self._turn,
+            mem_ctx, skills_block
         )
+
         trimmed   = self._history[-(MAX_HISTORY * 2):]
         messages  = ([{"role": "system", "content": sys_prompt}]
                      + trimmed
                      + [{"role": "user", "content": user_msg}])
 
-        # Async memory write — never block
+        # Async memory write — never block the agent loop
         if self.memory:
             asyncio.create_task(
                 self.memory.remember_async(f"User: {user_input}",
@@ -170,15 +187,14 @@ class AgentRuntime:
 async def build_runtime(workspace_id: str = DEFAULT_WORKSPACE,
                         model: str = DEFAULT_MODEL) -> "AgentRuntime":
     """Build a fully wired AgentRuntime with all services."""
-    # Add project root to path for service imports
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
-    from services.memd.service       import MemoryService
-    from services.toolbridge.service  import ToolBridge
-    from adapters.policy.local_policy_adapter import LocalPolicyAdapter
-    from clawos_core.config.loader import get
+    from services.memd.service                import MemoryService
+    from services.toolbridge.service           import ToolBridge
+    from adapters.policy.local_policy_adapter  import LocalPolicyAdapter
+    from clawos_core.config.loader             import get
 
     memory = MemoryService()
     policy = LocalPolicyAdapter(

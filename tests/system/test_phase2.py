@@ -108,8 +108,8 @@ try:
     assert openclaw_feasible(HardwareProfile(ram_gb=8))  is False
     assert voice_feasible(HardwareProfile(ram_gb=8, has_mic=True)) is True
     assert voice_feasible(HardwareProfile(ram_gb=8, has_mic=False)) is False
-    assert recommended_model(HardwareProfile(ram_gb=8))  == "gemma3:4b"
-    assert recommended_model(HardwareProfile(ram_gb=32)) == "gemma3:12b"
+    assert recommended_model(HardwareProfile(ram_gb=8))  == "qwen2.5:7b"
+    assert recommended_model(HardwareProfile(ram_gb=32)) == "qwen2.5:7b"
     ok("openclaw_feasible, voice_feasible, recommended_model")
 except Exception as e:
     fail("profile helpers", str(e))

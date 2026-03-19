@@ -82,7 +82,7 @@ except Exception as e:
 
 try:
     firstboot = (ISO_DIR / "firstboot.sh").read_text()
-    assert "ollama pull gemma3:4b" in firstboot
+    assert "ollama pull qwen2.5:7b" in firstboot
     assert "firstboot_done" in firstboot
     assert "bootstrap" in firstboot
     assert "dev_boot" in firstboot or "services" in firstboot

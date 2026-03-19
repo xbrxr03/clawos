@@ -78,7 +78,7 @@ try:
     assert VERSION == "0.1.0"
     assert PORT_DASHD == 7070
     assert "policyd" in SERVICES
-    assert DEFAULT_MODEL == "gemma3:4b"
+    assert DEFAULT_MODEL == "qwen2.5:7b"
     ok("constants — VERSION, ports, services, model")
 except Exception as ex:
     fail("constants", str(ex))
@@ -107,7 +107,7 @@ section("2. Config loader")
 try:
     from clawos_core.config.loader import load, get
     cfg = load("balanced")
-    assert cfg.get("model", {}).get("chat") == "gemma3:4b"
+    assert cfg.get("model", {}).get("chat") == "qwen2.5:7b"
     assert cfg.get("_profile") == "balanced"
     ok("load balanced profile")
 except Exception as ex:
@@ -125,15 +125,15 @@ except Exception as ex:
 try:
     from clawos_core.config.loader import load
     pf = load("performance")
-    assert pf["model"]["chat"] == "gemma3:12b"
-    ok("load performance profile — gemma3:12b")
+    assert pf["model"]["chat"] == "qwen2.5:7b"
+    ok("load performance profile — qwen2.5:7b")
 except Exception as ex:
     fail("load performance", str(ex))
 
 try:
     from clawos_core.config.loader import get
     val = get("model.chat", "fallback", "balanced")
-    assert val == "gemma3:4b"
+    assert val == "qwen2.5:7b"
     missing = get("does.not.exist", "default")
     assert missing == "default"
     ok("config get() — dot notation + missing key fallback")
@@ -487,8 +487,8 @@ except Exception as ex:
 try:
     from openclaw_integration.config_gen import GOOD_MODELS
     assert "qwen2.5:7b" in GOOD_MODELS
-    assert "gemma3:4b" not in GOOD_MODELS   # doesn't support tool calling
-    ok("openclaw — gemma3:4b excluded (no tool calling), qwen2.5:7b included")
+    assert "qwen2.5:7b" not in GOOD_MODELS   # doesn't support tool calling
+    ok("openclaw — qwen2.5:7b excluded (no tool calling), qwen2.5:7b included")
 except Exception as ex:
     fail("openclaw model list", str(ex))
 
