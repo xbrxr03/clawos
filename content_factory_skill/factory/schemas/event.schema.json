@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "factory/event.schema.json",
+  "title": "FactoryEvent",
+  "description": "One line in events.jsonl. Written by every agent for every significant action.",
+  "type": "object",
+  "required": ["timestamp", "agent_id", "job_id", "event_type", "phase", "message"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC time the event was emitted."
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "The agent that emitted this event.",
+      "enum": [
+        "foreman_agent", "writer_agent", "visual_agent",
+        "voice_agent", "assembler_agent", "monitor_agent", "system"
+      ]
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job this event belongs to. Use 'system' for non-job events."
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "start", "complete", "error",
+        "lease_issued", "lease_expired", "lease_released",
+        "retry", "failed",
+        "artifact_written",
+        "heartbeat", "registered"
+      ]
+    },
+    "phase": {
+      "type": "string",
+      "description": "Pipeline phase at time of event."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable description of the event."
+    }
+  },
+  "additionalProperties": true,
+
+  "examples": [
+    {
+      "timestamp":  "2024-03-15T10:00:00Z",
+      "agent_id":   "writer_agent",
+      "job_id":     "job_20240315100000_a1b2c3",
+      "event_type": "start",
+      "phase":      "writing",
+      "message":    "Starting writing"
+    },
+    {
+      "timestamp":  "2024-03-15T10:01:34Z",
+      "agent_id":   "writer_agent",
+      "job_id":     "job_20240315100000_a1b2c3",
+      "event_type": "complete",
+      "phase":      "writing",
+      "message":    "Completed writing in 94.2s"
+    },
+    {
+      "timestamp":  "2024-03-15T10:06:01Z",
+      "agent_id":   "foreman_agent",
+      "job_id":     "job_20240315100000_a1b2c3",
+      "event_type": "lease_expired",
+      "phase":      "visualizing",
+      "message":    "Reclaiming from visual_agent"
+    }
+  ]
+}

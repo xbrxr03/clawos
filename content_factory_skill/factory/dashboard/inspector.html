@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factory Inspector</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232dd4bf' stroke-width='2'%3E%3Cpath d='M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg:#0f0f11; --surface:#18181c; --surface2:#222228; --surface3:#2a2a32;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
+  --text:#e2e2e6; --muted:#6b6b78; --muted2:#4a4a55;
+  --green:#34d399; --amber:#fbbf24; --red:#f87171;
+  --blue:#60a5fa; --purple:#a78bfa; --teal:#2dd4bf;
+  --radius:8px; --mono:"JetBrains Mono","Fira Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:48px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
+.logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
+.logo svg{width:18px;height:18px;color:var(--teal)}
+.header-center{display:flex;align-items:center;gap:6px;flex:1;max-width:360px}
+.api-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;font-size:12px;font-family:var(--mono);width:100%;outline:none}
+.api-input:focus{border-color:var(--border2)}
+.header-right{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);white-space:nowrap}
+#dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+#dot.live{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+#dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.hbtn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+.hbtn:hover{background:var(--surface3)}
+.hbtn.primary{background:var(--teal);border-color:var(--teal);color:#000;font-weight:500}
+.hbtn.primary:hover{opacity:.9}
+.layout{display:grid;grid-template-columns:240px 1fr;flex:1;overflow:hidden}
+nav{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:1px}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:.8px;color:var(--muted2);text-transform:uppercase;padding:12px 16px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;cursor:pointer;color:var(--muted);font-size:13px;border-left:2px solid transparent;transition:all .1s}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:var(--text);border-left-color:var(--teal)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--surface3);color:var(--muted);font-size:10px;padding:1px 6px;border-radius:8px}
+.nav-badge.alert{background:rgba(248,113,113,.2);color:var(--red)}
+main{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;gap:8px}
+.card-header .actions{display:flex;gap:6px}
+.card-body{padding:16px}
+.badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--muted)}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat-value{font-size:28px;font-weight:600;line-height:1.2;margin-top:2px;font-variant-numeric:tabular-nums}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.res-row{margin-bottom:10px}
+.res-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px}
+.res-label span:last-child{color:var(--text)}
+.res-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.res-fill{height:100%;border-radius:3px;transition:width .8s ease}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 12px;font-size:10px;font-weight:600;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.mono{font-family:var(--mono);font-size:11px}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;font-family:var(--mono)}
+.pill-created{background:rgba(107,107,120,.15);color:var(--muted)}
+.pill-writing{background:rgba(96,165,250,.15);color:var(--blue)}
+.pill-visualizing{background:rgba(167,139,250,.15);color:var(--purple)}
+.pill-voice{background:rgba(45,212,191,.15);color:var(--teal)}
+.pill-assembling{background:rgba(251,191,36,.15);color:var(--amber)}
+.pill-complete{background:rgba(52,211,153,.15);color:var(--green)}
+.pill-failed,.pill-cancelled{background:rgba(248,113,113,.15);color:var(--red)}
+.pill-paused{background:rgba(251,191,36,.15);color:var(--amber)}
+.pill-pending,.pill-offline{background:rgba(107,107,120,.15);color:var(--muted)}
+.pill-active{background:rgba(52,211,153,.15);color:var(--green)}
+.adot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;margin-right:4px}
+.adot-idle{background:var(--muted)}
+.adot-processing{background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite}
+.adot-running{background:var(--blue);animation:pulse 2s infinite}
+.adot-paused{background:var(--amber)}
+.adot-stale{background:var(--red)}
+.btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface3);border-color:var(--border2)}
+.btn-danger{border-color:rgba(248,113,113,.4);color:var(--red)}
+.btn-danger:hover{background:rgba(248,113,113,.1)}
+.btn-success{border-color:rgba(52,211,153,.4);color:var(--green)}
+.btn-success:hover{background:rgba(52,211,153,.1)}
+.btn-amber{border-color:rgba(251,191,36,.4);color:var(--amber)}
+.btn-amber:hover{background:rgba(251,191,36,.1)}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#000;font-weight:500;padding:5px 14px;font-size:12px}
+.btn-primary:hover{opacity:.9}
+.form-row{margin-bottom:12px}
+.form-label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:13px;outline:none}
+.form-input:focus{border-color:var(--border2)}
+select.form-input option{background:var(--surface2)}
+.form-hint{font-size:11px;color:var(--muted);margin-top:3px}
+.artifact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:12px}
+.artifact-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer}
+.artifact-item:hover{border-color:var(--border2)}
+.artifact-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:var(--surface3)}
+.artifact-name{font-size:11px;padding:6px 8px;font-family:var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.artifact-text{white-space:pre-wrap;font-family:var(--mono);font-size:12px;color:var(--text);background:var(--surface2);border-radius:6px;padding:12px;max-height:400px;overflow-y:auto;border:1px solid var(--border)}
+.event-row{display:grid;grid-template-columns:145px 130px 110px 100px 1fr;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);align-items:center;font-size:12px;font-family:var(--mono)}
+.event-row:last-child{border-bottom:none}
+.event-row:hover{background:var(--surface2)}
+.ev-ts{color:var(--muted);font-size:11px}
+.ev-agent{color:var(--blue)}
+.ev-start{color:var(--green)}.ev-complete{color:var(--teal)}.ev-error,.ev-failed{color:var(--red)}
+.ev-lease_issued{color:var(--purple)}.ev-lease_expired{color:var(--amber)}.ev-retry{color:var(--amber)}
+.ev-registered{color:var(--muted)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:24px;width:480px;max-width:90vw;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;opacity:0;transition:opacity .2s;z-index:200;max-width:340px}
+#toast.show{opacity:1}
+#toast.ok{border-color:rgba(52,211,153,.4);color:var(--green)}
+#toast.err{border-color:rgba(248,113,113,.4);color:var(--red)}
+.tp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:14px 16px}
+.tp-label{font-size:11px;color:var(--muted)}
+.tp-val{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.hidden{display:none}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+    Factory Inspector
+  </div>
+  <div class="header-center">
+    <input class="api-input" id="api-url" value="http://localhost:7000">
+  </div>
+  <div class="header-right">
+    <div id="dot"></div><span id="conn-label">connecting…</span>
+    <span id="ts-label">—</span>
+    <button class="hbtn" onclick="poll()">↻</button>
+    <button class="hbtn primary" onclick="openNewJobModal()">+ New Job</button>
+  </div>
+</header>
+
+<div class="layout">
+<nav>
+  <div class="nav-section">Overview</div>
+  <div class="nav-item active" data-view="overview" onclick="showView('overview',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard</div>
+  <div class="nav-item" data-view="agents" onclick="showView('agents',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    Agents <span class="nav-badge" id="nb-agents">—</span></div>
+  <div class="nav-section">Jobs</div>
+  <div class="nav-item" data-view="active-jobs" onclick="showView('active-jobs',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Active <span class="nav-badge" id="nb-active">0</span></div>
+  <div class="nav-item" data-view="inbox" onclick="showView('inbox',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6M12 3v13M8 10l4-4 4 4"/></svg>
+    Inbox <span class="nav-badge" id="nb-inbox">0</span></div>
+  <div class="nav-item" data-view="completed" onclick="showView('completed',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 13l4 4L19 7"/></svg>
+    Completed <span class="nav-badge" id="nb-completed">0</span></div>
+  <div class="nav-item" data-view="failed" onclick="showView('failed',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+    Failed <span class="nav-badge alert" id="nb-failed">0</span></div>
+  <div class="nav-section">System</div>
+  <div class="nav-item" data-view="events" onclick="showView('events',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h10M4 18h6"/></svg>
+    Events</div>
+  <div class="nav-item" data-view="metrics" onclick="showView('metrics',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l4-8 4 14 4-10 3 4h3"/></svg>
+    Metrics</div>
+</nav>
+
+<main id="main-panel">
+  <!-- OVERVIEW -->
+  <div id="view-overview">
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-label">Inbox</div><div class="stat-value" id="s-inbox" style="color:var(--blue)">—</div><div class="stat-sub">waiting</div></div>
+      <div class="stat"><div class="stat-label">Active</div><div class="stat-value" id="s-active" style="color:var(--green)">—</div><div class="stat-sub">running</div></div>
+      <div class="stat"><div class="stat-label">Completed</div><div class="stat-value" id="s-completed" style="color:var(--teal)">—</div><div class="stat-sub">total</div></div>
+      <div class="stat"><div class="stat-label">Failed</div><div class="stat-value" id="s-failed" style="color:var(--red)">—</div><div class="stat-sub">jobs</div></div>
+    </div>
+    <div class="card"><div class="card-header">System resources</div><div class="card-body">
+      <div class="res-row"><div class="res-label"><span>CPU</span><span id="cpu-lbl">—</span></div><div class="res-bar"><div class="res-fill" id="cpu-bar" style="width:0%"></div></div></div>
+      <div class="res-row"><div class="res-label"><span>Memory</span><span id="mem-lbl">—</span></div><div class="res-bar"><div class="res-fill" id="mem-bar" style="width:0%"></div></div></div>
+      <div class="res-row" style="margin-bottom:0"><div class="res-label"><span>Disk</span><span id="disk-lbl">—</span></div><div class="res-bar"><div class="res-fill" id="disk-bar" style="width:0%"></div></div></div>
+    </div></div>
+    <div class="card"><div class="card-header">Throughput <span class="badge" id="avg-badge">avg — s/job</span></div>
+      <div class="tp-grid">
+        <div><div class="tp-label">Writing</div><div class="tp-val" id="tp-w">—</div></div>
+        <div><div class="tp-label">Visualizing</div><div class="tp-val" id="tp-v">—</div></div>
+        <div><div class="tp-label">Voice</div><div class="tp-val" id="tp-voice">—</div></div>
+        <div><div class="tp-label">Assembly</div><div class="tp-val" id="tp-a">—</div></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-header">Active jobs</div><div id="ov-active"></div></div>
+  </div>
+
+  <!-- AGENTS -->
+  <div id="view-agents" class="hidden">
+    <div class="card"><div class="card-header">Agent health &amp; control</div>
+      <table><thead><tr><th>Agent</th><th>Status</th><th>Job</th><th>CPU</th><th>Memory</th><th>Heartbeat</th><th>Actions</th></tr></thead>
+      <tbody id="agent-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- JOB VIEWS -->
+  <div id="view-active-jobs" class="hidden"><div class="card"><div class="card-header">Active jobs</div><div id="tbl-active"></div></div></div>
+  <div id="view-inbox" class="hidden"><div class="card"><div class="card-header">Inbox</div><div id="tbl-inbox"></div></div></div>
+  <div id="view-completed" class="hidden"><div class="card"><div class="card-header">Completed</div><div id="tbl-completed"></div></div></div>
+  <div id="view-failed" class="hidden"><div class="card"><div class="card-header">Failed &amp; cancelled</div><div id="tbl-failed"></div></div></div>
+
+  <!-- JOB DETAIL -->
+  <div id="view-job-detail" class="hidden">
+    <div style="margin-bottom:12px"><button class="btn" onclick="goBack()">← Back</button></div>
+    <div class="card"><div class="card-header"><span id="jd-title">Job detail</span><div class="actions" id="jd-actions"></div></div><div class="card-body" id="jd-body"></div></div>
+    <div class="card" style="margin-top:12px"><div class="card-header">Artifacts</div><div id="artifact-container"></div></div>
+    <div class="card" style="margin-top:12px"><div class="card-header">Job events</div><div id="jd-events"></div></div>
+  </div>
+
+  <!-- EVENTS -->
+  <div id="view-events" class="hidden">
+    <div class="card"><div class="card-header">Event log
+      <div class="actions"><select class="form-input" id="events-tail" style="width:80px;padding:2px 6px;font-size:11px" onchange="renderEvents(latestEvents)">
+        <option value="40">40</option><option value="100">100</option><option value="200">200</option>
+      </select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:145px 130px 110px 100px 1fr;gap:8px;padding:5px 12px;font-size:10px;font-weight:600;letter-spacing:.5px;color:var(--muted2);text-transform:uppercase;border-bottom:1px solid var(--border)">
+      <span>Timestamp</span><span>Agent</span><span>Type</span><span>Phase</span><span>Message</span>
+    </div>
+    <div id="event-list"></div></div>
+  </div>
+
+  <!-- METRICS -->
+  <div id="view-metrics" class="hidden">
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-label">CPU</div><div class="stat-value" id="m-cpu" style="color:var(--blue)">—</div><div class="stat-sub" id="m-cpu-sub">— cores</div></div>
+      <div class="stat"><div class="stat-label">Memory</div><div class="stat-value" id="m-mem" style="color:var(--purple)">—</div><div class="stat-sub" id="m-mem-sub">—</div></div>
+      <div class="stat"><div class="stat-label">Disk</div><div class="stat-value" id="m-disk" style="color:var(--teal)">—</div><div class="stat-sub" id="m-disk-sub">—</div></div>
+      <div class="stat"><div class="stat-label">Completed</div><div class="stat-value" id="m-done" style="color:var(--green)">—</div><div class="stat-sub" id="m-fail">—</div></div>
+    </div>
+    <div class="card"><div class="card-header">Resource detail</div><div class="card-body">
+      <div class="res-row"><div class="res-label"><span>CPU</span><span id="m-cpu-lbl">—</span></div><div class="res-bar"><div class="res-fill" id="m-cpu-bar" style="width:0%"></div></div></div>
+      <div class="res-row"><div class="res-label"><span>Memory</span><span id="m-mem-lbl">—</span></div><div class="res-bar"><div class="res-fill" id="m-mem-bar" style="width:0%"></div></div></div>
+      <div class="res-row" style="margin-bottom:0"><div class="res-label"><span>Disk</span><span id="m-disk-lbl">—</span></div><div class="res-bar"><div class="res-fill" id="m-disk-bar" style="width:0%"></div></div></div>
+    </div></div>
+  </div>
+</main>
+</div>
+
+<!-- Create Job Modal -->
+<div class="modal-bg" id="new-job-modal">
+  <div class="modal">
+    <h2>Create new job</h2>
+    <div class="form-row">
+      <label class="form-label">Topic *</label>
+      <input class="form-input" id="nj-topic" placeholder="e.g. The history of the transistor">
+      <div class="form-hint">What should the content be about?</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Template</label>
+      <select class="form-input" id="nj-template">
+        <option value="">— No template —</option>
+        <option value="educational_video">Educational Video (5-10 min, structured)</option>
+        <option value="short_form_video">Short-Form Video (60-90s, punchy)</option>
+        <option value="tutorial_video">Tutorial / How-To (step-by-step)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Priority</label>
+      <select class="form-input" id="nj-priority">
+        <option value="9">9 — Urgent</option>
+        <option value="7">7 — High</option>
+        <option value="5" selected>5 — Normal</option>
+        <option value="3">3 — Low</option>
+        <option value="1">1 — Background</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('new-job-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewJob()">Create Job</button>
+    </div>
+  </div>
+</div>
+
+<!-- Artifact lightbox -->
+<div class="modal-bg" id="art-modal">
+  <div class="modal" style="max-width:720px;width:90vw">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span id="art-title" style="font-weight:600"></span>
+      <button class="btn" onclick="closeModal('art-modal')">✕</button>
+    </div>
+    <div id="art-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let API='http://localhost:7000', pollTimer=null, latestEvents=[], prevView='overview', curView='overview', curJobId=null;
+
+const $ = id => document.getElementById(id);
+const setTxt = (id,v) => { const el=$(id); if(el) el.textContent=v; };
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const pill = p => `<span class="pill pill-${p}">${p}</span>`;
+const fmts = v => v ? v+'s' : '—';
+const fmtMB = mb => mb>=1024 ? (mb/1024).toFixed(1)+'GB' : mb+'MB';
+const barClr = p => p>85?'var(--red)':p>60?'var(--amber)':'var(--green)';
+
+async function api(method, path, body) {
+  const opts = {method, signal:AbortSignal.timeout(8000)};
+  if(body) { opts.headers={'Content-Type':'application/json'}; opts.body=JSON.stringify(body); }
+  const r = await fetch(API+path, opts);
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`);
+  return d;
+}
+
+async function poll() {
+  try {
+    const tail = $('events-tail')?.value || 40;
+    const [health, jobs, events] = await Promise.all([
+      api('GET','/health'), api('GET','/jobs'), api('GET',`/events?tail=${tail}`)
+    ]);
+    latestEvents = events||[];
+    renderAll(health, jobs, events);
+    $('dot').className='live'; $('conn-label').textContent='live';
+    $('ts-label').textContent=new Date().toLocaleTimeString();
+  } catch(e) {
+    $('dot').className='err'; $('conn-label').textContent='disconnected';
+    $('ts-label').textContent='Error: '+e.message;
+  }
+}
+
+function startPoll(ms=5000) { if(pollTimer) clearInterval(pollTimer); poll(); pollTimer=setInterval(poll,ms); }
+
+function renderAll(health, jobs, events) {
+  const q  = health.queue_depth||{};
+  const ag = health.agent_health||{};
+  const sys= health.system||{};
+  const tp = health.throughput||{};
+
+  setTxt('nb-agents', Object.keys(ag).length);
+  setTxt('nb-active',    q.active    ||0);
+  setTxt('nb-inbox',     q.inbox     ||0);
+  setTxt('nb-completed', q.completed ||0);
+  setTxt('nb-failed',    q.failed    ||0);
+  setTxt('s-inbox',      q.inbox     ??'—');
+  setTxt('s-active',     q.active    ??'—');
+  setTxt('s-completed',  q.completed ??'—');
+  setTxt('s-failed',     q.failed    ??'—');
+
+  // bars (overview + metrics)
+  ['', 'm-'].forEach(pfx => {
+    const b = id => $(pfx+id); if(!b('cpu-bar')) return;
+    const cpu=sys.cpu_percent||0, memP=sys.memory_percent||0, diskP=sys.disk_percent||0;
+    b('cpu-lbl').textContent=cpu.toFixed(1)+'%';
+    b('cpu-bar').style.cssText=`width:${cpu}%;background:${barClr(cpu)}`;
+    b('mem-lbl').textContent=`${sys.memory_used_mb||0} / ${sys.memory_total_mb||0} MB`;
+    b('mem-bar').style.cssText=`width:${memP}%;background:${barClr(memP)}`;
+    b('disk-lbl').textContent=`${(sys.disk_used_gb||0).toFixed(1)} / ${(sys.disk_total_gb||0).toFixed(1)} GB`;
+    b('disk-bar').style.cssText=`width:${diskP}%;background:${barClr(diskP)}`;
+  });
+
+  const pp=tp.avg_per_phase_s||{};
+  $('avg-badge').textContent=`avg ${tp.avg_job_duration_s||0}s/job`;
+  setTxt('tp-w',    fmts(pp.writing_duration_s));
+  setTxt('tp-v',    fmts(pp.visualizing_duration_s));
+  setTxt('tp-voice',fmts(pp.voice_duration_s));
+  setTxt('tp-a',    fmts(pp.assembling_duration_s));
+
+  setTxt('m-cpu',     sys.cpu_percent!=null?sys.cpu_percent.toFixed(0)+'%':'—');
+  setTxt('m-cpu-sub', `${sys.cpu_count||'?'} cores`);
+  setTxt('m-mem',     sys.memory_used_mb!=null?fmtMB(sys.memory_used_mb):'—');
+  setTxt('m-mem-sub', sys.memory_total_mb?`of ${fmtMB(sys.memory_total_mb)}`:'—');
+  setTxt('m-disk',    sys.disk_used_gb!=null?sys.disk_used_gb.toFixed(1)+'GB':'—');
+  setTxt('m-disk-sub',sys.disk_total_gb?`of ${sys.disk_total_gb.toFixed(0)}GB`:'—');
+  setTxt('m-done',    tp.total_completed||'—');
+  setTxt('m-fail',    `${tp.total_failed||0} failed`);
+
+  renderAgents(ag);
+  renderJobTable('tbl-active',    jobs.active||[],    true);
+  renderJobTable('tbl-inbox',     jobs.inbox||[],     true);
+  renderJobTable('tbl-completed', jobs.completed||[], false);
+  renderJobTable('tbl-failed',    jobs.failed||[],    false);
+
+  const active=jobs.active||[];
+  $('ov-active').innerHTML = active.length
+    ? `<table><thead><tr><th>ID</th><th>Topic</th><th>Phase</th><th>Agent</th><th>Actions</th></tr></thead><tbody>${active.map(j=>`<tr><td>${jLink(j)}</td><td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(j.topic||'')}</td><td>${pill(j.phase||'?')}</td><td class="mono">${j.assigned_agent||'—'}</td><td>${jobBtns(j)}</td></tr>`).join('')}</tbody></table>`
+    : '<div style="padding:20px;text-align:center;color:var(--muted)">No active jobs</div>';
+
+  renderEvents(latestEvents);
+  if(curView==='job-detail' && curJobId) loadJobDetail(curJobId);
+}
+
+function renderAgents(ag) {
+  const order = ['foreman_agent','monitor_agent','writer_agent','visual_agent','voice_agent','assembler_agent'];
+  $('agent-tbody').innerHTML = order.map(id => {
+    const h=ag[id]||{status:'offline',stale:true};
+    const dc=h.stale?'stale':h.status==='processing'?'processing':h.status==='running'?'running':h.status==='paused'?'paused':'idle';
+    const job=h.current_job?`<span class="mono">${h.current_job.slice(-14)}</span>`:'—';
+    const hb=(h.heartbeat_age_s!=null?h.heartbeat_age_s.toFixed(0)+'s':'—');
+    const canCtrl = id!=='foreman_agent'&&id!=='monitor_agent';
+    const paused = h.status==='paused';
+    const acts = canCtrl
+      ? `<button class="btn ${paused?'btn-success':'btn-amber'}" onclick="agentAct('${id}','${paused?'resume':'pause'}')">${paused?'▶ Resume':'⏸ Pause'}</button>`
+      : '—';
+    return `<tr><td><span class="adot adot-${dc}"></span>${id.replace('_agent','')}</td><td>${pill(h.status||'offline')}${h.stale?' <span style="color:var(--red);font-size:11px">stale</span>':''}</td><td>${job}</td><td class="mono">${(h.cpu_percent||0).toFixed(1)}%</td><td class="mono">${h.memory_mb||0}MB</td><td class="mono" style="color:${h.stale?'var(--red)':'var(--muted)'}">${hb}</td><td>${acts}</td></tr>`;
+  }).join('');
+}
+
+function renderJobTable(elId, jobs, withActs) {
+  const el=$(elId);
+  if(!jobs.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">No jobs</div>';return;}
+  el.innerHTML=`<table><thead><tr><th>ID</th><th>Topic</th><th>Phase</th><th>Status</th><th>Priority</th><th>Retries</th>${withActs?'<th>Actions</th>':''}</tr></thead><tbody>${
+    jobs.slice(0,100).map(j=>`<tr>
+      <td>${jLink(j)}</td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(j.topic||'')}</td>
+      <td>${pill(j.phase||'created')}</td>
+      <td>${pill(j.status||'pending')}</td>
+      <td>${j.priority||5}</td>
+      <td>${j.retry_count>0?`<span style="color:var(--amber)">↻${j.retry_count}</span>`:'—'}</td>
+      ${withActs?`<td>${jobBtns(j)}</td>`:''}
+    </tr>`).join('')
+  }</tbody></table>`;
+}
+
+function jLink(j) { return `<a href="#" onclick="loadJobDetail('${j.job_id}');return false" class="mono" style="color:var(--blue);text-decoration:none">${j.job_id.slice(-14)}</a>`; }
+
+function jobBtns(j) {
+  const s=j.status, btns=[];
+  if(['failed','cancelled'].includes(s)) btns.push(`<button class="btn btn-success" onclick="jobAct('${j.job_id}','retry')">Retry</button>`);
+  if(s==='pending') btns.push(`<button class="btn btn-amber" onclick="jobAct('${j.job_id}','pause')">Pause</button>`);
+  if(s==='paused')  btns.push(`<button class="btn btn-success" onclick="jobAct('${j.job_id}','resume')">Resume</button>`);
+  if(['pending','paused','active'].includes(s)) btns.push(`<button class="btn btn-danger" onclick="jobAct('${j.job_id}','cancel')">Cancel</button>`);
+  return btns.join(' ');
+}
+
+function renderEvents(evts) {
+  const el=$('event-list');
+  if(!evts||!evts.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">No events yet</div>';return;}
+  el.innerHTML=[...evts].reverse().map(e=>`<div class="event-row">
+    <span class="ev-ts">${(e.timestamp||'').replace('T',' ').slice(0,19)}</span>
+    <span class="ev-agent">${e.agent_id||''}</span>
+    <span class="ev-${e.event_type||''}">${e.event_type||''}</span>
+    <span style="color:var(--muted)">${e.phase||''}</span>
+    <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.message||'')}</span>
+  </div>`).join('');
+}
+
+async function loadJobDetail(jobId) {
+  prevView=curView; curJobId=jobId; showView('job-detail');
+  try {
+    const j = await api('GET',`/jobs/${jobId}`);
+    // detail table
+    $('jd-title').textContent=j.job_id;
+    $('jd-actions').innerHTML=jobBtns(j);
+    const rows=[['Topic',esc(j.topic||'')],['Status',pill(j.status||'?')],['Phase',pill(j.phase||'?')],
+      ['Priority',j.priority||5],['Retries',`${j.retry_count||0}/${j.max_retries||3}`],
+      ['Agent',j.assigned_agent||'—'],['Created',(j.created_at||'').slice(0,19).replace('T',' ')],
+      ['Updated',(j.updated_at||'').slice(0,19).replace('T',' ')]];
+    const m=j.metrics||{};
+    if(m.writing_duration_s)     rows.push(['Writing',m.writing_duration_s+'s']);
+    if(m.visualizing_duration_s) rows.push(['Visualizing',m.visualizing_duration_s+'s']);
+    if(m.voice_duration_s)       rows.push(['Voice',m.voice_duration_s+'s']);
+    if(m.assembling_duration_s)  rows.push(['Assembly',m.assembling_duration_s+'s']);
+    $('jd-body').innerHTML=`<table style="width:auto">${rows.map(([k,v])=>`<tr><td style="color:var(--muted);padding:4px 16px 4px 0;white-space:nowrap">${k}</td><td>${v}</td></tr>`).join('')}</table>`
+      +((j.errors||[]).length?`<div style="margin-top:10px;padding:10px;background:rgba(248,113,113,.08);border-radius:6px;border:1px solid rgba(248,113,113,.2)"><div style="color:var(--red);font-size:12px;font-weight:600;margin-bottom:4px">Errors</div>${j.errors.map(e=>`<div style="font-size:11px;font-family:var(--mono);color:var(--muted)">${(e.timestamp||'').slice(0,19)} — ${esc(e.error||'')}</div>`).join('')}</div>`:'');
+    renderArtifacts(j);
+    const jEvts=(latestEvents||[]).filter(e=>e.job_id===jobId);
+    $('jd-events').innerHTML=jEvts.length
+      ? '<div style="display:grid;grid-template-columns:145px 130px 110px 100px 1fr;gap:8px;padding:5px 12px;font-size:10px;font-weight:600;letter-spacing:.5px;color:var(--muted2);text-transform:uppercase;border-bottom:1px solid var(--border)"><span>Time</span><span>Agent</span><span>Type</span><span>Phase</span><span>Message</span></div>'
+        +jEvts.map(e=>`<div class="event-row"><span class="ev-ts">${(e.timestamp||'').replace('T',' ').slice(0,19)}</span><span class="ev-agent">${e.agent_id||''}</span><span class="ev-${e.event_type||''}">${e.event_type||''}</span><span style="color:var(--muted)">${e.phase||''}</span><span>${esc(e.message||'')}</span></div>`).join('')
+      : '<div style="padding:20px;text-align:center;color:var(--muted)">No events for this job</div>';
+  } catch(e) { $('jd-body').innerHTML=`<div style="color:var(--red)">Error: ${e.message}</div>`; }
+}
+
+function renderArtifacts(job) {
+  const files=job._artifact_files||[], base=`${API}/jobs/${job.job_id}/artifact`;
+  if(!files.length){$('artifact-container').innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">No artifacts yet</div>';return;}
+  const imgs=files.filter(f=>/\.(png|jpg|jpeg)$/i.test(f));
+  const txts=files.filter(f=>/\.(txt|json)$/i.test(f));
+  const auds=files.filter(f=>/\.(wav|mp3)$/i.test(f));
+  let html='';
+  if(imgs.length){
+    html+=`<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);font-weight:600">Images (${imgs.length})</div><div class="artifact-grid">`;
+    imgs.forEach(fn=>{html+=`<div class="artifact-item" onclick="openArt('${base}/${fn}','${fn}','image')"><img class="artifact-thumb" src="${base}/${fn}" loading="lazy" onerror="this.style.display='none'" alt="${fn}"><div class="artifact-name">${fn}</div></div>`;});
+    html+='</div>';
+  }
+  if(auds.length){
+    html+=`<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);font-weight:600">Audio</div><div style="padding:12px 16px">`;
+    auds.forEach(fn=>{html+=`<div style="margin-bottom:8px"><div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:4px">${fn}</div><audio controls style="width:100%;filter:invert(.85)" src="${base}/${fn}"></audio></div>`;});
+    html+='</div>';
+  }
+  if(txts.length){
+    html+=`<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);font-weight:600">Text &amp; JSON</div><div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px">`;
+    txts.forEach(fn=>{html+=`<button class="btn" onclick="openArt('${base}/${fn}','${fn}','text')">${fn}</button>`;});
+    html+='</div>';
+  }
+  $('artifact-container').innerHTML=html;
+}
+
+async function openArt(url, name, type) {
+  $('art-title').textContent=name;
+  $('art-body').innerHTML='<div style="color:var(--muted);padding:20px;text-align:center">Loading…</div>';
+  openModal('art-modal');
+  try {
+    if(type==='image'){$('art-body').innerHTML=`<img src="${url}" style="width:100%;border-radius:6px" alt="${name}">`;}
+    else{const txt=await(await fetch(url)).text();let d=txt;if(name.endsWith('.json')){try{d=JSON.stringify(JSON.parse(txt),null,2);}catch{}}
+      $('art-body').innerHTML=`<div class="artifact-text">${esc(d).slice(0,10000)}</div>`;}
+  } catch(e) { $('art-body').innerHTML=`<div style="color:var(--red)">Error: ${e.message}</div>`; }
+}
+
+async function jobAct(jobId, action) {
+  try{await api('POST',`/api/jobs/${jobId}/${action}`);toast(`Job ${action}d`,'ok');poll();}
+  catch(e){toast(`Failed: ${e.message}`,'err');}
+}
+async function agentAct(agentId, action) {
+  try{await api('POST',`/api/agents/${agentId}/${action}`);toast(`Agent ${action}d`,'ok');poll();}
+  catch(e){toast(`Failed: ${e.message}`,'err');}
+}
+
+function openNewJobModal(){$('nj-topic').value='';$('nj-priority').value='5';$('nj-template').value='';openModal('new-job-modal');setTimeout(()=>$('nj-topic').focus(),100);}
+async function submitNewJob(){
+  const topic=$('nj-topic').value.trim();
+  const priority=parseInt($('nj-priority').value);
+  const template=$('nj-template').value;
+  if(!topic){toast('Topic is required','err');return;}
+  try{const r=await api('POST','/api/jobs',{topic,priority,template:template||undefined});closeModal('new-job-modal');toast(`Created: ${r.job.job_id.slice(-10)}`,'ok');poll();}
+  catch(e){toast(`Error: ${e.message}`,'err');}
+}
+$('nj-topic').addEventListener('keydown',e=>{if(e.key==='Enter')submitNewJob();if(e.key==='Escape')closeModal('new-job-modal');});
+
+function showView(name,navEl){
+  document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
+  const t=$('view-'+name); if(t) t.classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  if(navEl) navEl.classList.add('active');
+  else{const ni=document.querySelector(`[data-view="${name}"]`);if(ni)ni.classList.add('active');}
+  curView=name;
+}
+function goBack(){showView(prevView);curJobId=null;}
+function openModal(id){$(id).classList.add('open');}
+function closeModal(id){$(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));});
+
+let toastTimer;
+function toast(msg,type='ok'){const el=$('toast');el.textContent=msg;el.className=`show ${type}`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='',3000);}
+
+$('api-url').addEventListener('change',e=>{API=e.target.value.replace(/\/$/,'');startPoll();});
+
+startPoll(5000);
+</script>
+</body>
+</html>

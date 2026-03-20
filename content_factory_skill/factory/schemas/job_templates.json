@@ -1,0 +1,174 @@
+{
+  "$schema": "../schemas/job.schema.json",
+  "templates": {
+    "educational_video": {
+      "name": "Educational Video",
+      "description": "In-depth explainer video suitable for YouTube or course content. 5-10 minutes, structured with intro, core concepts, examples, and summary.",
+      "priority": 5,
+      "pipeline_config": {
+        "script": {
+          "style": "educational",
+          "target_length_words": 800,
+          "structure": [
+            "hook",
+            "agenda",
+            "concept_1",
+            "concept_2",
+            "concept_3",
+            "real_world_example",
+            "summary",
+            "cta"
+          ],
+          "tone": "clear and engaging, knowledgeable but approachable",
+          "ollama_system_prompt": "You are an expert educational content writer. Write detailed, accurate scripts that explain complex topics clearly. Use the Feynman technique: explain as if to a smart 15-year-old. Include concrete examples and analogies."
+        },
+        "visuals": {
+          "shot_count": 8,
+          "style": "educational illustration",
+          "negative_prompt": "blurry, low quality, watermark, text overlay, busy background",
+          "image_width": 1920,
+          "image_height": 1080,
+          "thumbnail_style": "bold title card with relevant imagery, high contrast"
+        },
+        "voice": {
+          "piper_voice": "en_US-lessac-medium",
+          "speed": 1.0,
+          "format": "wav"
+        }
+      },
+      "example_topics": [
+        "How HTTPS encryption actually works",
+        "The history of the transistor",
+        "Why stars don't fall down",
+        "How the immune system recognises viruses"
+      ]
+    },
+    "short_form_video": {
+      "name": "Short-Form Video",
+      "description": "Fast-paced social media content. 60-90 seconds, hook in first 3 seconds, single clear takeaway.",
+      "priority": 7,
+      "pipeline_config": {
+        "script": {
+          "style": "short_form",
+          "target_length_words": 200,
+          "structure": [
+            "hook_3s",
+            "core_point",
+            "proof",
+            "punchline"
+          ],
+          "tone": "punchy, direct, conversational",
+          "ollama_system_prompt": "You are a viral short-form content writer. Write scripts for 60-90 second videos. The first sentence must be a compelling hook that stops scrolling. Every sentence earns its place. No fluff. End with a memorable punchline or call to action."
+        },
+        "visuals": {
+          "shot_count": 4,
+          "style": "dynamic social media visual",
+          "negative_prompt": "blurry, static, boring, stock photo look",
+          "image_width": 1080,
+          "image_height": 1920,
+          "thumbnail_style": "vertical format, bold text, vibrant colours, face or dramatic scene"
+        },
+        "voice": {
+          "piper_voice": "en_US-ryan-high",
+          "speed": 1.1,
+          "format": "wav"
+        }
+      },
+      "example_topics": [
+        "One weird thing about the speed of light",
+        "The real reason planes leave contrails",
+        "Why your phone battery degrades",
+        "The oldest living thing on Earth"
+      ]
+    },
+    "tutorial_video": {
+      "name": "Tutorial / How-To Video",
+      "description": "Step-by-step instructional content. Viewer should be able to follow along and complete a task.",
+      "priority": 6,
+      "pipeline_config": {
+        "script": {
+          "style": "tutorial",
+          "target_length_words": 600,
+          "structure": [
+            "intro_goal",
+            "prerequisites",
+            "step_1",
+            "step_2",
+            "step_3",
+            "step_4",
+            "step_5",
+            "verification",
+            "next_steps"
+          ],
+          "tone": "instructional, patient, precise",
+          "ollama_system_prompt": "You are a technical tutorial writer. Write step-by-step scripts where every action is explicit and unambiguous. Number each step. Include what the viewer should see or verify after each step. Anticipate common mistakes and address them proactively."
+        },
+        "visuals": {
+          "shot_count": 6,
+          "style": "tutorial screenshot or diagram style",
+          "negative_prompt": "blurry, abstract, artistic, confusing",
+          "image_width": 1920,
+          "image_height": 1080,
+          "thumbnail_style": "before/after or step diagram, clear title"
+        },
+        "voice": {
+          "piper_voice": "en_US-lessac-medium",
+          "speed": 0.95,
+          "format": "wav"
+        }
+      },
+      "example_topics": [
+        "How to set up a Python virtual environment",
+        "Building your first REST API with FastAPI",
+        "Setting up Nginx as a reverse proxy",
+        "How to configure SSH key authentication"
+      ]
+    },
+    "documentary_video": {
+      "name": "Documentary Video",
+      "description": "Cinematic documentary-style YouTube video. 8-12 minutes, serious narrator tone, real events and people.",
+      "priority": 5,
+      "pipeline_config": {
+        "script": {
+          "style": "documentary",
+          "target_length_words": 1500,
+          "structure": [
+            "hook",
+            "context",
+            "rise",
+            "conflict",
+            "resolution",
+            "lesson"
+          ],
+          "tone": "serious, authoritative documentary narrator, third person only, no first person",
+          "ollama_system_prompt": "You are a documentary scriptwriter in the style of Magnates Media, Company Man, and Newsthink. Write compelling documentary scripts about real events, companies, people, and phenomena. Use specific facts, dates, and figures. Build tension and narrative momentum. Third person only \u2014 never 'I' or 'we'. Each section should end with a hook into the next. Structure: Hook (shocking fact or question), Context (background), Rise (how it grew), Conflict (the turning point or problem), Resolution (what happened), Lesson (what we learn)."
+        },
+        "visuals": {
+          "shot_count": 12,
+          "style": "cinematic documentary photography, dramatic lighting, photorealistic, 4k, film grain, professional",
+          "negative_prompt": "cartoon, anime, watermark, text overlay, logo, blurry, low quality, illustration, drawing",
+          "image_width": 1920,
+          "image_height": 1080,
+          "thumbnail_style": "cinematic title card, dramatic scene, bold white text, dark overlay, high contrast"
+        },
+        "voice": {
+          "piper_voice": "en_US-lessac-medium",
+          "speed": 0.95,
+          "format": "wav"
+        }
+      },
+      "example_topics": [
+        "The rise and fall of Kodak",
+        "How Nokia lost everything",
+        "The real story behind WeWork",
+        "How Tesla almost went bankrupt",
+        "The collapse of Enron"
+      ]
+    }
+  },
+  "usage": {
+    "cli": "python factoryctl.py new-job \"Your topic\" --template educational_video",
+    "api": "POST /api/jobs  {\"topic\": \"Your topic\", \"template\": \"short_form_video\", \"priority\": 7}",
+    "note": "Templates configure writer_agent prompts and visual_agent parameters. The pipeline_config is merged into the job and read by each agent."
+  }
+}
