@@ -1,33 +1,37 @@
 """
 visual_agent.py — image and thumbnail generation.
 
-Uses ComfyUI via its REST API (default: http://localhost:8188).
-Reads shots.json written by the writer agent.
+Primary:  Pollinations.ai (free, no API key, no setup required)
+Optional: ComfyUI via REST API (http://localhost:8188) — used if running
+
+Reads shots.json produced by writer_agent.
 Produces: image_01.png … image_N.png, thumbnail.png
 
 Resume logic: each image file is checked individually — only missing ones
-are generated.  thumbnail is only generated if all shot images exist.
+are generated. thumbnail is only generated after all shot images exist.
 """
 
 import json
 import os
-import subprocess
 import time
-import requests
+import urllib.request
+import urllib.parse
+import urllib.error
 from pathlib import Path
 
 from core.agent_base import AgentBase
 
-
-COMFYUI_BASE    = os.environ.get("COMFYUI_BASE",        "http://localhost:8188")
-COMFYUI_DIR     = os.environ.get("COMFYUI_DIR",         str(Path.home() / "ComfyUI"))
+# ── config ─────────────────────────────────────────────────────────────────────
+COMFYUI_BASE    = os.environ.get("COMFYUI_BASE",         "http://localhost:8188")
+COMFYUI_DIR     = os.environ.get("COMFYUI_DIR",          "")   # empty = don't try
 DEFAULT_WIDTH   = int(os.environ.get("VISUAL_IMAGE_WIDTH",  "512"))
 DEFAULT_HEIGHT  = int(os.environ.get("VISUAL_IMAGE_HEIGHT", "512"))
 DEFAULT_STEPS   = int(os.environ.get("VISUAL_STEPS",        "15"))
-DEFAULT_CFG     = 7.0
-DEFAULT_SAMPLER = "euler"
-CHECKPOINT      = os.environ.get("COMFYUI_CHECKPOINT", "dreamshaper.safetensors")
-COMFYUI_STARTUP_TIMEOUT = 120   # seconds to wait for ComfyUI to be ready
+CHECKPOINT      = os.environ.get("COMFYUI_CHECKPOINT",   "dreamshaper.safetensors")
+
+# Pollinations.ai — free, no API key
+POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}?width={w}&height={h}&nologo=true"
+POLLINATIONS_TIMEOUT = 60   # seconds per image
 
 
 class VisualAgent(AgentBase):
@@ -43,253 +47,145 @@ class VisualAgent(AgentBase):
     def process_job(self, job: dict):
         job_id = job["job_id"]
 
-        # Load the shot prompts produced by the writer
         shots_raw = self.read_artifact(job_id, "shots.json")
         if not shots_raw:
             raise RuntimeError("shots.json not found — writer must run first")
         shots = json.loads(shots_raw)
 
+        # Decide which backend to use
+        use_comfyui = self._comfyui_ready()
+        backend = "ComfyUI" if use_comfyui else "Pollinations.ai"
+        self.logger.info(f"[visual] using backend: {backend}")
+
         generated_images = []
 
-        # ── start ComfyUI if not already running ─────────────────────────────
-        comfyui_proc = self._ensure_comfyui_running()
+        for shot in shots:
+            num      = shot.get("shot_number", 1)
+            filename = f"image_{num:02d}.png"
 
-        try:
-            # ── generate each shot image ──────────────────────────────────────────
-            for shot in shots:
-                num      = shot.get("shot_number", 1)
-                filename = f"image_{num:02d}.png"
-
-                if self.artifact_exists(job_id, filename):
-                    self.logger.info(f"[visual] {filename} exists, skipping")
-                    generated_images.append(str(self.artifact_path(job_id, filename)))
-                    continue
-
-                prompt = shot.get("image_prompt", f"image for shot {num}")
-                self.logger.info(f"[visual] generating {filename}: {prompt[:60]}…")
-
-                width  = shot.get("width",  DEFAULT_WIDTH)
-                height = shot.get("height", DEFAULT_HEIGHT)
-                neg    = shot.get("negative_prompt", "blurry, low quality, watermark")
-                image_bytes = self._generate_image(prompt, width=width, height=height, negative_prompt=neg)
-                dest = self.write_artifact(job_id, filename, image_bytes)
-                generated_images.append(str(dest))
-                self.logger.info(f"[visual] saved {filename}")
-
-                # Small pause between heavy generations — keeps RAM pressure down
-                time.sleep(1)
-
-            # ── generate thumbnail ────────────────────────────────────────────────
-            if not self.artifact_exists(job_id, "thumbnail.png"):
-                if generated_images:
-                    thumb_prompt = (
-                        shots[0].get("image_prompt", "thumbnail") +
-                        ", centered composition, vibrant colours, thumbnail style"
-                    )
-                    self.logger.info("[visual] generating thumbnail")
-                    thumb_bytes = self._generate_image(
-                        thumb_prompt, width=512, height=512
-                    )
-                    self.write_artifact(job_id, "thumbnail.png", thumb_bytes)
-            else:
-                self.logger.info("[visual] thumbnail.png exists, skipping")
-
-        finally:
-            # ── shut down ComfyUI after all images are generated ──────────────────
-            if comfyui_proc is not None:
-                self.logger.info("[visual] shutting down ComfyUI to free RAM")
-                comfyui_proc.terminate()
-                try:
-                    comfyui_proc.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    comfyui_proc.kill()
-                self.logger.info("[visual] ComfyUI stopped")
-                # Restart agents we killed before image generation
-                self._restart_agents()
-
-    def _restart_agents(self):
-        """Restart factory agents that were stopped to free RAM for ComfyUI."""
-        import os
-        from pathlib import Path as _P
-
-        factory_dir = _P(os.environ.get("FACTORY_ROOT", str(_P(__file__).parent.parent)))
-        for agent in ["foreman_agent", "monitor_agent", "writer_agent",
-                      "voice_agent", "assembler_agent"]:
-            script   = factory_dir / "agents" / f"{agent}.py"
-            log_file = factory_dir / "logs"   / f"{agent}.log"
-            if not script.exists():
+            if self.artifact_exists(job_id, filename):
+                self.logger.info(f"[visual] {filename} exists, skipping")
+                generated_images.append(str(self.artifact_path(job_id, filename)))
                 continue
-            proc = subprocess.Popen(
-                ["python", str(script)],
-                stdout=open(log_file, "a"),
-                stderr=subprocess.STDOUT,
-                env=os.environ.copy(),
+
+            prompt = shot.get("image_prompt", f"image for shot {num}")
+            width  = shot.get("width",  DEFAULT_WIDTH)
+            height = shot.get("height", DEFAULT_HEIGHT)
+            neg    = shot.get("negative_prompt", "blurry, low quality, watermark")
+
+            self.logger.info(f"[visual] generating {filename} via {backend}: {prompt[:60]}…")
+
+            if use_comfyui:
+                image_bytes = self._generate_comfyui(prompt, width, height, neg)
+            else:
+                image_bytes = self._generate_pollinations(prompt, width, height)
+
+            dest = self.write_artifact(job_id, filename, image_bytes)
+            generated_images.append(str(dest))
+            self.logger.info(f"[visual] saved {filename} ({len(image_bytes):,} bytes)")
+            time.sleep(1)
+
+        # Generate thumbnail
+        if not self.artifact_exists(job_id, "thumbnail.png") and generated_images:
+            thumb_prompt = (
+                shots[0].get("image_prompt", "thumbnail") +
+                ", centered composition, vibrant colours, thumbnail style"
             )
-            self.logger.info(f"[visual] restarted {agent} (pid={proc.pid})")
-        self.logger.info("[visual] all agents restarted")
+            self.logger.info("[visual] generating thumbnail")
+            if use_comfyui:
+                thumb_bytes = self._generate_comfyui(thumb_prompt, 512, 512)
+            else:
+                thumb_bytes = self._generate_pollinations(thumb_prompt, 512, 512)
+            self.write_artifact(job_id, "thumbnail.png", thumb_bytes)
+            self.logger.info("[visual] thumbnail saved")
+        else:
+            self.logger.info("[visual] thumbnail.png exists, skipping")
 
-    # ── ComfyUI lifecycle ─────────────────────────────────────────────────────
+    # ── Pollinations.ai (free fallback, no deps) ────────────────────────────────
 
-    def _ensure_comfyui_running(self) -> "subprocess.Popen | None":
-        """
-        Check if ComfyUI is already responding. If not, start it as a
-        subprocess and wait for it to be ready. Returns the Popen object
-        so the caller can shut it down when done, or None if it was
-        already running externally.
-        """
-        # Check if already up
-        if self._comfyui_ready():
-            self.logger.info("[visual] ComfyUI already running — using existing instance")
-            return None  # don't manage it — caller started it manually
+    def _generate_pollinations(self, prompt: str, width: int, height: int) -> bytes:
+        """Generate image via Pollinations.ai — free, no API key required."""
+        encoded = urllib.parse.quote(prompt)
+        url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true"
 
-        # Stop other agents to free RAM before loading the SD model.
-        # They will be restarted automatically after image generation completes.
-        self.logger.info("[visual] stopping other agents to free RAM...")
-        for agent in ["foreman_agent", "monitor_agent", "writer_agent",
-                      "voice_agent", "assembler_agent"]:
-            subprocess.run(["pkill", "-f", f"{agent}.py"], capture_output=True)
-        time.sleep(3)   # give processes time to exit cleanly
+        for attempt in range(3):
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "ClawOS-Factory/1.0"})
+                with urllib.request.urlopen(req, timeout=POLLINATIONS_TIMEOUT) as resp:
+                    data = resp.read()
+                    if len(data) > 1000:   # valid image is at least ~1KB
+                        return data
+                    raise ValueError(f"Response too small ({len(data)} bytes)")
+            except Exception as e:
+                self.logger.warning(f"[visual] Pollinations attempt {attempt+1}/3 failed: {e}")
+                if attempt < 2:
+                    time.sleep(5)
 
-        # Start ComfyUI as a subprocess
-        self.logger.info(f"[visual] Starting ComfyUI from {COMFYUI_DIR}...")
-        proc = subprocess.Popen(
-            ["python", "main.py", "--listen", "0.0.0.0", "--cpu"],
-            cwd=COMFYUI_DIR,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        raise RuntimeError(f"Pollinations.ai failed after 3 attempts for prompt: {prompt[:60]}")
 
-        # Wait for it to be ready
-        deadline = time.time() + COMFYUI_STARTUP_TIMEOUT
-        while time.time() < deadline:
-            if self._comfyui_ready():
-                self.logger.info("[visual] ComfyUI is ready")
-                return proc
-            if proc.poll() is not None:
-                raise RuntimeError("ComfyUI process exited unexpectedly during startup")
-            time.sleep(3)
-
-        proc.terminate()
-        raise RuntimeError(
-            f"ComfyUI did not start within {COMFYUI_STARTUP_TIMEOUT}s. "
-            f"Check that {COMFYUI_DIR}/main.py exists and dependencies are installed."
-        )
+    # ── ComfyUI (optional, used when running) ──────────────────────────────────
 
     def _comfyui_ready(self) -> bool:
         """Return True if ComfyUI API is responding."""
         try:
-            r = requests.get(f"{COMFYUI_BASE}/system_stats", timeout=3)
-            return r.status_code == 200
+            import urllib.request as r
+            with r.urlopen(f"{COMFYUI_BASE}/system_stats", timeout=3) as resp:
+                return resp.status == 200
         except Exception:
             return False
 
-    # ── ComfyUI image helpers ─────────────────────────────────────────────────
+    def _generate_comfyui(self, prompt: str, width: int, height: int,
+                           negative_prompt: str = "blurry, low quality") -> bytes:
+        """Generate image via ComfyUI REST API."""
+        import urllib.request as r
+        import json as _json
 
-    def _generate_image(
-        self,
-        prompt: str,
-        width: int = DEFAULT_WIDTH,
-        height: int = DEFAULT_HEIGHT,
-        negative_prompt: str = "blurry, low quality, watermark, text, ugly",
-    ) -> bytes:
-        """
-        Submit a prompt to ComfyUI and poll until the image is ready.
-        Returns raw PNG bytes.
-        """
         workflow = self._build_workflow(prompt, width, height, negative_prompt)
-        # Queue the prompt
-        resp = requests.post(
-            f"{COMFYUI_BASE}/prompt",
-            json={"prompt": workflow},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        prompt_id = resp.json()["prompt_id"]
+        data = _json.dumps({"prompt": workflow}).encode()
+        req  = r.Request(f"{COMFYUI_BASE}/prompt", data=data,
+                         headers={"Content-Type": "application/json"})
+        with r.urlopen(req, timeout=30) as resp:
+            prompt_id = _json.loads(resp.read())["prompt_id"]
 
-        # Poll for completion
-        image_bytes = self._poll_for_output(prompt_id, timeout=2700)  # 45 min — 4.5 min/image × 8 + buffer
-        return image_bytes
-
-    def _poll_for_output(self, prompt_id: str, timeout: int = 2700) -> bytes:
-        deadline = time.time() + timeout
+        deadline = time.time() + 2700
         while time.time() < deadline:
-            resp = requests.get(f"{COMFYUI_BASE}/history/{prompt_id}", timeout=10)
-            resp.raise_for_status()
-            history = resp.json()
+            with r.urlopen(f"{COMFYUI_BASE}/history/{prompt_id}", timeout=10) as resp:
+                history = _json.loads(resp.read())
             if prompt_id in history:
-                outputs = history[prompt_id].get("outputs", {})
-                for node_output in outputs.values():
-                    images = node_output.get("images", [])
-                    if images:
-                        img_info = images[0]
-                        img_resp = requests.get(
-                            f"{COMFYUI_BASE}/view",
-                            params={
-                                "filename": img_info["filename"],
-                                "subfolder": img_info.get("subfolder", ""),
-                                "type": img_info.get("type", "output"),
-                            },
-                            timeout=30,
-                        )
-                        img_resp.raise_for_status()
-                        return img_resp.content
+                for node_output in history[prompt_id].get("outputs", {}).values():
+                    for img_info in node_output.get("images", []):
+                        params = urllib.parse.urlencode({
+                            "filename":  img_info["filename"],
+                            "subfolder": img_info.get("subfolder", ""),
+                            "type":      img_info.get("type", "output"),
+                        })
+                        with r.urlopen(f"{COMFYUI_BASE}/view?{params}", timeout=30) as img:
+                            return img.read()
             time.sleep(2)
-        raise TimeoutError(f"ComfyUI did not return image for prompt_id={prompt_id} within {timeout}s")
 
-    def _build_workflow(self, prompt: str, width: int, height: int, negative_prompt: str = "blurry, low quality") -> dict:
-        """Minimal ComfyUI API workflow for text-to-image."""
+        raise TimeoutError(f"ComfyUI timed out for prompt_id={prompt_id}")
+
+    def _build_workflow(self, prompt: str, width: int, height: int,
+                        negative_prompt: str = "blurry, low quality") -> dict:
         return {
-            "3": {
-                "class_type": "KSampler",
-                "inputs": {
-                    "seed":         42,
-                    "steps":        DEFAULT_STEPS,
-                    "cfg":          DEFAULT_CFG,
-                    "sampler_name": DEFAULT_SAMPLER,
-                    "scheduler":    "normal",
-                    "denoise":      1.0,
-                    "model":        ["4", 0],
-                    "positive":     ["6", 0],
-                    "negative":     ["7", 0],
-                    "latent_image": ["5", 0],
-                },
-            },
-            "4": {
-                "class_type": "CheckpointLoaderSimple",
-                "inputs": {"ckpt_name": CHECKPOINT},
-            },
-            "5": {
-                "class_type": "EmptyLatentImage",
-                "inputs": {"width": width, "height": height, "batch_size": 1},
-            },
-            "6": {
-                "class_type": "CLIPTextEncode",
-                "inputs": {
-                    "text": prompt,
-                    "clip": ["4", 1],
-                },
-            },
-            "7": {
-                "class_type": "CLIPTextEncode",
-                "inputs": {
-                    "text": negative_prompt,
-                    "clip": ["4", 1],
-                },
-            },
-            "8": {
-                "class_type": "VAEDecode",
-                "inputs": {
-                    "samples": ["3", 0],
-                    "vae":     ["4", 2],
-                },
-            },
-            "9": {
-                "class_type": "SaveImage",
-                "inputs": {
-                    "filename_prefix": "factory_output",
-                    "images":          ["8", 0],
-                },
-            },
+            "3": {"class_type": "KSampler", "inputs": {
+                "seed": 42, "steps": DEFAULT_STEPS, "cfg": 7.0,
+                "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+                "model": ["4", 0], "positive": ["6", 0],
+                "negative": ["7", 0], "latent_image": ["5", 0],
+            }},
+            "4": {"class_type": "CheckpointLoaderSimple",
+                  "inputs": {"ckpt_name": CHECKPOINT}},
+            "5": {"class_type": "EmptyLatentImage",
+                  "inputs": {"width": width, "height": height, "batch_size": 1}},
+            "6": {"class_type": "CLIPTextEncode",
+                  "inputs": {"text": prompt, "clip": ["4", 1]}},
+            "7": {"class_type": "CLIPTextEncode",
+                  "inputs": {"text": negative_prompt, "clip": ["4", 1]}},
+            "8": {"class_type": "VAEDecode",
+                  "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+            "9": {"class_type": "SaveImage",
+                  "inputs": {"filename_prefix": "factory_output", "images": ["8", 0]}},
         }
 
 

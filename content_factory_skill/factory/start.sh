@@ -1,28 +1,33 @@
 #!/bin/bash
 # start.sh — start all factory agents
-# Pipeline: writing → voice → assembling → visualizing → rendering → uploading
+# Usage: bash ~/factory/start.sh
 
-set -a && source ~/factory/.env 2>/dev/null || true && set +a
+FACTORY_DIR="${FACTORY_ROOT:-$HOME/factory}"
+ENV_FILE="$FACTORY_DIR/.env"
 
-export FACTORY_ROOT="${FACTORY_ROOT:-$HOME/factory}"
-export PYTHONPATH="$FACTORY_ROOT"
+# Load .env
+if [[ -f "$ENV_FILE" ]]; then
+    while IFS='=' read -r key value; do
+        [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+        key="${key// /}"
+        value="${value// /}"
+        export "$key=$value"
+    done < <(grep -v '^\s*#' "$ENV_FILE" | grep -v '^\s*$')
+fi
 
-cd "$FACTORY_ROOT"
+export FACTORY_ROOT="$FACTORY_DIR"
+export PYTHONPATH="$FACTORY_DIR"
 
-pkill -f "foreman_agent.py"   2>/dev/null || true
-pkill -f "monitor_agent.py"   2>/dev/null || true
-pkill -f "writer_agent.py"    2>/dev/null || true
-pkill -f "voice_agent.py"     2>/dev/null || true
-pkill -f "assembler_agent.py" 2>/dev/null || true
-pkill -f "visual_agent.py"    2>/dev/null || true
-pkill -f "render_agent.py"    2>/dev/null || true
-pkill -f "upload_agent.py"    2>/dev/null || true
-sleep 1
-
+cd "$FACTORY_DIR"
 mkdir -p logs
 
-echo "Starting factory agents..."
+# Kill any existing agents cleanly
+for agent in foreman_agent monitor_agent writer_agent voice_agent assembler_agent render_agent upload_agent; do
+    pkill -f "${agent}.py" 2>/dev/null || true
+done
+sleep 1
 
+# Start all agents
 python3 agents/foreman_agent.py   >> logs/foreman_agent.log   2>&1 &
 python3 agents/monitor_agent.py   >> logs/monitor_agent.log   2>&1 &
 python3 agents/writer_agent.py    >> logs/writer_agent.log    2>&1 &
@@ -32,13 +37,11 @@ python3 agents/render_agent.py    >> logs/render_agent.log    2>&1 &
 python3 agents/upload_agent.py    >> logs/upload_agent.log    2>&1 &
 
 sleep 2
-
-echo ""
+RUNNING=$(ps aux | grep "agents/.*_agent.py" | grep -v grep | wc -l)
 echo "✓ Agents started: foreman, monitor, writer, voice, assembler, render, upload"
-echo ""
 echo "Pipeline: writing → voice → assembling → visualizing → rendering → uploading"
 echo ""
-echo "NOTE: Visual agent (ComfyUI) not started — run: bash ~/factory/start_visual.sh"
+echo "Dashboard: http://$(hostname -I | awk '{print $1}' 2>/dev/null || echo localhost):7000"
 echo ""
-echo "Dashboard: http://localhost:7000"
-echo "Submit: python3 factoryctl.py new-job \"Your topic\" --template documentary_video"
+echo "Submit a job:"
+echo "  cd $FACTORY_DIR && python3 factoryctl.py new-job \"Your topic\" --template documentary_video"

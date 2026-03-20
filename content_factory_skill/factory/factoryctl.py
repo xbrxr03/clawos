@@ -509,7 +509,7 @@ system commands:
     s.add_argument("--priority", type=int, default=5, metavar="1-10",
                    help="Scheduling priority 1-10 (default 5)")
     s.add_argument("--template", default="",
-                   choices=["", "educational_video", "short_form_video", "tutorial_video"],
+                   choices=["", "educational_video", "short_form_video", "tutorial_video", "documentary_video"],
                    metavar="TEMPLATE",
                    help="Pipeline template: educational_video, short_form_video, tutorial_video")
 

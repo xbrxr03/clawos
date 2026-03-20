@@ -2,18 +2,7 @@
 # content-factory — ClawOS skill installer
 # Installs the full automated YouTube documentary pipeline.
 #
-# What this installs:
-#   ~/factory/          — multi-agent video production system
-#   ~/.claw/skills/content-factory/     — Claw Core skill
-#   ~/.openclaw/skills/content-factory/ — OpenClaw skill
-#
-# Usage:
-#   bash install.sh
-#
-# After install:
-#   bash ~/factory/start.sh
-#   # Then in claw or WhatsApp: "make a video about the rise of Tesla"
-
+# Usage: bash install.sh
 set -euo pipefail
 
 G="\033[38;5;84m"; R="\033[38;5;203m"; B="\033[38;5;75m"
@@ -44,39 +33,35 @@ sudo apt-get install -y -qq \
   fonts-dejavu \
   wget \
   2>/dev/null || warn "apt install had errors — continuing"
-ok "ffmpeg + fonts installed"
+ok "System deps installed"
 
-# ── 2. Python packages ────────────────────────────────────────────────────────
+# ── 2. Python packages (ALL required) ────────────────────────────────────────
 step "Python packages"
 
 pip3 install -q \
+  psutil \
+  pathvalidate \
+  piper-tts \
+  requests \
+  pillow \
   google-auth-oauthlib \
   google-api-python-client \
-  pillow \
-  requests \
   --break-system-packages 2>/dev/null \
 || pip3 install -q \
+  psutil \
+  pathvalidate \
+  piper-tts \
+  requests \
+  pillow \
   google-auth-oauthlib \
   google-api-python-client \
-  pillow \
-  requests \
   --user 2>/dev/null \
-|| warn "Some Python packages failed — YouTube upload may not work"
-ok "Python packages installed"
+|| warn "Some Python packages failed"
+ok "Python packages installed (psutil, pathvalidate, piper-tts, requests, pillow, google)"
 
-# ── 3. Piper TTS ──────────────────────────────────────────────────────────────
-step "Piper TTS (voice generation)"
+# ── 3. Piper voice model ──────────────────────────────────────────────────────
+step "Piper TTS voice model"
 
-if command -v piper &>/dev/null; then
-  ok "Piper already installed"
-else
-  pip3 install piper-tts --break-system-packages -q 2>/dev/null \
-  || pip3 install piper-tts --user -q 2>/dev/null \
-  || warn "Piper install failed — voice phase will be skipped"
-  ok "Piper TTS installed"
-fi
-
-# Download voice model
 PIPER_MODEL_DIR="$HOME/.local/share/piper"
 mkdir -p "$PIPER_MODEL_DIR"
 PIPER_MODEL="$PIPER_MODEL_DIR/en_US-lessac-medium.onnx"
@@ -93,70 +78,87 @@ else
   ok "Voice model already present"
 fi
 
+# Verify piper works
+if piper --model "$PIPER_MODEL" --output_file /tmp/piper_test.wav <<< "test" 2>/dev/null; then
+  rm -f /tmp/piper_test.wav
+  ok "Piper TTS verified working"
+else
+  warn "Piper test failed — check installation"
+fi
+
 # ── 4. Install factory ────────────────────────────────────────────────────────
 step "Installing factory pipeline"
 
 if [ -d "$FACTORY_DIR" ]; then
-  info "Factory already exists at $FACTORY_DIR — updating agents only"
-  # Update agents and config from this package
-  cp "$SCRIPT_DIR/factory/agents/render_agent.py"  "$FACTORY_DIR/agents/"
-  cp "$SCRIPT_DIR/factory/agents/upload_agent.py"  "$FACTORY_DIR/agents/"
-  cp "$SCRIPT_DIR/factory/core/config.py"           "$FACTORY_DIR/core/"
-  cp "$SCRIPT_DIR/factory/schemas/job_templates.json" "$FACTORY_DIR/schemas/"
-  ok "Factory agents updated"
+  info "Factory exists at $FACTORY_DIR — updating files"
+  cp -r "$SCRIPT_DIR/factory/." "$FACTORY_DIR/"
+  ok "Factory updated"
 else
   cp -r "$SCRIPT_DIR/factory" "$FACTORY_DIR"
   ok "Factory installed to $FACTORY_DIR"
 fi
 
-# Ensure all required dirs exist
+# Ensure all dirs exist
 mkdir -p \
-  "$FACTORY_DIR/jobs/inbox" \
-  "$FACTORY_DIR/jobs/active" \
+  "$FACTORY_DIR/jobs/inbox"     \
+  "$FACTORY_DIR/jobs/active"    \
   "$FACTORY_DIR/jobs/completed" \
-  "$FACTORY_DIR/jobs/failed" \
-  "$FACTORY_DIR/artifacts" \
-  "$FACTORY_DIR/logs" \
-  "$FACTORY_DIR/state/agents" \
-  "$FACTORY_DIR/state/events" \
-  "$FACTORY_DIR/state/leases" \
-  "$FACTORY_DIR/state/metrics" \
+  "$FACTORY_DIR/jobs/failed"    \
+  "$FACTORY_DIR/artifacts"      \
+  "$FACTORY_DIR/logs"           \
+  "$FACTORY_DIR/state/agents"   \
+  "$FACTORY_DIR/state/events"   \
+  "$FACTORY_DIR/state/leases"   \
+  "$FACTORY_DIR/state/metrics"  \
   "$FACTORY_DIR/assets/music"
 
-chmod +x "$FACTORY_DIR/start.sh" "$FACTORY_DIR/stop.sh" 2>/dev/null || true
-ok "Factory directories ready"
+chmod +x "$FACTORY_DIR/start.sh" "$FACTORY_DIR/stop.sh" \
+         "$FACTORY_DIR/factoryctl" 2>/dev/null || true
+
+# Write .env with correct paths
+cat > "$FACTORY_DIR/.env" << ENV
+FACTORY_ROOT=$FACTORY_DIR
+PYTHONPATH=$FACTORY_DIR
+OLLAMA_MODEL=qwen2.5:7b
+PIPER_MODEL_DIR=$HOME/.local/share/piper
+PIPER_VOICE=en_US-lessac-medium.onnx
+COMFYUI_DIR=
+ENV
+ok "Factory ready at $FACTORY_DIR"
 
 # ── 5. Install skill for Claw Core ───────────────────────────────────────────
-step "Installing skill (Claw Core)"
+step "Installing skill (Claw Core + OpenClaw)"
 
-mkdir -p "$CLAW_SKILL_DIR"
+mkdir -p "$CLAW_SKILL_DIR" "$OC_SKILL_DIR"
 cp "$SCRIPT_DIR/SKILL.md"          "$CLAW_SKILL_DIR/SKILL.md"
 cp "$SCRIPT_DIR/youtube_upload.py" "$CLAW_SKILL_DIR/youtube_upload.py"
-
-if [ ! -f "$CLAW_SKILL_DIR/schedule.json" ]; then
-  echo '{"upload_time": "09:00", "timezone": "local"}' > "$CLAW_SKILL_DIR/schedule.json"
-fi
-ok "Claw Core skill ready (~/.claw/skills/content-factory/)"
-
-# ── 6. Install skill for OpenClaw ────────────────────────────────────────────
-step "Installing skill (OpenClaw)"
-
-mkdir -p "$OC_SKILL_DIR"
 cp "$SCRIPT_DIR/SKILL.md"          "$OC_SKILL_DIR/SKILL.md"
 cp "$SCRIPT_DIR/youtube_upload.py" "$OC_SKILL_DIR/youtube_upload.py"
 
-if [ ! -f "$OC_SKILL_DIR/schedule.json" ]; then
-  echo '{"upload_time": "09:00", "timezone": "local"}' > "$OC_SKILL_DIR/schedule.json"
-fi
-ok "OpenClaw skill ready (~/.openclaw/skills/content-factory/)"
+for dir in "$CLAW_SKILL_DIR" "$OC_SKILL_DIR"; do
+  if [ ! -f "$dir/schedule.json" ]; then
+    echo '{"upload_time": "09:00", "timezone": "local"}' > "$dir/schedule.json"
+  fi
+done
 
-# ── 7. Background music dir ───────────────────────────────────────────────────
+ok "Skill installed for Claw Core (~/.claw/skills/content-factory/)"
+ok "Skill installed for OpenClaw (~/.openclaw/skills/content-factory/)"
+
+# ── 6. Background music dir ───────────────────────────────────────────────────
 step "Assets"
-
 mkdir -p "$FACTORY_DIR/assets/music"
 info "Drop royalty-free .mp3 files in: $FACTORY_DIR/assets/music/"
 info "Recommended source: pixabay.com/music (free, no attribution needed)"
 ok "Assets directory ready"
+
+# ── 7. Run test suite ────────────────────────────────────────────────────────
+step "Running preflight tests"
+
+if PYTHONPATH="$FACTORY_DIR" python3 "$SCRIPT_DIR/test_factory.py" --quick 2>/dev/null; then
+  ok "All preflight tests passed"
+else
+  warn "Some tests failed — check output above"
+fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
@@ -167,18 +169,14 @@ echo ""
 echo -e "  ${BOLD}Start the factory:${RESET}"
 echo -e "    ${B}bash ~/factory/start.sh${RESET}"
 echo ""
-echo -e "  ${BOLD}Make your first video:${RESET}"
-echo -e "    ${B}claw${RESET}  then: ${D}make a video about the rise and fall of Kodak${RESET}"
-echo -e "    ${D}or via WhatsApp if OpenClaw gateway is running${RESET}"
+echo -e "  ${BOLD}Submit a job:${RESET}"
+echo -e "    ${B}cd ~/factory && python3 factoryctl.py new-job \"your topic\" --template documentary_video${RESET}"
 echo ""
-echo -e "  ${BOLD}Check pipeline status:${RESET}"
-echo -e "    ${B}cd ~/factory && python3 factoryctl.py status${RESET}"
-echo -e "    ${B}http://localhost:7000${RESET}  (dashboard)"
+echo -e "  ${BOLD}In claw REPL:${RESET}"
+echo -e "    ${D}make a video about the rise and fall of Kodak${RESET}"
 echo ""
-echo -e "  ${BOLD}Set up YouTube upload (optional):${RESET}"
+echo -e "  ${BOLD}Dashboard:${RESET} ${B}http://localhost:7000${RESET}"
+echo ""
+echo -e "  ${BOLD}YouTube upload (optional):${RESET}"
 echo -e "    ${D}Message Jarvis: 'youtube setup'${RESET}"
-echo ""
-echo -e "  ${BOLD}Visual images (optional, needs ComfyUI):${RESET}"
-echo -e "    ${B}bash ~/factory/start_visual.sh${RESET}"
-echo -e "    ${D}Without ComfyUI, Pollinations.ai is used as fallback (free, online)${RESET}"
 echo ""

@@ -1,26 +1,28 @@
 """
 voice_agent.py — narration audio generation.
 
-Uses Piper TTS (https://github.com/rhasspy/piper) — local, CPU-only.
-Reads script.txt produced by the writer agent.
+Uses Piper TTS — local, CPU-only.
+Reads script.txt produced by writer_agent.
 Produces: voice.wav
 
-Resume logic: if voice.wav already exists, skip generation entirely.
+Resume logic: if voice.wav already exists, skip entirely.
 """
 
+import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
 
 from core.agent_base import AgentBase
 
-
-import os
-
+# ── config — all overridable via .env ──────────────────────────────────────────
 PIPER_BIN       = os.environ.get("PIPER_BIN",       "piper")
 PIPER_MODEL     = os.environ.get("PIPER_VOICE",     "en_US-lessac-medium.onnx")
-PIPER_MODEL_DIR = os.environ.get("PIPER_MODEL_DIR", "/usr/share/piper/voices")
-SAMPLE_RATE     = 22050
+
+# Default model dir — checks ~/.local/share/piper first (pip install piper-tts)
+_DEFAULT_MODEL_DIR = str(Path.home() / ".local" / "share" / "piper")
+PIPER_MODEL_DIR = os.environ.get("PIPER_MODEL_DIR", _DEFAULT_MODEL_DIR)
 
 
 class VoiceAgent(AgentBase):
@@ -40,47 +42,46 @@ class VoiceAgent(AgentBase):
             self.logger.info("[voice] voice.wav exists — skipping")
             return
 
-        # Load the script
         script = self.read_artifact(job_id, "script.txt")
         if not script:
             raise RuntimeError("script.txt not found — writer must run first")
 
-        # Read voice model from template pipeline_config if available
-        pipeline_cfg  = job.get("pipeline_config") or {}
-        voice_cfg     = pipeline_cfg.get("voice", {})
-        voice_model   = voice_cfg.get("piper_voice", PIPER_MODEL)
-        speech_speed  = voice_cfg.get("speed", 1.0)
+        # Clean markdown before sending to TTS
+        script = self._clean_script(script)
+
+        pipeline_cfg = job.get("pipeline_config") or {}
+        voice_cfg    = pipeline_cfg.get("voice", {})
+        voice_model  = voice_cfg.get("piper_voice", PIPER_MODEL)
 
         self.logger.info(f"[voice] generating narration ({len(script)} chars, model={voice_model})")
         wav_bytes = self._synthesize(script, model=voice_model)
         self.write_artifact(job_id, "voice.wav", wav_bytes)
         self.logger.info(f"[voice] narration written ({len(wav_bytes):,} bytes)")
 
-    # ── Piper helpers ─────────────────────────────────────────────────────────
-
     def _synthesize(self, text: str, model: str = PIPER_MODEL) -> bytes:
-        """
-        Pipe text through Piper and return WAV bytes.
-
-        Piper usage: echo "text" | piper --model <model> --output_file <out.wav>
-        We use a temp file for the output then read it back.
-        """
+        """Pipe text through Piper and return WAV bytes."""
+        # Resolve model path
         model_path = Path(PIPER_MODEL_DIR) / model
+        if not model_path.exists():
+            # Try without .onnx extension check — maybe it's a full path
+            if Path(model).exists():
+                model_path = Path(model)
+            else:
+                raise RuntimeError(
+                    f"Piper voice model not found: {model_path}\n"
+                    f"Run: piper --download-voices or check PIPER_MODEL_DIR"
+                )
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp_path = Path(tmp.name)
 
         try:
             result = subprocess.run(
-                [
-                    PIPER_BIN,
-                    "--model",       str(model_path),
-                    "--output_file", str(tmp_path),
-                ],
+                [PIPER_BIN, "--model", str(model_path), "--output_file", str(tmp_path)],
                 input=text,
                 capture_output=True,
                 text=True,
-                timeout=600,   # long scripts can take time on CPU
+                timeout=600,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"Piper error: {result.stderr.strip()}")
@@ -89,14 +90,12 @@ class VoiceAgent(AgentBase):
             tmp_path.unlink(missing_ok=True)
 
     def _clean_script(self, text: str) -> str:
-        """
-        Strip any markdown formatting from the script before sending to TTS.
-        """
-        import re
-        text = re.sub(r"#+\s", "", text)       # headings
-        text = re.sub(r"\*+([^*]+)\*+", r"\1", text)  # bold/italic
-        text = re.sub(r"`[^`]+`", "", text)    # code
-        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)  # links
+        """Strip markdown formatting before sending to TTS."""
+        text = re.sub(r"#+\s", "", text)
+        text = re.sub(r"\*+([^*]+)\*+", r"\1", text)
+        text = re.sub(r"`[^`]+`", "", text)
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
         return text.strip()
 
 
