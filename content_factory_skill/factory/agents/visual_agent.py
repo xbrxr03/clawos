@@ -1,37 +1,30 @@
 """
-visual_agent.py — image and thumbnail generation.
+visual_agent.py — image generation via ComfyUI + DreamShaper 8.
 
-Primary:  Pollinations.ai (free, no API key, no setup required)
-Optional: ComfyUI via REST API (http://localhost:8188) — used if running
-
+Starts ComfyUI automatically if not already running.
 Reads shots.json produced by writer_agent.
-Produces: image_01.png … image_N.png, thumbnail.png
+Produces: image_01.png ... image_N.png, thumbnail.png
 
-Resume logic: each image file is checked individually — only missing ones
-are generated. thumbnail is only generated after all shot images exist.
+Resume logic: each image checked individually — only missing ones generated.
 """
 
 import json
 import os
+import subprocess
 import time
-import urllib.request
-import urllib.parse
-import urllib.error
+import requests
 from pathlib import Path
 
 from core.agent_base import AgentBase
 
-# ── config ─────────────────────────────────────────────────────────────────────
-COMFYUI_BASE    = os.environ.get("COMFYUI_BASE",         "http://localhost:8188")
-COMFYUI_DIR     = os.environ.get("COMFYUI_DIR",          "")   # empty = don't try
-DEFAULT_WIDTH   = int(os.environ.get("VISUAL_IMAGE_WIDTH",  "512"))
-DEFAULT_HEIGHT  = int(os.environ.get("VISUAL_IMAGE_HEIGHT", "512"))
-DEFAULT_STEPS   = int(os.environ.get("VISUAL_STEPS",        "15"))
-CHECKPOINT      = os.environ.get("COMFYUI_CHECKPOINT",   "dreamshaper.safetensors")
-
-# Pollinations.ai — free, no API key
-POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}?width={w}&height={h}&nologo=true"
-POLLINATIONS_TIMEOUT = 60   # seconds per image
+COMFYUI_BASE     = os.environ.get("COMFYUI_BASE",         "http://localhost:8188")
+COMFYUI_DIR      = os.environ.get("COMFYUI_DIR",          str(Path.home() / "ComfyUI"))
+CHECKPOINT       = os.environ.get("COMFYUI_CHECKPOINT",   "dreamshaper_8.safetensors")
+DEFAULT_WIDTH    = int(os.environ.get("VISUAL_IMAGE_WIDTH",   "512"))
+DEFAULT_HEIGHT   = int(os.environ.get("VISUAL_IMAGE_HEIGHT",  "512"))
+DEFAULT_STEPS    = int(os.environ.get("VISUAL_STEPS",         "20"))
+DEFAULT_CFG      = float(os.environ.get("VISUAL_CFG",         "7.0"))
+STARTUP_TIMEOUT  = int(os.environ.get("COMFYUI_STARTUP_TIMEOUT", "180"))
 
 
 class VisualAgent(AgentBase):
@@ -52,124 +45,169 @@ class VisualAgent(AgentBase):
             raise RuntimeError("shots.json not found — writer must run first")
         shots = json.loads(shots_raw)
 
-        # Decide which backend to use
-        use_comfyui = self._comfyui_ready()
-        backend = "ComfyUI" if use_comfyui else "Pollinations.ai"
-        self.logger.info(f"[visual] using backend: {backend}")
+        comfyui_proc = self._ensure_comfyui_running()
 
-        generated_images = []
+        try:
+            for shot in shots:
+                num      = shot.get("shot_number", 1)
+                filename = f"image_{num:02d}.png"
 
-        for shot in shots:
-            num      = shot.get("shot_number", 1)
-            filename = f"image_{num:02d}.png"
+                if self.artifact_exists(job_id, filename):
+                    self.logger.info(f"[visual] {filename} exists — skipping")
+                    continue
 
-            if self.artifact_exists(job_id, filename):
-                self.logger.info(f"[visual] {filename} exists, skipping")
-                generated_images.append(str(self.artifact_path(job_id, filename)))
+                prompt = shot.get("image_prompt", f"shot {num}")
+                width  = shot.get("width",  DEFAULT_WIDTH)
+                height = shot.get("height", DEFAULT_HEIGHT)
+                neg    = shot.get("negative_prompt",
+                                  "blurry, low quality, watermark, text, ugly")
+
+                self.logger.info(f"[visual] generating {filename}: {prompt[:60]}...")
+                image_bytes = self._generate_image(prompt, width=width,
+                                                   height=height, negative_prompt=neg)
+                self.write_artifact(job_id, filename, image_bytes)
+                size_kb = len(image_bytes) // 1024
+                self.logger.info(f"[visual] saved {filename} ({size_kb}KB)")
+                time.sleep(1)
+
+            # Thumbnail
+            if not self.artifact_exists(job_id, "thumbnail.png"):
+                art_dir = self.artifact_dir(job_id)
+                if list(art_dir.glob("image_*.png")) and shots:
+                    thumb_prompt = (
+                        shots[0].get("image_prompt", "documentary thumbnail") +
+                        ", bold centered composition, vibrant colours, YouTube thumbnail"
+                    )
+                    self.logger.info("[visual] generating thumbnail")
+                    thumb = self._generate_image(thumb_prompt, width=512, height=512)
+                    self.write_artifact(job_id, "thumbnail.png", thumb)
+                    self.logger.info("[visual] thumbnail saved")
+            else:
+                self.logger.info("[visual] thumbnail.png exists — skipping")
+
+        finally:
+            if comfyui_proc is not None:
+                self.logger.info("[visual] shutting down ComfyUI to free RAM")
+                comfyui_proc.terminate()
+                try:
+                    comfyui_proc.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    comfyui_proc.kill()
+                self.logger.info("[visual] ComfyUI stopped")
+                self._restart_agents()
+
+    def _restart_agents(self):
+        factory_dir = Path(os.environ.get("FACTORY_ROOT",
+                                           str(Path(__file__).parent.parent)))
+        for agent in ["foreman_agent", "monitor_agent", "writer_agent",
+                      "voice_agent", "assembler_agent"]:
+            script   = factory_dir / "agents" / f"{agent}.py"
+            log_file = factory_dir / "logs"   / f"{agent}.log"
+            if not script.exists():
                 continue
-
-            prompt = shot.get("image_prompt", f"image for shot {num}")
-            width  = shot.get("width",  DEFAULT_WIDTH)
-            height = shot.get("height", DEFAULT_HEIGHT)
-            neg    = shot.get("negative_prompt", "blurry, low quality, watermark")
-
-            self.logger.info(f"[visual] generating {filename} via {backend}: {prompt[:60]}…")
-
-            if use_comfyui:
-                image_bytes = self._generate_comfyui(prompt, width, height, neg)
-            else:
-                image_bytes = self._generate_pollinations(prompt, width, height)
-
-            dest = self.write_artifact(job_id, filename, image_bytes)
-            generated_images.append(str(dest))
-            self.logger.info(f"[visual] saved {filename} ({len(image_bytes):,} bytes)")
-            time.sleep(1)
-
-        # Generate thumbnail
-        if not self.artifact_exists(job_id, "thumbnail.png") and generated_images:
-            thumb_prompt = (
-                shots[0].get("image_prompt", "thumbnail") +
-                ", centered composition, vibrant colours, thumbnail style"
+            subprocess.Popen(
+                ["python3", str(script)],
+                stdout=open(log_file, "a"),
+                stderr=subprocess.STDOUT,
+                env=os.environ.copy(),
             )
-            self.logger.info("[visual] generating thumbnail")
-            if use_comfyui:
-                thumb_bytes = self._generate_comfyui(thumb_prompt, 512, 512)
-            else:
-                thumb_bytes = self._generate_pollinations(thumb_prompt, 512, 512)
-            self.write_artifact(job_id, "thumbnail.png", thumb_bytes)
-            self.logger.info("[visual] thumbnail saved")
-        else:
-            self.logger.info("[visual] thumbnail.png exists, skipping")
+            self.logger.info(f"[visual] restarted {agent}")
 
-    # ── Pollinations.ai (free fallback, no deps) ────────────────────────────────
+    def _ensure_comfyui_running(self):
+        if self._comfyui_ready():
+            self.logger.info("[visual] ComfyUI already running")
+            return None
 
-    def _generate_pollinations(self, prompt: str, width: int, height: int) -> bytes:
-        """Generate image via Pollinations.ai — free, no API key required."""
-        encoded = urllib.parse.quote(prompt)
-        url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true"
+        comfyui_path = Path(COMFYUI_DIR)
+        if not comfyui_path.exists() or not (comfyui_path / "main.py").exists():
+            raise RuntimeError(
+                f"ComfyUI not found at {COMFYUI_DIR}\n"
+                f"Run: cd ~/clawos/content_factory_skill && bash install.sh"
+            )
 
-        for attempt in range(3):
-            try:
-                req = urllib.request.Request(url, headers={"User-Agent": "ClawOS-Factory/1.0"})
-                with urllib.request.urlopen(req, timeout=POLLINATIONS_TIMEOUT) as resp:
-                    data = resp.read()
-                    if len(data) > 1000:   # valid image is at least ~1KB
-                        return data
-                    raise ValueError(f"Response too small ({len(data)} bytes)")
-            except Exception as e:
-                self.logger.warning(f"[visual] Pollinations attempt {attempt+1}/3 failed: {e}")
-                if attempt < 2:
-                    time.sleep(5)
+        ckpt = comfyui_path / "models" / "checkpoints" / CHECKPOINT
+        if not ckpt.exists():
+            raise RuntimeError(
+                f"Checkpoint not found: {ckpt}\n"
+                f"Run: cd ~/clawos/content_factory_skill && bash install.sh"
+            )
 
-        raise RuntimeError(f"Pollinations.ai failed after 3 attempts for prompt: {prompt[:60]}")
+        self.logger.info("[visual] stopping other agents to free RAM for ComfyUI...")
+        for agent in ["foreman_agent", "monitor_agent", "writer_agent",
+                      "voice_agent", "assembler_agent"]:
+            subprocess.run(["pkill", "-f", f"{agent}.py"], capture_output=True)
+        time.sleep(3)
 
-    # ── ComfyUI (optional, used when running) ──────────────────────────────────
+        self.logger.info(f"[visual] starting ComfyUI from {COMFYUI_DIR}...")
+        proc = subprocess.Popen(
+            ["python3", "main.py", "--listen", "0.0.0.0"],
+            cwd=COMFYUI_DIR,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        deadline = time.time() + STARTUP_TIMEOUT
+        while time.time() < deadline:
+            if self._comfyui_ready():
+                self.logger.info("[visual] ComfyUI ready")
+                return proc
+            if proc.poll() is not None:
+                raise RuntimeError(
+                    "ComfyUI exited during startup. "
+                    f"Check logs: journalctl or {COMFYUI_DIR}"
+                )
+            time.sleep(3)
+
+        proc.terminate()
+        raise RuntimeError(
+            f"ComfyUI did not start within {STARTUP_TIMEOUT}s. "
+            f"Try starting it manually: cd {COMFYUI_DIR} && python3 main.py --listen 0.0.0.0"
+        )
 
     def _comfyui_ready(self) -> bool:
-        """Return True if ComfyUI API is responding."""
         try:
-            import urllib.request as r
-            with r.urlopen(f"{COMFYUI_BASE}/system_stats", timeout=3) as resp:
-                return resp.status == 200
+            r = requests.get(f"{COMFYUI_BASE}/system_stats", timeout=3)
+            return r.status_code == 200
         except Exception:
             return False
 
-    def _generate_comfyui(self, prompt: str, width: int, height: int,
-                           negative_prompt: str = "blurry, low quality") -> bytes:
-        """Generate image via ComfyUI REST API."""
-        import urllib.request as r
-        import json as _json
-
+    def _generate_image(self, prompt: str, width: int = DEFAULT_WIDTH,
+                        height: int = DEFAULT_HEIGHT,
+                        negative_prompt: str = "blurry, low quality") -> bytes:
         workflow = self._build_workflow(prompt, width, height, negative_prompt)
-        data = _json.dumps({"prompt": workflow}).encode()
-        req  = r.Request(f"{COMFYUI_BASE}/prompt", data=data,
-                         headers={"Content-Type": "application/json"})
-        with r.urlopen(req, timeout=30) as resp:
-            prompt_id = _json.loads(resp.read())["prompt_id"]
+        resp = requests.post(f"{COMFYUI_BASE}/prompt",
+                             json={"prompt": workflow}, timeout=30)
+        resp.raise_for_status()
+        prompt_id = resp.json()["prompt_id"]
 
         deadline = time.time() + 2700
         while time.time() < deadline:
-            with r.urlopen(f"{COMFYUI_BASE}/history/{prompt_id}", timeout=10) as resp:
-                history = _json.loads(resp.read())
+            resp = requests.get(f"{COMFYUI_BASE}/history/{prompt_id}", timeout=10)
+            resp.raise_for_status()
+            history = resp.json()
             if prompt_id in history:
-                for node_output in history[prompt_id].get("outputs", {}).values():
-                    for img_info in node_output.get("images", []):
-                        params = urllib.parse.urlencode({
-                            "filename":  img_info["filename"],
-                            "subfolder": img_info.get("subfolder", ""),
-                            "type":      img_info.get("type", "output"),
-                        })
-                        with r.urlopen(f"{COMFYUI_BASE}/view?{params}", timeout=30) as img:
-                            return img.read()
+                for node_out in history[prompt_id].get("outputs", {}).values():
+                    for img in node_out.get("images", []):
+                        r = requests.get(
+                            f"{COMFYUI_BASE}/view",
+                            params={"filename": img["filename"],
+                                    "subfolder": img.get("subfolder", ""),
+                                    "type": img.get("type", "output")},
+                            timeout=60,
+                        )
+                        r.raise_for_status()
+                        return r.content
             time.sleep(2)
 
         raise TimeoutError(f"ComfyUI timed out for prompt_id={prompt_id}")
 
     def _build_workflow(self, prompt: str, width: int, height: int,
                         negative_prompt: str = "blurry, low quality") -> dict:
+        import random
         return {
             "3": {"class_type": "KSampler", "inputs": {
-                "seed": 42, "steps": DEFAULT_STEPS, "cfg": 7.0,
+                "seed": random.randint(0, 2**32),
+                "steps": DEFAULT_STEPS, "cfg": DEFAULT_CFG,
                 "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
                 "model": ["4", 0], "positive": ["6", 0],
                 "negative": ["7", 0], "latent_image": ["5", 0],
@@ -185,7 +223,7 @@ class VisualAgent(AgentBase):
             "8": {"class_type": "VAEDecode",
                   "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
             "9": {"class_type": "SaveImage",
-                  "inputs": {"filename_prefix": "factory_output", "images": ["8", 0]}},
+                  "inputs": {"filename_prefix": "cf_output", "images": ["8", 0]}},
         }
 
 
