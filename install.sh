@@ -1,40 +1,55 @@
 #!/bin/bash
 # ClawOS — one-command installer
-# curl -fsSL https://clawos.dev/install.sh | bash
-#
-# Installs on Ubuntu 22.04/24.04, Debian 12+, Raspberry Pi OS
-# Requirements: 8GB RAM minimum, internet for first run only
+# curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 set -euo pipefail
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
   BOLD="\033[1m"; RESET="\033[0m"
-  G="\033[38;5;84m"; R="\033[38;5;203m"; B="\033[38;5;75m"
-  P="\033[38;5;141m"; D="\033[2m\033[38;5;245m"; Y="\033[38;5;220m"
+  G="\033[38;5;84m";  R="\033[38;5;203m"; B="\033[38;5;75m"
+  P="\033[38;5;141m"; D="\033[2m\033[38;5;245m"
+  Y="\033[38;5;220m"; W="\033[38;5;255m"
 else
-  BOLD=""; RESET=""; G=""; R=""; B=""; P=""; D=""; Y=""
+  BOLD=""; RESET=""; G=""; R=""; B=""; P=""; D=""; Y=""; W=""
 fi
 
-step()  { echo -e "\n${B}${BOLD}  ──${RESET}  $1"; }
+# ── Helpers ───────────────────────────────────────────────────────────────────
+divider() { echo -e "${D}  ──────────────────────────────────────────────────────${RESET}"; }
+step()  { echo -e "\n${B}${BOLD}  ◆${RESET}  ${W}${BOLD}$1${RESET}"; }
 ok()    { echo -e "  ${G}✓${RESET}  $1"; }
 info()  { echo -e "  ${D}·  $1${RESET}"; }
-warn()  { echo -e "  ${Y}!${RESET}  $1"; }
-die()   { echo -e "\n  ${R}✗${RESET}  $1\n"; exit 1; }
+warn()  { echo -e "  ${Y}▲${RESET}  ${Y}$1${RESET}"; }
+die()   { echo -e "\n  ${R}✗  $1${RESET}\n"; exit 1; }
+
+spinner() {
+  local pid=$1 msg=$2
+  local frames=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+  local i=0
+  while kill -0 "$pid" 2>/dev/null; do
+    printf "\r  ${B}${frames[$i]}${RESET}  ${D}%s${RESET}   " "$msg"
+    i=$(( (i+1) % ${#frames[@]} ))
+    sleep 0.08
+  done
+  printf "\r\033[K"
+}
 
 # ── Banner ────────────────────────────────────────────────────────────────────
+clear
+echo ""
 echo -e "${P}${BOLD}"
 cat << 'BANNER'
-
-  ██████╗██╗      █████╗ ██╗    ██╗ ██████╗ ███████╗
- ██╔════╝██║     ██╔══██╗██║    ██║██╔═══██╗██╔════╝
- ██║     ██║     ███████║██║ █╗ ██║██║   ██║███████╗
- ██║     ██║     ██╔══██║██║███╗██║██║   ██║╚════██║
- ╚██████╗███████╗██║  ██║╚███╔███╔╝╚██████╔╝███████║
-  ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝  ╚═════╝ ╚══════╝
-
+   ██████╗██╗      █████╗ ██╗    ██╗ ██████╗ ███████╗
+  ██╔════╝██║     ██╔══██╗██║    ██║██╔═══██╗██╔════╝
+  ██║     ██║     ███████║██║ █╗ ██║██║   ██║███████╗
+  ██║     ██║     ██╔══██║██║███╗██║██║   ██║╚════██║
+  ╚██████╗███████╗██║  ██║╚███╔███╔╝╚██████╔╝███████║
+   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝  ╚═════╝ ╚══════╝
 BANNER
-echo -e "${RESET}${D}  Local AI agent OS — offline, private, free${RESET}"
-echo -e "${D}  ──────────────────────────────────────────────${RESET}"
+echo -e "${RESET}"
+echo -e "  ${W}${BOLD}Agent-native OS. Offline. Private. Free.${RESET}"
+echo -e "  ${D}github.com/xbrxr03/clawos${RESET}"
+echo ""
+divider
 echo ""
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -42,96 +57,119 @@ CLAWOS_REPO="${CLAWOS_REPO:-https://github.com/xbrxr03/clawos}"
 INSTALL_DIR="${CLAWOS_DIR:-$HOME/clawos}"
 CLAWOS_BRANCH="${CLAWOS_BRANCH:-main}"
 SKIP_MODEL="${SKIP_MODEL:-false}"
-SKIP_OPENCLAW="${SKIP_OPENCLAW:-false}"
-SKIP_SKILLS="${SKIP_SKILLS:-false}"
 MIN_RAM_GB=7
+START_TIME=$SECONDS
 
 # ── Preflight ─────────────────────────────────────────────────────────────────
-step "Checking system"
+step "Checking your system"
 
 if [ -f /etc/os-release ]; then
   . /etc/os-release
   case "$ID" in
-    ubuntu|debian|raspbian|linuxmint|pop) ;;
-    *) warn "Untested OS: $ID. Proceeding anyway — may need manual fixes." ;;
+    ubuntu|debian|raspbian|linuxmint|pop) ok "OS: $PRETTY_NAME" ;;
+    *) warn "Untested OS: $ID — proceeding anyway" ;;
   esac
-else
-  warn "Cannot detect OS. Proceeding."
 fi
 
 RAM_KB=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
 RAM_GB=$((RAM_KB / 1024 / 1024))
-if [ "$RAM_GB" -lt "$MIN_RAM_GB" ]; then
-  die "Not enough RAM: ${RAM_GB}GB detected, ${MIN_RAM_GB}GB required."
-fi
+[ "$RAM_GB" -lt "$MIN_RAM_GB" ] && die "Not enough RAM: ${RAM_GB}GB found, ${MIN_RAM_GB}GB required."
 ok "RAM: ${RAM_GB}GB"
 
 DISK_FREE=$(df -BG "$HOME" | awk 'NR==2 {gsub("G",""); print $4}')
-if [ "${DISK_FREE:-0}" -lt 10 ]; then
-  die "Not enough disk: ${DISK_FREE}GB free, need 10GB."
-fi
+[ "${DISK_FREE:-0}" -lt 10 ] && die "Not enough disk: ${DISK_FREE}GB free, need 10GB."
 ok "Disk: ${DISK_FREE}GB free"
 
-if ! command -v python3 &>/dev/null; then
-  die "python3 not found. Install it: sudo apt-get install -y python3"
-fi
+command -v python3 &>/dev/null || die "python3 not found: sudo apt-get install -y python3"
 PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-info "Python $PY_VER"
-ok "Preflight passed"
+ok "Python $PY_VER"
+
+if   [ "$RAM_GB" -ge 32 ]; then PROFILE="performance"; TIER="Tier C  GPU workstation"
+elif [ "$RAM_GB" -ge 14 ]; then PROFILE="balanced";    TIER="Tier B  workstation"
+else                             PROFILE="lowram";      TIER="Tier A  mini PC"
+fi
+ok "Hardware: $TIER"
 
 # ── System packages ───────────────────────────────────────────────────────────
-step "Installing system dependencies"
+step "Installing system packages"
 
-sudo apt-get update -qq 2>/dev/null || warn "apt update had errors — continuing"
-sudo apt-get install -y -qq \
-  python3-pip python3-venv \
-  git curl wget \
-  sqlite3 \
-  2>/dev/null || die "Failed to install system packages"
-ok "System packages"
+(sudo apt-get update -qq 2>/dev/null && \
+ sudo apt-get install -y -qq python3-pip python3-venv git curl wget sqlite3 2>/dev/null) \
+  & spinner $! "Updating apt and installing dependencies"
+wait $! || die "Failed to install system packages"
+ok "git  curl  sqlite3  python3-pip"
 
 # ── Ollama ────────────────────────────────────────────────────────────────────
-step "Setting up Ollama (local model runtime)"
+step "Setting up Ollama"
 
 if command -v ollama &>/dev/null; then
   ok "Ollama already installed"
 else
-  info "Downloading Ollama..."
-  curl -fsSL https://ollama.com/install.sh | sh >/dev/null 2>&1 \
-    || die "Ollama install failed. Try: curl -fsSL https://ollama.com/install.sh | sh"
+  (curl -fsSL https://ollama.com/install.sh | sh >/dev/null 2>&1) \
+    & spinner $! "Downloading and installing Ollama"
+  wait $! || die "Ollama install failed. Run: curl -fsSL https://ollama.com/install.sh | sh"
   ok "Ollama installed"
 fi
 
 if ! curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
-  info "Starting Ollama..."
   nohup ollama serve >/dev/null 2>&1 &
-  sleep 3
-  if ! curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
-    warn "Ollama not responding — will retry after install"
-  else
-    ok "Ollama running"
-  fi
+  for i in 1 2 3 4 5; do
+    sleep 1
+    curl -sf http://localhost:11434/api/tags >/dev/null 2>&1 && break
+  done
+  curl -sf http://localhost:11434/api/tags >/dev/null 2>&1 \
+    && ok "Ollama server running" \
+    || warn "Ollama not responding — run 'ollama serve' manually if needed"
 else
-  ok "Ollama running"
+  ok "Ollama server running"
 fi
 
-# ── Clone / update ClawOS ─────────────────────────────────────────────────────
-step "Installing ClawOS"
+# ── Node.js ───────────────────────────────────────────────────────────────────
+step "Installing Node.js"
+
+if command -v node &>/dev/null; then
+  ok "Node.js $(node --version) already installed"
+else
+  (curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - >/dev/null 2>&1 \
+    && sudo apt-get install -y -qq nodejs 2>/dev/null) \
+    & spinner $! "Installing Node.js LTS"
+  wait $! 2>/dev/null || true
+  command -v node &>/dev/null \
+    && ok "Node.js $(node --version)" \
+    || warn "Node.js install failed — OpenClaw will be skipped"
+fi
+
+# ── OpenClaw ──────────────────────────────────────────────────────────────────
+step "Installing OpenClaw"
+
+if ! command -v node &>/dev/null; then
+  warn "Skipping — Node.js not available"
+elif command -v openclaw &>/dev/null; then
+  ok "OpenClaw already installed"
+else
+  (npm install -g openclaw@latest --quiet 2>/dev/null) \
+    & spinner $! "Installing OpenClaw via npm"
+  wait $! || warn "OpenClaw npm install failed — try: sudo npm install -g openclaw"
+  command -v openclaw &>/dev/null \
+    && ok "OpenClaw installed" \
+    || warn "OpenClaw not found after install"
+fi
+
+# ── Clone ClawOS ──────────────────────────────────────────────────────────────
+step "Installing Claw Core"
 
 if [ -d "$INSTALL_DIR/clawos_core" ]; then
-  info "ClawOS already present at $INSTALL_DIR"
-  ok "Using existing install"
+  ok "Claw Core already present at $INSTALL_DIR"
 elif [ -d "$INSTALL_DIR/.git" ]; then
-  info "Updating existing install at $INSTALL_DIR"
-  git -C "$INSTALL_DIR" pull --ff-only -q 2>/dev/null \
-    || warn "Git pull failed — using existing version"
-  ok "Updated"
+  (git -C "$INSTALL_DIR" pull --ff-only -q 2>/dev/null) \
+    & spinner $! "Updating existing install"
+  wait $! || warn "Git pull failed — using existing version"
+  ok "Claw Core updated"
 else
-  info "Cloning from $CLAWOS_REPO"
-  git clone -q --branch "$CLAWOS_BRANCH" --depth 1 \
-    "$CLAWOS_REPO" "$INSTALL_DIR" \
-    || die "Clone failed. Check: $CLAWOS_REPO"
-  ok "Cloned to $INSTALL_DIR"
+  (git clone -q --branch "$CLAWOS_BRANCH" --depth 1 "$CLAWOS_REPO" "$INSTALL_DIR") \
+    & spinner $! "Cloning from GitHub"
+  wait $! || die "Clone failed. Check: $CLAWOS_REPO"
+  ok "Claw Core cloned to $INSTALL_DIR"
 fi
 
 cd "$INSTALL_DIR"
@@ -140,45 +178,24 @@ export PYTHONPATH="$INSTALL_DIR"
 # ── Python packages ───────────────────────────────────────────────────────────
 step "Installing Python packages"
 
-pip3 install -q \
-  pyyaml \
-  aiohttp \
-  fastapi \
-  "uvicorn[standard]" \
-  ollama \
-  click \
-  chromadb \
-  json_repair \
+(pip3 install -q \
+  pyyaml aiohttp fastapi "uvicorn[standard]" \
+  ollama click chromadb json_repair \
   --break-system-packages 2>/dev/null \
 || pip3 install -q \
-  pyyaml \
-  aiohttp \
-  fastapi \
-  "uvicorn[standard]" \
-  ollama \
-  click \
-  chromadb \
-  json_repair \
-  --user 2>/dev/null \
-|| warn "Some Python packages may have failed — proceeding"
-
-ok "Python packages"
+  pyyaml aiohttp fastapi "uvicorn[standard]" \
+  ollama click chromadb json_repair \
+  --user 2>/dev/null || true) \
+  & spinner $! "Installing Python dependencies"
+wait $! 2>/dev/null || warn "Some Python packages may have failed"
+ok "pyyaml  fastapi  chromadb  ollama  json_repair"
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
-step "Bootstrapping ClawOS"
+step "Bootstrapping Claw Core"
 
-if [ "$RAM_GB" -ge 32 ]; then
-  PROFILE="performance"
-elif [ "$RAM_GB" -ge 14 ]; then
-  PROFILE="balanced"
-else
-  PROFILE="lowram"
-fi
-info "Profile: $PROFILE (${RAM_GB}GB RAM)"
-
-python3 -m bootstrap.bootstrap --profile "$PROFILE" --yes \
-  || die "Bootstrap failed. Try: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"
-
+(python3 -m bootstrap.bootstrap --profile "$PROFILE" --yes 2>/dev/null) \
+  & spinner $! "Running bootstrap ($PROFILE profile)"
+wait $! || die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"
 ok "Bootstrap complete"
 
 # ── Pull model ────────────────────────────────────────────────────────────────
@@ -187,170 +204,33 @@ step "Pulling AI model"
 if [ "$SKIP_MODEL" = "true" ]; then
   warn "Skipping model pull (SKIP_MODEL=true)"
 else
-  # qwen2.5:7b is the default for all tiers — supports tool calling
   MODEL="qwen2.5:7b"
-
-  info "Pulling $MODEL (~4.7GB, takes 5-10 min on first run)..."
+  info "Pulling $MODEL (~4.7GB) — showing live progress..."
+  echo ""
 
   if ! curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
-    nohup ollama serve >/dev/null 2>&1 &
-    sleep 4
+    nohup ollama serve >/dev/null 2>&1 & sleep 4
   fi
 
-  if ollama pull "$MODEL" 2>/dev/null; then
-    ok "Model ready: $MODEL"
-  else
-    warn "Model pull failed — run manually: ollama pull $MODEL"
-  fi
-fi
-
-# ── Node.js ───────────────────────────────────────────────────────────────────
-step "Installing Node.js"
-
-if command -v node &>/dev/null; then
-  ok "Node.js already installed ($(node --version))"
-else
-  info "Installing Node.js LTS..."
-  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - >/dev/null 2>&1 \
-    || warn "NodeSource setup failed — trying apt"
-  sudo apt-get install -y -qq nodejs 2>/dev/null \
-    || warn "Node.js install failed — OpenClaw will be skipped"
-  if command -v node &>/dev/null; then
-    ok "Node.js $(node --version)"
-  else
-    warn "Node.js not installed — OpenClaw will be skipped"
-  fi
-fi
-
-# ── OpenClaw offline config ───────────────────────────────────────────────────
-step "Configuring OpenClaw for offline use"
-
-if [ "$SKIP_OPENCLAW" = "true" ]; then
-  info "Skipping OpenClaw (SKIP_OPENCLAW=true)"
-elif ! command -v node &>/dev/null; then
-  warn "Node.js not available — skipping OpenClaw"
-else
-  if command -v openclaw &>/dev/null; then
-    ok "OpenClaw already installed"
-  else
-    info "Installing OpenClaw..."
-    npm install -g openclaw@latest --quiet 2>/dev/null \
-      || warn "OpenClaw npm install failed — try: sudo npm install -g openclaw"
-  fi
-
-  OC_DIR="$HOME/.openclaw"
-  mkdir -p "$OC_DIR/agents/main/agent"
-
-  cat > "$OC_DIR/agents/main/agent/auth-profiles.json" << 'JSON'
-{
-  "ollama:local": {
-    "type": "token",
-    "provider": "ollama",
-    "token": "ollama-local"
-  },
-  "lastGood": {
-    "ollama": "ollama:local"
-  }
-}
-JSON
-
-  # qwen2.5:7b for all tiers — reliable tool calling
-  if [ "$RAM_GB" -ge 32 ]; then
-    OC_MODEL="qwen2.5:14b"
-  else
-    OC_MODEL="qwen2.5:7b"
-  fi
-
-  cat > "$OC_DIR/openclaw.json" << JSON
-{
-  "models": {
-    "providers": {
-      "ollama": {
-        "baseUrl": "http://127.0.0.1:11434/v1",
-        "apiKey": "ollama-local",
-        "api": "openai-completions",
-        "models": [
-          {
-            "id": "${OC_MODEL}",
-            "name": "${OC_MODEL}",
-            "contextWindow": 32768
-          }
-        ]
-      }
-    }
-  },
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "ollama/${OC_MODEL}"
-      }
-    }
-  }
-}
-JSON
-
-  ok "OpenClaw configured for offline Ollama (model: $OC_MODEL)"
-
-  if [ "$RAM_GB" -ge 14 ] && [ "$OC_MODEL" = "qwen2.5:14b" ]; then
-    info "Pulling OpenClaw model: $OC_MODEL"
-    if ollama pull "$OC_MODEL" 2>/dev/null; then
-      ok "OpenClaw model ready: $OC_MODEL"
-    else
-      warn "Pull failed — run: ollama pull $OC_MODEL"
-    fi
-  fi
-fi
-
-# ── ClawHub skills (keyless) ──────────────────────────────────────────────────
-step "Installing ClawHub skills"
-
-if [ "$SKIP_SKILLS" = "true" ]; then
-  info "Skipping skills (SKIP_SKILLS=true)"
-elif ! command -v openclaw &>/dev/null; then
-  warn "OpenClaw not installed — skipping ClawHub skills"
-else
-  # These 5 skills require no API keys — safe to auto-install
-  # They work with both OpenClaw (via gateway) and Claw Core (via skilld)
-  KEYLESS_SKILLS=(
-    "capability-evolver"    # 35K installs — agent self-improvement
-    "self-improving-agent"  # 15K installs — correction memory
-    "agent-browser"         # 11K installs — headless browser automation
-    "summarize"             # 10K installs — document summarisation
-    "obsidian"              #  8K installs — local knowledge base / notes
-  )
-
-  SKILLS_OK=0
-  SKILLS_FAIL=0
-
-  for skill in "${KEYLESS_SKILLS[@]}"; do
-    info "Installing $skill..."
-    if openclaw skills install "$skill" --yes 2>/dev/null; then
-      ok "$skill"
-      SKILLS_OK=$((SKILLS_OK + 1))
-    else
-      warn "$skill — failed (run manually: openclaw skills install $skill)"
-      SKILLS_FAIL=$((SKILLS_FAIL + 1))
-    fi
+  ollama pull "$MODEL" 2>&1 | while IFS= read -r line; do
+    printf "    ${D}%s${RESET}\n" "$line"
   done
 
-  # Skills also available to Claw Core via skilld — symlink openclaw skills dir
-  CLAW_SKILLS_DIR="$HOME/.claw/skills"
-  OC_SKILLS_DIR="$HOME/.openclaw/skills"
-  if [ -d "$OC_SKILLS_DIR" ] && [ ! -L "$CLAW_SKILLS_DIR" ]; then
-    mkdir -p "$HOME/.claw"
-    ln -sf "$OC_SKILLS_DIR" "$CLAW_SKILLS_DIR" 2>/dev/null || true
-    info "Linked skills to Claw Core (~/.claw/skills)"
-  fi
-
-  ok "Skills: $SKILLS_OK installed, $SKILLS_FAIL failed"
-  info "To install more: openclaw skills install <name>"
-  info "To list in Claw Core: claw then /skills"
+  echo ""
+  ok "Model ready: $MODEL (4.7GB · GPU · offline)"
 fi
 
-# ── clawctl in PATH ───────────────────────────────────────────────────────────
-step "Installing clawctl"
+# ── Install clawos command ────────────────────────────────────────────────────
+step "Installing clawos command"
 
 mkdir -p "$HOME/.local/bin"
+
+cat > "$HOME/.local/bin/clawos" << CMD
+#!/bin/bash
+export PYTHONPATH="${INSTALL_DIR}"
+exec python3 "${INSTALL_DIR}/clients/cli/repl.py" "\$@"
+CMD
+chmod +x "$HOME/.local/bin/clawos"
 
 cat > "$HOME/.local/bin/clawctl" << CMD
 #!/bin/bash
@@ -359,28 +239,19 @@ exec python3 "${INSTALL_DIR}/clawctl/main.py" "\$@"
 CMD
 chmod +x "$HOME/.local/bin/clawctl"
 
-cat > "$HOME/.local/bin/claw" << CMD
-#!/bin/bash
-export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clients/cli/repl.py" "\$@"
-CMD
-chmod +x "$HOME/.local/bin/claw"
-
 _add_to_path() {
-  local profile="$1"
-  if [ -f "$profile" ] && ! grep -q '.local/bin' "$profile" 2>/dev/null; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$profile"
-  fi
+  local f="$1"
+  [ -f "$f" ] && ! grep -q '.local/bin' "$f" 2>/dev/null \
+    && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$f"
 }
 _add_to_path "$HOME/.bashrc"
 _add_to_path "$HOME/.zshrc"
 _add_to_path "$HOME/.profile"
 export PATH="$HOME/.local/bin:$PATH"
-
-ok "clawctl and claw installed"
+ok "clawos  clawctl"
 
 # ── Autostart ─────────────────────────────────────────────────────────────────
-step "Setting up autostart"
+step "Enabling autostart"
 
 if command -v systemctl &>/dev/null && systemctl --user status >/dev/null 2>&1; then
   mkdir -p "$HOME/.config/systemd/user"
@@ -398,37 +269,49 @@ Environment=HOME=${HOME}
 [Install]
 WantedBy=default.target
 UNIT
-
   systemctl --user daemon-reload 2>/dev/null || true
   systemctl --user enable ollama.service 2>/dev/null || true
   systemctl --user start ollama.service 2>/dev/null || true
-  ok "Ollama autostart enabled"
+  ok "Ollama starts on boot"
 else
-  info "systemd user services not available — start Ollama manually: ollama serve"
+  info "systemd not available — start manually: ollama serve"
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
-ELAPSED=$SECONDS
+ELAPSED=$((SECONDS - START_TIME))
+echo ""
+echo ""
+divider
 echo ""
 echo -e "  ${G}${BOLD}✓  ClawOS installed in ${ELAPSED}s${RESET}"
 echo ""
-echo -e "  ${D}──────────────────────────────────────────────${RESET}"
+divider
 echo ""
-echo -e "  ${BOLD}Start chatting:${RESET}"
-echo -e "  ${B}  claw${RESET}                  interactive chat"
-echo -e "  ${B}  /skills${RESET}               list loaded skills"
+echo -e "  ${W}${BOLD}Mode 1  —  Offline chat (works right now)${RESET}"
 echo ""
-echo -e "  ${BOLD}All services + dashboard:${RESET}"
-echo -e "  ${B}  clawctl start${RESET}         start everything"
-echo -e "  ${B}  clawctl status${RESET}        check health"
-echo -e "  ${B}  http://localhost:7070${RESET}  dashboard"
+echo -e "  ${B}  clawos${RESET}"
 echo ""
-echo -e "  ${BOLD}OpenClaw (WhatsApp + skills gateway):${RESET}"
-echo -e "  ${B}  clawctl openclaw start${RESET}"
-echo -e "  ${B}  openclaw onboard${RESET}      connect WhatsApp"
+echo -e "  ${D}  Claw Core · qwen2.5:7b · fully local · no account needed${RESET}"
 echo ""
-echo -e "  ${D}Restart your shell or run: source ~/.bashrc${RESET}"
+divider
 echo ""
-echo -e "  ${D}GitHub:  https://github.com/xbrxr03/clawos${RESET}"
-echo -e "  ${D}Docs:    https://clawos.dev${RESET}"
+echo -e "  ${W}${BOLD}Mode 2  —  Full OpenClaw power (free, Kimi k2.5)${RESET}"
+echo ""
+echo -e "  ${D}  Sign in to Ollama once — free cloud model, 256k context:${RESET}"
+echo ""
+echo -e "  ${B}  ollama signin${RESET}"
+echo -e "  ${B}  ollama launch openclaw --model kimi-k2.5:cloud${RESET}"
+echo ""
+echo -e "  ${D}  OpenClaw · Kimi k2.5 · 13,700+ skills · WhatsApp · free tier${RESET}"
+echo ""
+divider
+echo ""
+echo -e "  ${W}${BOLD}Connect WhatsApp${RESET}"
+echo ""
+echo -e "  ${B}  openclaw configure --section channels${RESET}"
+echo ""
+divider
+echo ""
+echo -e "  ${D}  Reload shell:   ${RESET}${B}source ~/.bashrc${RESET}"
+echo -e "  ${D}  GitHub:         ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
 echo ""
