@@ -1,0 +1,36 @@
+name: Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install system deps
+        run: sudo apt-get install -y -qq ffmpeg fonts-dejavu
+      - name: Install Python deps
+        run: pip install psutil pathvalidate requests pillow piper-tts google-auth-oauthlib google-api-python-client
+      - name: Download Piper model
+        run: |
+          mkdir -p ~/.local/share/piper
+          BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium"
+          wget -q "$BASE/en_US-lessac-medium.onnx" -O ~/.local/share/piper/en_US-lessac-medium.onnx
+          wget -q "$BASE/en_US-lessac-medium.onnx.json" -O ~/.local/share/piper/en_US-lessac-medium.onnx.json || true
+      - name: Set up factory
+        run: |
+          cp -r factory ~/factory
+          mkdir -p ~/factory/jobs/{inbox,active,completed,failed}
+          mkdir -p ~/factory/{artifacts,logs,state/{agents,events,leases,metrics},assets/music}
+          printf 'FACTORY_ROOT=%s\nPYTHONPATH=%s\nOLLAMA_MODEL=qwen2.5:7b\nPIPER_MODEL_DIR=%s/.local/share/piper\nPIPER_VOICE=en_US-lessac-medium.onnx\n' \
+            "$HOME/factory" "$HOME/factory" "$HOME" > ~/factory/.env
+      - name: Run tests
+        run: |
+          FACTORY_ROOT=~/factory PYTHONPATH=~/factory \
+          PIPER_MODEL_DIR=~/.local/share/piper \
+          CI=true python3 test_factory.py --quick
