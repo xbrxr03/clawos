@@ -71,8 +71,17 @@ if [ -f /etc/os-release ]; then
   esac
 fi
 
-RAM_KB=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
-RAM_GB=$((RAM_KB / 1024 / 1024))
+# RAM detection — Linux, macOS, fallback
+if [ -f /proc/meminfo ]; then
+  RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+  RAM_GB=$((RAM_KB / 1024 / 1024))
+elif command -v sysctl &>/dev/null; then
+  RAM_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+  RAM_GB=$((RAM_BYTES / 1024 / 1024 / 1024))
+else
+  warn "Cannot detect RAM — assuming 8GB and continuing"
+  RAM_GB=8
+fi
 [ "$RAM_GB" -lt "$MIN_RAM_GB" ] && die "Not enough RAM: ${RAM_GB}GB found, ${MIN_RAM_GB}GB required."
 ok "RAM: ${RAM_GB}GB"
 
