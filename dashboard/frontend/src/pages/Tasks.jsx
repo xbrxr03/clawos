@@ -1,98 +1,92 @@
 import { useState } from 'react'
-import { Card, SectionHeader, StatusDot, Badge, Empty, Timestamp } from '../components/ui.jsx'
-import { ListTodo } from 'lucide-react'
+import { Card, Row, Dot, Badge, Empty, SectionLabel, Time } from '../components/ui.jsx'
 import { clsx } from 'clsx'
 
-const TABS = ['active', 'queued', 'failed', 'completed']
+const TABS = [
+  { key: 'active',    label: 'Active',    color: '#30d158' },
+  { key: 'queued',    label: 'Queued',    color: '#0a84ff' },
+  { key: 'failed',    label: 'Failed',    color: '#ff453a' },
+  { key: 'completed', label: 'Completed', color: 'rgba(255,255,255,0.3)' },
+]
 
 export function Tasks({ tasks }) {
   const [tab, setTab] = useState('active')
   const items = tasks[tab] ?? []
+  const activeTab = TABS.find(t => t.key === tab)
 
   return (
-    <div className="p-6 space-y-4 fade-in">
-      <div>
-        <h1 className="text-lg font-semibold text-claw-text">Tasks</h1>
-        <p className="text-sm text-claw-dim mt-0.5">Agent task queue and execution history</p>
+    <div className="p-6 overflow-y-auto h-full fade-up">
+
+      {/* Segmented control */}
+      <div
+        className="flex rounded-[10px] p-0.5 mb-5"
+        style={{ background: 'rgba(255,255,255,0.08)' }}
+      >
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={clsx(
+              'flex-1 py-1.5 rounded-[8px] text-xs font-semibold transition-all flex items-center justify-center gap-1.5',
+              tab === t.key ? 'text-white' : 'text-white/40'
+            )}
+            style={tab === t.key ? { background: 'rgba(255,255,255,0.15)' } : {}}
+          >
+            {t.label}
+            <span
+              className="text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center"
+              style={{
+                background: tab === t.key ? t.color : 'transparent',
+                color: tab === t.key ? '#000' : 'rgba(255,255,255,0.3)',
+                fontSize: 10,
+              }}
+            >
+              {tasks[t.key]?.length ?? 0}
+            </span>
+          </button>
+        ))}
       </div>
 
-      <Card>
-        {/* Tabs */}
-        <div className="flex border-b border-claw-border">
-          {TABS.map(t => {
-            const count = tasks[t]?.length ?? 0
-            return (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={clsx(
-                  'px-4 py-3 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors',
-                  tab === t
-                    ? 'border-claw-accent text-claw-accent'
-                    : 'border-transparent text-claw-dim hover:text-claw-text'
-                )}
-              >
-                {t}
-                <span className={clsx(
-                  'text-xs font-mono px-1.5 rounded',
-                  tab === t ? 'bg-claw-accent/10 text-claw-accent' : 'bg-claw-muted text-claw-dim'
-                )}>
-                  {count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Task list */}
-        {items.length === 0 ? (
-          <Empty icon={ListTodo} message={`No ${tab} tasks`} />
-        ) : (
-          <div className="divide-y divide-claw-border">
+      {items.length === 0 ? (
+        <Card><Empty icon="✓" message={`No ${tab} tasks`} /></Card>
+      ) : (
+        <>
+          <SectionLabel>{activeTab?.label} Tasks</SectionLabel>
+          <Card>
             {items.map(task => (
-              <TaskRow key={task.id} task={task} />
+              <TaskRow key={task.id} task={task} color={activeTab?.color} />
             ))}
-          </div>
-        )}
-      </Card>
+          </Card>
+        </>
+      )}
     </div>
   )
 }
 
-function TaskRow({ task }) {
-  const [expanded, setExpanded] = useState(false)
-
+function TaskRow({ task, color }) {
+  const [open, setOpen] = useState(false)
   return (
-    <div
-      className="px-4 py-3 hover:bg-claw-muted/20 cursor-pointer"
-      onClick={() => setExpanded(e => !e)}
-    >
-      <div className="flex items-center gap-3">
-        <StatusDot status={task.status} />
-        <div className="flex-1 min-w-0">
-          <div className="text-sm text-claw-text truncate font-mono">
-            {task.description ?? task.id}
+    <div>
+      <Row
+        left={<Dot status={task.status} />}
+        center={
+          <div>
+            <div className="text-sm font-medium truncate">{task.description ?? task.id}</div>
+            <div className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              {task.id} {task.agent ? `· ${task.agent}` : ''}
+            </div>
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-claw-dim font-mono">{task.id}</span>
-            {task.agent && <Badge variant="default">{task.agent}</Badge>}
-          </div>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <Timestamp value={task.created_at} />
-          <Badge variant={
-            task.status === 'active' ? 'accent' :
-            task.status === 'queued' ? 'info' :
-            task.status === 'failed' ? 'danger' : 'completed'
-          }>
-            {task.status}
-          </Badge>
-        </div>
-      </div>
-
-      {expanded && task.log && (
-        <div className="mt-3 bg-claw-bg rounded p-3 font-mono text-xs text-claw-dim border border-claw-border">
-          <pre className="whitespace-pre-wrap max-h-48 overflow-y-auto">{task.log}</pre>
+        }
+        right={<Time value={task.created_at} />}
+        onClick={() => setOpen(o => !o)}
+        chevron={!!task.log}
+      />
+      {open && task.log && (
+        <div className="px-4 pb-3" style={{ background: 'rgba(0,0,0,0.3)' }}>
+          <pre className="text-xs font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+            style={{ color: 'rgba(255,255,255,0.5)' }}>
+            {task.log}
+          </pre>
         </div>
       )}
     </div>

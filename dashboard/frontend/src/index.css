@@ -3,45 +3,82 @@
 @tailwind utilities;
 
 :root {
+  --ios-bg:         #000000;
+  --ios-bg2:        #1c1c1e;
+  --ios-bg3:        #2c2c2e;
+  --ios-bg4:        #3a3a3c;
+  --ios-separator:  rgba(255,255,255,0.08);
+  --ios-blue:       #0a84ff;
+  --ios-green:      #30d158;
+  --ios-red:        #ff453a;
+  --ios-orange:     #ff9f0a;
+  --ios-yellow:     #ffd60a;
+  --ios-purple:     #bf5af2;
+  --ios-teal:       #40c8e0;
+  --ios-text:       #ffffff;
+  --ios-text2:      rgba(255,255,255,0.6);
+  --ios-text3:      rgba(255,255,255,0.3);
   color-scheme: dark;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: #0a0c10;
-  color: #e2e8f0;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  margin: 0;
+  background: var(--ios-bg);
+  color: var(--ios-text);
+  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* SF Pro numeric tabular */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* iOS card */
+.ios-card {
+  background: var(--ios-bg2);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* iOS inset grouped list row */
+.ios-row {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--ios-separator);
+}
+.ios-row:last-child { border-bottom: none; }
+
+/* Blur glass */
+.glass {
+  background: rgba(28,28,30,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #111418; }
-::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #3a4050; }
+::-webkit-scrollbar { width: 0px; }
 
-/* Terminal text */
-.font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-
-/* Accent glow */
-.accent-glow {
-  box-shadow: 0 0 20px rgba(0, 229, 160, 0.15);
-}
-
-/* Status pulse */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-.pulse { animation: pulse-dot 2s ease-in-out infinite; }
-
-/* Fade in */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
+/* Animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-in { animation: fade-in 0.2s ease-out forwards; }
+.fade-up { animation: fade-up 0.3s cubic-bezier(0.34,1.1,0.64,1) forwards; }
+
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse { animation: pulse-green 2s ease-in-out infinite; }
+
+/* iOS switch look for badges */
+.ios-badge {
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

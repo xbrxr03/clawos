@@ -1,149 +1,145 @@
-import { Card, SectionHeader, Empty, Badge, Timestamp, Button } from '../components/ui.jsx'
-import { ShieldAlert, Check, X, Terminal } from 'lucide-react'
-import { api } from '../lib/api.js'
 import { useState } from 'react'
+import { Card, Row, Empty, SectionLabel, Button, ProgressBar, Time } from '../components/ui.jsx'
+import { api } from '../lib/api.js'
 
 export function Approvals({ approvals }) {
-  const [deciding, setDeciding] = useState({}) // id → 'approving' | 'denying'
+  const [deciding, setDeciding] = useState({})
 
   async function decide(id, action) {
-    setDeciding(d => ({ ...d, [id]: action === 'approve' ? 'approving' : 'denying' }))
-    try {
-      await (action === 'approve' ? api.approve(id) : api.deny(id))
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setDeciding(d => { const n = { ...d }; delete n[id]; return n })
-    }
+    setDeciding(d => ({ ...d, [id]: action }))
+    try { await (action === 'approve' ? api.approve(id) : api.deny(id)) }
+    catch (e) { console.error(e) }
+    finally { setDeciding(d => { const n = {...d}; delete n[id]; return n }) }
   }
 
   return (
-    <div className="p-6 space-y-4 fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-claw-text">Approvals</h1>
-          <p className="text-sm text-claw-dim mt-0.5">Sensitive actions waiting for human approval</p>
+    <div className="p-6 overflow-y-auto h-full fade-up">
+
+      {/* Header pill */}
+      {approvals.length > 0 && (
+        <div
+          className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] mb-5 text-sm font-medium"
+          style={{ background: '#ff9f0a18', color: '#ff9f0a' }}
+        >
+          <span>⚠️</span>
+          <span>{approvals.length} action{approvals.length > 1 ? 's' : ''} waiting for your approval</span>
         </div>
-        {approvals.length > 0 && (
-          <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full">
-            <ShieldAlert size={12} />
-            {approvals.length} pending
-          </div>
-        )}
-      </div>
+      )}
 
       {approvals.length === 0 ? (
-        <Card>
-          <Empty icon={ShieldAlert} message="No pending approvals — all quiet" />
-        </Card>
+        <>
+          <SectionLabel>Approvals</SectionLabel>
+          <Card><Empty icon="🛡️" message="All clear — no pending approvals" /></Card>
+        </>
       ) : (
-        <div className="space-y-3">
-          {approvals.map(approval => (
-            <ApprovalCard
-              key={approval.id}
-              approval={approval}
-              deciding={deciding[approval.id]}
-              onApprove={() => decide(approval.id, 'approve')}
-              onDeny={() => decide(approval.id, 'deny')}
-            />
-          ))}
-        </div>
+        <>
+          <SectionLabel>Pending</SectionLabel>
+          <div className="space-y-3">
+            {approvals.map(a => (
+              <ApprovalCard
+                key={a.id}
+                approval={a}
+                deciding={deciding[a.id]}
+                onApprove={() => decide(a.id, 'approve')}
+                onDeny={() => decide(a.id, 'deny')}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
 }
 
 function ApprovalCard({ approval, deciding, onApprove, onDeny }) {
-  const riskColor = {
-    high:   'border-red-500/30 bg-red-500/5',
-    medium: 'border-amber-500/30 bg-amber-500/5',
-    low:    'border-claw-border bg-claw-surface',
-  }[approval.risk ?? 'medium']
+  const riskColor = approval.risk === 'high' ? '#ff453a' : approval.risk === 'low' ? '#30d158' : '#ff9f0a'
 
   return (
-    <div className={`rounded-lg border p-4 space-y-3 ${riskColor}`}>
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-claw-text">{approval.tool ?? 'unknown.tool'}</span>
-            <Badge variant={approval.risk === 'high' ? 'danger' : approval.risk === 'low' ? 'default' : 'warn'}>
-              {approval.risk ?? 'medium'} risk
-            </Badge>
-            {approval.agent && <Badge variant="default">{approval.agent}</Badge>}
-          </div>
-          <div className="text-xs text-claw-dim font-mono mt-1">
-            task: {approval.task_id ?? '—'} · id: {approval.id}
-          </div>
-        </div>
-        <Timestamp value={approval.created_at} />
-      </div>
+    <div className="ios-card overflow-hidden">
+      {/* Risk stripe */}
+      <div className="h-0.5 w-full" style={{ background: riskColor }} />
 
-      {/* Action being requested */}
-      {approval.action && (
-        <div className="bg-claw-bg rounded p-3 border border-claw-border">
-          <div className="text-xs text-claw-dim mb-1.5">Requested action</div>
-          <div className="flex items-start gap-2">
-            <Terminal size={12} className="text-claw-dim mt-0.5 flex-shrink-0" />
-            <pre className="font-mono text-xs text-claw-text whitespace-pre-wrap break-all">
-              {typeof approval.action === 'string'
-                ? approval.action
-                : JSON.stringify(approval.action, null, 2)}
+      <div className="p-4 space-y-3">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-semibold">{approval.tool ?? 'action'}</span>
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: `${riskColor}20`, color: riskColor }}
+              >
+                {approval.risk ?? 'medium'} risk
+              </span>
+            </div>
+            <div className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {approval.agent ?? 'agent'} · {approval.task_id ?? '—'}
+            </div>
+          </div>
+          <Time value={approval.created_at} />
+        </div>
+
+        {/* Action */}
+        {approval.action && (
+          <div
+            className="rounded-[10px] p-3"
+            style={{ background: 'rgba(0,0,0,0.4)' }}
+          >
+            <div className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Requested action
+            </div>
+            <pre className="text-xs font-mono whitespace-pre-wrap break-all"
+              style={{ color: 'rgba(255,255,255,0.8)' }}>
+              {typeof approval.action === 'string' ? approval.action : JSON.stringify(approval.action, null, 2)}
             </pre>
           </div>
+        )}
+
+        {/* Reason */}
+        {approval.reason && (
+          <p className="text-sm italic" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            "{approval.reason}"
+          </p>
+        )}
+
+        {/* Timeout */}
+        {approval.timeout_at && <TimeoutBar timeoutAt={approval.timeout_at} />}
+
+        {/* Buttons */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onApprove}
+            disabled={!!deciding}
+            className="flex-1 py-2.5 rounded-[10px] text-sm font-semibold transition-opacity disabled:opacity-40"
+            style={{ background: '#30d15820', color: '#30d158' }}
+          >
+            {deciding === 'approve' ? 'Approving...' : '✓ Approve'}
+          </button>
+          <button
+            onClick={onDeny}
+            disabled={!!deciding}
+            className="flex-1 py-2.5 rounded-[10px] text-sm font-semibold transition-opacity disabled:opacity-40"
+            style={{ background: '#ff453a20', color: '#ff453a' }}
+          >
+            {deciding === 'deny' ? 'Denying...' : '✕ Deny'}
+          </button>
         </div>
-      )}
-
-      {/* Reason */}
-      {approval.reason && (
-        <p className="text-xs text-claw-dim italic">"{approval.reason}"</p>
-      )}
-
-      {/* Timeout indicator */}
-      {approval.timeout_at && (
-        <TimeoutBar timeoutAt={approval.timeout_at} />
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 pt-1">
-        <Button
-          variant="accent"
-          onClick={onApprove}
-          disabled={!!deciding}
-        >
-          <Check size={12} />
-          {deciding === 'approving' ? 'Approving...' : 'Approve'}
-        </Button>
-        <Button
-          variant="danger"
-          onClick={onDeny}
-          disabled={!!deciding}
-        >
-          <X size={12} />
-          {deciding === 'denying' ? 'Denying...' : 'Deny'}
-        </Button>
       </div>
     </div>
   )
 }
 
 function TimeoutBar({ timeoutAt }) {
-  const total = 120 // 120s timeout as per policyd
+  const total = 120
   const remaining = Math.max(0, (new Date(timeoutAt * 1000) - Date.now()) / 1000)
   const pct = (remaining / total) * 100
-
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-claw-dim">
+      <div className="flex justify-between text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
         <span>Auto-deny in</span>
-        <span className="font-mono">{Math.ceil(remaining)}s</span>
+        <span className="tabular">{Math.ceil(remaining)}s</span>
       </div>
-      <div className="h-1 bg-claw-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-amber-500 rounded-full transition-all duration-1000"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <ProgressBar value={pct} color="#ff9f0a" />
     </div>
   )
 }
