@@ -40,7 +40,7 @@ After one command:
 - **WhatsApp bridge** — text your AI from your phone
 - **policyd** — every tool call gated and audited before it runs
 - **Dashboard** — web UI showing tasks, approvals, models, memory, audit log
-- **Full OpenClaw ecosystem** — 13,700+ skills, all working offline
+- **Full OpenClaw ecosystem** — 13,700+ skills and more to come
 
 ```
 $ clawos
