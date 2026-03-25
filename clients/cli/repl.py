@@ -183,6 +183,15 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
                     memory.forget(arg, current_ws)
                     print(f"  {_p(AMBER, '◌')} Forgotten: {_d(arg)}\n")
 
+            elif cmd == "/do":
+                if arg:
+                    import subprocess
+                    subprocess.run(
+                        ["python3", "/home/user/clawdo/claw_do/cli.py", arg],
+                        env={**__import__("os").environ, "PYTHONPATH": "/home/user/clawdo"}
+                    )
+                else:
+                    print(f"  {_d('Usage: /do <request>')}\n")
             elif cmd == "/workspace":
                 if arg:
                     current_ws = arg
