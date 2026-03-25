@@ -1,153 +1,94 @@
-import { clsx } from 'clsx'
+export function StatusDot({ status, size = 7 }) {
+  const cls = {
+    up: 'green', running: 'green', active: 'green',
+    degraded: 'orange', pending: 'orange', queued: 'blue',
+    down: 'red', failed: 'red',
+    completed: 'gray',
+  }[status] ?? 'gray'
 
-// ── App Icon wrapper ───────────────────────────────────────────────────────────
-export function AppIcon({ color = '#0a84ff', children, size = 36 }) {
-  return (
-    <div
-      className="flex items-center justify-center rounded-[10px] flex-shrink-0"
-      style={{ width: size, height: size, background: color }}
-    >
-      {children}
-    </div>
-  )
-}
-
-// ── Section label (above grouped list) ────────────────────────────────────────
-export function SectionLabel({ children }) {
-  return (
-    <div className="px-4 pb-1 pt-5 text-xs font-semibold uppercase tracking-wider"
-      style={{ color: 'rgba(255,255,255,0.4)' }}>
-      {children}
-    </div>
-  )
-}
-
-// ── iOS grouped card ───────────────────────────────────────────────────────────
-export function Card({ children, className }) {
-  return (
-    <div className={clsx('ios-card', className)}>
-      {children}
-    </div>
-  )
-}
-
-// ── Row inside a card ──────────────────────────────────────────────────────────
-export function Row({ left, center, right, onClick, chevron = false }) {
-  return (
-    <div
-      className={clsx('ios-row', onClick && 'cursor-pointer active:opacity-60')}
-      onClick={onClick}
-    >
-      {left && <div className="flex-shrink-0">{left}</div>}
-      <div className="flex-1 min-w-0">{center}</div>
-      {right && <div className="flex-shrink-0 flex items-center gap-1">{right}</div>}
-      {chevron && (
-        <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
-          <path d="M1 1l6 5.5L1 12" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      )}
-    </div>
-  )
-}
-
-// ── Status dot ────────────────────────────────────────────────────────────────
-export function Dot({ status }) {
-  const color = {
-    up:       '#30d158',
-    active:   '#30d158',
-    running:  '#30d158',
-    degraded: '#ff9f0a',
-    pending:  '#ff9f0a',
-    queued:   '#0a84ff',
-    down:     '#ff453a',
-    failed:   '#ff453a',
-    completed:'rgba(255,255,255,0.3)',
-  }[status] ?? 'rgba(255,255,255,0.3)'
-
-  const shouldPulse = ['up','active','running'].includes(status)
+  const pulse = ['up','running','active'].includes(status)
 
   return (
-    <div
-      className={clsx('rounded-full flex-shrink-0', shouldPulse && 'pulse')}
-      style={{ width: 8, height: 8, background: color }}
+    <span
+      className={`dot ${cls}${pulse ? ' pulse' : ''}`}
+      style={{ width: size, height: size }}
     />
   )
 }
 
-// ── iOS badge ──────────────────────────────────────────────────────────────────
-export function Badge({ children, color = '#0a84ff' }) {
+export function Badge({ children, color = 'gray' }) {
+  return <span className={`pill ${color}`}>{children}</span>
+}
+
+export function Card({ children, style, className = '' }) {
   return (
-    <span
-      className="ios-badge"
-      style={{ background: `${color}22`, color }}
-    >
+    <div className={`glass ${className}`} style={style}>
       {children}
+    </div>
+  )
+}
+
+export function SectionLabel({ children }) {
+  return <div className="section-label">{children}</div>
+}
+
+export function StatCard({ label, value, unit, color }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-val" style={color ? { color } : {}}>
+        {value ?? '—'}
+        {unit && <span className="stat-unit">{unit}</span>}
+      </div>
+      <div className="stat-label">{label}</div>
+    </div>
+  )
+}
+
+export function Empty({ children }) {
+  return (
+    <div className="empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 12h8M12 8v8" opacity="0.4"/>
+      </svg>
+      {children}
+    </div>
+  )
+}
+
+export function Ts({ value }) {
+  if (!value) return null
+  const d = new Date(typeof value === 'number' && value < 1e12 ? value * 1000 : value)
+  return (
+    <span className="ts">
+      {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
     </span>
   )
 }
 
-// ── iOS button ─────────────────────────────────────────────────────────────────
-export function Button({ children, onClick, color = '#0a84ff', variant = 'fill', disabled, size = 'sm' }) {
-  const pad = size === 'sm' ? 'px-4 py-1.5 text-sm' : 'px-5 py-2.5 text-base'
-  const style = variant === 'fill'
-    ? { background: color, color: '#fff' }
-    : { background: `${color}18`, color }
-
+export function Btn({ children, onClick, variant = 'default', size, disabled }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={clsx(
-        'rounded-[10px] font-semibold transition-opacity active:opacity-60',
-        pad,
-        disabled && 'opacity-30 cursor-not-allowed'
-      )}
-      style={style}
+      className={`btn${variant !== 'default' ? ` ${variant}` : ''}${size === 'sm' ? ' sm' : ''}`}
     >
       {children}
     </button>
   )
 }
 
-// ── Large number stat ──────────────────────────────────────────────────────────
-export function Stat({ value, label, color = '#ffffff' }) {
+export function Row({ left, center, right, onClick, chevron }) {
   return (
-    <div className="text-center">
-      <div className="text-3xl font-bold tabular" style={{ color }}>{value ?? '—'}</div>
-      <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</div>
-    </div>
-  )
-}
-
-// ── Empty state ────────────────────────────────────────────────────────────────
-export function Empty({ icon, message }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 gap-3">
-      {icon && <div className="text-4xl opacity-20">{icon}</div>}
-      <div className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>{message}</div>
-    </div>
-  )
-}
-
-// ── Time ──────────────────────────────────────────────────────────────────────
-export function Time({ value }) {
-  if (!value) return null
-  const d = new Date(typeof value === 'number' && value < 1e12 ? value * 1000 : value)
-  return (
-    <span className="text-xs tabular" style={{ color: 'rgba(255,255,255,0.3)' }}>
-      {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-    </span>
-  )
-}
-
-// ── Progress bar ───────────────────────────────────────────────────────────────
-export function ProgressBar({ value, color = '#0a84ff' }) {
-  return (
-    <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-      <div
-        className="h-full rounded-full transition-all duration-300"
-        style={{ width: `${Math.min(100, value)}%`, background: color }}
-      />
+    <div className={`row${onClick ? ' clickable' : ''}`} onClick={onClick}>
+      {left}
+      <div style={{ flex: 1, minWidth: 0 }}>{center}</div>
+      {right && <div style={{ flexShrink: 0, color: 'var(--text-2)', fontSize: 13 }}>{right}</div>}
+      {chevron && (
+        <svg width="6" height="11" viewBox="0 0 6 11" fill="none" style={{ flexShrink: 0 }}>
+          <path d="M1 1l4 4.5L1 10" stroke="var(--text-3)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )}
     </div>
   )
 }

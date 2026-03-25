@@ -1,4 +1,4 @@
-import { Card, Row, Dot, Badge, Stat, AppIcon, SectionLabel, Time } from '../components/ui.jsx'
+import { StatCard, Card, Row, StatusDot, Badge, SectionLabel, Ts, Empty } from '../components/ui.jsx'
 
 export function Overview({ services, tasks, approvals, events, models }) {
   const counts = {
@@ -7,149 +7,124 @@ export function Overview({ services, tasks, approvals, events, models }) {
     failed:    tasks.failed?.length    ?? 0,
     completed: tasks.completed?.length ?? 0,
   }
-  const serviceList = Object.entries(services)
-  const upCount = serviceList.filter(([,s]) => s.status === 'up').length
+
+  const svcEntries = Object.entries(services)
+  const upCount    = svcEntries.filter(([,s]) => s.status === 'up').length
 
   return (
-    <div className="p-6 overflow-y-auto h-full space-y-1 fade-up">
-
-      {/* Hero stats */}
-      <SectionLabel>Runtime</SectionLabel>
-      <Card>
-        <div className="grid grid-cols-4 divide-x" style={{ divideColor: 'rgba(255,255,255,0.08)' }}>
-          {[
-            { label: 'Active',    value: counts.active,    color: '#30d158' },
-            { label: 'Queued',    value: counts.queued,    color: '#0a84ff' },
-            { label: 'Failed',    value: counts.failed,    color: '#ff453a' },
-            { label: 'Done',      value: counts.completed, color: 'rgba(255,255,255,0.4)' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="py-5" style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-              <Stat value={value} label={label} color={color} />
-            </div>
-          ))}
+    <div className="fade-up" style={{ padding: '0 0 48px' }}>
+      {/* Header */}
+      <div style={{ padding: '32px 24px 0' }}>
+        <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>Overview</div>
+        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
+          Agent runtime · {upCount}/{svcEntries.length} services up
         </div>
-      </Card>
+      </div>
 
-      {/* Services */}
-      <SectionLabel>Services — {upCount}/{serviceList.length} up</SectionLabel>
-      <Card>
-        {serviceList.length === 0 ? (
-          <div className="px-4 py-4 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Polling services...
+      {/* Task counts */}
+      <SectionLabel>Tasks</SectionLabel>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, padding: '0 20px' }}>
+        <StatCard label="Active"    value={counts.active}    color="var(--green)"  />
+        <StatCard label="Queued"    value={counts.queued}    color="var(--blue)"   />
+        <StatCard label="Failed"    value={counts.failed}    color="var(--red)"    />
+        <StatCard label="Completed" value={counts.completed} color="var(--text-2)" />
+      </div>
+
+      {/* Alert */}
+      {approvals.length > 0 && (
+        <div style={{ padding: '14px 20px 0' }}>
+          <div style={{
+            background: 'var(--orange-dim)',
+            border: '1px solid rgba(251,146,60,0.25)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '14px 16px',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 2L16.5 15H1.5L9 2Z" stroke="#fb923c" strokeWidth="1.5" strokeLinejoin="round"/>
+              <path d="M9 7v4M9 12.5v.5" stroke="#fb923c" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <div>
+              <div style={{ fontWeight: 500, color: 'var(--orange)', fontSize: 13 }}>
+                {approvals.length} pending approval{approvals.length > 1 ? 's' : ''}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                Agents waiting for human review
+              </div>
+            </div>
           </div>
-        ) : serviceList.map(([name, info]) => (
-          <Row
-            key={name}
-            left={<Dot status={info.status} />}
-            center={
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{name}</span>
-                <span className="text-xs tabular" style={{ color: 'rgba(255,255,255,0.3)' }}>:{info.port}</span>
-              </div>
-            }
-            right={
-              <div className="flex items-center gap-2">
-                {info.latency_ms != null && (
-                  <span className="text-xs tabular" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    {info.latency_ms}ms
-                  </span>
-                )}
-                <Badge
-                  color={info.status === 'up' ? '#30d158' : info.status === 'degraded' ? '#ff9f0a' : '#ff453a'}
-                >
-                  {info.status}
-                </Badge>
-              </div>
-            }
-          />
-        ))}
-      </Card>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '0 20px', marginTop: 14 }}>
+        {/* Services */}
+        <div>
+          <div className="section-label" style={{ padding: '0 0 8px' }}>Services</div>
+          <Card>
+            {svcEntries.length === 0 ? (
+              <div className="row"><span style={{ color: 'var(--text-2)', fontSize: 13 }}>Polling…</span></div>
+            ) : svcEntries.map(([name, s]) => (
+              <Row
+                key={name}
+                left={<StatusDot status={s.status} />}
+                center={<span className="mono" style={{ fontSize: 13 }}>{name}</span>}
+                right={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {s.latency_ms != null && <span className="ts">{s.latency_ms}ms</span>}
+                    <Badge color={s.status === 'up' ? 'green' : s.status === 'degraded' ? 'orange' : 'red'}>
+                      {s.status}
+                    </Badge>
+                  </div>
+                }
+              />
+            ))}
+          </Card>
+        </div>
+
+        {/* Live events */}
+        <div>
+          <div className="section-label" style={{ padding: '0 0 8px' }}>Live events</div>
+          <Card style={{ maxHeight: 280, overflowY: 'auto' }}>
+            {events.length === 0 ? (
+              <div className="row"><span style={{ color: 'var(--text-2)', fontSize: 13 }}>Waiting…</span></div>
+            ) : events.slice(0, 30).map((e, i) => {
+              const color = e.type?.includes('error') || e.type?.includes('fail') ? 'var(--red)'
+                : e.type?.includes('approval') ? 'var(--orange)' : 'var(--green)'
+              return (
+                <Row
+                  key={i}
+                  left={<span style={{ width:6, height:6, borderRadius:'50%', background:color, flexShrink:0 }} />}
+                  center={<span className="mono" style={{ fontSize: 11, color: 'var(--text-2)' }}>{e.type}</span>}
+                  right={<Ts value={e.data?.timestamp ?? Date.now()} />}
+                />
+              )
+            })}
+          </Card>
+        </div>
+      </div>
 
       {/* Models */}
-      {(models.models ?? []).length > 0 && (
-        <>
-          <SectionLabel>Models</SectionLabel>
-          <Card>
-            {(models.models ?? []).map(m => (
-              <Row
-                key={m.name}
-                left={<Dot status={m.running ? 'active' : 'completed'} />}
-                center={
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{m.name}</span>
-                    {m.name === models.default && <Badge color="#0a84ff">default</Badge>}
-                    {m.running && <Badge color="#30d158">running</Badge>}
-                  </div>
-                }
-                right={
-                  <span className="text-sm tabular" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    {m.size_gb} GB
-                  </span>
-                }
-              />
-            ))}
-          </Card>
-        </>
-      )}
-
-      {/* Approvals */}
-      {approvals.length > 0 && (
-        <>
-          <SectionLabel>Pending Approvals</SectionLabel>
-          <Card>
-            {approvals.slice(0, 3).map(a => (
-              <Row
-                key={a.id}
-                left={
-                  <div className="w-8 h-8 rounded-[8px] flex items-center justify-center text-sm"
-                    style={{ background: '#ff9f0a22' }}>
-                    ⚠️
-                  </div>
-                }
-                center={
-                  <div>
-                    <div className="text-sm font-medium">{a.tool ?? 'action'}</div>
-                    <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {a.agent ?? 'agent'} · {a.risk ?? 'medium'} risk
-                    </div>
-                  </div>
-                }
-                right={<Time value={a.created_at} />}
-                chevron
-              />
-            ))}
-          </Card>
-        </>
-      )}
-
-      {/* Live events */}
-      <SectionLabel>Live Events</SectionLabel>
-      <Card>
-        {events.length === 0 ? (
-          <div className="px-4 py-4 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Waiting for events...
-          </div>
-        ) : events.slice(0, 8).map((evt, i) => (
-          <Row
-            key={i}
-            left={
-              <div className="w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0"
-                style={{
-                  background: evt.type?.includes('error') ? '#ff453a'
-                    : evt.type?.includes('approval') ? '#ff9f0a'
-                    : 'rgba(255,255,255,0.2)'
-                }}
-              />
-            }
-            center={
-              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                {evt.type}
-              </span>
-            }
-            right={<Time value={Date.now()} />}
-          />
-        ))}
-      </Card>
+      <SectionLabel>Models</SectionLabel>
+      <div style={{ padding: '0 20px' }}>
+        <Card>
+          {(models.models ?? []).length === 0 ? (
+            <Empty>No models — is Ollama running?</Empty>
+          ) : (models.models ?? []).map(m => (
+            <Row
+              key={m.name}
+              left={<StatusDot status={m.running ? 'active' : 'completed'} />}
+              center={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="mono" style={{ fontSize: 13 }}>{m.name}</span>
+                  {m.name === models.default && <Badge color="blue">default</Badge>}
+                  {m.running && <Badge color="green">running</Badge>}
+                </div>
+              }
+              right={<span className="ts">{m.size_gb} GB</span>}
+            />
+          ))}
+        </Card>
+      </div>
     </div>
   )
 }

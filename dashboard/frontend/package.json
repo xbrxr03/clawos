@@ -1,6 +1,6 @@
 {
   "name": "clawos-dashboard",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,10 +12,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.1",
-    "lucide-react": "^0.383.0",
-    "recharts": "^2.12.7",
-    "clsx": "^2.1.1",
-    "date-fns": "^3.6.0"
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

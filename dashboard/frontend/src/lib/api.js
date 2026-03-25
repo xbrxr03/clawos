@@ -1,38 +1,20 @@
-const BASE = '/api'
-
-async function req(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } }
-  if (body) opts.body = JSON.stringify(body)
-  const r = await fetch(`${BASE}${path}`, opts)
-  if (!r.ok) throw new Error(`${method} ${path} → ${r.status}`)
-  return r.json()
-}
+const r = (method, path, body) =>
+  fetch(`/api${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  }).then(r => { if (!r.ok) throw new Error(`${method} ${path} → ${r.status}`); return r.json() })
 
 export const api = {
-  // Approvals
-  approve: (id) => req('POST', `/approvals/${id}/approve`),
-  deny:    (id) => req('POST', `/approvals/${id}/deny`),
-
-  // Tasks
-  tasks:   ()   => req('GET', '/tasks'),
-
-  // Models
-  models:  ()   => req('GET', '/models'),
-  pullModel:  (name) => req('POST', `/models/${encodeURIComponent(name)}/pull`),
-  deleteModel: (name) => req('DELETE', `/models/${encodeURIComponent(name)}`),
-
-  // Audit
-  audit:   (limit = 100, offset = 0) => req('GET', `/audit?limit=${limit}&offset=${offset}`),
-
-  // Memory
-  memory:  ()   => req('GET', '/memory'),
-
-  // Workspaces
-  workspaces: () => req('GET', '/workspaces'),
-
-  // System
-  system:  ()   => req('GET', '/system'),
-
-  // Services
-  services: ()  => req('GET', '/services'),
+  approve:     id   => r('POST',   `/approvals/${id}/approve`),
+  deny:        id   => r('POST',   `/approvals/${id}/deny`),
+  tasks:       ()   => r('GET',    '/tasks'),
+  models:      ()   => r('GET',    '/models'),
+  pullModel:   name => r('POST',   `/models/${encodeURIComponent(name)}/pull`),
+  deleteModel: name => r('DELETE', `/models/${encodeURIComponent(name)}`),
+  audit:       (n=200) => r('GET', `/audit?limit=${n}`),
+  memory:      ()   => r('GET',    '/memory'),
+  workspaces:  ()   => r('GET',    '/workspaces'),
+  system:      ()   => r('GET',    '/system'),
+  services:    ()   => r('GET',    '/services'),
 }
