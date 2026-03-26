@@ -46,8 +46,8 @@ PHASE_ROUTING = {
     "uploading":   ("upload_agent",    "uploading",   "light"),
 }
 PHASE_SEQUENCE = [
-    "writing", "voice", "assembling",
-    "visualizing", "rendering", "uploading", "complete"
+    "writing", "voice", "visualizing",
+    "assembling", "rendering", "uploading", "complete"
 ]
 TERMINAL_PHASES = {"complete", "failed"}
 MAX_RETRIES = 3

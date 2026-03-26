@@ -7,7 +7,6 @@ After=network.target
 Type=simple
 WorkingDirectory=%h/clawos
 ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/policyd/service.py
-ExecStartPost=/bin/bash -c 'for i in $(seq 1 15); do curl -sf http://localhost:7074/health && exit 0; sleep 1; done; exit 1'
 Restart=on-failure
 RestartSec=3
 StandardOutput=append:%h/clawos/logs/policyd.log
