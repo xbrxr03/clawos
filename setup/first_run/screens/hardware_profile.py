@@ -16,9 +16,9 @@ def run(state) -> bool:
     print(f"  Recommended profile: {auto}")
     print()
     print("  Profiles:")
-    print("    [1] Low RAM      — 8-16GB,  gemma3:4b,  voice off")
-    print("    [2] Balanced     — 16-32GB, gemma3:4b,  voice optional  ← recommended for you")
-    print("    [3] Performance  — 32GB+,   gemma3:12b, voice on")
+    print("    [1] Low RAM      — <12GB,  qwen2.5:3b, voice off")
+    print("    [2] Balanced     — 12-32GB, qwen2.5:7b, voice optional  ← recommended for you")
+    print("    [3] Performance  — 32GB+,   qwen2.5:7b, voice on, GPU acceleration")
     print()
 
     choice = input("  Choose profile [1/2/3] or Enter for recommended: ").strip()
@@ -35,6 +35,6 @@ def run(state) -> bool:
     from bootstrap.profile_selector import recommended_model
     state.model = recommended_model(hw)
 
-    print(f"\n  Profile set: {profile}")
+    print(f"\n  Profile set: {profile}  →  model: {state.model}")
     state.mark_done("hardware_profile")
     return True

@@ -53,6 +53,8 @@ HELP = f"""
   {_p(CYAN, '/forget')} {_d('<id>')}     delete a memory
   {_p(CYAN, '/skills')}           list loaded skills
   {_p(CYAN, '/skills reload')}    rescan skill directories
+  {_p(CYAN, '/do')} {_d('<request>')}    natural language shell command
+  {_p(CYAN, '/setup')}            re-run first-run wizard
   {_p(CYAN, '/help')}             show this help
   {_p(CYAN, '/quit')}             exit
 """
@@ -186,12 +188,29 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
             elif cmd == "/do":
                 if arg:
                     import subprocess
-                    subprocess.run(
-                        ["python3", "/home/user/clawdo/claw_do/cli.py", arg],
-                        env={**__import__("os").environ, "PYTHONPATH": "/home/user/clawdo"}
-                    )
+                    # Locate claw-do dynamically — works regardless of username
+                    clawdo_dir = Path.home() / "clawdo"
+                    clawdo_cli = clawdo_dir / "claw_do" / "cli.py"
+                    if clawdo_cli.exists():
+                        subprocess.run(
+                            ["python3", str(clawdo_cli), arg],
+                            env={**os.environ, "PYTHONPATH": str(clawdo_dir)}
+                        )
+                    else:
+                        print(f"  {_d('claw-do not found at')} {clawdo_dir}")
+                        print(f"  {_d('Install: git clone https://github.com/xbrxr03/clawdo ~/clawdo')}\n")
                 else:
                     print(f"  {_d('Usage: /do <request>')}\n")
+
+            elif cmd == "/setup":
+                import subprocess
+                wizard = Path(__file__).parent.parent.parent / "setup" / "first_run" / "wizard.py"
+                if wizard.exists():
+                    print(f"  {_p(AMBER, '◆')} Launching setup wizard ...\n")
+                    subprocess.run(["python3", str(wizard), "--reset"])
+                else:
+                    print(f"  {_d('Wizard not found at')} {wizard}\n")
+
             elif cmd == "/workspace":
                 if arg:
                     current_ws = arg

@@ -28,8 +28,8 @@ class WizardState:
     voice_enabled:  bool  = True
     voice_mode:     str   = "push_to_talk"
 
-    # Model
-    model:          str   = "gemma3:4b"
+    # Model — qwen2.5:7b is the confirmed default (gemma3 removed)
+    model:          str   = "qwen2.5:7b"
     openclaw_model: str   = "qwen2.5:7b"
     model_pulled:   bool  = False
 

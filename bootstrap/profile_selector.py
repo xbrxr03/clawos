@@ -25,9 +25,14 @@ def voice_feasible(hw: HardwareProfile) -> bool:
 
 
 def recommended_model(hw: HardwareProfile) -> str:
-    if hw.ram_gb >= 32 or hw.gpu_vram_gb >= 8:
-        return "gemma3:12b"
-    return "gemma3:4b"
+    """
+    qwen2.5:7b is the confirmed default across all tiers.
+    gemma3 models have been removed from the project.
+    Tier A gets qwen2.5:3b if <12GB RAM to avoid OOM.
+    """
+    if hw.ram_gb < 12:
+        return "qwen2.5:3b"
+    return "qwen2.5:7b"
 
 
 def recommended_openclaw_model(hw: HardwareProfile) -> str:

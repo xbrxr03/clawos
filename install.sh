@@ -286,9 +286,8 @@ else
   info "systemd not available — start manually: ollama serve"
 fi
 
-# ── Done ──────────────────────────────────────────────────────────────────────
+# ── First-run wizard ──────────────────────────────────────────────────────────
 ELAPSED=$((SECONDS - START_TIME))
-echo ""
 echo ""
 divider
 echo ""
@@ -296,31 +295,46 @@ echo -e "  ${G}${BOLD}✓  ClawOS installed in ${ELAPSED}s${RESET}"
 echo ""
 divider
 echo ""
-echo -e "  ${W}${BOLD}Mode 1  —  Offline chat (works right now)${RESET}"
-echo ""
-echo -e "  ${B}  clawos${RESET}"
-echo ""
-echo -e "  ${D}  Claw Core · qwen2.5:7b · fully local · no account needed${RESET}"
-echo ""
-divider
-echo ""
-echo -e "  ${W}${BOLD}Mode 2  —  Full OpenClaw power (free, Kimi k2.5)${RESET}"
-echo ""
-echo -e "  ${D}  Sign in to Ollama once — free cloud model, 256k context:${RESET}"
-echo ""
-echo -e "  ${B}  ollama signin${RESET}"
-echo -e "  ${B}  ollama launch openclaw --model kimi-k2.5:cloud${RESET}"
-echo ""
-echo -e "  ${D}  OpenClaw · Kimi k2.5 · 13,700+ skills · WhatsApp · free tier${RESET}"
-echo ""
-divider
-echo ""
-echo -e "  ${W}${BOLD}Connect WhatsApp${RESET}"
-echo ""
-echo -e "  ${B}  openclaw configure --section channels${RESET}"
-echo ""
-divider
-echo ""
-echo -e "  ${D}  Reload shell:   ${RESET}${B}source ~/.bashrc${RESET}"
-echo -e "  ${D}  GitHub:         ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
-echo ""
+
+WIZARD_STATE="${HOME}/clawos/config/wizard_state.json"
+
+if [ ! -f "$WIZARD_STATE" ]; then
+  echo -e "  ${W}${BOLD}Starting first-run setup wizard...${RESET}"
+  echo -e "  ${D}Sets up your workspace, voice, and AI runtime preferences.${RESET}"
+  echo ""
+  sleep 1
+  cd "$INSTALL_DIR"
+  export PYTHONPATH="$INSTALL_DIR"
+  python3 -m setup.first_run.wizard
+else
+  # Re-install / update case — wizard already completed, just show quick start
+  echo -e "  ${W}${BOLD}Mode 1  —  Offline chat (works right now)${RESET}"
+  echo ""
+  echo -e "  ${B}  clawos${RESET}"
+  echo ""
+  echo -e "  ${D}  Claw Core · qwen2.5:7b · fully local · no account needed${RESET}"
+  echo ""
+  divider
+  echo ""
+  echo -e "  ${W}${BOLD}Mode 2  —  Full OpenClaw power (free, Kimi k2.5)${RESET}"
+  echo ""
+  echo -e "  ${D}  Sign in to Ollama once — free cloud model, 256k context:${RESET}"
+  echo ""
+  echo -e "  ${B}  ollama signin${RESET}"
+  echo -e "  ${B}  ollama launch openclaw --model kimi-k2.5:cloud${RESET}"
+  echo ""
+  echo -e "  ${D}  OpenClaw · Kimi k2.5 · 13,700+ skills · WhatsApp · free tier${RESET}"
+  echo ""
+  divider
+  echo ""
+  echo -e "  ${W}${BOLD}Connect WhatsApp${RESET}"
+  echo ""
+  echo -e "  ${B}  openclaw configure --section channels${RESET}"
+  echo ""
+  divider
+  echo ""
+  echo -e "  ${D}  Re-run wizard:  ${RESET}${B}clawos /setup${RESET}${D}  or  ${RESET}${B}python3 -m setup.first_run.wizard --reset${RESET}"
+  echo -e "  ${D}  Reload shell:   ${RESET}${B}source ~/.bashrc${RESET}"
+  echo -e "  ${D}  GitHub:         ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
+  echo ""
+fi
