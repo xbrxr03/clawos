@@ -1,99 +1,103 @@
 #!/usr/bin/env bash
 # ClawOS ordered startup — called by clawos.service ExecStart
-# Starts all 9 services in dependency order, waiting for each to be healthy
-# before proceeding to the next.
+# Launches all services as background processes in dependency order.
+# clawos.service is the supervisor — all child processes live under it.
 
 set -uo pipefail
 
 CLAWOS_HOME="${CLAWOS_HOME:-$HOME/clawos}"
 LOG_DIR="$CLAWOS_HOME/logs"
-mkdir -p "$LOG_DIR"
+PIDS_DIR="$CLAWOS_HOME/run"
+mkdir -p "$LOG_DIR" "$PIDS_DIR"
 
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-BOLD='\033[1m'
-NC='\033[0m'
-
+GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
 ok()   { echo -e "  ${GREEN}✓${NC} $*"; }
 fail() { echo -e "  ${RED}✗${NC} $*"; }
 info() { echo -e "  ${YELLOW}→${NC} $*"; }
 
-# Wait for an HTTP health endpoint to respond, or just a process to be running
-# Usage: wait_healthy <unit> <port|-> [timeout_secs]
-wait_healthy() {
-    local unit="$1"
-    local port="$2"
-    local timeout="${3:-15}"
+start_svc() {
+    local name="$1"
+    local script="$2"
+    local wait_secs="${3:-2}"
+    local pidfile="$PIDS_DIR/$name.pid"
 
-    if [ "$port" = "-" ]; then
-        # No HTTP check — just wait for process to be active
-        for i in $(seq 1 $timeout); do
-            systemctl --user is-active --quiet "$unit" && return 0
-            sleep 1
-        done
-    else
-        for i in $(seq 1 $timeout); do
-            if curl -sf "http://localhost:$port/health" > /dev/null 2>&1; then
-                return 0
-            fi
-            sleep 1
-        done
+    info "Starting $name..."
+
+    if [ -f "$pidfile" ]; then
+        kill "$(cat "$pidfile")" 2>/dev/null || true
+        rm -f "$pidfile"
     fi
 
-    return 1
-}
+    PYTHONPATH="$CLAWOS_HOME" \
+    CLAWOS_HOME="$CLAWOS_HOME" \
+    CLAWOS_SERVICE="$name" \
+    OLLAMA_HOST="http://localhost:11434" \
+        /usr/bin/python3 "$CLAWOS_HOME/$script" \
+        >> "$LOG_DIR/$name.log" 2>&1 &
 
-start_service() {
-    local unit="$1"
-    local port="${2:--}"
-    local label="${3:-$unit}"
-    local timeout="${4:-15}"
+    local pid=$!
+    echo "$pid" > "$pidfile"
 
-    info "Starting $label..."
-
-    # Don't fail if already running
-    systemctl --user start "$unit" 2>/dev/null || true
-
-    if wait_healthy "$unit" "$port" "$timeout"; then
-        ok "$label"
+    sleep "$wait_secs"
+    if kill -0 "$pid" 2>/dev/null; then
+        ok "$name (pid $pid)"
     else
-        fail "$label failed to become healthy (port $port)"
-        echo "  Check logs: journalctl --user -u $unit -n 30"
-        # Non-optional services abort the boot
-        if [[ "$unit" =~ ^clawos-(policyd|memd|modeld|toolbridge|agentd|clawd) ]]; then
-            echo ""
-            echo "  Critical service failed. Stopping ClawOS."
-            bash "$CLAWOS_HOME/scripts/clawos-stop.sh" 2>/dev/null || true
+        fail "$name exited — check $LOG_DIR/$name.log"
+        if [[ "$name" =~ ^(policyd|memd|modeld|agentd|clawd) ]]; then
+            echo "  Critical service failed. Aborting."
             exit 1
         fi
     fi
+}
+
+start_dashd() {
+    local name="dashd"
+    local pidfile="$PIDS_DIR/$name.pid"
+    info "Starting $name..."
+    [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null || true
+    rm -f "$pidfile"
+
+    PYTHONPATH="$CLAWOS_HOME" CLAWOS_HOME="$CLAWOS_HOME" \
+        /usr/bin/python3 -m uvicorn service:app \
+        --host 0.0.0.0 --port 7070 --log-level warning \
+        --app-dir "$CLAWOS_HOME/dashboard/backend" \
+        >> "$LOG_DIR/$name.log" 2>&1 &
+
+    local pid=$!
+    echo "$pid" > "$pidfile"
+    sleep 2
+    kill -0 "$pid" 2>/dev/null && ok "$name (pid $pid)" || fail "$name exited — check $LOG_DIR/$name.log"
+}
+
+start_gatewayd() {
+    local name="gatewayd"
+    local pidfile="$PIDS_DIR/$name.pid"
+    info "Starting $name..."
+    [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null || true
+    rm -f "$pidfile"
+
+    openclaw gateway --allow-unconfigured \
+        >> "$LOG_DIR/$name.log" 2>&1 &
+
+    local pid=$!
+    echo "$pid" > "$pidfile"
+    sleep 2
+    kill -0 "$pid" 2>/dev/null && ok "$name (pid $pid)" || fail "$name exited — check $LOG_DIR/$name.log"
 }
 
 echo ""
 echo -e "${BOLD}Starting ClawOS...${NC}"
 echo ""
 
-# Boot order (matches architecture spec):
-# 1. policyd  — permission gate must be first
-# 2. memd     — memory layer
-# 3. modeld   — model routing
-# 4. toolbridge — tool execution boundary (no HTTP health, check process)
-# 5. agentd   — task queue
-# 6. voiced   — voice pipeline (optional, soft failure)
-# 7. clawd    — orchestration
-# 8. dashd    — dashboard UI
-# 9. gatewayd — WhatsApp bridge (optional, soft failure)
-
-start_service "clawos-policyd"   "7074" "policyd   (permission gate)"    15
-start_service "clawos-memd"      "7073" "memd      (memory manager)"     15
-start_service "clawos-modeld"    "7075" "modeld    (model routing)"      20
-start_service "clawos-toolbridge" "-"   "toolbridge (tool execution)"    10
-start_service "clawos-agentd"    "7072" "agentd    (task queue)"         15
-start_service "clawos-voiced"    "-"    "voiced    (voice pipeline)"     10   # soft fail
-start_service "clawos-clawd"     "7071" "clawd     (orchestration)"      15
-start_service "clawos-dashd"     "7070" "dashd     (dashboard)"          15
-start_service "clawos-gatewayd"  "-"    "gatewayd  (WhatsApp bridge)"    15   # soft fail
+start_svc  "policyd"    "services/policyd/service.py"    2
+start_svc  "memd"       "services/memd/service.py"       2
+start_svc  "modeld"     "services/modeld/service.py"     2
+start_svc  "toolbridge" "services/toolbridge/service.py" 2
+start_svc  "agentd"     "services/agentd/service.py"     2
+start_svc  "voiced"     "services/voiced/service.py"     1
+start_svc  "clawd"      "services/clawd/service.py"      2
+start_dashd
+start_gatewayd
 
 echo ""
 echo -e "${GREEN}${BOLD}ClawOS is running.${NC}"
@@ -102,3 +106,7 @@ echo "  Dashboard: http://localhost:7070"
 echo "  Chat:      clawos"
 echo "  Status:    clawos status"
 echo ""
+
+# Hold process open so clawos.service (Type=simple) stays active
+# All child PIDs are tracked in ~/clawos/run/*.pid
+wait

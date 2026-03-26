@@ -4,8 +4,7 @@ Documentation=https://github.com/xbrxr03/clawos
 After=network.target
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+Type=simple
 WorkingDirectory=%h/clawos
 ExecStart=%h/clawos/scripts/clawos-start.sh
 ExecStop=%h/clawos/scripts/clawos-stop.sh
