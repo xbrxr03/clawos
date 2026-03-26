@@ -341,25 +341,45 @@ async def api_services():
 
 
 async def get_services_health() -> dict:
-    services = {
-        "policyd": (POLICYD_URL, 7074),
-        "memd": (MEMD_URL, 7073),
-        "modeld": (MODELD_URL, 7075),
-        "agentd": (AGENTD_URL, 7072),
-        "ollama": (OLLAMA_URL, 11434),
-    }
+    import subprocess, asyncio
     result = {}
+
+    # clawos.service covers policyd/memd/modeld/agentd — all run inside the daemon
+    async def check_systemd(unit: str) -> str:
+        try:
+            r = await asyncio.create_subprocess_exec(
+                "systemctl", "--user", "is-active", unit,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+            )
+            out, _ = await r.communicate()
+            return out.decode().strip()
+        except Exception:
+            return "unknown"
+
+    # Check parent clawos.service
+    daemon_status = await check_systemd("clawos.service")
+    daemon_up = daemon_status == "active"
+
+    # Services that live inside the daemon process
+    for name in ["policyd", "memd", "modeld", "agentd"]:
+        result[name] = {
+            "status": "up" if daemon_up else "down",
+            "port": None,
+            "latency_ms": None,
+        }
+
+    # Ollama — check via HTTP since it has a real endpoint
     async with httpx.AsyncClient(timeout=1.5) as client:
-        for name, (url, port) in services.items():
-            try:
-                r = await client.get(f"{url}/health")
-                result[name] = {
-                    "status": "up" if r.status_code == 200 else "degraded",
-                    "port": port,
-                    "latency_ms": int(r.elapsed.total_seconds() * 1000),
-                }
-            except Exception:
-                result[name] = {"status": "down", "port": port, "latency_ms": None}
+        try:
+            r = await client.get(f"{OLLAMA_URL}/api/tags")
+            result["ollama"] = {
+                "status": "up" if r.status_code == 200 else "degraded",
+                "port": 11434,
+                "latency_ms": int(r.elapsed.total_seconds() * 1000),
+            }
+        except Exception:
+            result["ollama"] = {"status": "down", "port": 11434, "latency_ms": None}
+
     return result
 
 
@@ -505,3 +525,7 @@ _start_time = time.time()
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("service:app", host="0.0.0.0", port=7070, reload=False, log_level="info")
+
+_static = Path(__file__).parent / "static"
+if _static.exists():
+    app.mount("/", StaticFiles(directory=str(_static), html=True), name="static")
