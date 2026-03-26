@@ -5,11 +5,14 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/scripts/clawos-start.sh
-ExecStop=%h/clawos/scripts/clawos-stop.sh
-StandardOutput=append:%h/clawos/logs/clawos.log
-StandardError=append:%h/clawos/logs/clawos.log
+ExecStart=/usr/bin/python3 /home/user/clawos/clients/daemon/daemon.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/user/clawos/logs/clawosd.log
+StandardError=append:/home/user/clawos/logs/clawosd.log
+Environment=PYTHONPATH=/home/user/clawos
+Environment=CLAWOS_HOME=/home/user/clawos
+Environment=OLLAMA_HOST=http://localhost:11434
 
 [Install]
 WantedBy=default.target
