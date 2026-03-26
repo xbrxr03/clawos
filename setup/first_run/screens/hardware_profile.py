@@ -18,7 +18,7 @@ def run(state) -> bool:
     print("  Profiles:")
     print("    [1] Low RAM      — <12GB,  qwen2.5:3b, voice off")
     print("    [2] Balanced     — 12-32GB, qwen2.5:7b, voice optional  ← recommended for you")
-    print("    [3] Performance  — 32GB+,   qwen2.5:7b, voice on, GPU acceleration")
+    print("    [3] Performance  — 32GB+,  qwen2.5:7b, GPU acceleration")
     print()
 
     choice = input("  Choose profile [1/2/3] or Enter for recommended: ").strip()

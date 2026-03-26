@@ -2,11 +2,22 @@
 # ClawOS dev_boot.sh — start all services for development
 # Usage: bash scripts/dev_boot.sh [--no-dashboard] [--no-voice]
 
-set -e
+set -uo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 export PYTHONPATH="$ROOT"
-export CLAWOS_PROFILE="${CLAWOS_PROFILE:-balanced}"
+
+# ── Detect profile from clawos.yaml, fall back to env, fall back to balanced ──
+if [ -z "${CLAWOS_PROFILE:-}" ]; then
+  YAML="$HOME/clawos/config/clawos.yaml"
+  if [ -f "$YAML" ]; then
+    DETECTED=$(grep '_profile:' "$YAML" 2>/dev/null | head -1 | awk '{print $2}' | tr -d '"'"'" )
+    CLAWOS_PROFILE="${DETECTED:-balanced}"
+  else
+    CLAWOS_PROFILE="balanced"
+  fi
+fi
+export CLAWOS_PROFILE
 
 PIDS=()
 
@@ -21,6 +32,19 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 log() { echo "  [boot] $*"; }
+
+port_in_use() {
+  local port=$1
+  # Try ss first (faster), fall back to netstat, fall back to /dev/tcp
+  if command -v ss &>/dev/null; then
+    ss -tnlp 2>/dev/null | grep -q ":${port} " && return 0
+  elif command -v netstat &>/dev/null; then
+    netstat -tnlp 2>/dev/null | grep -q ":${port} " && return 0
+  else
+    (echo > /dev/tcp/127.0.0.1/$port) 2>/dev/null && return 0
+  fi
+  return 1
+}
 
 log "ClawOS dev boot — profile: $CLAWOS_PROFILE"
 
@@ -53,8 +77,12 @@ python3 -m services.agentd.main &
 PIDS+=($!)
 sleep 0.5
 
-# 6. dashd (unless --no-dashboard)
-if [[ ! " $* " =~ " --no-dashboard " ]]; then
+# 6. dashd — only if port 7070 is free and --no-dashboard not passed
+if [[ " $* " =~ " --no-dashboard " ]]; then
+  log "Skipping dashd (--no-dashboard)"
+elif port_in_use 7070; then
+  log "Dashboard already running on :7070 — skipping dashd"
+else
   log "Starting dashd at http://localhost:7070 ..."
   python3 -m services.dashd.main &
   PIDS+=($!)
@@ -65,7 +93,7 @@ log ""
 log "╔══════════════════════════════════════╗"
 log "║   ClawOS is running (dev mode)       ║"
 log "║   Dashboard: http://localhost:7070   ║"
-log "║   Chat:      python3 -m clients.cli.repl ║"
+log "║   Chat:      clawos                  ║"
 log "║   Ctrl+C to stop all services        ║"
 log "╚══════════════════════════════════════╝"
 log ""

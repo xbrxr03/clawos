@@ -11,14 +11,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from clawos_core.constants import DEFAULT_WORKSPACE, VERSION_FULL
 
-# ── ANSI colours (graceful fallback if terminal doesn't support) ──────────────
+# ── ANSI colours ──────────────────────────────────────────────────────────────
 def _supports_colour():
     return hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
 C = _supports_colour()
-RESET  = "\033[0m"       if C else ""
-BOLD   = "\033[1m"       if C else ""
-DIM    = "\033[2m"       if C else ""
+RESET  = "\033[0m"        if C else ""
+BOLD   = "\033[1m"        if C else ""
+DIM    = "\033[2m"        if C else ""
 PURPLE = "\033[38;5;141m" if C else ""
 GREEN  = "\033[38;5;84m"  if C else ""
 AMBER  = "\033[38;5;220m" if C else ""
@@ -27,9 +27,9 @@ BLUE   = "\033[38;5;75m"  if C else ""
 GREY   = "\033[38;5;245m" if C else ""
 CYAN   = "\033[38;5;117m" if C else ""
 
-def _p(colour, text):   return f"{colour}{text}{RESET}"
-def _b(colour, text):   return f"{BOLD}{colour}{text}{RESET}"
-def _d(text):           return f"{DIM}{GREY}{text}{RESET}"
+def _p(colour, text):  return f"{colour}{text}{RESET}"
+def _b(colour, text):  return f"{BOLD}{colour}{text}{RESET}"
+def _d(text):          return f"{DIM}{GREY}{text}{RESET}"
 
 BANNER = f"""
 {PURPLE}{BOLD}  ██████╗██╗      █████╗ ██╗    ██╗ ██████╗ ███████╗
@@ -64,19 +64,50 @@ THINKING_FRAMES = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
 def _hr():
     return _d("  " + "─" * 52)
 
-def _tag(label, colour):
-    return f"{colour}{BOLD} {label} {RESET}"
-
 def _status_line(workspace: str, model: str, turn: int) -> str:
     return (f"  {_d('ws:')} {_p(AMBER, workspace)}"
             f"  {_d('model:')} {_p(BLUE, model.split(':')[0])}"
             f"  {_d('turn:')} {_p(GREY, str(turn))}")
 
 
+def _resolve_workspace(arg: str) -> str:
+    """
+    Determine the active workspace.
+    Priority: explicit CLI arg > clawos.yaml workspace.default > DEFAULT_WORKSPACE.
+    Filters out wizard flags (--reset, --from) that must never be workspace names.
+    """
+    WIZARD_FLAGS = {"--reset", "--from", "--help", "-h"}
+
+    if arg and arg not in WIZARD_FLAGS and not arg.startswith("--"):
+        return arg
+
+    # Read from clawos.yaml
+    try:
+        from clawos_core.constants import CLAWOS_CONFIG
+        if CLAWOS_CONFIG.exists():
+            try:
+                import yaml
+                cfg = yaml.safe_load(CLAWOS_CONFIG.read_text()) or {}
+                ws = cfg.get("workspace", {}).get("default", "")
+                if ws and ws.strip():
+                    return ws.strip()
+            except Exception:
+                for line in CLAWOS_CONFIG.read_text().splitlines():
+                    line = line.strip()
+                    if line.startswith("default:"):
+                        val = line.split(":", 1)[1].strip().strip('"').strip("'")
+                        if val:
+                            return val
+    except Exception:
+        pass
+
+    return DEFAULT_WORKSPACE
+
+
 class ThinkingIndicator:
     def __init__(self):
-        self._stop  = False
-        self._task  = None
+        self._stop = False
+        self._task = None
 
     async def start(self):
         self._stop = False
@@ -108,7 +139,6 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
     from services.memd.service   import MemoryService
     from services.skilld.service import get_loader, reload_skills
 
-    # Loading indicator
     print(f"  {_p(AMBER, '◆')} Loading workspace {_b(AMBER, workspace)} ...", end="", flush=True)
     try:
         agent  = await build_runtime(workspace)
@@ -136,8 +166,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
 
     while True:
         try:
-            prompt = f"  {_b(PURPLE, 'you')} {_d('›')} "
-            raw = input(prompt).strip()
+            raw = input(f"  {_b(PURPLE, 'you')} {_d('›')} ").strip()
         except (KeyboardInterrupt, EOFError):
             print(f"\n\n  {_p(GREEN, '◆')} Goodbye.\n")
             break
@@ -187,20 +216,15 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
 
             elif cmd == "/do":
                 if arg:
-                    import subprocess
-                    # Locate claw-do dynamically — works regardless of username
-                    clawdo_dir = Path.home() / "clawdo"
-                    clawdo_cli = clawdo_dir / "claw_do" / "cli.py"
-                    if clawdo_cli.exists():
-                        subprocess.run(
-                            ["python3", str(clawdo_cli), arg],
-                            env={**os.environ, "PYTHONPATH": str(clawdo_dir)}
-                        )
-                    else:
-                        print(f"  {_d('claw-do not found at')} {clawdo_dir}")
-                        print(f"  {_d('Install: git clone https://github.com/xbrxr03/clawdo ~/clawdo')}\n")
+                    from tools.shell.do.cli import run as _do_run
+                    # Split arg into argv-style list preserving flags
+                    import shlex
+                    try:
+                        _do_run(shlex.split(arg))
+                    except Exception as _e:
+                        print(f"  {_d(str(_e))}\n")
                 else:
-                    print(f"  {_d('Usage: /do <request>')}\n")
+                    print(f"  {_d('Usage: /do <request> [--dry] [--yes] [--history] [--undo] [--explain] [--step]')}\n")
 
             elif cmd == "/setup":
                 import subprocess
@@ -219,6 +243,8 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
                     agent = await br(current_ws)
                     turn  = 0
                     print(f"\r  {_p(GREEN, '✓')} Workspace: {_b(AMBER, current_ws)}\n")
+                else:
+                    print(f"  {_d('Current workspace:')} {_p(AMBER, current_ws)}\n")
 
             elif cmd == "/status":
                 from services.modeld.ollama_client import is_running, list_models
@@ -272,7 +298,6 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
         elapsed = time.time() - t0
         await spinner.stop()
 
-        # Print reply with nice formatting
         print(f"  {_b(GREEN, 'jarvis')} {_d('›')}", end=" ")
         words = reply.split()
         line  = ""
@@ -294,8 +319,9 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
 
 
 def main():
-    ws = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_WORKSPACE
-    asyncio.run(run_repl(ws))
+    arg = sys.argv[1] if len(sys.argv) > 1 else ""
+    workspace = _resolve_workspace(arg)
+    asyncio.run(run_repl(workspace))
 
 
 if __name__ == "__main__":

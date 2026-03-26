@@ -44,7 +44,6 @@ class WizardState:
     completed:      bool  = False
     screens_done:   list  = field(default_factory=list)
 
-
     def save(self):
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         STATE_FILE.write_text(json.dumps(asdict(self), indent=2))

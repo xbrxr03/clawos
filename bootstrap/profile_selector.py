@@ -1,6 +1,7 @@
 """
 Auto-select ClawOS profile from hardware tier.
 Can be overridden by user during first-run wizard.
+gemma3 models have been removed — qwen2.5:7b is the confirmed default.
 """
 from bootstrap.hardware_probe import HardwareProfile
 
@@ -26,9 +27,9 @@ def voice_feasible(hw: HardwareProfile) -> bool:
 
 def recommended_model(hw: HardwareProfile) -> str:
     """
-    qwen2.5:7b is the confirmed default across all tiers.
-    gemma3 models have been removed from the project.
-    Tier A gets qwen2.5:3b if <12GB RAM to avoid OOM.
+    qwen2.5:7b confirmed default across Tier B and C.
+    Tier A (<12GB) gets qwen2.5:3b to avoid OOM.
+    gemma3 models removed from project entirely.
     """
     if hw.ram_gb < 12:
         return "qwen2.5:3b"
@@ -36,7 +37,7 @@ def recommended_model(hw: HardwareProfile) -> str:
 
 
 def recommended_openclaw_model(hw: HardwareProfile) -> str:
-    """OpenClaw needs tool-calling models — gemma3 doesn't work."""
+    """OpenClaw needs tool-calling models — gemma3 doesn't support tool calls."""
     if hw.ram_gb >= 32:
         return "qwen2.5:14b"
     return "qwen2.5:7b"
@@ -47,8 +48,8 @@ def summary(hw: HardwareProfile) -> str:
     lines = [
         f"  RAM:    {hw.ram_gb}GB → profile: {profile}",
         f"  CPU:    {hw.cpu_cores} cores",
-        f"  GPU:    {hw.gpu_name} ({hw.gpu_vram_gb}GB VRAM)" if hw.gpu_vram_gb > 0
-               else f"  GPU:    none (CPU inference)",
+        (f"  GPU:    {hw.gpu_name} ({hw.gpu_vram_gb}GB VRAM)" if hw.gpu_vram_gb > 0
+         else "  GPU:    none (CPU inference)"),
         f"  Disk:   {hw.disk_free_gb}GB free",
         f"  Audio:  {'mic detected' if hw.has_mic else 'no mic'}",
         f"  Ollama: {'running' if hw.ollama_ok else 'not running'}",
