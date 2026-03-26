@@ -1,0 +1,20 @@
+[Unit]
+Description=ClawOS scheduler — runs scheduled agent tasks
+Documentation=https://github.com/xbrxr03/clawos
+After=clawos-agentd.service clawos-clawd.service
+Requires=clawos-agentd.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clawos
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/scheduler/service.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:%h/clawos/logs/scheduler.log
+StandardError=append:%h/clawos/logs/scheduler.log
+Environment=PYTHONPATH=%h/clawos
+Environment=CLAWOS_HOME=%h/clawos
+Environment=CLAWOS_SERVICE=scheduler
+
+[Install]
+WantedBy=default.target

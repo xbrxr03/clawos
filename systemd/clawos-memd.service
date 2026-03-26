@@ -1,0 +1,21 @@
+[Unit]
+Description=ClawOS memd — 4-layer memory manager (PINNED+WORKFLOW+ChromaDB+FTS5)
+Documentation=https://github.com/xbrxr03/clawos
+After=clawos-policyd.service
+Requires=clawos-policyd.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clawos
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/memd/service.py
+ExecStartPost=/bin/bash -c 'for i in $(seq 1 15); do curl -sf http://localhost:7073/health && exit 0; sleep 1; done; exit 1'
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:%h/clawos/logs/memd.log
+StandardError=append:%h/clawos/logs/memd.log
+Environment=PYTHONPATH=%h/clawos
+Environment=CLAWOS_HOME=%h/clawos
+Environment=CLAWOS_SERVICE=memd
+
+[Install]
+WantedBy=default.target

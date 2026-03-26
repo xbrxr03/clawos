@@ -1,0 +1,16 @@
+[Unit]
+Description=ClawOS — Agent-Native AI Stack
+Documentation=https://github.com/xbrxr03/clawos
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/clawos
+ExecStart=%h/clawos/scripts/clawos-start.sh
+ExecStop=%h/clawos/scripts/clawos-stop.sh
+StandardOutput=append:%h/clawos/logs/clawos.log
+StandardError=append:%h/clawos/logs/clawos.log
+
+[Install]
+WantedBy=default.target

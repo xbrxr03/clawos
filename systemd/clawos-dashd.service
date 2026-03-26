@@ -1,0 +1,20 @@
+[Unit]
+Description=ClawOS dashd — dashboard backend and WebSocket event stream (port 7070)
+Documentation=https://github.com/xbrxr03/clawos
+After=clawos-clawd.service
+Wants=clawos-clawd.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clawos/dashboard/backend
+ExecStart=%h/clawos/venv/bin/uvicorn service:app --host 0.0.0.0 --port 7070 --log-level warning
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:%h/clawos/logs/dashd.log
+StandardError=append:%h/clawos/logs/dashd.log
+Environment=PYTHONPATH=%h/clawos
+Environment=CLAWOS_HOME=%h/clawos
+Environment=CLAWOS_SERVICE=dashd
+
+[Install]
+WantedBy=default.target

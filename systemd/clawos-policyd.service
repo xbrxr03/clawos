@@ -1,0 +1,20 @@
+[Unit]
+Description=ClawOS policyd — permission gate, Merkle audit, lifecycle hooks
+Documentation=https://github.com/xbrxr03/clawos
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clawos
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/policyd/service.py
+ExecStartPost=/bin/bash -c 'for i in $(seq 1 15); do curl -sf http://localhost:7074/health && exit 0; sleep 1; done; exit 1'
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:%h/clawos/logs/policyd.log
+StandardError=append:%h/clawos/logs/policyd.log
+Environment=PYTHONPATH=%h/clawos
+Environment=CLAWOS_HOME=%h/clawos
+Environment=CLAWOS_SERVICE=policyd
+
+[Install]
+WantedBy=default.target

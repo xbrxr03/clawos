@@ -1,0 +1,22 @@
+[Unit]
+Description=ClawOS modeld — Ollama model routing and health checks
+Documentation=https://github.com/xbrxr03/clawos
+After=clawos-policyd.service
+Requires=clawos-policyd.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clawos
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/modeld/service.py
+ExecStartPost=/bin/bash -c 'for i in $(seq 1 20); do curl -sf http://localhost:7075/health && exit 0; sleep 1; done; exit 1'
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:%h/clawos/logs/modeld.log
+StandardError=append:%h/clawos/logs/modeld.log
+Environment=PYTHONPATH=%h/clawos
+Environment=CLAWOS_HOME=%h/clawos
+Environment=CLAWOS_SERVICE=modeld
+Environment=OLLAMA_HOST=http://localhost:11434
+
+[Install]
+WantedBy=default.target

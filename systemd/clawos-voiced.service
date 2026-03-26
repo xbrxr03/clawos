@@ -1,0 +1,24 @@
+[Unit]
+Description=ClawOS voiced — Whisper STT + Piper TTS voice pipeline
+Documentation=https://github.com/xbrxr03/clawos
+After=clawos-modeld.service clawos-agentd.service
+Wants=clawos-modeld.service clawos-agentd.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clawos
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/voiced/service.py
+Restart=on-failure
+RestartSec=5
+# voiced is non-critical — don't block stack on voice failure
+SuccessExitStatus=0 1
+StandardOutput=append:%h/clawos/logs/voiced.log
+StandardError=append:%h/clawos/logs/voiced.log
+Environment=PYTHONPATH=%h/clawos
+Environment=CLAWOS_HOME=%h/clawos
+Environment=CLAWOS_SERVICE=voiced
+# Pipewire audio fix (44100Hz)
+Environment=PULSE_LATENCY_MSEC=60
+
+[Install]
+WantedBy=default.target
