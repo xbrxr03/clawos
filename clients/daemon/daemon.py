@@ -56,12 +56,13 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
         import uvicorn
         dashboard_dir = Path(__file__).parent.parent.parent / "dashboard" / "backend"
         if (dashboard_dir / "service.py").exists():
+            sys.path.insert(0, str(dashboard_dir))
             config = uvicorn.Config(
                 "service:app",
                 host="0.0.0.0",
                 port=7070,
                 log_level="warning",
-                app_dir=str(dashboard_dir),
+                
             )
             server = uvicorn.Server(config)
             asyncio.create_task(server.serve())
