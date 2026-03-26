@@ -16,3 +16,9 @@ build/
 /voice/*.json
 *.iso
 /dist/
+dashboard/backend/static/
+dashboard/frontend/node_modules/
+dashboard/frontend/package-lock.json
+run/
+*.zip
+services/__init__.py
