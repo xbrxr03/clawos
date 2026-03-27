@@ -103,6 +103,36 @@ class AgentRuntime:
         top = self._skills.top(user_input)
         return format_skills_block(top)
 
+    def _get_rag_context(self, user_input: str) -> str:
+        """
+        Query the workspace RAG index for relevant document chunks.
+        Returns formatted context block with citations, or empty string
+        if no documents are indexed or no relevant chunks found.
+        """
+        if self._is_trivial(user_input):
+            return ""
+        try:
+            from pathlib import Path
+            from services.ragd.service import get_rag
+            ws_root = Path.home() / "clawos" / "workspace" / self.workspace_id
+            rag     = get_rag(self.workspace_id, ws_root)
+            # Only query if there are ingested docs
+            s = rag.stats()
+            if s.get("documents", 0) == 0:
+                return ""
+            results = rag.retrieve(user_input)
+            if not results:
+                return ""
+            lines = ["[Project Documents]"]
+            for i, r in enumerate(results, 1):
+                lines.append(
+                    f"[{i}] {r['title']} p.{r['page']} ({r['chunk_type']}): "
+                    f"{r['content'][:300]}"
+                )
+            return "\n".join(lines)
+        except Exception:
+            return ""
+
     async def chat(self, user_input: str) -> str:
         self._turn       += 1
         self.session.turn = self._turn
@@ -111,9 +141,10 @@ class AgentRuntime:
         mem_ctx     = self._get_memory_context(user_input)
         skills_block = self._get_skills_block(user_input)
 
+        rag_ctx  = self._get_rag_context(user_input)
         user_msg = build_user_message(
             user_input, self.session.session_id, self._turn,
-            mem_ctx, skills_block
+            mem_ctx, skills_block, rag_ctx
         )
 
         trimmed   = self._history[-(MAX_HISTORY * 2):]

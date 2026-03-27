@@ -3,7 +3,12 @@ ClawOS Core Constants
 =====================
 Single source of truth for version, paths, service names, ports.
 Import from here — never hardcode these elsewhere.
+
+Environment overrides:
+  OLLAMA_HOST   — point at a remote Ollama server (e.g. http://192.168.1.50:11434)
+  CLAWOS_MODEL  — override the default chat model
 """
+import os
 from pathlib import Path
 
 # ── Version ───────────────────────────────────────────────────────────────────
@@ -59,16 +64,27 @@ PORT_MODELD   = 7075
 PORT_GATEWAYD = 7076
 PORT_OLLAMA   = 11434
 
-OLLAMA_HOST   = "http://localhost:11434"
+# Read from environment — allows pointing at a remote Ollama server
+# Example: export OLLAMA_HOST=http://192.168.1.50:11434
+OLLAMA_HOST   = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 
 # ── Models ────────────────────────────────────────────────────────────────────
-DEFAULT_MODEL        = "qwen2.5:7b"
-DEFAULT_EMBED_MODEL  = "nomic-embed-text"
+# Four models. Nothing else.
+#   basic:    qwen2.5:1.5b  — simple Q&A, greetings, acks (ARM/CPU-only friendly)
+#   standard: qwen2.5:3b    — writing, summarization, general tasks
+#   full:     qwen2.5:7b    — tools, code, RAG, complex reasoning (GPU recommended)
+#   openclaw: kimi-k2.5:cloud — OpenClaw agent sessions (cloud, 256k ctx)
+DEFAULT_MODEL       = os.environ.get("CLAWOS_MODEL", "qwen2.5:7b")
+DEFAULT_EMBED_MODEL = "nomic-embed-text"
 
 MODEL_PROFILES = {
-    "lowram":      {"chat": "qwen2.5:7b",  "ctx": 2048, "voice": False},
-    "balanced":    {"chat": "qwen2.5:7b",  "ctx": 4096, "voice": True},
-    "performance": {"chat": "qwen2.5:7b",  "ctx": 8192, "voice": True},
+    # Tier A: ARM / CPU-only / low RAM (RPi 5, 8GB mini PCs)
+    # qwen2.5:1.5b runs at ~3-5 tok/s on RPi 5 — responsive
+    "lowram":      {"chat": "qwen2.5:1.5b", "ctx": 2048, "voice": False},
+    # Tier B: x86 8-16GB (laptops, mini PCs with iGPU)
+    "balanced":    {"chat": "qwen2.5:3b",   "ctx": 4096, "voice": True},
+    # Tier C: x86 16GB+ with discrete GPU
+    "performance": {"chat": "qwen2.5:7b",   "ctx": 8192, "voice": True},
 }
 
 # ── Agent loop ────────────────────────────────────────────────────────────────

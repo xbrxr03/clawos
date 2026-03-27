@@ -33,6 +33,7 @@ if str(_ROOT) not in sys.path:
 RESERVED = {
     "status", "logs", "audit", "memory", "workspace", "model",
     "policy", "approve", "deny", "setup", "scan",
+    "secret", "project",
     # aliases
     "ws", "mod",
 }
@@ -67,6 +68,39 @@ def _b(c, t): return f"{BOLD}{c}{t}{RESET}"
 def cmd_status():
     from clawctl.commands.status import run
     run()
+    # Show compression stats inline if openclaw is installed
+    import shutil
+    if shutil.which("openclaw"):
+        _print_compression_status()
+
+
+def _print_compression_status():
+    try:
+        from openclaw_integration.compression import (
+            headroom_running, rtk_installed, headroom_stats,
+            rtk_stats, HEADROOM_PORT
+        )
+        h = headroom_running()
+        r = rtk_installed()
+        if not h and not r:
+            return
+        print(f"  {_d('Token compression')} {_d('─'*22)}")
+        if h:
+            s   = headroom_stats()
+            tok = s.get("tokens", {}).get("saved", 0)
+            pct = s.get("tokens", {}).get("savings_percent", 0)
+            tag = f" {_d(str(tok)+' saved ('+str(round(pct))+'%)')}" if tok else ""
+            print("  " + _p(GREEN, "✓") + f"  headroom  proxy :{HEADROOM_PORT}{tag}")
+        if r:
+            s = rtk_stats()
+            raw = s.get("raw", "")
+            import re as _re2
+            m = _re2.search(r'[\d,]+\s*tokens', raw)
+            tag = f" {_d(m.group(0))}" if m else ""
+            print("  " + _p(GREEN, "✓") + f"  rtk       CLI compression{tag}")
+        print()
+    except Exception:
+        pass
 
 
 # ── logs ──────────────────────────────────────────────────────────────────────
@@ -389,6 +423,235 @@ def print_help():
 
 
 # ── main entry point ──────────────────────────────────────────────────────────
+
+# ── secret ─────────────────────────────────────────────────────────────────────
+def cmd_secret(args: list):
+    from services.secretd.service import get_store
+    store = get_store()
+
+    if not args:
+        print(f"\n  Usage: nexus secret set <NAME> <VALUE>")
+        print(f"         nexus secret get <NAME>")
+        print(f"         nexus secret list")
+        print(f"         nexus secret remove <NAME>\n")
+        return
+
+    sub = args[0].lower()
+
+    if sub == "set":
+        if len(args) < 3:
+            print(f"\n  Usage: nexus secret set <NAME> <VALUE>\n")
+            return
+        name, value = args[1], " ".join(args[2:])
+        if store.set(name, value):
+            print(f"\n  " + _p(GREEN, "✓") + f"  Secret {_b(PURPLE, name)} stored\n")
+        else:
+            print(f"\n  " + _p(RED, "✗") + f"  Invalid name: {name}\n")
+
+    elif sub == "get":
+        if len(args) < 2:
+            print(f"\n  Usage: nexus secret get <NAME>\n")
+            return
+        name  = args[1]
+        value = store.get(name)
+        if value is None:
+            print(f"\n  " + _p(RED, "✗") + f"  Secret not found: {name}\n")
+        else:
+            # Show masked by default
+            masked = value[:4] + "*" * max(0, len(value) - 4)
+            print(f"\n  {_b(PURPLE, name)}  {_d(masked)}\n")
+
+    elif sub == "list":
+        names = store.list_names()
+        print()
+        if not names:
+            print(f"  {_d('No secrets stored.')}")
+        else:
+            print(f"  {_d('Stored secrets:')}")
+            for n in names:
+                val = store.get(n) or ""
+                masked = val[:4] + "*" * max(0, len(val) - 4)
+                print(f"  {_p(GREEN, '·')}  {_b(PURPLE, n):<30} {_d(masked)}")
+        print()
+
+    elif sub == "remove":
+        if len(args) < 2:
+            print(f"\n  Usage: nexus secret remove <NAME>\n")
+            return
+        name = args[1]
+        if store.remove(name):
+            print(f"\n  " + _p(GREEN, "✓") + f"  Secret {_b(PURPLE, name)} removed\n")
+        else:
+            print(f"\n  " + _p(RED, "✗") + f"  Secret not found: {name}\n")
+
+    else:
+        print(f"\n  Unknown subcommand: {sub}\n")
+
+
+# ── project ────────────────────────────────────────────────────────────────────
+def cmd_project(args: list):
+    from clawos_core.constants import DEFAULT_WORKSPACE, WORKSPACE_DIR
+    from pathlib import Path as _Path
+    import json as _json
+
+    if not args:
+        print(f"\n  Usage: nexus project start <name>")
+        print(f"         nexus project switch <name>")
+        print(f"         nexus project list")
+        print(f"         nexus project upload <file>")
+        print(f"         nexus project files")
+        print(f"         nexus project forget <filename>\n")
+        return
+
+    sub = args[0].lower()
+
+    def _ws_dir(name):
+        try:
+            return _Path(str(WORKSPACE_DIR)) / name
+        except Exception:
+            return _Path.home() / "clawos" / "workspace" / name
+
+    def _current_ws():
+        marker = _Path.home() / ".local" / "share" / "clawos" / "current_project"
+        if marker.exists():
+            return marker.read_text().strip()
+        return DEFAULT_WORKSPACE
+
+    def _set_current_ws(name):
+        marker = _Path.home() / ".local" / "share" / "clawos" / "current_project"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(name)
+
+    if sub == "start":
+        if len(args) < 2:
+            print(f"\n  Usage: nexus project start <name>\n")
+            return
+        name = "_".join(args[1:]).replace(" ", "_").lower()
+        ws   = _ws_dir(name)
+        ws.mkdir(parents=True, exist_ok=True)
+        (ws / "uploads").mkdir(exist_ok=True)
+        # Ask for one-line description
+        print(f"\n  Creating project {_b(PURPLE, name)}")
+        try:
+            desc = input(f"  Describe this project in one line: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            desc = ""
+        if desc:
+            pinned = ws / "PINNED.md"
+            existing = pinned.read_text() if pinned.exists() else ""
+            if f"Project: {name}" not in existing:
+                with open(pinned, "a") as f:
+                    f.write(f"\nProject: {name}\nDescription: {desc}\n")
+        _set_current_ws(name)
+        print(f"  " + _p(GREEN, "✓") + f"  Project {_b(PURPLE, name)} created and active")
+        if desc:
+            print(f"  {_d('Pinned: ' + desc)}")
+        print(f"\n  Upload docs: nexus project upload <file.pdf>\n")
+
+    elif sub == "switch":
+        if len(args) < 2:
+            print(f"\n  Usage: nexus project switch <name>\n")
+            return
+        name = args[1]
+        ws   = _ws_dir(name)
+        if not ws.exists():
+            print(f"\n  " + _p(RED, "✗") + f"  Project not found: {name}")
+            print(f"  Create it: nexus project start {name}\n")
+            return
+        _set_current_ws(name)
+        print(f"\n  " + _p(GREEN, "✓") + f"  Switched to {_b(PURPLE, name)}\n")
+
+    elif sub == "list":
+        try:
+            ws_root = _Path(str(WORKSPACE_DIR))
+        except Exception:
+            ws_root = _Path.home() / "clawos" / "workspace"
+        current = _current_ws()
+        projects = [d for d in sorted(ws_root.iterdir()) if d.is_dir()] if ws_root.exists() else []
+        print()
+        if not projects:
+            print(f"  {_d('No projects. Create one: nexus project start <name>')}")
+        else:
+            for p in projects:
+                marker = f"  {_p(AMBER, '← active')}" if p.name == current else ""
+                files  = list((p / "uploads").glob("*")) if (p / "uploads").exists() else []
+                print(f"  {_p(GREEN, '·')}  {_b(PURPLE, p.name):<28} {_d(str(len(files))+' files')}{marker}")
+        print()
+
+    elif sub == "upload":
+        if len(args) < 2:
+            print(f"\n  Usage: nexus project upload <file>\n")
+            return
+        src  = _Path(args[1])
+        if not src.exists():
+            print(f"\n  " + _p(RED, "✗") + f"  File not found: {src}\n")
+            return
+        current = _current_ws()
+        ws      = _ws_dir(current)
+        dest    = ws / "uploads" / src.name
+        import shutil as _shutil
+        _shutil.copy2(str(src), str(dest))
+
+        print(f"\n  Ingesting {_b(AMBER, src.name)} into {_b(PURPLE, current)} ...")
+        try:
+            from services.ragd.service import get_rag
+            rag   = get_rag(current, ws)
+            stats = rag.ingest(dest)
+            if stats.get("skipped"):
+                print(f"  {_p(AMBER, '⚠')}  Already indexed: {stats.get('skip_reason', '')}")
+            else:
+                kept  = stats.get("chunks_kept", 0)
+                types = stats.get("chunk_types", {})
+                print(f"  " + _p(GREEN, "✓") + f"  {kept} chunks indexed")
+                if types:
+                    summary = ", ".join(f"{k}={v}" for k, v in sorted(types.items()))
+                    print(f"  {_d(summary)}")
+        except Exception as e:
+            print(f"  {_p(RED, '✗')}  Ingest failed: {e}")
+        print()
+
+    elif sub == "files":
+        current = _current_ws()
+        ws      = _ws_dir(current)
+        try:
+            from services.ragd.service import get_rag
+            rag   = get_rag(current, ws)
+            files = rag.list_files()
+        except Exception as e:
+            print(f"\n  {_p(RED, '✗')}  {e}\n")
+            return
+        print()
+        print(f"  {_b(PURPLE, current)} {_d('— indexed documents')}")
+        if not files:
+            print(f"  {_d('No documents. Upload with: nexus project upload <file>')}")
+        else:
+            for f in files:
+                print(f"  {_p(GREEN, '·')}  {_b(AMBER, f['title']):<30} "
+                      f"{_d(f['type'])}  {_d(str(f['chunks'])+' chunks')}")
+        print()
+
+    elif sub == "forget":
+        if len(args) < 2:
+            print(f"\n  Usage: nexus project forget <filename>\n")
+            return
+        current  = _current_ws()
+        ws       = _ws_dir(current)
+        filename = args[1]
+        try:
+            from services.ragd.service import get_rag
+            rag = get_rag(current, ws)
+            ok  = rag.forget(filename)
+            if ok:
+                print(f"\n  " + _p(GREEN, "✓") + f"  Removed {filename} from index\n")
+            else:
+                print(f"\n  " + _p(RED, "✗") + f"  Not found: {filename}\n")
+        except Exception as e:
+            print(f"\n  {_p(RED, '✗')}  {e}\n")
+
+    else:
+        print(f"\n  Unknown subcommand: {sub}\n")
+
+
 def main(argv: list = None):
     if argv is None:
         argv = sys.argv[1:]
@@ -448,6 +711,12 @@ def main(argv: list = None):
             print(f"\n  Usage: nexus scan <text to check>\n")
         else:
             cmd_scan(text)
+
+    elif first == "secret":
+        cmd_secret(argv[1:])
+
+    elif first == "project":
+        cmd_project(argv[1:])
 
     else:
         # Everything else → natural language shell request

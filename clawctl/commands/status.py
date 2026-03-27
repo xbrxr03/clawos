@@ -92,6 +92,46 @@ def run():
     print("  " + (_ok(f"whatsapp     linked")
                   if wa_linked else _dim("·  whatsapp     not linked  (clawctl openclaw whatsapp)")))
 
+    # Token compression (show only if openclaw is installed)
+    if oc_ok:
+        print()
+        try:
+            from openclaw_integration.compression import (
+                headroom_installed, headroom_running,
+                rtk_installed, HEADROOM_PORT, headroom_stats, rtk_stats
+            )
+            h_run = headroom_running()
+            h_ins = headroom_installed()
+            r_ins = rtk_installed()
+
+            print(f"  {_dim('Token compression')} {_dim('─' * 24)}")
+
+            # Headroom
+            if h_run:
+                s = headroom_stats()
+                saved = s.get("tokens", {}).get("saved", 0)
+                pct   = s.get("tokens", {}).get("savings_percent", 0)
+                detail = (f"{_dim(str(saved) + ' tokens saved (' + str(round(pct)) + '%)')}")
+                print("  " + _ok(f"headroom     proxy :{HEADROOM_PORT}  {detail}"))
+            elif h_ins:
+                print("  " + _warn(f"headroom     installed, not running  {_dim('clawctl openclaw start')}"))
+            else:
+                print("  " + _dim(f"·  headroom     not installed  (clawctl openclaw install)"))
+
+            # RTK
+            if r_ins:
+                s = rtk_stats()
+                raw = s.get("raw", "")
+                # Try to extract a number from gain output
+                import re as _re
+                m = _re.search(r'([\d,]+)\s*tokens', raw)
+                detail = _dim(m.group(0)) if m else _dim("active")
+                print("  " + _ok(f"rtk          CLI compression  {detail}"))
+            else:
+                print("  " + _dim(f"·  rtk          not installed  (clawctl openclaw install)"))
+        except Exception:
+            pass
+
     print()
     print(f"  {_dim('─' * 46)}")
     print(f"  {_dim('clawctl start   — start all services')}")

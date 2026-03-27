@@ -93,9 +93,24 @@ command -v python3 &>/dev/null || die "python3 not found: sudo apt-get install -
 PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 ok "Python $PY_VER"
 
+# Detect CPU architecture — ARM runs models much slower, needs smaller default
+ARCH=$(uname -m)
+case "$ARCH" in
+  aarch64|armv7l|armv8l) IS_ARM=true  ;;
+  *)                      IS_ARM=false ;;
+esac
+
 if   [ "$RAM_GB" -ge 32 ]; then PROFILE="performance"; TIER="Tier C  GPU workstation"
 elif [ "$RAM_GB" -ge 14 ]; then PROFILE="balanced";    TIER="Tier B  workstation"
-else                             PROFILE="lowram";      TIER="Tier A  mini PC"
+else                             PROFILE="lowram";      TIER="Tier A  mini PC / ARM"
+fi
+
+# On ARM CPU-only machines (RPi, etc) force lowram profile regardless of RAM
+# qwen2.5:7b at ~0.5 tok/s on ARM CPU is unusable — 1.5b runs at ~3-5 tok/s
+if [ "$IS_ARM" = "true" ] && [ "$PROFILE" != "lowram" ]; then
+  PROFILE="lowram"
+  TIER="Tier A  ARM device"
+  warn "ARM CPU detected — using lightweight model (qwen2.5:1.5b) for fast responses"
 fi
 ok "Hardware: $TIER"
 
@@ -190,14 +205,16 @@ step "Installing Python packages"
 (pip3 install -q \
   pyyaml aiohttp fastapi "uvicorn[standard]" \
   ollama click chromadb json_repair \
+  pypdf python-docx \
   --break-system-packages 2>/dev/null \
 || pip3 install -q \
   pyyaml aiohttp fastapi "uvicorn[standard]" \
   ollama click chromadb json_repair \
+  pypdf python-docx \
   --user 2>/dev/null || true) \
   & spinner $! "Installing Python dependencies"
 wait $! 2>/dev/null || warn "Some Python packages may have failed"
-ok "pyyaml  fastapi  chromadb  ollama  json_repair"
+ok "pyyaml  fastapi  chromadb  ollama  json_repair  pypdf  python-docx"
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 step "Bootstrapping Nexus"
@@ -213,20 +230,71 @@ step "Pulling AI model"
 if [ "$SKIP_MODEL" = "true" ]; then
   warn "Skipping model pull (SKIP_MODEL=true)"
 else
-  MODEL="qwen2.5:7b"
-  info "Pulling $MODEL (~4.7GB) — showing live progress..."
-  echo ""
+  # Select model based on hardware profile
+  # Tier A (ARM / low RAM) → 1.5b: fast on CPU, ~3-5 tok/s on RPi 5
+  # Tier B (x86 8-16GB)    → 3b:   good balance of speed and quality
+  # Tier C (GPU 16GB+)     → 7b:   full capability with tool calling
+  case "$PROFILE" in
+    lowram)      MODEL="qwen2.5:1.5b"; MODEL_SIZE="~1.1GB"; MODEL_NOTE="ARM/CPU optimised" ;;
+    balanced)    MODEL="qwen2.5:3b";   MODEL_SIZE="~2.0GB"; MODEL_NOTE="balanced speed/quality" ;;
+    performance) MODEL="qwen2.5:7b";   MODEL_SIZE="~4.7GB"; MODEL_NOTE="full capability · GPU" ;;
+    *)           MODEL="qwen2.5:3b";   MODEL_SIZE="~2.0GB"; MODEL_NOTE="balanced speed/quality" ;;
+  esac
 
-  if ! curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
-    nohup ollama serve >/dev/null 2>&1 & sleep 4
+  # Allow env override (also supports remote Ollama — model must exist on remote server)
+  if [ -n "${CLAWOS_MODEL:-}" ]; then
+    MODEL="$CLAWOS_MODEL"
+    MODEL_SIZE="custom"
+    MODEL_NOTE="from CLAWOS_MODEL env"
   fi
 
-  ollama pull "$MODEL" 2>&1 | while IFS= read -r line; do
-    printf "    ${D}%s${RESET}\n" "$line"
-  done
+  # If OLLAMA_HOST is set to a remote server, skip local pull
+  # The model must already exist on the remote server
+  OLLAMA_URL="${OLLAMA_HOST:-http://localhost:11434}"
+  if [ "$OLLAMA_URL" != "http://localhost:11434" ] && [ "$OLLAMA_URL" != "http://127.0.0.1:11434" ]; then
+    info "Remote Ollama detected: $OLLAMA_URL"
+    info "Skipping local model pull — model '$MODEL' must exist on remote server"
+    info "Run on remote:  ollama pull $MODEL"
+    ok "Remote Ollama configured: $OLLAMA_URL"
+  else
+    info "Pulling $MODEL ($MODEL_SIZE) — $MODEL_NOTE..."
+    echo ""
 
-  echo ""
-  ok "Model ready: $MODEL (4.7GB · GPU · offline)"
+    if ! curl -sf "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
+      nohup ollama serve >/dev/null 2>&1 & sleep 4
+    fi
+
+    ollama pull "$MODEL" 2>&1 | while IFS= read -r line; do
+      printf "    ${D}%s${RESET}\n" "$line"
+    done
+
+    echo ""
+    ok "Model ready: $MODEL ($MODEL_SIZE · $MODEL_NOTE · offline)"
+  fi
+fi
+
+# ── Pull embedding model (for RAG) ────────────────────────────────────────────
+step "Pulling embedding model"
+
+if [ "$SKIP_MODEL" = "true" ]; then
+  warn "Skipping embedding model pull (SKIP_MODEL=true)"
+else
+  EMBED_MODEL="nomic-embed-text"
+  OLLAMA_URL="${OLLAMA_HOST:-http://localhost:11434}"
+  if [ "$OLLAMA_URL" != "http://localhost:11434" ] && [ "$OLLAMA_URL" != "http://127.0.0.1:11434" ]; then
+    info "Remote Ollama — skipping embedding model pull"
+    info "Run on remote:  ollama pull $EMBED_MODEL"
+  elif ! curl -sf "$OLLAMA_URL/api/tags" 2>/dev/null | grep -q "nomic-embed-text"; then
+    info "Pulling $EMBED_MODEL (~274MB) — needed for document RAG..."
+    echo ""
+    ollama pull "$EMBED_MODEL" 2>&1 | while IFS= read -r line; do
+      printf "    ${D}%s${RESET}\n" "$line"
+    done
+    echo ""
+    ok "Embedding model ready: $EMBED_MODEL"
+  else
+    ok "Embedding model already present: $EMBED_MODEL"
+  fi
 fi
 
 # ── Install clawos command ────────────────────────────────────────────────────
@@ -319,7 +387,7 @@ else
   echo ""
   echo -e "  ${B}  nexus${RESET}"
   echo ""
-  echo -e "  ${D}  Nexus · qwen2.5:7b · fully local · no account needed${RESET}"
+  echo -e "  ${D}  Nexus · ${MODEL} · fully local · no account needed${RESET}"
   echo ""
   divider
   echo ""

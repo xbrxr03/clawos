@@ -38,10 +38,11 @@ RULES:
 
 def build_user_message(user_input: str, session_id: str, turn: int,
                        memory_context: str = "",
-                       skills_block: str = "") -> str:
+                       skills_block: str = "",
+                       rag_context: str = "") -> str:
     """
     Assemble the user message for this turn.
-    Order: memory context → skills → session header → user input.
+    Order: memory context → RAG docs → skills → session header → user input.
 
     All dynamic info lives here (not in the system prompt) so the
     system prompt stays static and benefits from prompt cache hits.
@@ -51,6 +52,8 @@ def build_user_message(user_input: str, session_id: str, turn: int,
     parts  = []
     if memory_context:
         parts.append(memory_context)
+    if rag_context:
+        parts.append(rag_context)
     if skills_block:
         parts.append(skills_block)
     parts.append(header + user_input)

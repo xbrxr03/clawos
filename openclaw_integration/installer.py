@@ -16,6 +16,9 @@ from openclaw_integration.config_gen import (
     write_config, apply_auth_fix, detect_best_model,
     GOOD_MODELS, OPENCLAW_DIR
 )
+from openclaw_integration.compression import (
+    setup_compression, start_headroom, patch_openclaw_config_for_headroom
+)
 
 log = logging.getLogger("openclaw")
 
@@ -163,6 +166,17 @@ def ensure_model(model: str) -> bool:
 
 
 def start_gateway() -> subprocess.Popen:
+    # Also ensure headroom is running when gateway starts
+    try:
+        from openclaw_integration.compression import (
+            headroom_installed, headroom_running,
+            start_headroom, patch_openclaw_config_for_headroom
+        )
+        if headroom_installed() and not headroom_running():
+            if start_headroom():
+                patch_openclaw_config_for_headroom()
+    except Exception:
+        pass
     return subprocess.Popen(
         ["openclaw", "gateway", "start"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -235,6 +249,10 @@ def install(model: str = None, force: bool = False,
 
     ok = ensure_model(model)
     status["model_ready"] = ok
+
+    # Install and configure token compression (default on)
+    comp = setup_compression(show_progress=True)
+    status["compression"] = comp
 
     print()
     print("  ── Done ──────────────────────────────────────")

@@ -35,7 +35,7 @@ ClawOS fixes all of that. It runs OpenClaw on your hardware, with your models, f
 After one command:
 
 - **OpenClaw** — pre-configured for offline Ollama, no API keys required
-- **Ollama** — local model runtime, `qwen2.5:7b` pulled and ready
+- **Ollama** — local model runtime, right model for your hardware pulled automatically
 - **Nexus** — native Python agent with memory, tools, and voice
 - **WhatsApp bridge** — text your AI from your phone
 - **policyd** — every tool call gated and audited before it runs
@@ -58,18 +58,60 @@ nexus › Created notes.txt in your workspace.
 
 ## Requirements
 
-- Ubuntu 24.04, Debian 12, or macOS (Apple Silicon + Intel)
-- 8GB RAM minimum (16GB recommended)
+- Ubuntu 24.04, Debian 12, Raspberry Pi OS, or macOS (Apple Silicon + Intel)
+- 8GB RAM minimum
 - 10GB free disk space
 - Internet on first run only (pulls models, then fully offline)
 
-| RAM | What runs |
-|-----|-----------|
-| 8GB | Nexus — gemma3:4b, full agent, voice |
-| 16GB | + OpenClaw — qwen2.5:7b, WhatsApp, 13,700+ skills |
-| 32GB+ | Larger models, faster inference |
+The installer automatically detects your hardware and picks the right model:
 
-GPU optional but recommended. NVIDIA (CUDA) and AMD (ROCm) both supported.
+| Hardware | RAM | Model | Speed |
+|----------|-----|-------|-------|
+| Raspberry Pi 5, ARM devices | 8GB | `qwen2.5:1.5b` | ~3–5 tok/s on CPU |
+| x86 laptop / mini PC | 8–16GB | `qwen2.5:3b` | ~8–15 tok/s |
+| x86 workstation with GPU | 16GB+ | `qwen2.5:7b` | ~40–80 tok/s GPU |
+
+GPU optional. NVIDIA (CUDA) and AMD (ROCm) both supported via Ollama.
+
+---
+
+## Raspberry Pi 5 / ARM
+
+ClawOS works on RPi 5 8GB. The installer detects ARM and pulls `qwen2.5:1.5b` automatically — no configuration needed.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+```
+
+Expected response time: 2–4 seconds for short answers on RPi 5.
+
+---
+
+## Using a Remote Ollama Server
+
+If you have a more powerful machine running Ollama on your local network, you can point ClawOS at it instead of running inference locally. Useful for low-power devices like the RPi 5.
+
+**On the powerful machine** — make Ollama listen on the network:
+```bash
+OLLAMA_HOST=0.0.0.0 ollama serve
+# Pull the models ClawOS needs:
+ollama pull qwen2.5:7b
+ollama pull nomic-embed-text
+```
+
+**On the ClawOS machine** — set the host before installing or running:
+```bash
+export OLLAMA_HOST=http://192.168.1.50:11434   # replace with your server IP
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+```
+
+To make it permanent:
+```bash
+echo 'export OLLAMA_HOST=http://192.168.1.50:11434' >> ~/.bashrc
+source ~/.bashrc
+```
+
+ClawOS will use the remote server for all inference — the local machine only runs the agent runtime, dashboard, and memory services.
 
 ---
 

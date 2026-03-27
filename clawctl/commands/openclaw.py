@@ -17,6 +17,23 @@ def run_status():
     else:
         info("Install:    clawctl openclaw install")
     print()
+    # Compression stack
+    try:
+        from openclaw_integration.compression import (
+            headroom_installed, headroom_running, rtk_installed,
+            headroom_stats, rtk_stats, HEADROOM_PORT
+        )
+        info(f"headroom:   {'✓ running (:' + str(HEADROOM_PORT) + ')' if headroom_running() else ('✓ installed, stopped' if headroom_installed() else '✗ not installed')}")
+        info(f"rtk:        {'✓ installed' if rtk_installed() else '✗ not installed'}")
+        if headroom_running():
+            s = headroom_stats()
+            saved = s.get('tokens', {}).get('saved', 0)
+            pct   = s.get('tokens', {}).get('savings_percent', 0)
+            if saved:
+                info(f"            {saved:,} tokens saved ({round(pct)}% compression)")
+    except Exception:
+        pass
+    print()
 
 
 def run_install(model: str = None, force: bool = False):
@@ -47,6 +64,13 @@ def run_stop():
     from openclaw_integration.installer import stop_gateway
     stop_gateway()
     success("OpenClaw gateway stopped")
+    # Stop headroom proxy too
+    try:
+        from openclaw_integration.compression import stop_headroom
+        stop_headroom()
+        info("Headroom proxy stopped")
+    except Exception:
+        pass
     print()
 
 
