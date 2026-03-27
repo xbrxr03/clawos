@@ -22,7 +22,7 @@ class WizardState:
     runtime:        str   = "core"      # core | openclaw | both
 
     # Workspace
-    workspace_id:   str   = "jarvis_default"
+    workspace_id:   str   = "nexus_default"
 
     # Voice
     voice_enabled:  bool  = True

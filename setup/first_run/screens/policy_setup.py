@@ -4,7 +4,7 @@
 def run(state) -> bool:
     print("\n  ── Permission Model ────────────────────────────")
     print()
-    print("  How should Jarvis handle sensitive actions?")
+    print("  How should Nexus handle sensitive actions?")
     print()
     print("  [1] Recommended  ← safe default")
     print("      · High-risk actions (delete, shell) pause for your approval")

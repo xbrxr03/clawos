@@ -3,7 +3,7 @@
 # Usage: bash scripts/seed_workspace.sh [workspace_id]
 set -e
 cd "$(dirname "$0")/.."
-WS="${1:-jarvis_default}"
+WS="${1:-nexus_default}"
 MEM_DIR="$HOME/clawos/memory/$WS"
 
 mkdir -p "$MEM_DIR/preferences" "$MEM_DIR/knowledge" "$MEM_DIR/context"

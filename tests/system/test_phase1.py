@@ -486,9 +486,10 @@ except Exception as ex:
 
 try:
     from openclaw_integration.config_gen import GOOD_MODELS
-    assert "qwen2.5:7b" in GOOD_MODELS
-    assert "qwen2.5:7b" not in GOOD_MODELS   # doesn't support tool calling
-    ok("openclaw — qwen2.5:7b excluded (no tool calling), qwen2.5:7b included")
+    assert "qwen2.5:7b" in GOOD_MODELS,  "qwen2.5:7b should be in GOOD_MODELS"
+    assert "gemma3:4b" not in GOOD_MODELS, "gemma3 has no tool calling — must be excluded"
+    assert "gemma3:12b" not in GOOD_MODELS, "gemma3 has no tool calling — must be excluded"
+    ok("openclaw — qwen2.5:7b in GOOD_MODELS, gemma3 excluded (no tool calling)")
 except Exception as ex:
     fail("openclaw model list", str(ex))
 

@@ -19,7 +19,7 @@ def _copy_if_missing(src: Path, dst: Path):
     return False
 
 
-def init_workspace(workspace_id: str = "jarvis_default") -> Path:
+def init_workspace(workspace_id: str = "nexus_default") -> Path:
     """Create workspace, seed template files. Idempotent."""
     ws   = workspace_path(workspace_id)
     mem  = memory_path(workspace_id)
@@ -32,7 +32,7 @@ def init_workspace(workspace_id: str = "jarvis_default") -> Path:
     # PINNED.md — blank if not present
     p = pinned_path(workspace_id)
     if not p.exists():
-        p.write_text("# Pinned Facts\n# Add permanent facts here — Jarvis always reads this.\n")
+        p.write_text("# Pinned Facts\n# Add permanent facts here — Nexus always reads this.\n")
 
     return ws
 

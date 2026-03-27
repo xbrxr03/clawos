@@ -1,4 +1,4 @@
-"""Screen 3 — Runtime choice: Claw Core / OpenClaw / Both."""
+"""Screen 3 — Runtime choice: Nexus / OpenClaw / Both."""
 
 
 def run(state) -> bool:
@@ -6,7 +6,7 @@ def run(state) -> bool:
     print()
     print("  ClawOS ships with two AI runtimes. Pick one to start with:")
     print()
-    print("  [1] Claw Core  (recommended)")
+    print("  [1] Nexus  (recommended)")
     print("      · Native Python agent, works on 8GB RAM")
     print(f"      · Uses {state.model} — already on your machine")
     print("      · Fast startup, full voice + WhatsApp support")
@@ -21,8 +21,8 @@ def run(state) -> bool:
         print("      · Needs Node.js + qwen2.5:7b (tool-calling model)")
         print("      · Requires ~2GB extra disk + longer first setup")
         print()
-        print("  [3] Both       (Claw Core default + OpenClaw available)")
-        print("      · Claw Core handles everyday tasks")
+        print("  [3] Both       (Nexus default + OpenClaw available)")
+        print("      · Nexus handles everyday tasks")
         print("      · OpenClaw available via: clawctl openclaw start")
     else:
         print(f"  [2] OpenClaw   ← not recommended ({state.ram_gb}GB RAM, needs 14GB+)")
@@ -30,7 +30,7 @@ def run(state) -> bool:
 
     print()
     valid = ["1", "2", "3"] if oc_ok else ["1", "2"]
-    choice = input("  Choose [1/2/3] or Enter for Claw Core: ").strip()
+    choice = input("  Choose [1/2/3] or Enter for Nexus: ").strip()
 
     if choice == "2":
         state.runtime = "openclaw"
@@ -43,10 +43,10 @@ def run(state) -> bool:
             print("  ⚠ Low RAM — performance may be limited")
     elif choice == "3" and oc_ok:
         state.runtime = "both"
-        print("\n  Runtime: Both (Claw Core default, OpenClaw available)")
+        print("\n  Runtime: Both (Nexus default, OpenClaw available)")
     else:
         state.runtime = "core"
-        print("\n  Runtime: Claw Core")
+        print("\n  Runtime: Nexus")
 
     state.mark_done("runtime_choice")
     return True

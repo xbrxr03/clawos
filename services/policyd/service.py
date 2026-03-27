@@ -19,6 +19,13 @@ from clawos_core.util.ids import entry_id, req_id
 from clawos_core.util.time import now_iso
 import clawos_core.logging.audit as audit_log
 
+# Prompt injection scanner (Phase 6)
+try:
+    from nexus.scanner import scan_tool_input as _scan_tool
+    _SCANNER_OK = True
+except ImportError:
+    _SCANNER_OK = False
+
 log = logging.getLogger("policyd")
 
 # ── Tool risk scores ──────────────────────────────────────────────────────────
@@ -164,6 +171,23 @@ class PolicyEngine:
                     Decision.DENY, f"path outside workspace ({workspace_id})",
                     tool, target, task_id, workspace_id
                 )
+
+        # Prompt injection scan on tool inputs (Phase 6)
+        if _SCANNER_OK and content:
+            scan_result = _scan_tool(tool, target, content)
+            if scan_result["is_injection"]:
+                log.warning(
+                    f"Injection detected in tool input [{tool}]: "
+                    f"score={scan_result['score']} patterns={scan_result['patterns']}"
+                )
+                # Log to audit but don't auto-deny — flag for review
+                # High severity injections get queued for human approval
+                if scan_result["score"] >= 8:
+                    return self._record(
+                        Decision.DENY,
+                        f"prompt injection detected (score={scan_result['score']})",
+                        tool, target, task_id, workspace_id
+                    )
 
         score = TOOL_SCORES.get(tool, 50)
         if score >= TOOL_SCORE_QUEUE:

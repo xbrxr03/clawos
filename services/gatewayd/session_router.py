@@ -31,7 +31,7 @@ class SessionRouter:
     def get_workspace(self, jid: str) -> str:
         """Return workspace for this JID. Creates one if not set."""
         if jid not in self._routes:
-            # Default: owner's JID → jarvis_default, others → their own
+            # Default: owner's JID → nexus_default, others → their own
             ws = self._jid_to_workspace(jid)
             self._routes[jid] = ws
             self._save()

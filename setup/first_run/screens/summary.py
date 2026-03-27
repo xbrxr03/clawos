@@ -12,9 +12,9 @@ from pathlib import Path
 
 def run(state) -> bool:
     runtime_label = {
-        "core":     "Claw Core (native Python agent)",
+        "core":     "Nexus (native Python agent)",
         "openclaw": "OpenClaw (full ecosystem, Ollama offline)",
-        "both":     "Both (Claw Core default + OpenClaw available)",
+        "both":     "Both (Nexus default + OpenClaw available)",
     }.get(state.runtime, state.runtime)
 
     print("\n  ── Setup Complete ──────────────────────────────")
@@ -29,12 +29,12 @@ def run(state) -> bool:
     print()
     print("  ─────────────────────────────────────────────")
     print()
-    print("  Start Jarvis:")
+    print("  Start Nexus:")
     print()
-    print(f"    clawos                               — text chat ({state.workspace_id})")
+    print(f"    nexus                                — start Nexus")
     print(f"    http://localhost:7070                — dashboard")
     if state.whatsapp_enabled:
-        print("    Message yourself on WhatsApp         — voice/text to Jarvis")
+        print("    Message yourself on WhatsApp         — voice/text to Nexus")
     if state.runtime in ("openclaw", "both"):
         print("    clawctl openclaw start               — start OpenClaw gateway")
     print()
@@ -48,7 +48,7 @@ def run(state) -> bool:
     # Persist active workspace + model to clawos.yaml
     _save_active_workspace(state)
 
-    ans = input("  Launch Jarvis now? [Y/n]: ").strip().lower()
+    ans = input("  Launch Nexus now? [Y/n]: ").strip().lower()
     state.completed = True
     state.mark_done("summary")
 

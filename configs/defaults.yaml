@@ -29,7 +29,7 @@ memory:
 voice:
   enabled: false
   mode: "push_to_talk"     # push_to_talk | always_on | off
-  stt_model: "base"        # whisper model size
+  stt_model: "base"
   record_rate: 44100
   silence_rms: 300
   silence_secs: 1.8
@@ -46,7 +46,7 @@ policy:
     - memory.write
 
 workspace:
-  default: "jarvis_default"
+  default: "nexus_default"
   root: "~/clawos/workspace"
 
 dashboard:

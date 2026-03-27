@@ -19,7 +19,7 @@ def run(state) -> bool:
     print()
     print("  This wizard takes ~2 minutes and sets up:")
     print("    • Hardware profile (auto-detected)")
-    print("    • AI runtime (Claw Core or OpenClaw)")
+    print("    • AI runtime (Nexus or OpenClaw)")
     print("    • Voice (optional)")
     print("    • WhatsApp (optional)")
     print("    • Permissions")

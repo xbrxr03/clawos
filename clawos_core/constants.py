@@ -7,8 +7,8 @@ Import from here — never hardcode these elsewhere.
 from pathlib import Path
 
 # ── Version ───────────────────────────────────────────────────────────────────
-VERSION   = "0.1.0"
-CODENAME  = "Prototype"
+VERSION      = "0.1.0"
+CODENAME     = "Prototype"
 VERSION_FULL = f"{VERSION} {CODENAME}"
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ LOGS_DIR         = CLAWOS_DIR / "logs"
 MEMORY_DIR       = CLAWOS_DIR / "memory"
 WORKSPACE_DIR    = CLAWOS_DIR / "workspace"
 VOICE_DIR        = CLAWOS_DIR / "voice"
-SERVICES_DIR     = Path(__file__).parent.parent  # clawos_v3/
+SERVICES_DIR     = Path(__file__).parent.parent
 
 # Runtime data (systemd standard locations for a real install)
 VAR_LIB_DIR      = Path("/var/lib/clawos")
@@ -66,19 +66,19 @@ DEFAULT_MODEL        = "qwen2.5:7b"
 DEFAULT_EMBED_MODEL  = "nomic-embed-text"
 
 MODEL_PROFILES = {
-    "lowram":      {"chat": "qwen2.5:7b",   "ctx": 2048, "voice": False},
-    "balanced":    {"chat": "qwen2.5:7b",   "ctx": 4096, "voice": True},
+    "lowram":      {"chat": "qwen2.5:7b",  "ctx": 2048, "voice": False},
+    "balanced":    {"chat": "qwen2.5:7b",  "ctx": 4096, "voice": True},
     "performance": {"chat": "qwen2.5:7b",  "ctx": 8192, "voice": True},
 }
 
 # ── Agent loop ────────────────────────────────────────────────────────────────
-MAX_ITERATIONS   = 8
-MAX_HISTORY      = 12
-DEFAULT_WORKSPACE = "jarvis_default"
+MAX_ITERATIONS    = 8
+MAX_HISTORY       = 12
+DEFAULT_WORKSPACE = "nexus_default"   # renamed from jarvis_default
 
 # ── Audio ─────────────────────────────────────────────────────────────────────
-RECORD_RATE      = 44100   # Hz — ALC294 native rate via pipewire
-WHISPER_RATE     = 16000   # Hz — Whisper expected rate (resamples from WAV)
+RECORD_RATE      = 44100
+WHISPER_RATE     = 16000
 AUDIO_CHANNELS   = 1
 AUDIO_CHUNK      = 2048
 SILENCE_RMS      = 300
@@ -88,7 +88,7 @@ WHISPER_MODEL    = "base"
 
 # ── Policy ────────────────────────────────────────────────────────────────────
 APPROVAL_TIMEOUT_S  = 120
-TOOL_SCORE_QUEUE    = 50   # risk score >= this → queue for human approval
+TOOL_SCORE_QUEUE    = 50
 
 # ── Ensure critical dirs exist ────────────────────────────────────────────────
 def ensure_dirs():

@@ -439,9 +439,9 @@ async def get_memory_stats() -> dict:
     if sqlite_db.exists():
         stats["sqlite_size_mb"] = round(sqlite_db.stat().st_size / 1e6, 2)
 
-    pinned = WORKSPACE_DIR / "jarvis_default" / "PINNED.md"
-    history = WORKSPACE_DIR / "jarvis_default" / "HISTORY.md"
-    workflow = WORKSPACE_DIR / "jarvis_default" / "WORKFLOW.md"
+    pinned = WORKSPACE_DIR / "nexus_default" / "PINNED.md"
+    history = WORKSPACE_DIR / "nexus_default" / "HISTORY.md"
+    workflow = WORKSPACE_DIR / "nexus_default" / "WORKFLOW.md"
 
     stats["pinned_lines"] = _count_lines(pinned)
     stats["history_lines"] = _count_lines(history)

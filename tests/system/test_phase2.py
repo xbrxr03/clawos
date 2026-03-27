@@ -108,9 +108,10 @@ try:
     assert openclaw_feasible(HardwareProfile(ram_gb=8))  is False
     assert voice_feasible(HardwareProfile(ram_gb=8, has_mic=True)) is True
     assert voice_feasible(HardwareProfile(ram_gb=8, has_mic=False)) is False
-    assert recommended_model(HardwareProfile(ram_gb=8))  == "qwen2.5:7b"
-    assert recommended_model(HardwareProfile(ram_gb=32)) == "qwen2.5:7b"
-    ok("openclaw_feasible, voice_feasible, recommended_model")
+    assert recommended_model(HardwareProfile(ram_gb=8))  == "qwen2.5:3b",  "Tier A (<12GB) should use qwen2.5:3b to avoid OOM"
+    assert recommended_model(HardwareProfile(ram_gb=16)) == "qwen2.5:7b",  "Tier B should use qwen2.5:7b"
+    assert recommended_model(HardwareProfile(ram_gb=32)) == "qwen2.5:7b",  "Tier C should use qwen2.5:7b"
+    ok("openclaw_feasible, voice_feasible, recommended_model — qwen2.5:3b Tier A, qwen2.5:7b Tier B/C")
 except Exception as e:
     fail("profile helpers", str(e))
 
@@ -194,7 +195,7 @@ try:
         assert path.exists()
         policy = load()
         assert policy["mode"] == "recommended"
-        assert "jarvis_default" in policy["workspaces"] or "test_ws" in policy["workspaces"]
+        assert "nexus_default" in policy["workspaces"] or "test_ws" in policy["workspaces"]
         ok("permissions_init — write() + load() round-trip")
 except Exception as e:
     fail("permissions_init", str(e))

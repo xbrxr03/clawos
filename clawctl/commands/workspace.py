@@ -41,7 +41,7 @@ def run_create(name: str):
 
 def run_delete(name: str):
     print()
-    if name == "jarvis_default":
+    if name == "nexus_default":
         error("Cannot delete the default workspace")
         return
     import shutil

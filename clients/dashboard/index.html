@@ -90,8 +90,8 @@ header{
 .msg.user{background:rgba(139,127,255,.1);border:1px solid rgba(139,127,255,.18)}
 .msg.user .who{color:var(--purple2)}
 .msg.user .body{color:var(--text)}
-.msg.jarvis{background:var(--bg2);border:1px solid var(--b)}
-.msg.jarvis .who{color:var(--green)}
+.msg.nexus{background:var(--bg2);border:1px solid var(--b)}
+.msg.nexus .who{color:var(--green)}
 .msg.sys .who{display:none}
 .msg.sys{background:transparent;border:none;padding:3px 0}
 .msg.sys .body{color:var(--muted);font-size:10px}
@@ -206,7 +206,7 @@ input::placeholder{color:var(--muted)}
 <header>
   <div>
     <div class="logo">CLAWOS</div>
-    <div class="ver" id="ver-lbl">v0.1.0 · Claw Core</div>
+    <div class="ver" id="ver-lbl">v0.1.0 · Nexus</div>
   </div>
   <div class="sep"></div>
   <div class="dot off" id="dot"></div>
@@ -226,7 +226,7 @@ input::placeholder{color:var(--muted)}
     <div class="ph"><div class="ph-dot purple"></div>Chat</div>
     <div class="msgs" id="msgs"></div>
     <div class="input-row">
-      <input type="text" id="inp" placeholder="Message Jarvis..." autocomplete="off">
+      <input type="text" id="inp" placeholder="Message Nexus..." autocomplete="off">
       <button class="send" onclick="send()">Send ↵</button>
     </div>
   </div>
@@ -268,7 +268,7 @@ function onEv(ev){
   if(ev.type==='task_update'){loadTasks();updM();rmThink()}
   if(ev.type==='approval_request'||ev.type==='approval_decided'){loadAp();updM()}
   if(ev.type==='log'){addLog(ev)}
-  if(ev.type==='chat_message'){rmThink();addMsg('jarvis',ev.message||'')}
+  if(ev.type==='chat_message'){rmThink();addMsg('nexus',ev.message||'')}
 }
 async function send(){
   const inp=document.getElementById('inp');
@@ -283,8 +283,8 @@ async function poll(id){
     await sleep(1000);
     const r=await fetch(`${API}/api/tasks/${id}`);
     const t=await r.json();
-    if(t.status==='completed'){rmThink();if(t.result)addMsg('jarvis',t.result);loadTasks();updM();return}
-    if(t.status==='failed'){rmThink();addMsg('jarvis','Error: '+(t.error||'task failed'));return}
+    if(t.status==='completed'){rmThink();if(t.result)addMsg('nexus',t.result);loadTasks();updM();return}
+    if(t.status==='failed'){rmThink();addMsg('nexus','Error: '+(t.error||'task failed'));return}
   }
   rmThink();
 }

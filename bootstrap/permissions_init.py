@@ -7,7 +7,7 @@ DEFAULT_POLICY = {
     "mode": "recommended",
     "version": "0.1.0",
     "workspaces": {
-        "jarvis_default": {
+        "nexus_default": {
             "granted_tools": [
                 "fs.read", "fs.write", "fs.list", "fs.search",
                 "web.search", "web.fetch",
@@ -28,7 +28,7 @@ DEFAULT_POLICY = {
 DEVELOPER_EXTRAS = ["shell.restricted", "shell.elevated", "api.external"]
 
 
-def write(mode: str = "recommended", workspace_id: str = "jarvis_default"):
+def write(mode: str = "recommended", workspace_id: str = "nexus_default"):
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     policy = dict(DEFAULT_POLICY)
     policy["mode"] = mode

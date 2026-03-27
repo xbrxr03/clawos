@@ -165,20 +165,20 @@ else
 fi
 
 # ── Clone ClawOS ──────────────────────────────────────────────────────────────
-step "Installing Claw Core"
+step "Installing Nexus"
 
 if [ -d "$INSTALL_DIR/clawos_core" ]; then
-  ok "Claw Core already present at $INSTALL_DIR"
+  ok "Nexus already present at $INSTALL_DIR"
 elif [ -d "$INSTALL_DIR/.git" ]; then
   (git -C "$INSTALL_DIR" pull --ff-only -q 2>/dev/null) \
     & spinner $! "Updating existing install"
   wait $! || warn "Git pull failed — using existing version"
-  ok "Claw Core updated"
+  ok "Nexus updated"
 else
   (git clone -q --branch "$CLAWOS_BRANCH" --depth 1 "$CLAWOS_REPO" "$INSTALL_DIR") \
     & spinner $! "Cloning from GitHub"
   wait $! || die "Clone failed. Check: $CLAWOS_REPO"
-  ok "Claw Core cloned to $INSTALL_DIR"
+  ok "Nexus cloned to $INSTALL_DIR"
 fi
 
 cd "$INSTALL_DIR"
@@ -200,7 +200,7 @@ wait $! 2>/dev/null || warn "Some Python packages may have failed"
 ok "pyyaml  fastapi  chromadb  ollama  json_repair"
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
-step "Bootstrapping Claw Core"
+step "Bootstrapping Nexus"
 
 (python3 -m bootstrap.bootstrap --profile "$PROFILE" --yes 2>/dev/null) \
   & spinner $! "Running bootstrap ($PROFILE profile)"
@@ -233,6 +233,13 @@ fi
 step "Installing clawos command"
 
 mkdir -p "$HOME/.local/bin"
+
+cat > "$HOME/.local/bin/nexus" << CMD
+#!/bin/bash
+export PYTHONPATH="${INSTALL_DIR}"
+exec python3 "${INSTALL_DIR}/nexus/cli.py" "\$@"
+CMD
+chmod +x "$HOME/.local/bin/nexus"
 
 cat > "$HOME/.local/bin/clawos" << CMD
 #!/bin/bash
@@ -310,9 +317,9 @@ else
   # Re-install / update case — wizard already completed, just show quick start
   echo -e "  ${W}${BOLD}Mode 1  —  Offline chat (works right now)${RESET}"
   echo ""
-  echo -e "  ${B}  clawos${RESET}"
+  echo -e "  ${B}  nexus${RESET}"
   echo ""
-  echo -e "  ${D}  Claw Core · qwen2.5:7b · fully local · no account needed${RESET}"
+  echo -e "  ${D}  Nexus · qwen2.5:7b · fully local · no account needed${RESET}"
   echo ""
   divider
   echo ""

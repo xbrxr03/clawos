@@ -1,6 +1,6 @@
 """
 Screen 7 — WhatsApp setup.
-Personal number — Jarvis lives in your main WhatsApp.
+Personal number — Nexus lives in your main WhatsApp.
 QR scan links the session once. After that it auto-reconnects.
 """
 
@@ -8,13 +8,13 @@ QR scan links the session once. After that it auto-reconnects.
 def run(state) -> bool:
     print("\n  ── WhatsApp Setup ──────────────────────────────")
     print()
-    print("  Connect your personal WhatsApp number to Jarvis.")
-    print("  Jarvis will receive messages YOU send to yourself,")
+    print("  Connect your personal WhatsApp number to Nexus.")
+    print("  Nexus will receive messages YOU send to yourself,")
     print("  or from contacts you whitelist.")
     print()
     print("  How it works:")
     print("    1. Scan a QR code once (like WhatsApp Web)")
-    print("    2. Message yourself or say 'Hey Jarvis, ...'")
+    print("    2. Message yourself or say 'Hey Nexus, ...'")
     print("    3. Approve tool calls by replying 'approve' or 'deny'")
     print("    4. Session persists — no re-scan after reboot")
     print()
@@ -63,7 +63,7 @@ def run(state) -> bool:
             state.whatsapp_enabled = True
             state.whatsapp_number  = channel.phone_number or "personal"
             print(f"\n  ✓ WhatsApp linked: {state.whatsapp_number}")
-            print("  Send yourself a message to test Jarvis.")
+            print("  Send yourself a message to test Nexus.")
         else:
             print("  QR scan failed or timed out.")
             print("  Try again later: clawctl whatsapp link")

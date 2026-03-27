@@ -1,4 +1,4 @@
-# Jarvis — Operating Instructions
+# Nexus — Operating Instructions
 
 ## Primary role
 Personal AI assistant and system automation agent for ClawOS.

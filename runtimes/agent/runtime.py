@@ -1,5 +1,5 @@
 """
-ClawOS Agent Runtime — Claw Core
+ClawOS Agent Runtime — Nexus
 ==================================
 ReAct (Reason + Act) loop. All competitive upgrades from S1 research:
   - json_repair parsing (Nanobot)
@@ -144,7 +144,7 @@ class AgentRuntime:
                 self._history.append({"role": "assistant",  "content": answer})
                 if self.memory:
                     asyncio.create_task(
-                        self.memory.remember_async(f"Jarvis: {answer}",
+                        self.memory.remember_async(f"Nexus: {answer}",
                                                    self.workspace_id, source="agent")
                     )
                 return answer

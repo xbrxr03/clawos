@@ -18,7 +18,7 @@ def _step(name: str):
     print(f"\n  [{name}]")
 
 
-def run(profile: str = None, yes: bool = False, workspace: str = "jarvis_default"):
+def run(profile: str = None, yes: bool = False, workspace: str = "nexus_default"):
     print("""
   ██████╗██╗      █████╗ ██╗    ██╗ ██████╗ ███████╗
  ██╔════╝██║     ██╔══██╗██║    ██║██╔═══██╗██╔════╝
@@ -95,7 +95,7 @@ def run(profile: str = None, yes: bool = False, workspace: str = "jarvis_default
   Bootstrap complete!
 
   Next steps:
-    python3 -m clients.cli.repl       — start chatting
+    nexus                            — start chatting
     bash scripts/dev_boot.sh          — start all services
     http://localhost:7070             — dashboard (after dev_boot)
 
@@ -111,7 +111,7 @@ def main():
     parser = argparse.ArgumentParser(description="ClawOS Bootstrap")
     parser.add_argument("--profile", choices=["lowram","balanced","performance"],
                         help="Force a profile instead of auto-detecting")
-    parser.add_argument("--workspace", default="jarvis_default",
+    parser.add_argument("--workspace", default="nexus_default",
                         help="Workspace name to initialise")
     parser.add_argument("--yes", action="store_true",
                         help="Non-interactive mode")

@@ -68,7 +68,7 @@ def run_test():
     try:
         from services.gatewayd.channels.whatsapp import WhatsAppChannel
         channel = WhatsAppChannel()
-        channel.send_self("ClawOS WhatsApp test — Jarvis is connected.")
+        channel.send_self("ClawOS WhatsApp test — Nexus is connected.")
         success("Test message sent")
     except Exception as e:
         error(f"Test failed: {e}")

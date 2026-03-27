@@ -1,5 +1,5 @@
 """
-Claw Core — interactive REPL
+Nexus — interactive REPL
 Demo-ready TUI with colours, typing indicator, clean layout.
 """
 import asyncio
@@ -298,7 +298,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
         elapsed = time.time() - t0
         await spinner.stop()
 
-        print(f"  {_b(GREEN, 'jarvis')} {_d('›')}", end=" ")
+        print(f"  {_b(GREEN, 'nexus')} {_d('›')}", end=" ")
         words = reply.split()
         line  = ""
         first = True

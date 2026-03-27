@@ -36,7 +36,7 @@ After one command:
 
 - **OpenClaw** — pre-configured for offline Ollama, no API keys required
 - **Ollama** — local model runtime, `qwen2.5:7b` pulled and ready
-- **Claw Core** — native Python agent with memory, tools, and voice
+- **Nexus** — native Python agent with memory, tools, and voice
 - **WhatsApp bridge** — text your AI from your phone
 - **policyd** — every tool call gated and audited before it runs
 - **Dashboard** — web UI showing tasks, approvals, models, memory, audit log
@@ -46,12 +46,12 @@ After one command:
 $ clawos
 
 you › what can you do?
-jarvis › I can read and write files, search the web, remember things
+nexus › I can read and write files, search the web, remember things
          across sessions, and run tools on this machine. Everything
          runs locally — nothing leaves this computer.
 
 you › create a file called notes.txt with my meeting agenda
-jarvis › Created notes.txt in your workspace.
+nexus › Created notes.txt in your workspace.
 ```
 
 ---
@@ -65,7 +65,7 @@ jarvis › Created notes.txt in your workspace.
 
 | RAM | What runs |
 |-----|-----------|
-| 8GB | Claw Core — gemma3:4b, full agent, voice |
+| 8GB | Nexus — gemma3:4b, full agent, voice |
 | 16GB | + OpenClaw — qwen2.5:7b, WhatsApp, 13,700+ skills |
 | 32GB+ | Larger models, faster inference |
 
@@ -84,7 +84,7 @@ Handles everything: Ollama, Node.js, Python dependencies, model download, OpenCl
 **After install:**
 
 ```bash
-# Start Claw Core (native agent)
+# Start Nexus (native agent)
 clawos
 
 # Start OpenClaw gateway (for WhatsApp + full skill ecosystem)

@@ -13,7 +13,7 @@ Schedule format (schedules.yaml):
       - id: daily-summary
         cron: "0 9 * * *"        # 9am daily
         task: "Generate a summary of yesterday's activity"
-        workspace: jarvis_default
+        workspace: nexus_default
         enabled: false
 
 Usage:
@@ -192,13 +192,13 @@ schedules:
   - id: daily-summary
     cron: "0 9 * * *"
     task: "Generate a brief summary of recent activity and any pending items"
-    workspace: jarvis_default
+    workspace: nexus_default
     enabled: false
 
   - id: weekly-digest
     cron: "0 8 * * 1"
     task: "Summarize the week's completed tasks and flag anything unresolved"
-    workspace: jarvis_default
+    workspace: nexus_default
     enabled: false
 """
         SCHEDULES_FILE.write_text(default)

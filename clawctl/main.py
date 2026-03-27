@@ -37,7 +37,7 @@ Commands:
   openclaw config [model]   — regenerate OpenClaw config
 
   wizard                    — run first-run wizard
-  chat                      — start interactive chat (Claw Core)
+  chat                      — start Nexus
 """
 import sys
 from pathlib import Path
@@ -254,12 +254,14 @@ else:
         from setup.first_run.wizard import run; run(reset=reset)
 
     @main.command()
-    @click.argument("workspace", default="jarvis_default")
+    @click.argument("workspace", default="nexus_default")
     def chat(workspace):
-        """Start interactive Jarvis chat."""
-        import asyncio
-        from clients.cli.repl import run_repl
-        asyncio.run(run_repl(workspace))
+        """Start Nexus."""
+        import subprocess, sys
+        from pathlib import Path
+        root = Path(__file__).parent.parent
+        subprocess.run([sys.executable, str(root / "nexus" / "cli.py")],
+                       env={**__import__("os").environ, "PYTHONPATH": str(root)})
 
 
 if __name__ == "__main__":

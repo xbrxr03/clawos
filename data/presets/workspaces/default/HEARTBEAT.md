@@ -1,7 +1,7 @@
-# Jarvis — Heartbeat Schedule
+# Nexus — Heartbeat Schedule
 
 ## What is this?
-This file defines what Jarvis checks proactively, on a schedule, without being asked.
+This file defines what Nexus checks proactively, on a schedule, without being asked.
 Results are pushed to WhatsApp (if connected) or logged to HISTORY.md.
 
 ## How to use
