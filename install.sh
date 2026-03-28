@@ -358,6 +358,7 @@ UNIT
   systemctl --user start ollama.service 2>/dev/null || true
   ok "Ollama starts on boot"
   bash "${INSTALL_DIR}/scripts/setup-systemd.sh" >/dev/null 2>&1 && ok "ClawOS starts on boot" || warn "ClawOS autostart setup failed"
+  systemctl --user start clawos 2>/dev/null && ok "ClawOS service started" || warn "Start manually: systemctl --user start clawos"
 else
   info "systemd not available — start manually: ollama serve"
 fi
