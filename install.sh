@@ -219,7 +219,7 @@ ok "pyyaml  fastapi  chromadb  ollama  json_repair  pypdf  python-docx"
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 step "Bootstrapping Nexus"
 
-(python3 -m bootstrap.bootstrap --profile "$PROFILE" --yes 2>/dev/null) \
+(python3 -m bootstrap.bootstrap --profile "$PROFILE" --yes >/dev/null 2>/dev/null) \
   & spinner $! "Running bootstrap ($PROFILE profile)"
 wait $! || die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"
 ok "Bootstrap complete"
