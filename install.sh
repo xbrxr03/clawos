@@ -190,7 +190,7 @@ elif [ -d "$INSTALL_DIR/.git" ]; then
   wait $! || warn "Git pull failed — using existing version"
   ok "Nexus updated"
 else
-  (git clone -q --branch "$CLAWOS_BRANCH" --depth 1 "$CLAWOS_REPO" "$INSTALL_DIR") \
+  (cd "$HOME" && git clone -q --branch "$CLAWOS_BRANCH" --depth 1 "$CLAWOS_REPO" "$INSTALL_DIR") \
     & spinner $! "Cloning from GitHub"
   wait $! || die "Clone failed. Check: $CLAWOS_REPO"
   ok "Nexus cloned to $INSTALL_DIR"
