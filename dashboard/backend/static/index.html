@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClawOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f2f2f7;--bg2:#ffffff;--bg3:#e8e8ed;
+  --border:rgba(0,0,0,0.09);--sep:rgba(0,0,0,0.06);
+  --text:#1d1d1f;--text2:rgba(29,29,31,0.52);--text3:rgba(29,29,31,0.28);
+  --blue:#0071e3;--blue-dim:rgba(0,113,227,0.1);
+  --green:#28cd41;--green-dim:rgba(40,205,65,0.1);
+  --red:#ff3b30;--red-dim:rgba(255,59,48,0.1);
+  --amber:#ff9500;--amber-dim:rgba(255,149,0,0.1);
+  --sidebar:240px;--radius:14px;
+  --shadow:0 2px 8px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);
+}
+[data-theme="dark"] {
+  --bg:#141414;--bg2:#1c1c1e;--bg3:#2c2c2e;
+  --border:rgba(255,255,255,0.1);--sep:rgba(255,255,255,0.06);
+  --text:#f5f5f7;--text2:rgba(245,245,247,0.52);--text3:rgba(245,245,247,0.28);
+  --shadow:0 2px 8px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px;display:flex;transition:background .25s,color .25s}
+
+/* sidebar */
+#sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:background .25s}
+#logo-area{padding:22px 20px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--sep)}
+#logo-icon{width:36px;height:36px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;flex-shrink:0}
+#logo-name{font-size:17px;font-weight:600;letter-spacing:-.2px}
+#logo-sub{font-size:11px;color:var(--text3);margin-top:1px}
+nav{flex:1;padding:10px;overflow-y:auto}
+.nav-sec{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;cursor:pointer;color:var(--text2);font-size:14px;font-weight:400;transition:all .15s;user-select:none;margin-bottom:1px}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--blue-dim);color:var(--blue);font-weight:500}
+.nav-item svg{flex-shrink:0;width:16px;height:16px}
+#approval-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;display:none}
+#nexus-link{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;cursor:pointer;color:var(--blue);font-size:14px;font-weight:500;text-decoration:none;border:1px solid var(--blue-dim);background:var(--blue-dim);margin:4px 10px 8px;transition:opacity .15s}
+#nexus-link:hover{opacity:.75}
+#sidebar-footer{padding:14px 20px;border-top:1px solid var(--sep);display:flex;align-items:center;justify-content:space-between}
+#ws-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2)}
+#ws-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
+#ws-dot.up{background:var(--green)}
+#ws-dot.down{background:var(--red)}
+#theme-btn{padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .2s;user-select:none}
+#theme-btn:hover{color:var(--text)}
+
+/* main */
+#main{flex:1;overflow-y:auto;background:var(--bg)}
+.page{display:none;padding:30px 32px}
+.page.active{display:block}
+.page-title{font-size:28px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.page-sub{color:var(--text2);font-size:14px;margin-bottom:28px}
+
+/* cards */
+.card{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);transition:background .25s}
+.cp{padding:22px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+
+/* stat cards */
+.stat-card{padding:24px 24px 20px}
+.stat-num{font-size:48px;font-weight:300;letter-spacing:-2px;line-height:1;margin-bottom:8px}
+.stat-num.blue{color:var(--blue)}
+.stat-num.green{color:var(--green)}
+.stat-num.red{color:var(--red)}
+.stat-num.amber{color:var(--amber)}
+.stat-label{font-size:12px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+
+/* section heading */
+.shd{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+
+/* dot + badge */
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.green{background:var(--green)}
+.dot.blue{background:var(--blue)}
+.dot.red{background:var(--red)}
+.dot.grey{background:var(--text3)}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em}
+.badge.green{background:var(--green-dim);color:var(--green)}
+.badge.red{background:var(--red-dim);color:var(--red)}
+.badge.blue{background:var(--blue-dim);color:var(--blue)}
+.badge.amber{background:var(--amber-dim);color:var(--amber)}
+.badge.grey{background:var(--bg3);color:var(--text2)}
+
+/* service rows */
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.svc-row{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid var(--sep)}
+.svc-row:nth-last-child(-n+2){border-bottom:none}
+.svc-name{flex:1;font-size:14px}
+.svc-lat{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)}
+
+/* events */
+.ev-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--sep);font-size:13px}
+.ev-row:last-child{border-bottom:none}
+.ev-type{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);width:90px;flex-shrink:0}
+.ev-detail{flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);flex-shrink:0}
+
+/* model rows */
+.model-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--sep)}
+.model-row:last-child{border-bottom:none}
+.model-name{flex:1;font-family:'DM Mono',monospace;font-size:13px}
+.model-size{font-size:12px;color:var(--text3)}
+
+/* tasks */
+.task-bar{display:flex;gap:10px;margin-bottom:18px}
+.ti{flex:1;padding:13px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .15s,box-shadow .15s}
+.ti:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-dim)}
+.ti::placeholder{color:var(--text3)}
+.btn{padding:12px 22px;background:var(--blue);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;white-space:nowrap}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sec{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn.dng{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,59,48,.2)}
+.btn.sm{padding:8px 16px;font-size:12px;border-radius:9px}
+.tabs{display:flex;gap:2px;background:var(--bg3);border-radius:11px;padding:4px;margin-bottom:18px;border:1px solid var(--border)}
+.tab{flex:1;padding:9px;border-radius:9px;border:none;background:transparent;font-size:13px;font-weight:400;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.tab.active{background:var(--bg2);color:var(--text);font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.task-row{padding:18px;border-bottom:1px solid var(--sep)}
+.task-row:last-child{border-bottom:none}
+.task-hd{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.task-intent{font-size:14px;font-weight:500}
+.task-meta{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px}
+.task-result{font-size:13px;color:var(--text2);white-space:pre-wrap;line-height:1.6;padding:12px 16px;background:var(--bg3);border-radius:9px;margin-top:4px}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;color:var(--text3);gap:10px}
+.empty-icon{font-size:32px;opacity:.3}
+.empty-text{font-size:14px}
+
+/* audit */
+.aud-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--sep);font-size:13px}
+.aud-row:last-child{border-bottom:none}
+.aud-icon{width:18px;text-align:center;flex-shrink:0;font-size:13px}
+.aud-tool{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);width:140px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aud-target{flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aud-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);flex-shrink:0}
+
+/* memory */
+.mem-card{padding:24px}
+.mem-val{font-size:40px;font-weight:300;letter-spacing:-1px;color:var(--blue)}
+.mem-label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;font-weight:500;margin-top:6px}
+.ws-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--sep)}
+.ws-row:last-child{border-bottom:none}
+.ws-name{flex:1;font-family:'DM Mono',monospace;font-size:13px}
+.ws-badge{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--green-dim);color:var(--green);font-weight:600;text-transform:uppercase}
+
+/* approvals */
+.appr-item{padding:20px;border-bottom:1px solid var(--sep)}
+.appr-item:last-child{border-bottom:none}
+.appr-tool{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;margin-bottom:5px}
+.appr-target{font-size:13px;color:var(--text2);margin-bottom:12px}
+.risk-bar{height:3px;border-radius:2px;background:var(--bg3);margin-bottom:14px;overflow:hidden}
+.risk-fill{height:100%;border-radius:2px;background:var(--blue)}
+.appr-actions{display:flex;gap:8px}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="logo-area">
+    <div id="logo-icon">C</div>
+    <div>
+      <div id="logo-name">ClawOS</div>
+      <div id="logo-sub">agent runtime</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-sec">Main</div>
+    <div class="nav-item active" onclick="nav('overview',this)">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
+      Overview
+    </div>
+    <div class="nav-item" onclick="nav('tasks',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="10" y2="8"/><line x1="2" y1="12" x2="12" y2="12"/></svg>
+      Tasks
+    </div>
+    <div class="nav-item" onclick="nav('approvals',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><polyline points="5,8 7,10 11,6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Approvals
+      <span id="approval-badge"></span>
+    </div>
+    <div class="nav-sec">System</div>
+    <div class="nav-item" onclick="nav('models',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="5" width="13" height="8" rx="2"/><path d="M5 5V3a1 1 0 011-1h4a1 1 0 011 1v2" stroke-linecap="round"/></svg>
+      Models
+    </div>
+    <div class="nav-item" onclick="nav('memory',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="8" cy="5" rx="5.5" ry="2.5"/><path d="M2.5 5v6c0 1.38 2.46 2.5 5.5 2.5s5.5-1.12 5.5-2.5V5"/></svg>
+      Memory
+    </div>
+    <div class="nav-item" onclick="nav('audit',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6" stroke-linecap="round"/><line x1="5" y1="9" x2="9" y2="9" stroke-linecap="round"/></svg>
+      Audit Log
+    </div>
+  </nav>
+  <a href="http://localhost:5180" target="_blank" id="nexus-link">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><polygon points="8,1 15,5.5 15,10.5 8,15 1,10.5 1,5.5"/></svg>
+    Nexus Command
+  </a>
+  <div id="sidebar-footer">
+    <div id="ws-status">
+      <div class="dot grey" id="ws-dot"></div>
+      <span id="ws-label">Connecting...</span>
+    </div>
+    <div id="theme-btn" onclick="toggleTheme()"><span id="theme-icon">🌙</span> Dark</div>
+  </div>
+</div>
+
+<div id="main">
+
+  <div class="page active" id="page-overview">
+    <div class="page-title">Overview</div>
+    <div class="page-sub" id="ov-sub">Agent runtime · loading...</div>
+    <div class="grid-4">
+      <div class="card stat-card"><div class="stat-num blue" id="s-active">—</div><div class="stat-label">Active</div></div>
+      <div class="card stat-card"><div class="stat-num" id="s-queued">—</div><div class="stat-label">Queued</div></div>
+      <div class="card stat-card"><div class="stat-num red" id="s-failed">—</div><div class="stat-label">Failed</div></div>
+      <div class="card stat-card"><div class="stat-num green" id="s-completed">—</div><div class="stat-label">Completed</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card cp">
+        <div class="shd">System Health</div>
+        <div class="svc-grid" id="svc-list"><div class="svc-row" style="grid-column:span 2"><span style="color:var(--text3);font-size:13px">Loading...</span></div></div>
+      </div>
+      <div class="card cp">
+        <div class="shd">Activity Feed</div>
+        <div id="events-list"><div style="color:var(--text3);font-size:13px;padding:8px 0">Waiting for events...</div></div>
+      </div>
+    </div>
+    <div class="card cp">
+      <div class="shd">Models</div>
+      <div id="ov-models"><div style="color:var(--text3);font-size:13px">Loading...</div></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-tasks">
+    <div class="page-title">Tasks</div>
+    <div class="page-sub">Submit tasks to Nexus</div>
+    <div class="task-bar">
+      <input class="ti" id="task-input" placeholder="Ask Nexus anything..." onkeydown="if(event.key==='Enter')submitTask()">
+      <button class="btn" id="run-btn" onclick="submitTask()">Run</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('active',this)">Active</button>
+      <button class="tab" onclick="switchTab('queued',this)">Queued</button>
+      <button class="tab" onclick="switchTab('failed',this)">Failed</button>
+      <button class="tab" onclick="switchTab('completed',this)">Completed</button>
+    </div>
+    <div class="card" id="tasks-list"><div class="empty"><div class="empty-icon">○</div><div class="empty-text">No active tasks</div></div></div>
+  </div>
+
+  <div class="page" id="page-approvals">
+    <div class="page-title">Approvals</div>
+    <div class="page-sub">Pending tool call approvals</div>
+    <div class="card" id="approvals-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-text">No pending approvals</div></div></div>
+  </div>
+
+  <div class="page" id="page-models">
+    <div class="page-title">Models</div>
+    <div class="page-sub">Ollama model management</div>
+    <div class="card cp" style="margin-bottom:18px">
+      <div class="shd">Pull a model</div>
+      <div class="task-bar" style="margin-bottom:0">
+        <input class="ti" id="pull-input" placeholder="e.g. qwen2.5:14b" onkeydown="if(event.key==='Enter')pullModel()">
+        <button class="btn" onclick="pullModel()">Pull</button>
+      </div>
+      <div id="pull-status" style="font-size:12px;color:var(--text2);margin-top:10px;font-family:'DM Mono',monospace;min-height:18px"></div>
+    </div>
+    <div class="card" id="models-list"><div class="empty"><div class="empty-icon">◻</div><div class="empty-text">Loading models...</div></div></div>
+  </div>
+
+  <div class="page" id="page-memory">
+    <div class="page-title">Memory</div>
+    <div class="page-sub">4-layer memory system</div>
+    <div class="grid-4" id="mem-layers">
+      <div class="card mem-card"><div class="mem-val">—</div><div class="mem-label">PINNED.md · L1</div></div>
+      <div class="card mem-card"><div class="mem-val">—</div><div class="mem-label">WORKFLOW.md · L2</div></div>
+      <div class="card mem-card"><div class="mem-val" style="color:var(--blue)">—</div><div class="mem-label">ChromaDB · L3</div></div>
+      <div class="card mem-card"><div class="mem-val" style="color:var(--amber)">—</div><div class="mem-label">SQLite FTS5 · L4</div></div>
+    </div>
+    <div class="card cp">
+      <div class="shd">Workspaces</div>
+      <div id="ws-list"><div style="color:var(--text3);font-size:13px">Loading...</div></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-audit">
+    <div class="page-title">Audit Log</div>
+    <div class="page-sub">Merkle-chained audit trail</div>
+    <div class="card cp" id="audit-list"><div style="color:var(--text3);font-size:13px">Loading...</div></div>
+  </div>
+
+</div>
+
+<script>
+let state={services:{},tasks:[],events:[],models:[]},currentTab='active',ws=null,dark=localStorage.getItem('clawos-theme')==='dark';
+
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  document.getElementById('theme-btn').innerHTML=dark?'<span>☀️</span> Light':'<span>🌙</span> Dark';
+  localStorage.setItem('clawos-theme',dark?'dark':'light');
+}
+function toggleTheme(){dark=!dark;applyTheme();}
+applyTheme();
+
+function nav(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='audit')loadAudit();
+  if(name==='memory')loadMemory();
+  if(name==='models')loadModels();
+  if(name==='approvals')loadApprovals();
+}
+
+function connect(){
+  ws=new WebSocket('ws://'+location.host+'/ws');
+  ws.onopen=()=>{
+    document.getElementById('ws-dot').className='dot up';
+    document.getElementById('ws-label').textContent='Connected';
+  };
+  ws.onclose=()=>{
+    document.getElementById('ws-dot').className='dot down';
+    document.getElementById('ws-label').textContent='Disconnected';
+    setTimeout(connect,3000);
+  };
+  ws.onmessage=e=>{
+    const msg=JSON.parse(e.data);
+    if(msg.type==='snapshot'){
+      state.services=msg.data.services||{};
+      state.events=(msg.data.events||[]).slice(0,20);
+      state.models=((msg.data.models||{}).models)||[];
+      renderSvcs();renderOvModels();renderEvs();
+    } else if(msg.type==='service_health'){
+      state.services=msg.data;renderSvcs();
+    } else if(msg.type==='audit_event'){
+      state.events.unshift(msg.data);
+      state.events=state.events.slice(0,20);
+      renderEvs();
+    }
+  };
+  setInterval(()=>ws&&ws.readyState===1&&ws.send('ping'),20000);
+}
+
+setInterval(async()=>{
+  try{
+    const r=await fetch('/api/tasks');
+    const data=await r.json();
+    if(!Array.isArray(data))return;
+    state.tasks=data;
+    const a=data.filter(t=>t.status==='active'||t.status==='running').length;
+    const q=data.filter(t=>t.status==='queued').length;
+    const f=data.filter(t=>t.status==='failed').length;
+    const c=data.filter(t=>t.status==='completed').length;
+    document.getElementById('s-active').textContent=a;
+    document.getElementById('s-queued').textContent=q;
+    document.getElementById('s-failed').textContent=f;
+    document.getElementById('s-completed').textContent=c;
+    document.getElementById('ov-sub').textContent='Agent runtime · '+data.length+' tasks total';
+    renderTasks();
+  }catch(e){}
+},3000);
+
+function svcBadge(up){return '<div class="badge '+(up?'green':'red')+'">'+(up?'up':'down')+'</div>';}
+function dot(color){return '<div class="dot '+color+'"></div>';}
+
+function renderSvcs(){
+  const el=document.getElementById('svc-list');
+  const s=state.services;
+  if(!s||!Object.keys(s).length)return;
+  let html='';
+  Object.entries(s).forEach(function([name,sv]){
+    const up=sv==='up'||sv.status==='up'||sv.status==='running';
+    const lat=sv.latency_ms?(sv.latency_ms+'ms'):'';
+    html+='<div class="svc-row">'+dot(up?'green':'red')+'<div class="svc-name">'+name+'</div>'+(lat?'<div class="svc-lat">'+lat+'</div>':'')+svcBadge(up)+'</div>';
+  });
+  el.innerHTML=html;
+  const up=Object.values(s).filter(sv=>sv==='up'||sv.status==='up'||sv.status==='running').length;
+  document.getElementById('ws-label').textContent=up+'/'+Object.keys(s).length+' up';
+}
+
+function renderEvs(){
+  const el=document.getElementById('events-list');
+  if(!state.events.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">No events yet</div>';return;}
+  let html='';
+  state.events.slice(0,12).forEach(function(e){
+    const t=e.timestamp?new Date(e.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+    const type=e.event_type||e.type||'event';
+    const detail=e.tool?(e.tool+(e.target?' → '+e.target:'')):(e.detail||'');
+    html+='<div class="ev-row"><div class="ev-type">'+type+'</div><div class="ev-detail">'+detail+'</div><div class="ev-time">'+t+'</div></div>';
+  });
+  el.innerHTML=html;
+}
+
+function renderOvModels(){
+  const el=document.getElementById('ov-models');
+  if(!state.models.length){el.innerHTML='<div style="color:var(--text3);font-size:13px">No models</div>';return;}
+  let html='';
+  state.models.forEach(function(m){
+    const sz=m.size_gb?(m.size_gb+' GB'):(m.size?((m.size/1e9).toFixed(1)+' GB'):'');
+    html+='<div class="model-row">'+dot(m.running?'blue':'grey')+'<div class="model-name">'+m.name+'</div>';
+    if(m.name==='qwen2.5:7b'||m.default)html+='<div class="badge blue">default</div>';
+    if(m.running)html+='<div class="badge green">running</div>';
+    html+='<div class="model-size">'+sz+'</div></div>';
+  });
+  el.innerHTML=html;
+}
+
+function renderTasks(){
+  const el=document.getElementById('tasks-list');
+  const f=state.tasks.filter(function(t){
+    if(currentTab==='active')return t.status==='active'||t.status==='running';
+    return t.status===currentTab;
+  });
+  if(!f.length){el.innerHTML='<div class="empty"><div class="empty-icon">○</div><div class="empty-text">No '+currentTab+' tasks</div></div>';return;}
+  let html='';
+  const colors={active:'blue',running:'blue',queued:'amber',failed:'red',completed:'green'};
+  f.forEach(function(t){
+    const ts=t.finished_at?new Date(t.finished_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'running...';
+    const sc=colors[t.status]||'grey';
+    html+='<div class="task-row"><div class="task-hd"><div class="badge '+sc+'">'+t.status+'</div><div class="task-intent">'+t.intent+'</div></div>';
+    html+='<div class="task-meta">'+t.task_id+' · '+t.workspace+' · '+ts+'</div>';
+    if(t.result)html+='<div class="task-result">'+t.result+'</div>';
+    if(t.error)html+='<div class="task-result" style="color:var(--red)">'+t.error+'</div>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+function switchTab(tab,el){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderTasks();
+}
+
+async function submitTask(){
+  const input=document.getElementById('task-input');
+  const btn=document.getElementById('run-btn');
+  const intent=input.value.trim();
+  if(!intent)return;
+  btn.disabled=true;btn.textContent='...';
+  try{
+    await fetch('/api/tasks/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intent:intent})});
+    input.value='';
+    switchTab('queued',document.querySelectorAll('.tab')[1]);
+    setTimeout(function(){switchTab('completed',document.querySelectorAll('.tab')[3]);},8000);
+  }catch(e){alert('Error: '+e);}
+  btn.disabled=false;btn.textContent='Run';
+}
+
+async function loadModels(){
+  try{
+    const r=await fetch('/api/models');
+    const data=await r.json();
+    const models=data.models||data||[];
+    state.models=models;
+    const el=document.getElementById('models-list');
+    if(!models.length){el.innerHTML='<div class="empty"><div class="empty-icon">◻</div><div class="empty-text">No models</div></div>';return;}
+    let html='';
+    models.forEach(function(m){
+      const sz=m.size_gb?(m.size_gb+' GB'):(m.size?((m.size/1e9).toFixed(1)+' GB'):'');
+      html+='<div class="model-row" style="padding:14px 22px">'+dot(m.running?'blue':'grey')+'<div class="model-name">'+m.name+'</div>';
+      if(m.name==='qwen2.5:7b'||m.default)html+='<div class="badge blue">default</div>';
+      if(m.running)html+='<div class="badge green">running</div>';
+      html+='<div class="model-size">'+sz+'</div>';
+      html+='<button class="btn dng sm" data-name="'+m.name+'" onclick="deleteModel(this.dataset.name)">Delete</button>';
+      html+='</div>';
+    });
+    el.innerHTML=html;
+  }catch(e){}
+}
+
+async function pullModel(){
+  const name=document.getElementById('pull-input').value.trim();
+  if(!name)return;
+  document.getElementById('pull-status').textContent='Pulling '+name+'...';
+  try{
+    await fetch('/api/models/'+encodeURIComponent(name)+'/pull',{method:'POST'});
+    document.getElementById('pull-status').textContent='Pull started for '+name;
+    document.getElementById('pull-input').value='';
+    setTimeout(loadModels,3000);
+  }catch(e){document.getElementById('pull-status').textContent='Error: '+e;}
+}
+
+async function deleteModel(name){
+  if(!confirm('Delete '+name+'?'))return;
+  await fetch('/api/models/'+encodeURIComponent(name),{method:'DELETE'});
+  loadModels();
+}
+
+async function loadMemory(){
+  try{
+    const r=await fetch('/api/memory/nexus_default');
+    const d=await r.json();
+    document.getElementById('mem-layers').innerHTML=
+      '<div class="card mem-card"><div class="mem-val">'+(d.pinned_lines||0)+'</div><div class="mem-label">PINNED.md · L1</div></div>'+
+      '<div class="card mem-card"><div class="mem-val">'+(d.workflow_lines||0)+'</div><div class="mem-label">WORKFLOW.md · L2</div></div>'+
+      '<div class="card mem-card"><div class="mem-val" style="color:var(--blue)">'+(d.chroma_size_mb||0)+' MB</div><div class="mem-label">ChromaDB · L3</div></div>'+
+      '<div class="card mem-card"><div class="mem-val" style="color:var(--amber)">'+(d.sqlite_size_mb||0)+' MB</div><div class="mem-label">SQLite FTS5 · L4</div></div>';
+  }catch(e){}
+  try{
+    const r=await fetch('/api/workspaces');
+    const data=await r.json();
+    const workspaces=data.workspaces||data||[];
+    const el=document.getElementById('ws-list');
+    if(!workspaces.length){el.innerHTML='<div style="color:var(--text3);font-size:13px">No workspaces</div>';return;}
+    let html='';
+    workspaces.forEach(function(w){
+      html+='<div class="ws-row">'+dot(w.has_pinned?'green':'grey')+'<div class="ws-name">'+w.name+'</div>'+(w.has_pinned?'<span class="ws-badge">pinned</span>':'')+'</div>';
+    });
+    el.innerHTML=html;
+  }catch(e){}
+}
+
+async function loadAudit(){
+  try{
+    const r=await fetch('/api/audit?limit=80');
+    const data=await r.json();
+    const entries=data.entries||data||[];
+    const el=document.getElementById('audit-list');
+    if(!entries.length){el.innerHTML='<div style="color:var(--text3);font-size:13px">No audit entries</div>';return;}
+    let html='';
+    entries.forEach(function(e){
+      const allow=e.decision==='ALLOW';
+      const t=e.timestamp?new Date(e.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+      html+='<div class="aud-row"><div class="aud-icon" style="color:'+(allow?'var(--green)':'var(--red)')+'">'+(allow?'✓':'✗')+'</div>';
+      html+='<div class="aud-tool">'+(e.tool||'?')+'</div><div class="aud-target">'+(e.target||'')+'</div><div class="aud-time">'+t+'</div></div>';
+    });
+    el.innerHTML=html;
+  }catch(e){}
+}
+
+async function loadApprovals(){
+  try{
+    const r=await fetch('/api/approvals');
+    const data=await r.json();
+    const el=document.getElementById('approvals-list');
+    const badge=document.getElementById('approval-badge');
+    if(!data.length){
+      el.innerHTML='<div class="empty"><div class="empty-icon">✓</div><div class="empty-text">No pending approvals</div></div>';
+      badge.style.display='none';return;
+    }
+    badge.style.display='inline';badge.textContent=data.length;
+    let html='';
+    data.forEach(function(a){
+      const risk=a.risk_score||50;
+      html+='<div class="appr-item">';
+      html+='<div class="risk-bar"><div class="risk-fill" style="width:'+Math.min(100,risk)+'%;background:'+(risk>70?'var(--red)':'var(--blue)')+'"></div></div>';
+      html+='<div class="appr-tool">'+(a.tool||'unknown')+'</div>';
+      html+='<div class="appr-target">'+(a.target||'')+'</div>';
+      html+='<div class="appr-actions">';
+      html+='<button class="btn sm" data-id="'+a.request_id+'" data-act="approve" onclick="decide(this.dataset.id,this.dataset.act)">Approve</button>';
+      html+='<button class="btn sec sm" data-id="'+a.request_id+'" data-act="deny" onclick="decide(this.dataset.id,this.dataset.act)">Deny</button>';
+      html+='</div></div>';
+    });
+    el.innerHTML=html;
+  }catch(e){}
+}
+
+async function decide(id,action){
+  await fetch('/api/approvals/'+id+'/'+action,{method:'POST'});
+  loadApprovals();
+}
+
+connect();
+fetch('/api/tasks').then(function(r){return r.json();}).then(function(data){
+  if(!Array.isArray(data))return;
+  state.tasks=data;
+  document.getElementById('s-active').textContent=data.filter(t=>t.status==='active'||t.status==='running').length;
+  document.getElementById('s-queued').textContent=data.filter(t=>t.status==='queued').length;
+  document.getElementById('s-failed').textContent=data.filter(t=>t.status==='failed').length;
+  document.getElementById('s-completed').textContent=data.filter(t=>t.status==='completed').length;
+}).catch(function(){
+  ['s-active','s-queued','s-failed','s-completed'].forEach(function(id){document.getElementById(id).textContent='0';});
+});
+</script>
+</body>
+</html>
