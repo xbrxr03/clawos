@@ -47,6 +47,11 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
         log.info(f"Skills loaded: {skills.count}")
         log.info("ClawOS daemon ready.")
 
+        from services.agentd.service import get_manager
+        mgr = get_manager()
+        await mgr.start()
+        asyncio.create_task(mgr.start_api())
+
     except Exception as e:
         log.error(f"Failed to start ClawOS services: {e}")
         sys.exit(1)
@@ -59,7 +64,7 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
             sys.path.insert(0, str(dashboard_dir))
             config = uvicorn.Config(
                 "service:app",
-                host="0.0.0.0",
+                host="127.0.0.1",
                 port=7070,
                 log_level="warning",
                 

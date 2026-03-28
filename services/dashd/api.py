@@ -51,7 +51,7 @@ except ImportError:
     def require_auth(*a, **kw):
         pass
 
-DASHBOARD_HTML = Path(__file__).parent.parent.parent / "clients" / "dashboard" / "index.html"
+DASHBOARD_HTML = Path(__file__).parent.parent.parent / "dashboard/backend/static/index.html"
 
 
 class ConnectionManager:
