@@ -205,12 +205,12 @@ step "Installing Python packages"
 (pip3 install -q \
   pyyaml aiohttp fastapi "uvicorn[standard]" \
   ollama click chromadb json_repair \
-  pypdf python-docx \
+  pypdf python-docx aiofiles httpx gitpython rich \
   --break-system-packages 2>/dev/null \
 || pip3 install -q \
   pyyaml aiohttp fastapi "uvicorn[standard]" \
   ollama click chromadb json_repair \
-  pypdf python-docx \
+  pypdf python-docx aiofiles httpx gitpython rich \
   --user 2>/dev/null || true) \
   & spinner $! "Installing Python dependencies"
 wait $! 2>/dev/null || warn "Some Python packages may have failed"
@@ -357,6 +357,7 @@ UNIT
   systemctl --user enable ollama.service 2>/dev/null || true
   systemctl --user start ollama.service 2>/dev/null || true
   ok "Ollama starts on boot"
+  bash "${INSTALL_DIR}/scripts/setup-systemd.sh" >/dev/null 2>&1 && ok "ClawOS starts on boot" || warn "ClawOS autostart setup failed"
 else
   info "systemd not available — start manually: ollama serve"
 fi
@@ -414,11 +415,4 @@ else
   echo ""
 fi
 
-# Download wake word model for "Hey Nexus" trigger
-if [ ! -f "/root/clawos/services/voiced/models/hey_jarvis.onnx" ]; then
-    step "Downloading wake word model..."
-    mkdir -p "/root/clawos/services/voiced/models"
-    wget -q -O "/root/clawos/services/voiced/models/hey_jarvis.onnx"         "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/hey_jarvis.onnx" || {
-        warn "Wake word model download failed — voice wake word disabled (optional)"
-    }
-fi
+
