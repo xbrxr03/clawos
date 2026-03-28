@@ -1,3 +1,4 @@
+import sys
 """Screen 1 — Welcome."""
 from clawos_core.constants import VERSION_FULL
 

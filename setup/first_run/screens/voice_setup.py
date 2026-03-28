@@ -1,3 +1,4 @@
+import sys
 """Screen 5 — Voice setup."""
 import shutil
 

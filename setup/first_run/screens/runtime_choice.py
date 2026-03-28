@@ -1,3 +1,4 @@
+import sys
 """Screen 3 — Runtime choice: Nexus / OpenClaw / Both."""
 
 

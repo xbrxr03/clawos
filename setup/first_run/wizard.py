@@ -62,6 +62,11 @@ def run(reset: bool = False, from_screen: str = None):
 
 
 def main():
+    import sys
+    if not sys.stdin.isatty():
+        print("  Non-interactive install detected — skipping wizard.")
+        print("  Run manually: nexus setup")
+        return
     parser = argparse.ArgumentParser(description="ClawOS First-Run Wizard")
     parser.add_argument("--reset",   action="store_true", help="Start from scratch")
     parser.add_argument("--from",    dest="from_screen",  help="Start from specific screen")

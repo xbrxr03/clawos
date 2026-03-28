@@ -381,7 +381,8 @@ if [ ! -f "$WIZARD_STATE" ]; then
   sleep 1
   cd "$INSTALL_DIR"
   export PYTHONPATH="$INSTALL_DIR"
-  python3 -m setup.first_run.wizard
+  python3 -m setup.first_run.wizard 2>/dev/null || true
+  echo -e "  ${D}Run wizard manually: nexus setup${RESET}"
 else
   # Re-install / update case — wizard already completed, just show quick start
   echo -e "  ${W}${BOLD}Mode 1  —  Offline chat (works right now)${RESET}"

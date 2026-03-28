@@ -1,3 +1,4 @@
+import sys
 """
 Screen 7 — WhatsApp setup.
 Personal number — Nexus lives in your main WhatsApp.

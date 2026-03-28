@@ -1,3 +1,4 @@
+import sys
 """Screen 4 — Workspace setup."""
 from clawos_core.constants import CLAWOS_DIR
 
