@@ -100,7 +100,7 @@ case "$ARCH" in
   *)                      IS_ARM=false ;;
 esac
 
-if   [ "$RAM_GB" -ge 32 ]; then PROFILE="performance"; TIER="Tier C  GPU workstation"
+if   [ "$RAM_GB" -ge 30 ]; then PROFILE="performance"; TIER="Tier C  GPU workstation"
 elif [ "$RAM_GB" -ge 14 ]; then PROFILE="balanced";    TIER="Tier B  workstation"
 else                             PROFILE="lowram";      TIER="Tier A  mini PC / ARM"
 fi
@@ -382,7 +382,6 @@ if [ ! -f "$WIZARD_STATE" ]; then
   cd "$INSTALL_DIR"
   export PYTHONPATH="$INSTALL_DIR"
   python3 -m setup.first_run.wizard 2>/dev/null || true
-  echo -e "  ${D}Run wizard manually: nexus setup${RESET}"
 else
   # Re-install / update case — wizard already completed, just show quick start
   echo -e "  ${W}${BOLD}Mode 1  —  Offline chat (works right now)${RESET}"
