@@ -5,6 +5,7 @@ Executes shell commands via subprocess.
 Writes every execution to a Merkle-chained audit log.
 """
 import hashlib
+import os as _os
 import json
 import os
 import subprocess
@@ -100,6 +101,8 @@ def run_commands(
         try:
             import shlex as _shlex
             try:
+                import re as _re
+                cmd = _re.sub(r"(?<![\w])~(?![\w])", _os.path.expanduser("~"), cmd)
                 _argv = _shlex.split(cmd)
             except ValueError:
                 _argv = ["bash", "-c", cmd]

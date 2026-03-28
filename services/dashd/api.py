@@ -51,7 +51,7 @@ except ImportError:
     def require_auth(*a, **kw):
         pass
 
-DASHBOARD_HTML = Path(__file__).parent.parent.parent / "dashboard/backend/static/index.html"
+DASHBOARD_HTML = Path(__file__).parent.parent.parent / "clients/dashboard/index.html"
 
 
 class ConnectionManager:
@@ -101,8 +101,25 @@ def create_app() -> "FastAPI":
 
     @app.get("/api/tasks")
     async def list_tasks(limit: int = 20):
-        from services.agentd.service import get_manager
-        return get_manager().list_tasks(limit)
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                r = await client.get(f"http://127.0.0.1:7072/tasks", timeout=2.0)
+                return r.json()
+        except Exception:
+            from services.agentd.service import get_manager
+            return get_manager().list_tasks(limit)
+
+    @app.post("/api/tasks/submit")
+    async def submit_task(body: dict):
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                r = await client.post("http://127.0.0.1:7072/submit",
+                                      json=body, timeout=5.0)
+                return r.json()
+        except Exception as e:
+            return {"error": str(e)}
 
     @app.get("/api/tasks/{task_id}")
     async def get_task(task_id: str):
@@ -166,4 +183,4 @@ def run():
         log.error("fastapi/uvicorn not installed — dashboard unavailable")
         return
     app = create_app()
-    uvicorn.run(app, host="127.0.0.1", port=PORT_DASHD, log_level="warning")
+    uvicorn.run(app, host="0.0.0.0", port=PORT_DASHD, log_level="warning")

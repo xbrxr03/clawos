@@ -367,13 +367,18 @@ def _run_plan_mode(spec: str, agent):
 
     print(f"\n  Generating plan...")
     try:
-        raw = asyncio.get_event_loop().run_until_complete(agent.chat(plan_prompt))
+        raw = asyncio.run(agent.chat(plan_prompt))
     except Exception as e:
         print(f"  Plan generation error: {e}\n")
         return
 
     try:
         clean = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        try:
+            from json_repair import repair_json
+            clean = repair_json(clean)
+        except ImportError:
+            pass
         options = json.loads(clean)
         if not isinstance(options, list):
             raise ValueError("not a list")
@@ -416,7 +421,7 @@ def _run_plan_mode(spec: str, agent):
         "Execute the steps. Use tools as needed."
     )
 
-    result = asyncio.get_event_loop().run_until_complete(agent.chat(execution_prompt))
+    result = asyncio.run(agent.chat(execution_prompt))
     print(f"\n  {result}\n")
 
 # ── nexus command (Nexus Command / openclaw-office) ───────────────────────────
@@ -814,7 +819,7 @@ def main(argv: list = None):
             import asyncio
             from runtimes.agent.runtime import build_runtime
             ws = _active_workspace()
-            agent = asyncio.get_event_loop().run_until_complete(build_runtime(ws))
+            agent = asyncio.run(build_runtime(ws))
             _run_plan_mode(spec, agent)
 
     elif first == "command":

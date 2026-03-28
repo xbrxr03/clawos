@@ -64,7 +64,7 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
             sys.path.insert(0, str(dashboard_dir))
             config = uvicorn.Config(
                 "service:app",
-                host="127.0.0.1",
+                host="0.0.0.0",
                 port=7070,
                 log_level="warning",
                 

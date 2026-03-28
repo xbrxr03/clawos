@@ -6,6 +6,22 @@ import { api } from '../lib/api.js'
 const TABS = ['active','queued','failed','completed']
 
 export function Tasks({ tasks }) {
+  const [input, setInput] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submitTask() {
+    if (!input.trim()) return;
+    setSubmitting(true);
+    try {
+      await fetch('/api/tasks/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent: input.trim() }),
+      });
+      setInput('');
+    } catch(e) { console.error(e); }
+    setSubmitting(false);
+  }
   const [tab, setTab]     = useState('active')
   const [expanded, setEx] = useState(null)
   const items = tasks[tab] ?? []
@@ -14,6 +30,19 @@ export function Tasks({ tasks }) {
     <div className="fade-up" style={{ padding: '0 0 48px' }}>
       <div style={{ padding: '32px 24px 0' }}>
         <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>Tasks</div>
+      <div style={{ display: 'flex', gap: 8, margin: '16px 0' }}>
+        <input
+          type="text"
+          placeholder="Submit a task to Nexus..."
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && submitTask()}
+          style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#f5f5f7', fontSize: 14, outline: 'none' }}
+        />
+        <button onClick={submitTask} disabled={submitting} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#2997FF', color: '#fff', fontSize: 14, cursor: 'pointer', opacity: submitting ? 0.6 : 1 }}>
+          {submitting ? '...' : 'Run'}
+        </button>
+      </div>
       </div>
 
       <div style={{ padding: '16px 20px 0' }}>

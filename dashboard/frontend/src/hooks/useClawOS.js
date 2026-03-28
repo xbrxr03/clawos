@@ -74,5 +74,24 @@ export function useClawOS() {
     return () => { clearTimeout(retryRef.current); ws.current?.close() }
   }, [connect])
 
+  // Poll tasks every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch('/api/tasks')
+        const data = await r.json()
+        if (Array.isArray(data)) {
+          const grouped = { active:[], queued:[], failed:[], completed:[] }
+          data.forEach(t => {
+            const s = t.status
+            if (grouped[s]) grouped[s].push(t)
+          })
+          setTasks(grouped)
+        }
+      } catch(e) {}
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
   return { connected, events, approvals, services, tasks, models, pullProgress }
 }

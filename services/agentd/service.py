@@ -92,14 +92,6 @@ class AgentManager:
             log.info(f"Session reset: {workspace_id}")
 
 
-_mgr: Optional[AgentManager] = None
-
-def get_manager() -> AgentManager:
-    global _mgr
-    if _mgr is None:
-        _mgr = AgentManager()
-    return _mgr
-
     async def start_api(self):
         """Start agentd HTTP API on PORT_AGENTD for dashboard integration."""
         try:
@@ -126,3 +118,13 @@ def get_manager() -> AgentManager:
             await uvicorn.Server(config).serve()
         except Exception as e:
             log.warning(f"agentd API not started: {e}")
+
+
+
+_mgr: Optional[AgentManager] = None
+
+def get_manager() -> AgentManager:
+    global _mgr
+    if _mgr is None:
+        _mgr = AgentManager()
+    return _mgr

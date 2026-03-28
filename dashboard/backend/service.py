@@ -180,6 +180,16 @@ async def health():
 
 
 # ── REST: Tasks ───────────────────────────────────────────────────────────────
+@app.post("/api/tasks/submit")
+async def api_submit_task(body: dict):
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            r = await client.post(f"{AGENTD_URL}/submit", json=body, timeout=10.0)
+            return r.json()
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/api/tasks")
 async def api_tasks():
     return await get_tasks_data()

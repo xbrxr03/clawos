@@ -4,371 +4,400 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ClawOS</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:    #07070a;
-  --bg1:   #0e0e14;
-  --bg2:   #13131c;
-  --bg3:   #191924;
-  --b:     rgba(255,255,255,0.07);
-  --b2:    rgba(255,255,255,0.12);
-  --purple:#8b7fff;
-  --purple2:#a89bff;
-  --green: #4ade80;
-  --red:   #f87171;
-  --amber: #fbbf24;
-  --blue:  #60a5fa;
-  --text:  #e2e2ee;
-  --dim:   #9090a8;
-  --muted: #50506a;
-  --mono:  'Space Mono',monospace;
-  --sans:  'Syne',sans-serif;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #141414; color: #f5f5f7; font-family: Inter, -apple-system, sans-serif; font-size: 14px; display: flex; height: 100vh; overflow: hidden; }
+  
+  /* Sidebar */
+  #sidebar { width: 200px; background: #1c1c1e; border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; }
+  #logo { padding: 8px 16px 20px; font-weight: 700; font-size: 16px; color: #f5f5f7; }
+  #logo span { font-size: 11px; font-weight: 400; color: rgba(245,245,247,0.45); display: block; margin-top: 2px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; margin: 1px 8px; border-radius: 8px; cursor: pointer; color: rgba(245,245,247,0.55); font-size: 13px; transition: all 0.15s; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: #f5f5f7; }
+  .nav-item.active { background: rgba(255,255,255,0.08); color: #f5f5f7; font-weight: 500; }
+  #nexus-cmd { margin-top: auto; padding: 8px 16px; font-size: 12px; color: #2997FF; cursor: pointer; text-decoration: none; display: block; }
+  #status-bar { padding: 12px 16px 8px; font-size: 11px; color: rgba(245,245,247,0.4); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #30D158; }
+  .dot.red { background: #FF453A; }
 
-/* Ambient glow */
-body::after{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(ellipse 50% 35% at 15% 15%, rgba(139,127,255,.1) 0%,transparent 70%),
-    radial-gradient(ellipse 40% 40% at 85% 80%, rgba(168,155,255,.07) 0%,transparent 60%);
-}
+  /* Main */
+  #main { flex: 1; overflow-y: auto; padding: 24px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .subtitle { color: rgba(245,245,247,0.45); font-size: 13px; margin-bottom: 24px; }
 
-/* Layout */
-.root{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column}
+  /* Cards */
+  .card { background: #1c1c1e; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .stat-val { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+  .stat-val.green { color: #30D158; }
+  .stat-val.red { color: #FF453A; }
+  .stat-val.amber { color: #FF9F0A; }
+  .stat-label { font-size: 12px; color: rgba(245,245,247,0.45); margin-top: 4px; }
+  .section-label { font-size: 11px; font-weight: 600; color: rgba(245,245,247,0.3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  
+  /* Services */
+  .service-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .service-row:last-child { border-bottom: none; }
+  .service-name { flex: 1; font-size: 13px; }
+  .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+  .badge.green { background: rgba(48,209,88,0.12); color: #30D158; }
+  .badge.red { background: rgba(255,69,58,0.12); color: #FF453A; }
+  .badge.amber { background: rgba(255,159,10,0.12); color: #FF9F0A; }
+  .badge.blue { background: rgba(41,151,255,0.12); color: #2997FF; }
+  .latency { font-size: 11px; color: rgba(245,245,247,0.3); font-family: monospace; }
 
-/* Header */
-header{
-  display:flex;align-items:center;gap:14px;
-  padding:0 24px;height:52px;flex-shrink:0;
-  border-bottom:1px solid var(--b);
-  background:rgba(7,7,10,.9);
-  backdrop-filter:blur(20px);
-}
-.logo{
-  font-family:var(--sans);font-size:16px;font-weight:800;letter-spacing:3px;
-  background:linear-gradient(135deg,#fff 0%,var(--purple2) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-}
-.ver{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:1px}
-.sep{width:1px;height:20px;background:var(--b);margin:0 6px}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);transition:all .3s}
-.dot.off{background:var(--red);box-shadow:0 0 8px var(--red)}
-.conn-lbl{font-size:10px;color:var(--muted)}
-.hdr-r{margin-left:auto;display:flex;gap:24px;align-items:center}
-.metric .v{
-  font-family:var(--sans);font-size:22px;font-weight:800;line-height:1;
-  background:linear-gradient(135deg,#fff,var(--purple2));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-}
-.metric .l{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px}
+  /* Events */
+  .event-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+  .event-row:last-child { border-bottom: none; }
+  .event-type { color: rgba(245,245,247,0.45); font-family: monospace; width: 100px; flex-shrink: 0; }
+  .event-detail { flex: 1; color: rgba(245,245,247,0.7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .event-time { color: rgba(245,245,247,0.3); font-family: monospace; flex-shrink: 0; }
 
-/* Grid */
-.grid{display:grid;grid-template-columns:1fr 320px;grid-template-rows:1fr 190px;flex:1;min-height:0;gap:1px;background:var(--b)}
+  /* Tasks */
+  .task-input-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .task-input-row input { flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f5f5f7; font-size: 14px; font-family: inherit; outline: none; }
+  .task-input-row input:focus { border-color: #2997FF; }
+  .run-btn { padding: 10px 20px; background: #2997FF; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .tabs { display: flex; gap: 2px; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 3px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 6px; border-radius: 8px; border: none; background: transparent; color: rgba(245,245,247,0.45); font-size: 12px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .tab.active { background: rgba(255,255,255,0.08); color: #f5f5f7; font-weight: 500; }
+  .task-row { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .task-row:last-child { border-bottom: none; }
+  .task-intent { font-size: 13px; margin-bottom: 4px; }
+  .task-meta { font-size: 11px; color: rgba(245,245,247,0.35); font-family: monospace; }
+  .task-result { font-size: 12px; color: rgba(245,245,247,0.6); margin-top: 6px; white-space: pre-wrap; }
+  .empty { text-align: center; padding: 48px; color: rgba(245,245,247,0.3); font-size: 13px; }
 
-.panel{background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
-.ph{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);
-    padding:14px 18px 0;flex-shrink:0;display:flex;align-items:center;gap:8px}
-.ph-dot{width:5px;height:5px;border-radius:50%}
-.ph-dot.purple{background:var(--purple)}
-.ph-dot.green{background:var(--green)}
-.ph-dot.amber{background:var(--amber)}
-.ph-dot.red{background:var(--red)}
+  /* Models */
+  .model-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .model-row:last-child { border-bottom: none; }
+  .model-name { flex: 1; font-size: 13px; font-family: monospace; }
+  .model-size { font-size: 11px; color: rgba(245,245,247,0.35); }
 
-/* Chat */
-.msgs{flex:1;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:2px;min-height:0}
-.msgs::-webkit-scrollbar{width:3px}
-.msgs::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+  /* Audit */
+  .audit-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-icon { width: 16px; text-align: center; flex-shrink: 0; }
+  .audit-tool { font-family: monospace; color: rgba(245,245,247,0.6); width: 120px; flex-shrink: 0; }
+  .audit-target { flex: 1; color: rgba(245,245,247,0.45); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .audit-time { color: rgba(245,245,247,0.3); font-family: monospace; flex-shrink: 0; }
 
-.msg{padding:9px 14px;border-radius:8px;animation:fu .18s ease}
-@keyframes fu{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.msg .who{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px}
-.msg .body{line-height:1.65;color:var(--dim);word-break:break-word;white-space:pre-wrap}
+  /* Memory */
+  .mem-layer { margin-bottom: 12px; }
+  .mem-layer-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; color: rgba(245,245,247,0.7); }
+  .mem-val { font-size: 24px; font-weight: 700; color: #BF5AF2; }
+  .ws-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+  .ws-row:last-child { border-bottom: none; }
+  .ws-name { flex: 1; font-family: monospace; }
+  .ws-count { color: rgba(245,245,247,0.4); font-size: 12px; }
 
-.msg.user{background:rgba(139,127,255,.1);border:1px solid rgba(139,127,255,.18)}
-.msg.user .who{color:var(--purple2)}
-.msg.user .body{color:var(--text)}
-.msg.nexus{background:var(--bg2);border:1px solid var(--b)}
-.msg.nexus .who{color:var(--green)}
-.msg.sys .who{display:none}
-.msg.sys{background:transparent;border:none;padding:3px 0}
-.msg.sys .body{color:var(--muted);font-size:10px}
-
-/* Thinking dots */
-.think{display:flex;gap:5px;align-items:center;padding:10px 14px}
-.think span{width:5px;height:5px;border-radius:50%;background:var(--purple2);animation:bl 1.1s infinite}
-.think span:nth-child(2){animation-delay:.18s}
-.think span:nth-child(3){animation-delay:.36s}
-@keyframes bl{0%,80%,100%{opacity:.2;transform:scale(.75)}40%{opacity:1;transform:scale(1)}}
-
-.input-row{
-  display:flex;gap:10px;padding:12px 18px;flex-shrink:0;
-  border-top:1px solid var(--b);background:rgba(7,7,10,.6);
-}
-input[type=text]{
-  flex:1;background:var(--bg2);border:1px solid var(--b);
-  color:var(--text);padding:9px 14px;
-  font-family:var(--mono);font-size:12px;border-radius:8px;outline:none;
-  transition:border-color .15s,box-shadow .15s;
-}
-input[type=text]:focus{border-color:rgba(139,127,255,.5);box-shadow:0 0 0 3px rgba(139,127,255,.08)}
-input::placeholder{color:var(--muted)}
-.send{
-  background:linear-gradient(135deg,var(--purple),var(--purple2));
-  border:none;color:#fff;padding:9px 18px;border-radius:8px;
-  cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;
-  letter-spacing:.5px;transition:opacity .15s,transform .1s;
-  box-shadow:0 4px 18px rgba(139,127,255,.28);
-}
-.send:hover{opacity:.88;transform:translateY(-1px)}
-.send:active{transform:translateY(0)}
-
-/* Right panel */
-.rpanel{grid-row:1/3;background:var(--bg1);border-left:1px solid var(--b);display:flex;flex-direction:column;overflow:hidden}
-.rsec{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
-.rsec+.rsec{border-top:1px solid var(--b);flex:1.4}
-.rsec-body{flex:1;overflow-y:auto;padding:8px 16px 12px;min-height:0}
-.rsec-body::-webkit-scrollbar{width:2px}
-.rsec-body::-webkit-scrollbar-thumb{background:var(--b2)}
-
-/* Approvals */
-.acard{
-  background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);
-  border-radius:8px;padding:11px 13px;margin-bottom:8px;animation:fu .2s ease;
-}
-.acard .al{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:5px}
-.acard .at{color:var(--text);margin-bottom:2px;font-size:11px}
-.acard .ag{color:var(--muted);font-size:10px;margin-bottom:9px;word-break:break-all}
-.abtns{display:flex;gap:6px}
-.ba,.bd{
-  flex:1;padding:6px;border:none;border-radius:6px;
-  cursor:pointer;font-family:var(--mono);font-size:10px;font-weight:700;
-  transition:background .1s;
-}
-.ba{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.2)}
-.bd{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.18)}
-.ba:hover{background:rgba(74,222,128,.22)}
-.bd:hover{background:rgba(248,113,113,.2)}
-.empty{color:var(--muted);font-size:11px;padding:4px 0}
-
-/* Audit log */
-.loglist{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:1px;min-height:0}
-.loglist::-webkit-scrollbar{width:2px}
-.loglist::-webkit-scrollbar-thumb{background:var(--b2)}
-.le{
-  display:flex;gap:8px;padding:5px 8px;border-radius:4px;
-  font-size:10px;line-height:1.4;border-left:2px solid transparent;
-  transition:background .1s;
-}
-.le:hover{background:var(--bg2)}
-.le.allow{border-color:rgba(74,222,128,.45)}
-.le.deny{border-color:rgba(248,113,113,.45)}
-.le.warn{border-color:rgba(251,191,36,.45)}
-.lt{color:var(--muted);flex-shrink:0;width:56px;font-size:9px}
-.ls{color:var(--purple2);flex-shrink:0;width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
-.lm{color:var(--dim);flex:1;word-break:break-all}
-.le.allow .lm{color:rgba(74,222,128,.8)}
-.le.deny  .lm{color:rgba(248,113,113,.8)}
-
-/* Tasks */
-.tpanel{grid-column:1;grid-row:2;border-top:1px solid var(--b)}
-.tlist{display:flex;gap:10px;overflow-x:auto;flex:1;min-height:0;padding:8px 18px 12px}
-.tlist::-webkit-scrollbar{height:3px}
-.tlist::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
-.tc{
-  flex-shrink:0;background:var(--bg2);border:1px solid var(--b);
-  border-radius:8px;padding:11px 13px;width:188px;
-  transition:border-color .2s,transform .15s;cursor:default;
-}
-.tc:hover{transform:translateY(-2px)}
-.tc.running{border-color:rgba(251,191,36,.3)}
-.tc.completed{border-color:rgba(74,222,128,.2)}
-.tc.failed{border-color:rgba(248,113,113,.2)}
-.tid{font-size:9px;color:var(--muted);margin-bottom:4px}
-.tint{color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
-.tres{color:var(--muted);font-size:10px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:5px}
-.sb{
-  display:inline-block;font-size:9px;font-weight:700;
-  letter-spacing:1px;padding:2px 8px;border-radius:20px;text-transform:uppercase;
-}
-.sb.queued{background:rgba(80,80,106,.2);color:var(--muted)}
-.sb.running{background:rgba(251,191,36,.12);color:var(--amber)}
-.sb.completed{background:rgba(74,222,128,.1);color:var(--green)}
-.sb.failed{background:rgba(248,113,113,.1);color:var(--red)}
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 </style>
 </head>
 <body>
-<div class="root">
 
-<!-- Header -->
-<header>
-  <div>
-    <div class="logo">CLAWOS</div>
-    <div class="ver" id="ver-lbl">v0.1.0 · Nexus</div>
-  </div>
-  <div class="sep"></div>
-  <div class="dot off" id="dot"></div>
-  <div class="conn-lbl" id="conn-lbl">connecting...</div>
-  <div class="hdr-r">
-    <div class="metric"><div class="v" id="m-tasks">0</div><div class="l">tasks</div></div>
-    <div class="metric"><div class="v" id="m-model">—</div><div class="l">model</div></div>
-    <div class="metric"><div class="v" id="m-pend">0</div><div class="l">pending</div></div>
-  </div>
-</header>
+<div id="sidebar">
+  <div id="logo">ClawOS <span>agent runtime</span></div>
+  <div class="nav-item active" onclick="showPage('overview')">⬡ Overview</div>
+  <div class="nav-item" onclick="showPage('tasks')">≡ Tasks</div>
+  <div class="nav-item" onclick="showPage('approvals')">○ Approvals</div>
+  <div class="nav-item" onclick="showPage('models')">⬡ Models</div>
+  <div class="nav-item" onclick="showPage('memory')">⬡ Memory</div>
+  <div class="nav-item" onclick="showPage('audit')">≡ Audit Log</div>
+  <a id="nexus-cmd" href="http://localhost:5180" target="_blank">⬡ Nexus Command</a>
+  <div id="status-bar"><div class="dot" id="ws-dot"></div><span id="ws-label">Connecting...</span></div>
+</div>
 
-<!-- Grid -->
-<div class="grid">
+<div id="main">
 
-  <!-- Chat -->
-  <div class="panel" style="grid-row:1">
-    <div class="ph"><div class="ph-dot purple"></div>Chat</div>
-    <div class="msgs" id="msgs"></div>
-    <div class="input-row">
-      <input type="text" id="inp" placeholder="Message Nexus..." autocomplete="off">
-      <button class="send" onclick="send()">Send ↵</button>
+  <!-- Overview -->
+  <div class="page active" id="page-overview">
+    <h1>Overview</h1>
+    <div class="subtitle" id="overview-subtitle">Agent runtime</div>
+    <div class="grid-4">
+      <div class="card"><div class="stat-val green" id="stat-active">0</div><div class="stat-label">Active</div></div>
+      <div class="card"><div class="stat-val" id="stat-queued">0</div><div class="stat-label">Queued</div></div>
+      <div class="card"><div class="stat-val red" id="stat-failed">0</div><div class="stat-label">Failed</div></div>
+      <div class="card"><div class="stat-val" id="stat-completed">0</div><div class="stat-label">Completed</div></div>
     </div>
-  </div>
-
-  <!-- Right: approvals + audit -->
-  <div class="rpanel">
-    <div class="rsec">
-      <div class="ph"><div class="ph-dot amber"></div>Approvals</div>
-      <div class="rsec-body"><div id="aplist"><div class="empty">No pending approvals</div></div></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="section-label">Services</div>
+        <div id="services-list"></div>
+      </div>
+      <div class="card">
+        <div class="section-label">Live Events</div>
+        <div id="events-list"></div>
+      </div>
     </div>
-    <div class="rsec">
-      <div class="ph"><div class="ph-dot green"></div>Audit Log</div>
-      <div class="rsec-body loglist" id="loglist"></div>
+    <div class="card">
+      <div class="section-label">Models</div>
+      <div id="overview-models"></div>
     </div>
   </div>
 
   <!-- Tasks -->
-  <div class="panel tpanel">
-    <div class="ph"><div class="ph-dot blue"></div>Tasks</div>
-    <div class="tlist" id="tlist"></div>
+  <div class="page" id="page-tasks">
+    <h1>Tasks</h1>
+    <div class="subtitle">Submit tasks to Nexus</div>
+    <div class="task-input-row">
+      <input type="text" id="task-input" placeholder="Ask Nexus anything..." onkeydown="if(event.key==='Enter')submitTask()">
+      <button class="run-btn" id="run-btn" onclick="submitTask()">Run</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('active',this)">active</button>
+      <button class="tab" onclick="switchTab('queued',this)">queued</button>
+      <button class="tab" onclick="switchTab('failed',this)">failed</button>
+      <button class="tab" onclick="switchTab('completed',this)">completed</button>
+    </div>
+    <div class="card" id="tasks-list"></div>
+  </div>
+
+  <!-- Approvals -->
+  <div class="page" id="page-approvals">
+    <h1>Approvals</h1>
+    <div class="subtitle">Pending tool approvals</div>
+    <div class="card" id="approvals-list"><div class="empty">No pending approvals</div></div>
+  </div>
+
+  <!-- Models -->
+  <div class="page" id="page-models">
+    <h1>Models</h1>
+    <div class="subtitle">Ollama model management</div>
+    <div class="card" id="models-list"></div>
+  </div>
+
+  <!-- Memory -->
+  <div class="page" id="page-memory">
+    <h1>Memory</h1>
+    <div class="subtitle">4-layer memory system</div>
+    <div class="grid-2" id="mem-layers"></div>
+    <div class="card">
+      <div class="section-label">Workspaces</div>
+      <div id="workspaces-list"></div>
+    </div>
+  </div>
+
+  <!-- Audit -->
+  <div class="page" id="page-audit">
+    <h1>Audit Log</h1>
+    <div class="subtitle">Merkle-chained audit trail</div>
+    <div class="card" id="audit-list"></div>
   </div>
 
 </div>
-</div>
 
 <script>
-const API='';let ws=null,think=null;
-function connect(){
-  ws=new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen=()=>{setC(true);loadAll()};
-  ws.onclose=()=>{setC(false);setTimeout(connect,2000)};
-  ws.onmessage=e=>onEv(JSON.parse(e.data));
+let state = { services:{}, tasks:[], events:[], models:[], approvals:[], audit:[], memory:{}, workspaces:[] }
+let currentTab = 'active'
+let ws = null
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById('page-' + name).classList.add('active')
+  event.target.classList.add('active')
+  if (name === 'audit') loadAudit()
+  if (name === 'memory') loadMemory()
+  if (name === 'models') loadModels()
 }
-function setC(ok){
-  document.getElementById('dot').className='dot'+(ok?'':' off');
-  document.getElementById('conn-lbl').textContent=ok?'connected':'reconnecting...';
+
+function switchTab(tab, el) {
+  currentTab = tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  el.classList.add('active')
+  renderTasks()
 }
-function onEv(ev){
-  if(ev.type==='task_update'){loadTasks();updM();rmThink()}
-  if(ev.type==='approval_request'||ev.type==='approval_decided'){loadAp();updM()}
-  if(ev.type==='log'){addLog(ev)}
-  if(ev.type==='chat_message'){rmThink();addMsg('nexus',ev.message||'')}
-}
-async function send(){
-  const inp=document.getElementById('inp');
-  const msg=inp.value.trim();if(!msg)return;
-  addMsg('user',msg);inp.value='';addThink();
-  const r=await fetch(`${API}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,workspace:'default'})});
-  const d=await r.json();
-  poll(d.task_id);
-}
-async function poll(id){
-  for(let i=0;i<90;i++){
-    await sleep(1000);
-    const r=await fetch(`${API}/api/tasks/${id}`);
-    const t=await r.json();
-    if(t.status==='completed'){rmThink();if(t.result)addMsg('nexus',t.result);loadTasks();updM();return}
-    if(t.status==='failed'){rmThink();addMsg('nexus','Error: '+(t.error||'task failed'));return}
+
+// WebSocket
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws`)
+  ws.onopen = () => {
+    document.getElementById('ws-dot').className = 'dot'
+    document.getElementById('ws-label').textContent = 'Connected'
   }
-  rmThink();
+  ws.onclose = () => {
+    document.getElementById('ws-dot').className = 'dot red'
+    document.getElementById('ws-label').textContent = 'Disconnected'
+    setTimeout(connect, 3000)
+  }
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data)
+    if (msg.type === 'snapshot') {
+      state.services = msg.data.services || {}
+      state.events = (msg.data.events || []).slice(-20)
+      state.models = msg.data.models || []
+      renderAll()
+    } else if (msg.type === 'service_health') {
+      state.services = msg.data
+      renderServices()
+    } else if (msg.type === 'audit_event') {
+      state.events.unshift(msg.data)
+      state.events = state.events.slice(0, 20)
+      renderEvents()
+    }
+  }
+  setInterval(() => ws && ws.readyState === 1 && ws.send('ping'), 20000)
 }
-function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
-document.getElementById('inp').addEventListener('keydown',e=>{if(e.key==='Enter')send()});
-function addMsg(who,txt){
-  const box=document.getElementById('msgs');
-  const el=document.createElement('div');
-  el.className='msg '+(who==='system'?'sys':who);
-  const label=who==='user'?'you':who;
-  el.innerHTML=`<div class="who">${label}</div><div class="body">${esc(txt)}</div>`;
-  box.appendChild(el);box.scrollTop=box.scrollHeight;
+
+// Poll tasks every 3s
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/tasks')
+    const data = await r.json()
+    if (Array.isArray(data)) {
+      state.tasks = data
+      renderTasks()
+      const active = data.filter(t => t.status === 'active' || t.status === 'running').length
+      const queued = data.filter(t => t.status === 'queued').length
+      const failed = data.filter(t => t.status === 'failed').length
+      const completed = data.filter(t => t.status === 'completed').length
+      document.getElementById('stat-active').textContent = active
+      document.getElementById('stat-queued').textContent = queued
+      document.getElementById('stat-failed').textContent = failed
+      document.getElementById('stat-completed').textContent = completed
+      document.getElementById('overview-subtitle').textContent = `Agent runtime · ${Object.keys(state.services).length}/5 services up`
+    }
+  } catch(e) {}
+}, 3000)
+
+function renderAll() { renderServices(); renderEvents(); renderOverviewModels() }
+
+function renderServices() {
+  const el = document.getElementById('services-list')
+  const svcs = state.services
+  if (!svcs || !Object.keys(svcs).length) { el.innerHTML = '<div class="empty">No service data</div>'; return }
+  el.innerHTML = Object.entries(svcs).map(([name, s]) => `
+    <div class="service-row">
+      <div class="dot ${s.status === 'running' || s.status === 'up' ? '' : 'red'}"></div>
+      <div class="service-name">${name}</div>
+      ${s.latency_ms ? `<div class="latency">${s.latency_ms}ms</div>` : ''}
+      <div class="badge ${s.status === 'running' || s.status === 'up' ? 'green' : 'red'}">${s.status || 'unknown'}</div>
+    </div>`).join('')
 }
-function addThink(){
-  rmThink();
-  const box=document.getElementById('msgs');
-  think=document.createElement('div');think.className='think';
-  think.innerHTML='<span></span><span></span><span></span>';
-  box.appendChild(think);box.scrollTop=box.scrollHeight;
+
+function renderEvents() {
+  const el = document.getElementById('events-list')
+  if (!state.events.length) { el.innerHTML = '<div class="empty">No events yet</div>'; return }
+  el.innerHTML = state.events.slice(0,15).map(e => `
+    <div class="event-row">
+      <div class="event-type">${e.type || e.event_type || 'event'}</div>
+      <div class="event-detail">${JSON.stringify(e.data || e).slice(0,60)}</div>
+      <div class="event-time">${new Date().toLocaleTimeString()}</div>
+    </div>`).join('')
 }
-function rmThink(){if(think&&think.parentNode)think.parentNode.removeChild(think);think=null}
-function addLog(ev){
-  const box=document.getElementById('loglist');
-  const el=document.createElement('div');
-  const msg=ev.message||'';
-  const cls=msg.includes('ALLOW')?'allow':msg.includes('DENY')?'deny':ev.level==='WARN'?'warn':'';
-  el.className='le '+cls;
-  const t=(ev.timestamp||'').slice(11,19)||'';
-  const s=(ev.service||'sys').slice(0,7);
-  el.innerHTML=`<span class="lt">${t}</span><span class="ls">${esc(s)}</span><span class="lm">${esc(msg.slice(0,80))}</span>`;
-  box.insertBefore(el,box.firstChild);
-  if(box.children.length>200)box.removeChild(box.lastChild);
+
+function renderOverviewModels() {
+  const el = document.getElementById('overview-models')
+  if (!state.models.length) { el.innerHTML = '<div class="empty">No models</div>'; return }
+  el.innerHTML = state.models.map(m => `
+    <div class="model-row">
+      <div class="dot ${m.running ? '' : 'red'}" style="background:${m.running ? '#30D158' : '#555'}"></div>
+      <div class="model-name">${m.name}</div>
+      ${m.default ? '<div class="badge blue">default</div>' : ''}
+      ${m.running ? '<div class="badge green">running</div>' : ''}
+      <div class="model-size">${m.size || ''}</div>
+    </div>`).join('')
 }
-async function loadTasks(){
-  const r=await fetch(`${API}/api/tasks`);const ts=await r.json();
-  document.getElementById('m-tasks').textContent=ts.length;
-  document.getElementById('tlist').innerHTML=ts.slice(0,14).map(t=>`
-    <div class="tc ${t.status}">
-      <div class="tid">${t.task_id}</div>
-      <div class="tint">${esc((t.intent||'').slice(0,36))}</div>
-      <span class="sb ${t.status}">${t.status}</span>
-      ${t.result?`<div class="tres">${esc(t.result.slice(0,80))}</div>`:''}
-    </div>`).join('');
+
+function renderTasks() {
+  const el = document.getElementById('tasks-list')
+  const filtered = state.tasks.filter(t => {
+    if (currentTab === 'active') return t.status === 'active' || t.status === 'running'
+    return t.status === currentTab
+  })
+  if (!filtered.length) { el.innerHTML = `<div class="empty">No ${currentTab} tasks</div>`; return }
+  el.innerHTML = filtered.map(t => `
+    <div class="task-row">
+      <div class="task-intent">${t.intent}</div>
+      <div class="task-meta">${t.task_id} · ${t.workspace} · ${t.status} · ${t.finished_at ? new Date(t.finished_at).toLocaleTimeString() : 'running...'}</div>
+      ${t.result ? `<div class="task-result">${t.result}</div>` : ''}
+      ${t.error ? `<div class="task-result" style="color:#FF453A">${t.error}</div>` : ''}
+    </div>`).join('')
 }
-async function loadAp(){
-  const r=await fetch(`${API}/api/approvals`);const list=await r.json();
-  document.getElementById('m-pend').textContent=list.length;
-  const el=document.getElementById('aplist');
-  if(!list.length){el.innerHTML='<div class="empty">No pending approvals</div>';return}
-  el.innerHTML=list.map(a=>`
-    <div class="acard">
-      <div class="al">⏸ approval required</div>
-      <div class="at">${esc(a.tool)}</div>
-      <div class="ag">${esc((a.target||'').slice(0,55))}</div>
-      <div class="abtns">
-        <button class="ba" onclick="decide('${a.request_id}',true)">✓ Approve</button>
-        <button class="bd" onclick="decide('${a.request_id}',false)">✗ Deny</button>
-      </div>
-    </div>`).join('');
+
+async function submitTask() {
+  const input = document.getElementById('task-input')
+  const btn = document.getElementById('run-btn')
+  const intent = input.value.trim()
+  if (!intent) return
+  btn.disabled = true
+  btn.textContent = '...'
+  try {
+    await fetch('/api/tasks/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent })
+    })
+    input.value = ''
+    switchTab('queued', document.querySelectorAll('.tab')[1])
+    setTimeout(() => switchTab('completed', document.querySelectorAll('.tab')[3]), 5000)
+  } catch(e) { alert('Submit failed: ' + e) }
+  btn.disabled = false
+  btn.textContent = 'Run'
 }
-async function decide(id,ok){
-  await fetch(`${API}/api/approve/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approve:ok})});
-  loadAp();
+
+async function loadAudit() {
+  try {
+    const r = await fetch('/api/audit')
+    const data = await r.json()
+    const entries = data.entries || data || []
+    const el = document.getElementById('audit-list')
+    if (!entries.length) { el.innerHTML = '<div class="empty">No audit entries</div>'; return }
+    el.innerHTML = entries.slice(0,50).map(e => `
+      <div class="audit-row">
+        <div class="audit-icon">${e.decision === 'ALLOW' ? '✓' : '✗'}</div>
+        <div class="audit-tool">${e.tool || '?'}</div>
+        <div class="audit-target">${e.target || ''}</div>
+        <div class="audit-time">${(e.timestamp||'').slice(11,16)}</div>
+      </div>`).join('')
+  } catch(e) {}
 }
-async function updM(){
-  try{
-    const r=await fetch(`${API}/api/health`);const h=await r.json();
-    const m=(h.model?.current_model||'—').split(':')[0].slice(0,9);
-    document.getElementById('m-model').textContent=m;
-  }catch{}
+
+async function loadMemory() {
+  try {
+    const r = await fetch('/api/memory/nexus_default')
+    const data = await r.json()
+    document.getElementById('mem-layers').innerHTML = `
+      <div class="card mem-layer"><div class="mem-val">${data.pinned_lines||0}</div><div class="stat-label">PINNED.md · Layer 1</div></div>
+      <div class="card mem-layer"><div class="mem-val">${data.workflow_lines||0}</div><div class="stat-label">WORKFLOW.md · Layer 2</div></div>
+      <div class="card mem-layer"><div class="mem-val" style="color:#2997FF">${data.chroma_count||0}</div><div class="stat-label">ChromaDB · Layer 3</div></div>
+      <div class="card mem-layer"><div class="mem-val" style="color:#FF9F0A">${data.fts_count||0}</div><div class="stat-label">SQLite FTS5 · Layer 4</div></div>`
+    const wsr = await fetch('/api/workspaces')
+    const ws = await wsr.json()
+    const workspaces = ws.workspaces || ws || []
+    document.getElementById('workspaces-list').innerHTML = workspaces.map(w => `
+      <div class="ws-row">
+        <div class="dot" style="background:${w.has_pinned ? '#30D158' : '#555'}"></div>
+        <div class="ws-name">${w.name}</div>
+        <div class="ws-count">${w.memory_count||0} memories</div>
+      </div>`).join('') || '<div class="empty">No workspaces</div>'
+  } catch(e) {}
 }
-async function loadAudit(){
-  try{
-    const r=await fetch(`${API}/api/audit`);const es=await r.json();
-    es.slice(0,30).forEach(e=>addLog({
-      timestamp:e.timestamp,service:'audit',
-      message:`${e.decision} ${e.tool} ${(e.target||'').slice(0,24)}`,
-      level:e.decision==='ALLOW'?'INFO':'WARN'
-    }));
-  }catch{}
+
+async function loadModels() {
+  try {
+    const r = await fetch('/api/models')
+    const data = await r.json()
+    const models = data.models || data || []
+    document.getElementById('models-list').innerHTML = models.map(m => `
+      <div class="model-row">
+        <div class="dot" style="background:${m.running ? '#30D158' : '#555'}"></div>
+        <div class="model-name">${m.name}</div>
+        ${m.default ? '<div class="badge blue">default</div>' : ''}
+        ${m.running ? '<div class="badge green">running</div>' : ''}
+        <div class="model-size">${m.size||''}</div>
+      </div>`).join('') || '<div class="empty">No models</div>'
+  } catch(e) {}
 }
-async function loadAll(){await Promise.all([loadTasks(),loadAp(),updM()])}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-connect();loadAudit();setInterval(()=>{loadTasks();loadAp();updM()},8000);
+
+connect()
 </script>
 </body>
 </html>
