@@ -297,6 +297,25 @@ else
   fi
 fi
 
+# ── Configure OpenClaw ────────────────────────────────────────────────────────
+step "Configuring OpenClaw"
+
+mkdir -p "$HOME/.openclaw"
+cat > "$HOME/.openclaw/openclaw.json" << 'OCJSON'
+{
+  "models": {
+    "providers": {
+      "ollama": {
+        "baseUrl": "http://127.0.0.1:11434",
+        "models": [{"id": "qwen2.5:7b","name": "qwen2.5:7b","contextWindow": 32768}]
+      }
+    }
+  },
+  "agents": {"defaults": {"model": {"primary": "ollama/qwen2.5:7b"}}}
+}
+OCJSON
+ok "OpenClaw configured — offline · qwen2.5:7b"
+
 # ── Install clawos command ────────────────────────────────────────────────────
 step "Installing clawos command"
 

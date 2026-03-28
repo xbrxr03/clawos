@@ -45,6 +45,13 @@ def run(state) -> bool:
     elif choice == "3" and oc_ok:
         state.runtime = "both"
         print("\n  Runtime: Both (Nexus default, OpenClaw available)")
+    elif choice == "" and oc_ok:
+        state.runtime = "openclaw"
+        from bootstrap.profile_selector import recommended_openclaw_model
+        from bootstrap.hardware_probe import HardwareProfile
+        hw = HardwareProfile(ram_gb=state.ram_gb, gpu_vram_gb=state.gpu_vram_gb)
+        state.openclaw_model = recommended_openclaw_model(hw)
+        print(f"\n  Runtime: OpenClaw (model: {state.openclaw_model})")
     else:
         state.runtime = "core"
         print("\n  Runtime: Nexus")

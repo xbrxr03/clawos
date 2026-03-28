@@ -31,12 +31,11 @@ def run(state) -> bool:
     print()
     print("  Start ClawOS:")
     print()
-    print(f"    nexus                                — start Nexus")
-    print(f"    http://localhost:7070                — dashboard")
+    print(f"    openclaw gateway --allow-unconfigured  — start OpenClaw")
+    print(f"    http://localhost:7070                  — dashboard")
+    print(f"    nexus                                  — lightweight fallback")
     if state.whatsapp_enabled:
-        print("    Message yourself on WhatsApp         — voice/text to Nexus")
-    if state.runtime in ("openclaw", "both"):
-        print("    clawctl openclaw start               — start OpenClaw gateway")
+        print("    Message yourself on WhatsApp           — voice/text to Nexus")
     print()
     print("  Useful commands:")
     print("    clawctl status                       — service health")
@@ -62,19 +61,31 @@ def run(state) -> bool:
         print()
         # Launch repl with correct workspace — reset sys.argv so --reset never leaks in
         try:
-            old_argv = sys.argv[:]
-            sys.argv = ["repl", state.workspace_id]
-            try:
-                import importlib
-                from clients.cli import repl as repl_mod
-                importlib.reload(repl_mod)
-                repl_mod.main()
-            finally:
-                sys.argv = old_argv
+            import shutil
+            if shutil.which("openclaw"):
+                print("  Starting OpenClaw...")
+                subprocess.run(["openclaw", "gateway", "stop"], capture_output=True)
+                print()
+                print("  Tips:")
+                print("    • Connect WhatsApp:  openclaw configure --section channels")
+                print("    • Pull more models:  clawctl model pull <name>")
+                print("    • Dashboard:         http://localhost:7070")
+                print()
+                subprocess.run(["openclaw", "gateway", "--allow-unconfigured"], check=False)
+            else:
+                old_argv = sys.argv[:]
+                sys.argv = ["repl", state.workspace_id]
+                try:
+                    import importlib
+                    from clients.cli import repl as repl_mod
+                    importlib.reload(repl_mod)
+                    repl_mod.main()
+                finally:
+                    sys.argv = old_argv
         except KeyboardInterrupt:
             pass
-        except Exception:
-            print(f"  Could not auto-launch — start manually: clawos")
+        except Exception as e:
+            print(f"  Could not auto-launch — start manually: openclaw gateway --allow-unconfigured")
 
     return True
 

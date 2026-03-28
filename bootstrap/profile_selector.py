@@ -38,9 +38,7 @@ def recommended_model(hw: HardwareProfile) -> str:
 
 def recommended_openclaw_model(hw: HardwareProfile) -> str:
     """OpenClaw needs tool-calling models — gemma3 doesn't support tool calls."""
-    if hw.ram_gb >= 32:
-        return "qwen2.5:14b"
-    return "qwen2.5:7b"
+    return "qwen2.5:7b"  # 7b is the default — upgrade to kimi-k2.5:cloud via ollama signin
 
 
 def summary(hw: HardwareProfile) -> str:
