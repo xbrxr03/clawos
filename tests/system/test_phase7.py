@@ -330,4 +330,5 @@ if failed:
 else:
     print("  \u2713  all passed")
 print()
-sys.exit(0 if failed == 0 else 1)
+if __name__ == "__main__":
+    sys.exit(0 if failed == 0 else 1)

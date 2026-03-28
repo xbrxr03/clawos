@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ClawOS Setup
+Comment=First-run wizard for ClawOS
+Exec=python3 /opt/clawos/setup/first_run/gtk_wizard.py
+Icon=system-software-install
+X-GNOME-Autostart-enabled=true
+NotShowIn=

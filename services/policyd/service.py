@@ -116,6 +116,11 @@ class PolicyEngine:
     def _init_db(self):
         POLICYD_DB.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(str(POLICYD_DB), check_same_thread=False)
+        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db.execute("PRAGMA busy_timeout=5000")
+        self._db.execute("PRAGMA synchronous=NORMAL")
+        import threading
+        self._db_lock = threading.Lock()
         self._db.execute("""
             CREATE TABLE IF NOT EXISTS approvals (
                 request_id TEXT PRIMARY KEY, task_id TEXT, workspace TEXT,

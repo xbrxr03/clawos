@@ -1,0 +1,8 @@
+name: rag-retrieval
+inputs: [question, project_name]
+outputs: [cited_answer]
+cost: medium
+latency: medium
+permissions: [filesystem.read]
+tags: [rag, documents, search, offline]
+entry: services/ragd/service.py

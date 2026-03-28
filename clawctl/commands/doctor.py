@@ -19,8 +19,8 @@ def _auto_fix(results: list[dict]):
         label = r["label"]
         # Only safe non-destructive fixes
         if fix.startswith("mkdir"):
-            subprocess.run(fix, shell=True)
+            subprocess.run(["bash", "-c", fix])
             print(f"  ✓  Fixed: {label}")
         elif fix.startswith("pip install"):
             print(f"  Running: {fix}")
-            subprocess.run(fix, shell=True)
+            subprocess.run(["bash", "-c", fix])

@@ -67,4 +67,4 @@ services:
   voiced:   { port: 0,    restart: "on-failure" }
   clawd:    { port: 7071, restart: "always" }
   dashd:    { port: 7070, restart: "always" }
-  gatewayd: { port: 7076, restart: "on-failure" }
+  gatewayd: { port: 18789, restart: "on-failure" }

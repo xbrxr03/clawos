@@ -18,12 +18,38 @@ log = logging.getLogger("dashd")
 try:
     from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
     from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi import Depends, Header
     import uvicorn
+    import secrets as _secrets
+    from pathlib import Path as _Path2
+
+    _TOKEN_FILE = _Path2.home() / ".local" / "share" / "clawos" / "dashboard.token"
+
+    def _load_dashboard_token() -> str:
+        _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+        if not _TOKEN_FILE.exists():
+            _TOKEN_FILE.write_text(_secrets.token_urlsafe(32))
+            _TOKEN_FILE.chmod(0o600)
+        return _TOKEN_FILE.read_text().strip()
+
+    DASHBOARD_TOKEN = _load_dashboard_token()
+
+    def require_auth(authorization: str = Header(default="")):
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        if authorization.removeprefix("Bearer ") != DASHBOARD_TOKEN:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
     FASTAPI_OK = True
+
 except ImportError:
     FASTAPI_OK = False
     FastAPI = WebSocket = WebSocketDisconnect = HTTPException = None
     HTMLResponse = JSONResponse = None
+    DASHBOARD_TOKEN = ""
+
+    def require_auth(*a, **kw):
+        pass
 
 DASHBOARD_HTML = Path(__file__).parent.parent.parent / "clients" / "dashboard" / "index.html"
 
@@ -140,4 +166,4 @@ def run():
         log.error("fastapi/uvicorn not installed — dashboard unavailable")
         return
     app = create_app()
-    uvicorn.run(app, host="0.0.0.0", port=PORT_DASHD, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=PORT_DASHD, log_level="warning")

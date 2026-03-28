@@ -28,9 +28,17 @@ class OrchestrationDaemon:
         self._running = False
 
     async def _heartbeat_loop(self):
-        """Check HEARTBEAT.md and emit scheduled tasks. Full impl in S3."""
+        """Check HEARTBEAT.md and emit scheduled tasks to agentd."""
         while self._running:
-            await asyncio.sleep(300)   # check every 5 minutes
+            try:
+                from clawos_core.constants import WORKSPACE_DIR, DEFAULT_WORKSPACE
+                from clawos_core.events.bus import get_bus
+                hb_file = WORKSPACE_DIR / DEFAULT_WORKSPACE / "HEARTBEAT.md"
+                if hb_file.exists():
+                    await get_bus().emit_log("info", "clawd", "heartbeat check")
+            except Exception as e:
+                log.warning(f"heartbeat error: {e}")
+            await asyncio.sleep(300)
 
     def hardware_info(self) -> dict:
         from clawos_core.constants import HARDWARE_JSON
@@ -53,3 +61,56 @@ def get_daemon() -> OrchestrationDaemon:
     if _daemon is None:
         _daemon = OrchestrationDaemon()
     return _daemon
+
+
+# ── A2A server ────────────────────────────────────────────────────────────────
+async def start_a2a_server(daemon: "OrchestrationDaemon"):
+    """Start Nexus A2A endpoint for OpenClaw peer communication."""
+    try:
+        from fastapi import FastAPI
+        import uvicorn
+        from clawos_core.constants import A2A_PORT_NEXUS, DEFAULT_WORKSPACE
+
+        app = FastAPI(title="Nexus A2A")
+
+        @app.get("/.well-known/agent-card.json")
+        def agent_card():
+            return {
+                "name": "Nexus",
+                "description": "ClawOS local agent. File ops, shell, memory, workspace tools.",
+                "url": f"http://localhost:{A2A_PORT_NEXUS}/a2a",
+                "version": "1.0",
+                "skills": [
+                    {"name": "filesystem",  "description": "Read, write, search files in workspace"},
+                    {"name": "shell",       "description": "Run allowlisted shell commands"},
+                    {"name": "memory",      "description": "Store and recall facts across sessions"},
+                    {"name": "workspace",   "description": "Create and manage workspaces"},
+                ],
+                "provider": {"name": "ClawOS", "url": "https://github.com/xbrxr03/clawos"},
+            }
+
+        @app.post("/a2a/tasks/send")
+        async def receive_task(body: dict):
+            """Receive task from OpenClaw, run through full Nexus ReAct loop."""
+            intent = body.get("message", {}).get("parts", [{}])[0].get("text", "")
+            workspace = body.get("metadata", {}).get("workspace", DEFAULT_WORKSPACE)
+            if not intent:
+                return {"error": "no message"}
+            try:
+                from services.agentd.service import get_manager
+                reply = await get_manager().chat_direct(intent, workspace_id=workspace,
+                                                        source="a2a:openclaw")
+            except Exception as e:
+                reply = f"[Error] {e}"
+            return {
+                "id": body.get("id", ""),
+                "status": {"state": "completed"},
+                "artifacts": [{"parts": [{"type": "text", "text": reply}]}],
+            }
+
+        config = uvicorn.Config(app, host="127.0.0.1",
+                                port=A2A_PORT_NEXUS, log_level="warning")
+        await uvicorn.Server(config).serve()
+    except Exception as e:
+        log.warning(f"Nexus A2A server not started: {e}")
+

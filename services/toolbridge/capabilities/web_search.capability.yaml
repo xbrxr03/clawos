@@ -1,0 +1,8 @@
+name: web-search
+inputs: [query]
+outputs: [search_results]
+cost: low
+latency: medium
+permissions: [web.search]
+tags: [web, search]
+entry: services/toolbridge/service.py

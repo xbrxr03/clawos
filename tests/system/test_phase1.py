@@ -574,4 +574,5 @@ else:
     print("  ✓  all passed")
 print()
 
-sys.exit(0 if failed == 0 else 1)
+if __name__ == "__main__":
+    sys.exit(0 if failed == 0 else 1)

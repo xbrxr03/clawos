@@ -1,0 +1,8 @@
+name: piper-tts
+inputs: [text]
+outputs: [audio_file]
+cost: low
+latency: fast
+permissions: [filesystem.write]
+tags: [voice, synthesis, offline]
+entry: services/voiced/service.py

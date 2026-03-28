@@ -1,5 +1,5 @@
 [Unit]
-Description=ClawOS gatewayd — OpenClaw WhatsApp bridge (port 7076)
+Description=ClawOS gatewayd — OpenClaw WhatsApp bridge (port 18789)
 Documentation=https://github.com/xbrxr03/clawos
 After=clawos-clawd.service
 Wants=clawos-clawd.service

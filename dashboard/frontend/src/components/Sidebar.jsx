@@ -95,7 +95,22 @@ export function Sidebar({ connected, services, approvalCount }) {
             )}
           </NavLink>
         ))}
-      </nav>
+      
+      <a
+        href="http://localhost:5180"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '8px 16px', borderRadius: 8, margin: '2px 8px',
+          cursor: 'pointer', color: '#2997FF', textDecoration: 'none',
+          fontSize: 14, marginTop: 'auto', fontWeight: 400,
+        }}
+        title="Open Nexus Command (openclaw-office)"
+      >
+        ⬡ Nexus Command
+      </a>
+</nav>
 
       {/* Footer */}
       <div style={{

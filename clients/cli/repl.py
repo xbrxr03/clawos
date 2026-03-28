@@ -214,6 +214,16 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
                     memory.forget(arg, current_ws)
                     print(f"  {_p(AMBER, '◌')} Forgotten: {_d(arg)}\n")
 
+
+            elif cmd == "/plan":
+                if arg:
+                    try:
+                        from nexus.cli import _run_plan_mode
+                        _run_plan_mode(arg, agent)
+                    except Exception as e:
+                        print(f"  plan error: {e}\n")
+                else:
+                    print("  Usage: /plan <task description>\n")
             elif cmd == "/do":
                 if arg:
                     from tools.shell.do.cli import run as _do_run
@@ -297,6 +307,16 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
 
         elapsed = time.time() - t0
         await spinner.stop()
+
+        # Emit task event to dashboard event bus
+        try:
+            from clawos_core.events.bus import get_bus
+            import asyncio as _asyncio
+            _asyncio.create_task(get_bus().emit_task(
+                f"repl-{turn}", "completed", raw[:80]
+            ))
+        except Exception:
+            pass
 
         print(f"  {_b(GREEN, 'nexus')} {_d('›')}", end=" ")
         words = reply.split()

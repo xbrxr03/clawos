@@ -1,0 +1,8 @@
+name: shell-exec
+inputs: [shell_command]
+outputs: [stdout]
+cost: low
+latency: fast
+permissions: [shell.restricted]
+tags: [shell, filesystem, offline]
+entry: services/toolbridge/service.py

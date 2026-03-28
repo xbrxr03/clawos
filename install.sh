@@ -413,3 +413,12 @@ else
   echo -e "  ${D}  GitHub:         ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
   echo ""
 fi
+
+# Download wake word model for "Hey Nexus" trigger
+if [ ! -f "/root/clawos/services/voiced/models/hey_jarvis.onnx" ]; then
+    step "Downloading wake word model..."
+    mkdir -p "/root/clawos/services/voiced/models"
+    wget -q -O "/root/clawos/services/voiced/models/hey_jarvis.onnx"         "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/hey_jarvis.onnx" || {
+        warn "Wake word model download failed — voice wake word disabled (optional)"
+    }
+fi

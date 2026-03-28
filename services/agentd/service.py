@@ -99,3 +99,30 @@ def get_manager() -> AgentManager:
     if _mgr is None:
         _mgr = AgentManager()
     return _mgr
+
+    async def start_api(self):
+        """Start agentd HTTP API on PORT_AGENTD for dashboard integration."""
+        try:
+            from fastapi import FastAPI
+            import uvicorn
+            from clawos_core.constants import PORT_AGENTD, DEFAULT_WORKSPACE
+            api = FastAPI(title="agentd API")
+
+            @api.get("/tasks")
+            def list_tasks_endpoint():
+                return self.list_tasks(50)
+
+            @api.post("/submit")
+            async def submit_endpoint(body: dict):
+                intent = body.get("intent", "")
+                workspace = body.get("workspace", DEFAULT_WORKSPACE)
+                if not intent:
+                    return {"error": "no intent"}
+                task = await self.submit(intent, workspace)
+                return {"task_id": task.task_id, "status": "queued"}
+
+            config = uvicorn.Config(api, host="127.0.0.1", port=PORT_AGENTD,
+                                    log_level="warning")
+            await uvicorn.Server(config).serve()
+        except Exception as e:
+            log.warning(f"agentd API not started: {e}")

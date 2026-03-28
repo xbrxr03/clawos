@@ -19,6 +19,8 @@ def _get_db() -> sqlite3.Connection:
     if _db is None:
         POLICYD_DB.parent.mkdir(parents=True, exist_ok=True)
         _db = sqlite3.connect(str(POLICYD_DB), check_same_thread=False)
+        _db.execute("PRAGMA journal_mode=WAL")
+        _db.execute("PRAGMA busy_timeout=5000")
         _db.execute("""
             CREATE TABLE IF NOT EXISTS audit_log (
                 entry_id TEXT PRIMARY KEY, task_id TEXT, workspace TEXT,

@@ -61,7 +61,9 @@ PORT_AGENTD   = 7072
 PORT_MEMD     = 7073
 PORT_POLICYD  = 7074
 PORT_MODELD   = 7075
-PORT_GATEWAYD = 7076
+PORT_GATEWAYD = 18789
+A2A_PORT_NEXUS = 7081
+A2A_PORT_RAGD  = 7082
 PORT_OLLAMA   = 11434
 
 # Read from environment — allows pointing at a remote Ollama server

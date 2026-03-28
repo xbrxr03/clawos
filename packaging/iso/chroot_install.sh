@@ -1,106 +1,59 @@
 #!/bin/bash
-# Runs inside chroot during ISO build.
-# Installs all ClawOS deps, bakes OpenClaw offline config.
-set -e
-export DEBIAN_FRONTEND=noninteractive
-export HOME=/root
+# Run inside Cubic Ubuntu chroot to build ClawOS ISO
+# Usage: bash chroot_install.sh [desktop|server]
+set -euo pipefail
+EDITION="${1:-desktop}"
 
-echo "[ClawOS] System packages ..."
-apt-get update -qq
-apt-get install -y -qq \
-  python3 python3-pip \
-  curl wget git sqlite3 \
-  alsa-utils pulseaudio pipewire pipewire-alsa \
-  ffmpeg build-essential
+echo "  Building ClawOS $EDITION ISO chroot..."
 
-echo "[ClawOS] Node.js 22+ ..."
-curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - >/dev/null 2>&1
-apt-get install -y -qq nodejs
+# Core deps
+apt-get update -q
+apt-get install -y -q \
+    python3 python3-pip python3-gi gir1.2-gtk-4.0 gir1.2-adwaita-1 \
+    libadwaita-1-dev \
+    nodejs npm curl wget git \
+    portaudio19-dev python3-pyaudio \
+    sqlite3
 
-echo "[ClawOS] Python packages ..."
-pip3 install --break-system-packages -q \
-  pyyaml aiohttp fastapi uvicorn ollama click \
-  openai-whisper piper-tts 2>/dev/null || true
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
 
-echo "[ClawOS] Ollama ..."
-curl -fsSL https://ollama.com/install.sh | sh >/dev/null 2>&1 || true
+# Copy ClawOS to /opt/clawos
+mkdir -p /opt/clawos
+cp -r /tmp/clawos/* /opt/clawos/ 2>/dev/null || echo "  (copy from /tmp/clawos skipped)"
 
-echo "[ClawOS] OpenClaw ..."
-npm install -g openclaw@latest --quiet
+# Python deps
+pip3 install --break-system-packages \
+    fastapi uvicorn pyyaml aiohttp click \
+    chromadb json_repair pypdf python-docx \
+    openwakeword pystray Pillow pyaudio \
+    gitpython ollama rich
 
-echo "[ClawOS] OpenClaw offline config ..."
-mkdir -p /root/.openclaw/agents/main/agent
-cat > /root/.openclaw/agents/main/agent/auth-profiles.json << 'JSON'
-{"ollama:local":{"type":"token","provider":"ollama","token":"ollama-local"},"lastGood":{"ollama":"ollama:local"}}
-JSON
-cat > /root/.openclaw/openclaw.json << 'JSON'
-{"models":{"providers":{"ollama":{"baseUrl":"http://127.0.0.1:11434/v1","apiKey":"ollama-local","api":"openai-completions","models":[{"id":"gemma3:4b","name":"gemma3:4b","contextWindow":4096,"maxOutput":2048,"inputCostPer1M":0,"outputCostPer1M":0}]}}},"agents":{"defaults":{"model":{"primary":"ollama/gemma3:4b"}}},"cloud":{"enabled":false,"fallback":false},"network":{"mode":"offline","allow_local_network":true}}
-JSON
+# Wake word model
+mkdir -p /opt/clawos/services/voiced/models
+wget -q -O /opt/clawos/services/voiced/models/hey_jarvis.onnx \
+    https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/hey_jarvis.onnx \
+    || echo "  (wake word model download skipped — will retry at runtime)"
 
-echo "[ClawOS] ClawOS setup ..."
-cd /opt/clawos
+# First-run autostart
+mkdir -p /etc/xdg/autostart
+cat > /etc/xdg/autostart/clawos-setup.desktop << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=ClawOS Setup
+Comment=First-run wizard for ClawOS
+Exec=python3 /opt/clawos/setup/first_run/gtk_wizard.py
+Icon=system-software-install
+X-GNOME-Autostart-enabled=true
+NotShowIn=
+DESKTOP
 
-# clawctl in PATH
-cat > /usr/local/bin/clawctl << 'CMD'
-#!/bin/bash
-PYTHONPATH=/opt/clawos python3 /opt/clawos/clawctl/main.py "$@"
-CMD
-chmod +x /usr/local/bin/clawctl
+# symlink nexus command
+ln -sf /opt/clawos/nexus/cli.py /usr/local/bin/nexus
+chmod +x /opt/clawos/nexus/cli.py
 
-# First boot service
-cat > /etc/systemd/system/clawos-firstboot.service << 'UNIT'
-[Unit]
-Description=ClawOS First Boot
-After=network.target ollama.service
-ConditionPathExists=!/var/lib/clawos/.firstboot_done
+# systemd user service for non-first-boot
+mkdir -p /etc/skel/.config/systemd/user
+cp /opt/clawos/systemd/clawos.service /etc/skel/.config/systemd/user/
 
-[Service]
-Type=oneshot
-ExecStart=/opt/clawos/packaging/iso/firstboot.sh
-RemainAfterExit=yes
-StandardOutput=journal
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-systemctl enable clawos-firstboot.service 2>/dev/null || true
-
-# Ollama systemd
-cat > /etc/systemd/system/ollama.service << 'UNIT'
-[Unit]
-Description=Ollama AI
-After=network-online.target
-
-[Service]
-ExecStart=/usr/local/bin/ollama serve
-Restart=always
-RestartSec=3
-Environment=HOME=/root
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-systemctl enable ollama.service 2>/dev/null || true
-
-# MOTD
-cat > /etc/motd << 'MOTD'
-
-  ██████╗██╗      █████╗ ██╗    ██╗ ██████╗ ███████╗
- ██╔════╝██║     ██╔══██╗██║    ██║██╔═══██╗██╔════╝
- ██║     ██║     ███████║██║ █╗ ██║██║   ██║███████╗
- ██║     ██║     ██╔══██║██║███╗██║██║   ██║╚════██║
- ╚██████╗███████╗██║  ██║╚███╔███╔╝╚██████╔╝███████║
-  ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝  ╚═════╝ ╚══════╝
-
-  Flash it. Boot it. Your AI is ready.
-  No API keys. No monthly bill. No setup.
-
-  clawctl status         check services
-  clawctl chat           start chatting
-  clawctl openclaw start start OpenClaw
-  openclaw onboard       connect WhatsApp
-  http://localhost:7070  dashboard
-
-MOTD
-
-echo "[ClawOS] Chroot install complete."
+echo "  ClawOS $EDITION ISO chroot complete."

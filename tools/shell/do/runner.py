@@ -98,7 +98,12 @@ def run_commands(
     for cmd in commands:
         print()
         try:
-            result = subprocess.run(cmd, shell=True, text=True)
+            import shlex as _shlex
+            try:
+                _argv = _shlex.split(cmd)
+            except ValueError:
+                _argv = ["bash", "-c", cmd]
+            result = subprocess.run(_argv, text=True)
             last_code = result.returncode
         except KeyboardInterrupt:
             print()

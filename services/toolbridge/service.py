@@ -226,7 +226,12 @@ class ToolBridge:
         if not any(re.match(p, command.strip()) for p in SHELL_ALLOWLIST):
             return f"[DENIED] Command not in allowlist: {command}"
         try:
-            r = subprocess.run(command, shell=True, capture_output=True,
+            import shlex
+            try:
+                argv = shlex.split(command)
+            except ValueError:
+                return "[DENIED] Could not parse command"
+            r = subprocess.run(argv, capture_output=True,
                                text=True, timeout=15, cwd=str(self._ws_root))
             out = (r.stdout + r.stderr)[:4000]
             return out.strip() or "[OK] No output"

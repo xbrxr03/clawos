@@ -104,3 +104,53 @@ def get_service() -> VoiceService:
     if _svc is None:
         _svc = VoiceService()
     return _svc
+
+
+# ── Talk Mode ─────────────────────────────────────────────────────────────────
+TALK_MODE_TIMEOUT = 10  # seconds after response to keep listening without wake word
+
+
+async def run_voice_session(agent, stt_fn, tts_fn, tray=None):
+    """
+    Handle a wake-word-triggered voice conversation session.
+    Stays in listening mode for TALK_MODE_TIMEOUT seconds after each response.
+    stt_fn: callable(timeout) → str | None
+    tts_fn: callable(text) → None
+    """
+    import asyncio
+    from services.voiced.tray import VoiceState
+
+    async def _think(text):
+        if tray:
+            tray.set_state(VoiceState.THINKING)
+        try:
+            reply = await agent.chat(text)
+        except Exception as e:
+            reply = f"Sorry, I encountered an error: {e}"
+        if tray:
+            tray.set_state(VoiceState.SPEAKING)
+        tts_fn(reply)
+        return reply
+
+    # Process first input (the one that triggered wake word)
+    if tray:
+        tray.set_state(VoiceState.LISTENING)
+
+    # Talk mode loop: keep listening for TALK_MODE_TIMEOUT after each response
+    deadline = asyncio.get_event_loop().time() + TALK_MODE_TIMEOUT
+    while asyncio.get_event_loop().time() < deadline:
+        if tray:
+            tray.set_state(VoiceState.LISTENING)
+        remaining = deadline - asyncio.get_event_loop().time()
+        follow_up = await asyncio.get_event_loop().run_in_executor(
+            None, stt_fn, min(remaining, TALK_MODE_TIMEOUT)
+        )
+        if follow_up and follow_up.strip():
+            await _think(follow_up.strip())
+            deadline = asyncio.get_event_loop().time() + TALK_MODE_TIMEOUT
+        else:
+            break
+
+    if tray:
+        tray.set_state(VoiceState.SLEEPING)
+

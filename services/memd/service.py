@@ -307,3 +307,63 @@ class MemoryService:
                     metadatas=[{"source": source, "workspace": workspace_id}])
         except Exception as e:
             log.debug(f"ChromaDB async write: {e}")
+
+
+# ── RAGd A2A server ───────────────────────────────────────────────────────────
+async def start_ragd_a2a_server():
+    """Start RAGd A2A endpoint for document retrieval via OpenClaw peers."""
+    try:
+        from fastapi import FastAPI
+        import uvicorn
+        from clawos_core.constants import A2A_PORT_RAGD, DEFAULT_WORKSPACE
+
+        app = FastAPI(title="RAGd A2A")
+
+        @app.get("/.well-known/agent-card.json")
+        def agent_card():
+            return {
+                "name": "RAGd",
+                "description": "Document retrieval agent. Answers questions from uploaded "
+                               "project documents with citations.",
+                "url": f"http://localhost:{A2A_PORT_RAGD}/a2a",
+                "version": "1.0",
+                "skills": [
+                    {"name": "rag_search", "description": "Search project documents and return cited answers"},
+                    {"name": "doc_list",   "description": "List ingested documents in the current project"},
+                ],
+                "provider": {"name": "ClawOS", "url": "https://github.com/xbrxr03/clawos"},
+            }
+
+        @app.post("/a2a/tasks/send")
+        async def receive_task(body: dict):
+            query = body.get("message", {}).get("parts", [{}])[0].get("text", "")
+            workspace = body.get("metadata", {}).get("workspace", DEFAULT_WORKSPACE)
+            if not query:
+                return {"error": "no query"}
+            try:
+                from services.ragd.service import get_rag
+                from clawos_core.util.paths import workspace_path
+                ws_root = workspace_path(workspace)
+                rag = get_rag(workspace, ws_root)
+                result = rag.answer(query)
+                answer = result.get("answer", "[No answer]")
+                citations = result.get("citations", [])
+                text = answer
+                if citations:
+                    text += "\n\n" + "\n".join(
+                        f"[{c['file']} p.{c.get('page', '?')}]" for c in citations
+                    )
+            except Exception as e:
+                text = f"[RAGd error: {e}]"
+            return {
+                "id": body.get("id", ""),
+                "status": {"state": "completed"},
+                "artifacts": [{"parts": [{"type": "text", "text": text}]}],
+            }
+
+        config = uvicorn.Config(app, host="127.0.0.1",
+                                port=A2A_PORT_RAGD, log_level="warning")
+        await uvicorn.Server(config).serve()
+    except Exception as e:
+        log.warning(f"RAGd A2A server not started: {e}")
+

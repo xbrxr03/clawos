@@ -33,7 +33,7 @@ if str(_ROOT) not in sys.path:
 RESERVED = {
     "status", "logs", "audit", "memory", "workspace", "model",
     "policy", "approve", "deny", "setup", "scan",
-    "secret", "project",
+    "secret", "project", "command", "plan",
     # aliases
     "ws", "mod",
 }
@@ -344,6 +344,97 @@ def cmd_do(request: str):
     )
     print_success(code, time.time() - t0)
     print_audit_note(str(_audit_path()))
+
+
+
+
+# ── plan mode ────────────────────────────────────────────────────────────────
+def _run_plan_mode(spec: str, agent):
+    """Generate a scored execution plan and wait for approval before running."""
+    import asyncio
+    import json
+
+    plan_prompt = (
+        "You are a planning agent. The user has described a task:\n\n"
+        + spec + "\n\n"
+        "Generate exactly 3 execution options ranked by approach. For each option return:\n"
+        "- title: a short title (5 words max)\n"
+        "- score: confidence score 1-10\n"
+        "- steps: list of 3-5 concrete steps\n"
+        "- risks: key risks or tradeoffs (one line)\n\n"
+        "Respond with ONLY a JSON array. No prose outside the JSON."
+    )
+
+    print(f"\n  Generating plan...")
+    try:
+        raw = asyncio.get_event_loop().run_until_complete(agent.chat(plan_prompt))
+    except Exception as e:
+        print(f"  Plan generation error: {e}\n")
+        return
+
+    try:
+        clean = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        options = json.loads(clean)
+        if not isinstance(options, list):
+            raise ValueError("not a list")
+    except Exception:
+        print("  Plan generation failed — falling back to direct execution\n")
+        return
+
+    # Display options
+    print(f"\n  {'─'*56}")
+    for i, opt in enumerate(options[:3], 1):
+        score = opt.get("score", "?")
+        title = opt.get("title", f"Option {i}")
+        steps = opt.get("steps", [])
+        risks = opt.get("risks", "")
+        print(f"\n  {i}  {title}  [{score}/10]")
+        for step in steps:
+            print(f"     > {step}")
+        if risks:
+            print(f"     ! {risks}")
+
+    print(f"\n  {'─'*56}")
+    try:
+        choice = input("  Choose option [1/2/3] or q to cancel: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return
+
+    if choice not in ("1", "2", "3"):
+        print("  Plan cancelled.\n")
+        return
+
+    selected = options[int(choice) - 1]
+    print(f"\n  Executing: {selected.get('title', '')}\n")
+
+    execution_prompt = (
+        "Execute this plan:\n"
+        f"Title: {selected.get('title')}\n"
+        f"Steps: {json.dumps(selected.get('steps', []))}\n\n"
+        f"Original task: {spec}\n\n"
+        "Execute the steps. Use tools as needed."
+    )
+
+    result = asyncio.get_event_loop().run_until_complete(agent.chat(execution_prompt))
+    print(f"\n  {result}\n")
+
+# ── nexus command (Nexus Command / openclaw-office) ───────────────────────────
+def cmd_command(args: list):
+    """Launch Nexus Command — openclaw-office rebranded 3D agent dashboard."""
+    port = 5180
+    for a in args:
+        if a.isdigit():
+            port = int(a)
+    import subprocess, sys
+    serve_script = _ROOT / "dashboard" / "nexus-command" / "serve.py"
+    if not serve_script.exists():
+        print(f"\n  {_p(RED, 'x')}  Nexus Command not found at {serve_script}\n")
+        return
+    try:
+        subprocess.run([sys.executable, str(serve_script), "--port", str(port)])
+    except KeyboardInterrupt:
+        pass
 
 
 # ── chat (default) ────────────────────────────────────────────────────────────
@@ -714,6 +805,20 @@ def main(argv: list = None):
 
     elif first == "secret":
         cmd_secret(argv[1:])
+
+    elif first == "plan":
+        spec = " ".join(argv[1:])
+        if not spec:
+            print("\n  Usage: nexus plan <task description>\n")
+        else:
+            import asyncio
+            from runtimes.agent.runtime import build_runtime
+            ws = _active_workspace()
+            agent = asyncio.get_event_loop().run_until_complete(build_runtime(ws))
+            _run_plan_mode(spec, agent)
+
+    elif first == "command":
+        cmd_command(argv[1:])
 
     elif first == "project":
         cmd_project(argv[1:])
