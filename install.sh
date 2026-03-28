@@ -205,12 +205,12 @@ step "Installing Python packages"
 (pip3 install -q \
   pyyaml aiohttp fastapi "uvicorn[standard]" \
   ollama click chromadb json_repair \
-  pypdf python-docx aiofiles httpx gitpython rich \
+  pypdf python-docx aiofiles httpx gitpython rich openai-whisper \
   --break-system-packages 2>/dev/null \
 || pip3 install -q \
   pyyaml aiohttp fastapi "uvicorn[standard]" \
   ollama click chromadb json_repair \
-  pypdf python-docx aiofiles httpx gitpython rich \
+  pypdf python-docx aiofiles httpx gitpython rich openai-whisper \
   --user 2>/dev/null || true) \
   & spinner $! "Installing Python dependencies"
 wait $! 2>/dev/null || warn "Some Python packages may have failed"

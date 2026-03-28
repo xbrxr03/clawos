@@ -37,7 +37,7 @@ def run(state) -> bool:
         state.model_pulled = ok
 
     # Pull OpenClaw model if needed
-    if state.runtime in ("openclaw", "both"):
+    if state.runtime in ("openclaw", "both") and state.openclaw_model != state.model:
         if model_present(state.openclaw_model):
             print(f"  ✓ {state.openclaw_model} already present")
         else:

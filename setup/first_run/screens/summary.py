@@ -29,7 +29,7 @@ def run(state) -> bool:
     print()
     print("  ─────────────────────────────────────────────")
     print()
-    print("  Start Nexus:")
+    print("  Start ClawOS:")
     print()
     print(f"    nexus                                — start Nexus")
     print(f"    http://localhost:7070                — dashboard")
@@ -48,7 +48,7 @@ def run(state) -> bool:
     # Persist active workspace + model to clawos.yaml
     _save_active_workspace(state)
 
-    ans = input("  Launch Nexus now? [Y/n]: ").strip().lower()
+    ans = input("  Launch ClawOS now? [Y/n]: ").strip().lower()
     state.completed = True
     state.mark_done("summary")
 

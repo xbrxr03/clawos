@@ -7,7 +7,7 @@ def run(state) -> bool:
     print()
     print("  ClawOS ships with two AI runtimes. Pick one to start with:")
     print()
-    print("  [1] Nexus  (recommended)")
+    print("  [1] Nexus")
     print("      · Native Python agent, works on 8GB RAM")
     print(f"      · Uses {state.model} — already on your machine")
     print("      · Fast startup, full voice + WhatsApp support")
@@ -16,7 +16,7 @@ def run(state) -> bool:
 
     oc_ok = state.ram_gb >= 14
     if oc_ok:
-        print("  [2] OpenClaw   (full ecosystem)")
+        print("  [2] OpenClaw   (recommended — full ecosystem)")
         print("      · 13,700+ community skills and integrations")
         print("      · Pre-configured for Ollama offline (no API keys)")
         print("      · Needs Node.js + qwen2.5:7b (tool-calling model)")
@@ -31,7 +31,7 @@ def run(state) -> bool:
 
     print()
     valid = ["1", "2", "3"] if oc_ok else ["1", "2"]
-    choice = input("  Choose [1/2/3] or Enter for Nexus: ").strip()
+    choice = input("  Choose [1/2/3] or Enter for OpenClaw: ").strip()
 
     if choice == "2":
         state.runtime = "openclaw"
