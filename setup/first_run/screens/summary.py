@@ -65,13 +65,23 @@ def run(state) -> bool:
             if shutil.which("openclaw"):
                 print("  Starting OpenClaw...")
                 subprocess.run(["openclaw", "gateway", "stop"], capture_output=True)
+                # Kill any leftover gateway processes
+                subprocess.run(["pkill", "-f", "openclaw-gateway"], capture_output=True)
+                import time as _t; _t.sleep(2)
                 print()
                 print("  Tips:")
                 print("    • Connect WhatsApp:  openclaw configure --section channels")
                 print("    • Pull more models:  clawctl model pull <name>")
                 print("    • Dashboard:         http://localhost:7070")
                 print()
-                subprocess.run(["openclaw", "gateway", "--allow-unconfigured"], check=False)
+                import time as _time
+                gw = subprocess.Popen(["openclaw", "gateway", "--allow-unconfigured"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                _time.sleep(3)
+                print("  Opening OpenClaw chat...")
+                print()
+                subprocess.run(["openclaw", "tui"], check=False)
+                gw.terminate()
             else:
                 old_argv = sys.argv[:]
                 sys.argv = ["repl", state.workspace_id]
