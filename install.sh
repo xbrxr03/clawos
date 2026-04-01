@@ -612,5 +612,18 @@ fi
 
 echo -e "  ${D}  Reload shell if needed:  ${RESET}${B}source ~/.bashrc${RESET}"
 echo -e "  ${D}  Re-run wizard:           ${RESET}${B}python3 -m setup.first_run.wizard --reset${RESET}"
+
+# ── Launch wizard if running interactively ────────────────────────────────────
+if [ -t 0 ] && [ -t 1 ]; then
+  echo ""
+  echo -e "  ${B}Starting setup wizard...${RESET}"
+  echo ""
+  cd "${INSTALL_DIR}" && python3 -m setup.first_run.wizard
+else
+  echo ""
+  echo -e "  ${D}  Non-interactive install detected.${RESET}"
+  echo -e "  ${D}  Run the setup wizard manually:  ${RESET}${B}nexus setup${RESET}"
+  echo ""
+fi
 echo -e "  ${D}  GitHub:                  ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
 echo ""
