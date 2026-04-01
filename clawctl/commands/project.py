@@ -67,9 +67,9 @@ def run_query(question: str, workspace: str = "nexus_default"):
         return
     try:
         from clawos_core.util.paths import workspace_path
-        from services.ragd.service import get_rag
+        from services.ragd.service import RAGService
         ws_root = workspace_path(workspace)
-        rag = get_rag(workspace, ws_root)
+        rag = RAGService(workspace, ws_root)
         result = rag.answer(question)
         answer = result.get("answer", "[no answer]")
         trust  = result.get("trust_label", "")

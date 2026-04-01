@@ -31,10 +31,10 @@ log = logging.getLogger("ragd")
 CHUNK_WORDS      = 220
 CHUNK_OVERLAP    = 40
 MIN_CHUNK_WORDS  = 40
-MIN_CHUNK_SCORE  = 0.38
+MIN_CHUNK_SCORE  = 0.0
 TOC_SCAN_MAX_PAGE = 20
 TOP_K            = 5
-DISTANCE_THRESH  = 0.65
+DISTANCE_THRESH  = 400.0
 EMBED_MODEL      = "nomic-embed-text"   # via Ollama
 
 # Read from constants so OLLAMA_HOST env var works everywhere
@@ -197,6 +197,7 @@ class RAGService:
                 self._collection = client.get_or_create_collection(
                     name=f"rag_{self.workspace}",
                     metadata={"workspace": self.workspace},
+                    embedding_function=chromadb.utils.embedding_functions.DefaultEmbeddingFunction(),
                 )
             except ImportError:
                 log.warning("chromadb not installed — RAG unavailable")
@@ -629,9 +630,16 @@ class RAGService:
         if not collection:
             return []
 
-        self._ensure_embed_model()
-        query_emb = self._embed([query])[0]
-        if query_emb is None:
+        # Embed query via Ollama directly (same model used at ingest time)
+        import urllib.request as _ur, json as _json
+        try:
+            _payload = _json.dumps({"model": EMBED_MODEL, "prompt": query}).encode()
+            _req = _ur.Request(f"{OLLAMA_HOST}/api/embeddings", data=_payload,
+                               headers={"Content-Type": "application/json"})
+            with _ur.urlopen(_req, timeout=30) as _r:
+                query_emb = _json.loads(_r.read())["embedding"]
+        except Exception as e:
+            log.warning(f"Embed query failed: {e}")
             return []
 
         try:

@@ -308,10 +308,6 @@ if CLICK_OK:
         from clawctl.commands.budget import run; run()
 
 
-if __name__ == "__main__":
-    main()
-
-# ── project ───────────────────────────────────────────────────────────────────
 if CLICK_OK:
     @main.group()
     def project():
@@ -347,3 +343,8 @@ if CLICK_OK:
         """Show RAG index stats for workspace."""
         from clawctl.commands.project import run_stats
         run_stats(workspace)
+
+if __name__ == "__main__":
+    main()
+
+# ── project ───────────────────────────────────────────────────────────────────
