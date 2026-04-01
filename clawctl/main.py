@@ -310,3 +310,40 @@ if CLICK_OK:
 
 if __name__ == "__main__":
     main()
+
+# ── project ───────────────────────────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def project():
+        """Document ingestion and RAG pipeline."""
+        pass
+
+    @project.command("upload")
+    @click.argument("filepath")
+    @click.option("--workspace", default="nexus_default")
+    def project_upload(filepath, workspace):
+        """Ingest a document into RAG (pdf, txt, md, docx)."""
+        from clawctl.commands.project import run_upload
+        run_upload(filepath, workspace)
+
+    @project.command("list")
+    @click.option("--workspace", default="nexus_default")
+    def project_list(workspace):
+        """List indexed documents in workspace."""
+        from clawctl.commands.project import run_list
+        run_list(workspace)
+
+    @project.command("query")
+    @click.argument("question")
+    @click.option("--workspace", default="nexus_default")
+    def project_query(question, workspace):
+        """Query indexed documents with citations."""
+        from clawctl.commands.project import run_query
+        run_query(question, workspace)
+
+    @project.command("stats")
+    @click.option("--workspace", default="nexus_default")
+    def project_stats(workspace):
+        """Show RAG index stats for workspace."""
+        from clawctl.commands.project import run_stats
+        run_stats(workspace)
