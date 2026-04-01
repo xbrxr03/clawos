@@ -261,9 +261,10 @@ else
     ok "OpenClaw already installed"
     OPENCLAW_OK=true
   else
-    if run_with_spinner "Installing OpenClaw via npm" npm install -g openclaw@latest --quiet; then
+    if [ -d "/usr/lib/node_modules" ]; then sudo chmod -R 755 /usr/lib/node_modules 2>/dev/null || true; fi
+    if run_with_spinner "Installing OpenClaw via npm" sudo npm install -g openclaw@latest --quiet; then
       :
-    elif run_with_spinner "Retrying OpenClaw install with sudo npm" sudo npm install -g openclaw@latest --quiet; then
+    elif run_with_spinner "Retrying OpenClaw install (user scope)" npm install -g openclaw@latest --quiet; then
       :
     else
       warn "OpenClaw install failed"
