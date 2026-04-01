@@ -40,6 +40,12 @@ def run(state) -> bool:
         print("      · WhatsApp + Telegram via gatewayd bridge")
         print()
 
+    print("  [4] PicoClaw        (lightweight edge agent — add-on)")
+    print("      · Go binary, <10MB RAM overhead, <1s boot")
+    print("      · Runs qwen2.5:1.5b — fast responses for simple tasks")
+    print("      · Good for always-on background agent on same machine")
+    print("      · Combine with any runtime above e.g. '34' or '3+4'")
+    print()
     print("  [5] A2A Federation  (this node + connect to other ClawOS nodes)")
     print("      · Enables Agent-to-Agent protocol (a2ad service)")
     print("      · Other ClawOS boxes on your LAN discover this node")
@@ -47,11 +53,9 @@ def run(state) -> bool:
     print("      · Combine with any of the above runtimes")
     print()
 
-    valid = ["1", "2", "3", "5"]
-    if is_arm or state.ram_gb <= 10:
-        valid.append("4")
+    valid = ["1", "2", "3", "4", "5"]
     default_hint = "2" if oc_ok else "1"
-    choice = input(f"  Choose [{chr(47).join(valid)}] or Enter for {'OpenClaw' if oc_ok else 'Nexus'}: ").strip()
+    choice = input(f"  Choose [1/2/3/4/5] or combos e.g. 3+4+5, Enter for {'OpenClaw' if oc_ok else 'Nexus'}: ").strip()
 
     # A2A is an add-on — check if combined choice e.g. "3+5" or "35"
     enable_a2a = "5" in choice
@@ -67,10 +71,8 @@ def run(state) -> bool:
     elif base == "3" and oc_ok:
         state.runtime = "both"
         print("\n  Runtime: Both (Nexus default, OpenClaw available)")
-    elif base == "4" and "4" in valid:
-        state.runtime = "picoclaw"
-        state.model = "qwen2.5:1.5b"
-        print("\n  Runtime: PicoClaw (Tier A edge runtime)")
+    # 4 is always an add-on now
+    enable_picoclaw = "4" in choice
     elif base == "" and oc_ok:
         state.runtime = "openclaw"
         from bootstrap.profile_selector import recommended_openclaw_model
@@ -81,6 +83,13 @@ def run(state) -> bool:
     else:
         state.runtime = "core"
         print("\n  Runtime: Nexus")
+
+    enable_picoclaw = "4" in choice
+    if enable_picoclaw:
+        state.enable_picoclaw = True
+        print("  + PicoClaw enabled — lightweight edge agent running alongside")
+    else:
+        state.enable_picoclaw = False
 
     if enable_a2a:
         state.enable_a2a = True
