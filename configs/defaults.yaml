@@ -68,3 +68,30 @@ services:
   clawd:    { port: 7071, restart: "always" }
   dashd:    { port: 7070, restart: "always" }
   gatewayd: { port: 18789, restart: "on-failure" }
+
+# ── metricd — OTel token tracking ─────────────────────────────────────────────
+metricd:
+  enabled: true
+  export_local: true       # write spans to logs/otel.jsonl
+  export_otlp: false       # set endpoint to enable remote Grafana/Datadog
+  otlp_endpoint: ""        # e.g. http://grafana:4317
+  budget:
+    enabled: false         # off by default
+    daily_tokens_per_workspace: 100000
+    action_on_limit: "warn"   # warn | deny | pause
+
+# ── a2ad — Agent-to-Agent Protocol ────────────────────────────────────────────
+a2a:
+  enabled: true
+  port: 7083
+  auth_token: ""           # set to require Bearer token on inbound tasks
+  mdns_enabled: true       # publish _clawos._tcp.local
+  discovery_interval_s: 60
+
+# ── picoclawd — Tier A edge runtime ───────────────────────────────────────────
+picoclaw:
+  enabled: false           # auto-enabled when ARM arch detected
+  port: 18800
+  github_repo: "sipeed/picoclaw"
+  version: "v0.2.4"
+  http_timeout: 300

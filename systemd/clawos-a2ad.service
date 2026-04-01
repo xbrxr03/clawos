@@ -1,0 +1,15 @@
+[Unit]
+Description=ClawOS a2ad — Agent-to-Agent Protocol server
+After=network.target clawos-agentd.service
+Wants=clawos-agentd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m services.a2ad.main
+WorkingDirectory=%h/clawos
+Environment=PYTHONPATH=%h/clawos
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=clawos.target

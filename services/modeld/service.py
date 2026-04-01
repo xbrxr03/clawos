@@ -104,3 +104,97 @@ def get_service() -> ModelService:
     if _svc is None:
         _svc = ModelService()
     return _svc
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Tier D: VRAM scheduler + parallel session support
+# ══════════════════════════════════════════════════════════════════════════════
+
+class VRAMScheduler:
+    """
+    Tracks running models and available VRAM.
+    On Tier D, allows up to N parallel agent sessions within VRAM budget.
+    On Tier A-C, allows only 1 concurrent model load.
+    """
+
+    def __init__(self):
+        from clawos_core.constants import (
+            TIER_D_MAX_PARALLEL, TIER_D_VRAM_PER_AGENT, TIER_D_VRAM_RESERVE
+        )
+        self._sessions:   dict[str, str] = {}   # session_id → model
+        self._max:        int   = TIER_D_MAX_PARALLEL
+        self._per_agent:  float = TIER_D_VRAM_PER_AGENT
+        self._reserve:    float = TIER_D_VRAM_RESERVE
+        self._is_tier_d:  bool  = False
+        self._vram_total: float = 0.0
+
+        try:
+            from bootstrap.hardware_probe import load_saved, is_tier_d
+            hw = load_saved()
+            self._is_tier_d  = is_tier_d(hw)
+            self._vram_total = hw.gpu_vram_gb
+        except Exception:
+            pass
+
+        log.info(
+            f"VRAMScheduler: tier_d={self._is_tier_d} "
+            f"vram={self._vram_total}GB max_parallel={self._max}"
+        )
+
+    def can_start(self, session_id: str, model: str = "") -> tuple[bool, str]:
+        """Return (ok, reason). Check before starting a new agent session."""
+        if not self._is_tier_d:
+            # Non-Tier-D: always allow (single model, Ollama manages memory)
+            return True, ""
+
+        if session_id in self._sessions:
+            return True, "already registered"
+
+        used_vram = len(self._sessions) * self._per_agent
+        free_vram = self._vram_total - used_vram - self._reserve
+        if free_vram < self._per_agent:
+            return False, (
+                f"Insufficient VRAM: {free_vram:.1f}GB free, "
+                f"{self._per_agent}GB required per session. "
+                f"Active sessions: {len(self._sessions)}"
+            )
+        if len(self._sessions) >= self._max:
+            return False, f"Max parallel sessions ({self._max}) reached"
+
+        return True, ""
+
+    def register(self, session_id: str, model: str):
+        self._sessions[session_id] = model
+        log.info(f"VRAMScheduler: registered session {session_id[:8]} model={model} "
+                 f"({len(self._sessions)}/{self._max} active)")
+
+    def unregister(self, session_id: str):
+        self._sessions.pop(session_id, None)
+        log.debug(f"VRAMScheduler: released session {session_id[:8]}")
+
+    @property
+    def active_count(self) -> int:
+        return len(self._sessions)
+
+    def free_vram_estimate(self) -> float:
+        used = len(self._sessions) * self._per_agent
+        return max(0.0, self._vram_total - used - self._reserve)
+
+    def status(self) -> dict:
+        return {
+            "tier_d": self._is_tier_d,
+            "vram_total_gb": self._vram_total,
+            "vram_free_gb": self.free_vram_estimate(),
+            "active_sessions": self.active_count,
+            "max_sessions": self._max,
+        }
+
+
+_vram_scheduler: VRAMScheduler = None
+
+
+def get_vram_scheduler() -> VRAMScheduler:
+    global _vram_scheduler
+    if _vram_scheduler is None:
+        _vram_scheduler = VRAMScheduler()
+    return _vram_scheduler

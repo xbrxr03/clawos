@@ -149,7 +149,15 @@ case "$ARCH" in
   *) IS_ARM=false ;;
 esac
 
-if [ "$RAM_GB" -ge 30 ]; then
+# Detect GPU VRAM for Tier D
+VRAM_GB=0
+if command -v nvidia-smi &>/dev/null; then
+  VRAM_GB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null     | awk '{printf "%.0f", $1/1024}' || echo 0)
+fi
+
+if [ "${VRAM_GB:-0}" -ge 10 ] && [ "$RAM_GB" -ge 30 ]; then
+  PROFILE="gaming"; TIER="Tier D  GPU gaming workstation (${VRAM_GB}GB VRAM)"
+elif [ "$RAM_GB" -ge 30 ]; then
   PROFILE="performance"; TIER="Tier C  GPU workstation"
 elif [ "$RAM_GB" -ge 14 ]; then
   PROFILE="balanced"; TIER="Tier B  workstation"
@@ -174,6 +182,11 @@ case "$PROFILE" in
     MODEL="qwen2.5:3b"
     MODEL_SIZE="~2.0GB"
     MODEL_NOTE="balanced speed/quality"
+    ;;
+  gaming)
+    MODEL="qwen2.5:7b"
+    MODEL_SIZE="~4.7GB"
+    MODEL_NOTE="full capability · GPU · multi-agent Tier D"
     ;;
   performance)
     MODEL="qwen2.5:7b"
@@ -439,6 +452,42 @@ export PATH="$HOME/.local/bin:$PATH"
 ok "clawos  clawctl"
 
 # ── Autostart ─────────────────────────────────────────────────────────────────
+
+# ── PicoClaw (Tier A ARM only) ────────────────────────────────────────────────
+if [ "$IS_ARM" = "true" ] && [ "$PROFILE" = "lowram" ]; then
+  step "Installing PicoClaw edge runtime (Tier A ARM)"
+  PICOCLAW_ARCH="arm64"
+  case "$(uname -m)" in
+    armv7l|armv8l|armhf) PICOCLAW_ARCH="arm32" ;;
+    aarch64|arm64)        PICOCLAW_ARCH="arm64" ;;
+    riscv64)              PICOCLAW_ARCH="riscv64" ;;
+  esac
+  PICOCLAW_URL="https://github.com/sipeed/picoclaw/releases/download/v0.2.4/picoclaw-linux-${PICOCLAW_ARCH}"
+  if command -v picoclaw &>/dev/null; then
+    ok "PicoClaw already installed"
+  else
+    run_with_spinner "Downloading PicoClaw (${PICOCLAW_ARCH})" \
+      wget -q -O /tmp/picoclaw "$PICOCLAW_URL" && \
+      sudo mv /tmp/picoclaw /usr/local/bin/picoclaw && \
+      sudo chmod +x /usr/local/bin/picoclaw
+    if command -v picoclaw &>/dev/null; then
+      ok "PicoClaw installed"
+    else
+      warn "PicoClaw download failed — will retry on first boot"
+    fi
+  fi
+  mkdir -p "$HOME/.picoclaw"
+  cat > "$HOME/.picoclaw/config.json" <<'PCEOF'
+{
+  "provider": "ollama",
+  "endpoint": "http://localhost:11434",
+  "model": "qwen2.5:1.5b",
+  "timeout": 300
+}
+PCEOF
+  ok "PicoClaw configured"
+fi
+
 step "Enabling autostart"
 
 if systemd_user_ready; then

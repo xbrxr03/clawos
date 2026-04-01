@@ -36,6 +36,13 @@ Commands:
   openclaw stop             — stop OpenClaw gateway
   openclaw config [model]   — regenerate OpenClaw config
 
+  a2a peers                 — list discovered A2A nodes on LAN
+  a2a card                  — print this node's Agent Card
+  a2a delegate '<task>' --peer <ip>  — send task to peer node
+  a2a status                — check a2ad service
+
+  budget                    — show per-workspace token usage
+
   wizard                    — run first-run wizard
   chat                      — start Nexus
 """
@@ -262,6 +269,43 @@ else:
         root = Path(__file__).parent.parent
         subprocess.run([sys.executable, str(root / "nexus" / "cli.py")],
                        env={**__import__("os").environ, "PYTHONPATH": str(root)})
+
+
+# ── a2a ───────────────────────────────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def a2a():
+        """A2A peer management and task delegation."""
+        pass
+
+    @a2a.command("peers")
+    def a2a_peers():
+        """List discovered ClawOS nodes on LAN."""
+        from clawctl.commands.a2a import run_peers; run_peers()
+
+    @a2a.command("card")
+    def a2a_card():
+        """Print this node Agent Card JSON."""
+        from clawctl.commands.a2a import run_card; run_card()
+
+    @a2a.command("delegate")
+    @click.argument("task")
+    @click.option("--peer", required=True, help="Peer IP address")
+    @click.option("--workspace", default="nexus_default")
+    def a2a_delegate(task, peer, workspace):
+        """Delegate a task to a remote ClawOS node."""
+        from clawctl.commands.a2a import run_delegate; run_delegate(task, peer, workspace)
+
+    @a2a.command("status")
+    def a2a_status():
+        """Check a2ad service status."""
+        from clawctl.commands.a2a import run_status; run_status()
+
+    # ── budget ────────────────────────────────────────────────────────────────
+    @main.command()
+    def budget():
+        """Show per-workspace token usage."""
+        from clawctl.commands.budget import run; run()
 
 
 if __name__ == "__main__":

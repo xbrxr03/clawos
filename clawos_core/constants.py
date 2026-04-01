@@ -13,7 +13,7 @@ from pathlib import Path
 
 # ── Version ───────────────────────────────────────────────────────────────────
 VERSION      = "0.1.0"
-CODENAME     = "Prototype"
+CODENAME     = "Nexus"
 VERSION_FULL = f"{VERSION} {CODENAME}"
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -36,6 +36,7 @@ POLICYD_DB       = CONFIG_DIR / "policyd.db"
 MEMORY_FTS_DB    = MEMORY_DIR / "fts.db"
 HARDWARE_JSON    = CONFIG_DIR / "hardware.json"
 CLAWOS_CONFIG    = CONFIG_DIR / "clawos.yaml"
+OTEL_JSONL       = LOGS_DIR / "otel.jsonl"
 
 # Voice models
 PIPER_MODEL      = VOICE_DIR / "en_US-lessac-medium.onnx"
@@ -44,6 +45,7 @@ PIPER_CONFIG     = VOICE_DIR / "en_US-lessac-medium.onnx.json"
 # ── Service names ─────────────────────────────────────────────────────────────
 SERVICES = [
     "policyd",
+    "metricd",
     "memd",
     "modeld",
     "toolbridge",
@@ -51,48 +53,52 @@ SERVICES = [
     "voiced",
     "clawd",
     "dashd",
+    "a2ad",
+    "picoclawd",
     "gatewayd",
 ]
 
 # ── Ports ─────────────────────────────────────────────────────────────────────
-PORT_DASHD    = 7070
-PORT_CLAWD    = 7071
-PORT_AGENTD   = 7072
-PORT_MEMD     = 7073
-PORT_POLICYD  = 7074
-PORT_MODELD   = 7075
-PORT_GATEWAYD = 18789
-A2A_PORT_NEXUS = 7081
-A2A_PORT_RAGD  = 7082
-PORT_OLLAMA   = 11434
+PORT_DASHD      = 7070
+PORT_CLAWD      = 7071
+PORT_AGENTD     = 7072
+PORT_MEMD       = 7073
+PORT_POLICYD    = 7074
+PORT_MODELD     = 7075
+PORT_METRICD    = 7076
+PORT_A2AD       = 7083
+PORT_PICOCLAWD  = 18800
+PORT_GATEWAYD   = 18789
+PORT_OLLAMA     = 11434
 
-# Read from environment — allows pointing at a remote Ollama server
-# Example: export OLLAMA_HOST=http://192.168.1.50:11434
+# Legacy aliases used by older code
+A2A_PORT_NEXUS  = PORT_A2AD
+A2A_PORT_RAGD   = 7082
+
+# Read from environment
 OLLAMA_HOST   = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 
 # ── Models ────────────────────────────────────────────────────────────────────
-# Four models. Nothing else.
-#   basic:    qwen2.5:1.5b  — simple Q&A, greetings, acks (ARM/CPU-only friendly)
-#   standard: qwen2.5:3b    — writing, summarization, general tasks
-#   full:     qwen2.5:7b    — tools, code, RAG, complex reasoning (GPU recommended)
-#   openclaw: kimi-k2.5:cloud — OpenClaw agent sessions (cloud, 256k ctx)
+# Four canonical models. Nothing else.
 DEFAULT_MODEL       = os.environ.get("CLAWOS_MODEL", "qwen2.5:7b")
 DEFAULT_EMBED_MODEL = "nomic-embed-text"
 
 MODEL_PROFILES = {
-    # Tier A: ARM / CPU-only / low RAM (RPi 5, 8GB mini PCs)
-    # qwen2.5:1.5b runs at ~3-5 tok/s on RPi 5 — responsive
-    "lowram":      {"chat": "qwen2.5:1.5b", "ctx": 2048, "voice": False},
-    # Tier B: x86 8-16GB (laptops, mini PCs with iGPU)
-    "balanced":    {"chat": "qwen2.5:3b",   "ctx": 4096, "voice": True},
-    # Tier C: x86 16GB+ with discrete GPU
-    "performance": {"chat": "qwen2.5:7b",   "ctx": 8192, "voice": True},
+    # Tier A: ARM / CPU-only / ≤8GB RAM
+    "lowram":      {"chat": "qwen2.5:1.5b", "ctx": 2048,  "voice": False, "tier": "A"},
+    # Tier B: x86 8-16GB
+    "balanced":    {"chat": "qwen2.5:3b",   "ctx": 4096,  "voice": True,  "tier": "B"},
+    # Tier C: x86 16-32GB with GPU
+    "performance": {"chat": "qwen2.5:7b",   "ctx": 8192,  "voice": True,  "tier": "C"},
+    # Tier D: 32GB+ RAM + GPU ≥10GB VRAM
+    "gaming":      {"chat": "qwen2.5:7b",   "ctx": 16384, "voice": True,  "tier": "D",
+                    "max_parallel": 3, "vram_per_agent_gb": 5.5},
 }
 
 # ── Agent loop ────────────────────────────────────────────────────────────────
 MAX_ITERATIONS    = 8
 MAX_HISTORY       = 12
-DEFAULT_WORKSPACE = "nexus_default"   # renamed from jarvis_default
+DEFAULT_WORKSPACE = "nexus_default"
 
 # ── Audio ─────────────────────────────────────────────────────────────────────
 RECORD_RATE      = 44100
@@ -107,6 +113,24 @@ WHISPER_MODEL    = "base"
 # ── Policy ────────────────────────────────────────────────────────────────────
 APPROVAL_TIMEOUT_S  = 120
 TOOL_SCORE_QUEUE    = 50
+
+# ── Tier D multi-agent ────────────────────────────────────────────────────────
+TIER_D_MAX_PARALLEL    = 3
+TIER_D_VRAM_PER_AGENT  = 5.5   # GB reserved per agent session
+TIER_D_VRAM_RESERVE    = 1.0   # GB always kept free for system
+
+# ── PicoClaw (Tier A) ────────────────────────────────────────────────────────
+PICOCLAW_GITHUB     = "sipeed/picoclaw"
+PICOCLAW_VERSION    = "v0.2.4"
+PICOCLAW_HTTP_TIMEOUT = 300
+
+# ── A2A Protocol ─────────────────────────────────────────────────────────────
+A2A_MDNS_SERVICE    = "_clawos._tcp.local"
+A2A_DISCOVERY_SECS  = 60
+A2A_BEARER_TOKEN_ENV = "CLAWOS_A2A_TOKEN"
+
+# ── metricd ───────────────────────────────────────────────────────────────────
+DEFAULT_DAILY_TOKEN_BUDGET = 100_000   # per workspace; 0 = unlimited
 
 # ── Ensure critical dirs exist ────────────────────────────────────────────────
 def ensure_dirs():

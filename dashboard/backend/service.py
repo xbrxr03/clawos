@@ -532,6 +532,67 @@ _start_time = time.time()
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
+
+
+# ── Token usage endpoint ───────────────────────────────────────────────────────
+@app.get("/api/tokens")
+async def api_tokens():
+    try:
+        from services.metricd.service import get_metrics
+        m = get_metrics()
+        workspaces = m.workspace_summary()
+        # Enrich with week totals
+        for ws in workspaces:
+            ws["tokens_week"] = m.week_tokens(ws["workspace_id"])
+        return {"workspaces": workspaces}
+    except Exception as e:
+        return {"workspaces": [], "error": str(e)}
+
+# ── A2A peers endpoint ────────────────────────────────────────────────────────
+@app.get("/api/peers")
+async def api_peers():
+    try:
+        from services.a2ad.discovery import get_peers
+        return {"peers": get_peers()}
+    except Exception:
+        return {"peers": []}
+
+# ── A2A delegate endpoint ─────────────────────────────────────────────────────
+@app.post("/api/delegate")
+async def api_delegate(body: dict):
+    peer_url = body.get("peer_url", "")
+    task     = body.get("task", "")
+    if not peer_url or not task:
+        return {"error": "peer_url and task required"}
+    try:
+        from services.gatewayd.service import delegate_to_peer
+        result = await delegate_to_peer(peer_url, task)
+        return {"result": result}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── LEARNED.md endpoint ───────────────────────────────────────────────────────
+@app.get("/api/learned")
+async def api_learned():
+    try:
+        from services.memd.service import get_learned
+        from clawos_core.constants import DEFAULT_WORKSPACE
+        content = get_learned(DEFAULT_WORKSPACE)
+        return {"content": content, "workspace": DEFAULT_WORKSPACE}
+    except Exception as e:
+        return {"content": "", "error": str(e)}
+
+# ── A2A Agent Card (serve from dashd too for convenience) ────────────────────
+@app.get("/.well-known/agent.json")
+async def agent_card():
+    try:
+        from services.a2ad.agent_card import build_card
+        from services.a2ad.discovery import get_local_ip
+        card = build_card(local_ip=get_local_ip())
+        return card.to_dict()
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("service:app", host="0.0.0.0", port=7070, reload=False, log_level="info")

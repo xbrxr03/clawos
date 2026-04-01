@@ -285,3 +285,42 @@ def get_engine() -> PolicyEngine:
     if _engine is None:
         _engine = PolicyEngine()
     return _engine
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GPU resource guard (Tier D) + token budget enforcement
+# ══════════════════════════════════════════════════════════════════════════════
+
+def check_gpu_guard(session_id: str, model: str = "") -> tuple[bool, str]:
+    """
+    Before starting a new Tier D parallel agent session,
+    verify VRAM is available. Returns (allowed, reason).
+    """
+    try:
+        from services.modeld.service import get_vram_scheduler
+        scheduler = get_vram_scheduler()
+        return scheduler.can_start(session_id, model)
+    except Exception:
+        return True, ""   # Non-fatal: allow if modeld not available
+
+
+def check_budget(workspace_id: str) -> tuple[bool, str]:
+    """
+    Check workspace token budget via metricd.
+    Returns (allowed, reason). If budget disabled, always returns (True, "").
+    """
+    try:
+        from services.metricd.service import get_metrics
+        m = get_metrics()
+        if m.is_over_budget(workspace_id):
+            action = m.budget_action()
+            today  = m.today_tokens(workspace_id)
+            reason = f"Token budget exceeded: {today} tokens today"
+            if action == "deny":
+                return False, reason
+            else:   # warn or pause
+                log.warning(f"Budget {action}: {workspace_id} — {today} tokens")
+                return True, reason
+    except Exception:
+        pass
+    return True, ""

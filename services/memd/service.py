@@ -367,3 +367,215 @@ async def start_ragd_a2a_server():
     except Exception as e:
         log.warning(f"RAGd A2A server not started: {e}")
 
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Layer 5: LEARNED.md — ACE Self-Improving Loop
+# ══════════════════════════════════════════════════════════════════════════════
+
+LEARNED_MAX_KB = 2   # default; overridden by gaming.yaml to 4KB
+
+
+class LearnedLayer:
+    """
+    ACE (Agentic Context Engineering) loop — arXiv 2025.
+    After each completed task, a Curator coroutine extracts learnings
+    and appends them to LEARNED.md. Injected into every agent turn.
+    +10.6% benchmark improvement without fine-tuning.
+    """
+
+    def path(self, workspace_id: str) -> Path:
+        from clawos_core.constants import WORKSPACE_DIR
+        return WORKSPACE_DIR / workspace_id / "LEARNED.md"
+
+    def read(self, workspace_id: str) -> str:
+        p = self.path(workspace_id)
+        return p.read_text() if p.exists() else ""
+
+    def _prune_if_over(self, p: Path, max_kb: int):
+        """Keep LEARNED.md under max_kb by dropping oldest bullet points."""
+        if p.stat().st_size <= max_kb * 1024:
+            return
+        lines = p.read_text().splitlines()
+        # Drop from top (oldest) until under limit
+        while lines and len("\n".join(lines).encode()) > max_kb * 1024:
+            lines.pop(0)
+        p.write_text("\n".join(lines))
+
+    async def extract_and_append(self, task_result: str, workspace_id: str,
+                                  ollama_host: str = "http://localhost:11434",
+                                  model: str = "qwen2.5:1.5b"):
+        """
+        Run async after task completion. Uses the smallest model (1.5b)
+        to extract 1-3 learnings — cheap and fast.
+        """
+        if not task_result or len(task_result) < 50:
+            return
+        prompt = (
+            "Extract 1-3 concrete, reusable learnings from this task result. "
+            "Write each as a short bullet point (one line). "
+            "Focus on facts that will help future tasks. "
+            "If no useful learnings, output: NONE\n\n"
+            f"Task result:\n{task_result[:1500]}"
+        )
+        try:
+            import json as _json
+            import urllib.request
+            payload = _json.dumps({
+                "model": model, "prompt": prompt,
+                "stream": False, "options": {"temperature": 0.1}
+            }).encode()
+            req = urllib.request.Request(
+                f"{ollama_host}/api/generate",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                resp_data = _json.loads(resp.read())
+            learnings = resp_data.get("response", "").strip()
+            if not learnings or learnings.upper() == "NONE":
+                return
+
+            p = self.path(workspace_id)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            from clawos_core.util.time import now_stamp
+            with p.open("a") as f:
+                f.write(f"\n<!-- {now_stamp()} -->\n")
+                for line in learnings.splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("NONE"):
+                        f.write(f"{line}\n")
+
+            # Prune if over limit
+            from clawos_core.config.loader import get
+            max_kb = get("memory.learned_md_max_kb", LEARNED_MAX_KB)
+            self._prune_if_over(p, max_kb)
+            log.debug(f"LEARNED.md updated for workspace: {workspace_id}")
+        except Exception as e:
+            log.debug(f"ACE extract failed (non-fatal): {e}")
+
+
+_learned = LearnedLayer()
+
+
+def get_learned(workspace_id: str) -> str:
+    """Public API — read LEARNED.md for injection into prompts."""
+    return _learned.read(workspace_id)
+
+
+async def run_ace_loop(task_result: str, workspace_id: str):
+    """Call after task completion. Fire-and-forget async."""
+    from clawos_core.constants import OLLAMA_HOST, DEFAULT_MODEL
+    await _learned.extract_and_append(task_result, workspace_id, OLLAMA_HOST)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Knowledge Graph Layer — SQLite adjacency list
+# ══════════════════════════════════════════════════════════════════════════════
+
+_KG_DB_PATH = MEMORY_DIR / "knowledge_graph.db"
+
+
+def _open_kg() -> sqlite3.Connection:
+    _KG_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(str(_KG_DB_PATH), check_same_thread=False)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS entities (
+            entity_id    TEXT PRIMARY KEY,
+            workspace_id TEXT,
+            name         TEXT NOT NULL,
+            entity_type  TEXT DEFAULT 'concept',
+            created_at   TEXT
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS relationships (
+            rel_id       TEXT PRIMARY KEY,
+            workspace_id TEXT,
+            from_entity  TEXT,
+            relation     TEXT,
+            to_entity    TEXT,
+            source_text  TEXT DEFAULT '',
+            created_at   TEXT
+        )
+    """)
+    db.execute("CREATE INDEX IF NOT EXISTS ix_entities_ws ON entities(workspace_id)")
+    db.execute("CREATE INDEX IF NOT EXISTS ix_rels_from ON relationships(from_entity)")
+    db.execute("CREATE INDEX IF NOT EXISTS ix_rels_to ON relationships(to_entity)")
+    db.commit()
+    return db
+
+
+def _extract_entities(text: str) -> list[str]:
+    """
+    Lightweight NER via regex noun-phrase extraction.
+    No external deps — spaCy not required.
+    Extracts capitalized multi-word phrases and quoted strings.
+    """
+    import re
+    # Capitalized words / multi-word proper nouns
+    caps = re.findall(r'\b([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*)\b', text)
+    # Quoted strings
+    quoted = re.findall(r'"([^"]{2,40})"', text)
+    # Filter stop words
+    stop = {"I", "The", "A", "An", "This", "That", "It", "He", "She",
+            "We", "You", "They", "Is", "Are", "Was", "Were", "Be",
+            "And", "Or", "But", "For", "With", "From", "To", "Of"}
+    return list({e.strip() for e in caps + quoted if e.strip() not in stop and len(e) > 1})
+
+
+def add_to_graph(text: str, workspace_id: str, source: str = "memory"):
+    """Extract entities from text and add to knowledge graph."""
+    import uuid
+    entities = _extract_entities(text)
+    if len(entities) < 2:
+        return
+    db = _open_kg()
+    ts = now_iso()
+    entity_ids = {}
+    for name in entities:
+        eid = f"{workspace_id}::{name.lower().replace(' ', '_')}"
+        entity_ids[name] = eid
+        db.execute("""
+            INSERT OR IGNORE INTO entities (entity_id, workspace_id, name, entity_type, created_at)
+            VALUES (?, ?, ?, 'concept', ?)
+        """, (eid, workspace_id, name, ts))
+
+    # Create co-occurrence relationships between entities in same sentence
+    import re
+    sentences = re.split(r'[.!?]\s', text)
+    for sent in sentences:
+        ents_in_sent = [n for n in entities if n.lower() in sent.lower()]
+        for i, a in enumerate(ents_in_sent):
+            for b in ents_in_sent[i+1:]:
+                rid = str(uuid.uuid4())[:16]
+                db.execute("""
+                    INSERT OR IGNORE INTO relationships
+                    (rel_id, workspace_id, from_entity, relation, to_entity, source_text, created_at)
+                    VALUES (?, ?, ?, 'co-occurs', ?, ?, ?)
+                """, (rid, workspace_id, entity_ids[a], entity_ids[b], sent[:200], ts))
+    db.commit()
+    db.close()
+
+
+def query_graph(entity_name: str, workspace_id: str, depth: int = 1) -> str:
+    """Return related entities from knowledge graph as text context."""
+    try:
+        db = _open_kg()
+        eid = f"{workspace_id}::{entity_name.lower().replace(' ', '_')}"
+        rows = db.execute("""
+            SELECT r.relation, e2.name, r.source_text
+            FROM relationships r
+            JOIN entities e2 ON e2.entity_id = r.to_entity
+            WHERE r.from_entity = ? AND r.workspace_id = ?
+            LIMIT 10
+        """, (eid, workspace_id)).fetchall()
+        db.close()
+        if not rows:
+            return ""
+        lines = [f"Knowledge graph context for '{entity_name}':"]
+        for rel, related, source in rows:
+            lines.append(f"  - {rel} → {related}  (from: {source[:60]})")
+        return "\n".join(lines)
+    except Exception:
+        return ""

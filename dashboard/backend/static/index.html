@@ -267,6 +267,18 @@ nav{flex:1;padding:8px 8px;overflow-y:auto}
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6" stroke-linecap="round"/><line x1="5" y1="9" x2="9" y2="9" stroke-linecap="round"/></svg>
       Audit Log
     </div>
+    <div class="nav-item" onclick="nav('tokens',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2" stroke-linecap="round"/></svg>
+      Token Usage
+    </div>
+    <div class="nav-item" onclick="nav('peers',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="8" r="2.5"/><circle cx="12" cy="8" r="2.5"/><line x1="6.5" y1="8" x2="9.5" y2="8" stroke-linecap="round"/></svg>
+      A2A Peers
+    </div>
+    <div class="nav-item" onclick="nav('learned',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l1.5 3 3.5.5-2.5 2.4.6 3.6L8 10l-3.1 1.5.6-3.6L3 5.5 6.5 5z"/></svg>
+      Learnings
+    </div>
   </nav>
   <a href="http://localhost:5180" target="_blank" id="nexus-link">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><polygon points="8,1 15,5.5 15,10.5 8,15 1,10.5 1,5.5"/></svg>
@@ -870,5 +882,162 @@ fetch('/api/tasks').then(function(r){return r.json();}).then(function(data){
   document.getElementById('s-completed').textContent=data.filter(function(t){return t.status==='completed';}).length;
 }).catch(function(){});
 </script>
+
+  <!-- Token Usage Page -->
+  <div id="page-tokens" class="page" style="display:none">
+    <div class="page-title">Token Usage</div>
+    <div class="page-subtitle">Per-workspace token consumption tracked by metricd</div>
+    <div id="token-content">
+      <div class="card" style="padding:24px;text-align:center;color:var(--text2)">Loading token data...</div>
+    </div>
+  </div>
+
+  <!-- A2A Peers Page -->
+  <div id="page-peers" class="page" style="display:none">
+    <div class="page-title">A2A Peers</div>
+    <div class="page-subtitle">ClawOS nodes discovered on your LAN via mDNS</div>
+    <div id="peers-content">
+      <div class="card" style="padding:24px;text-align:center;color:var(--text2)">Scanning for peers...</div>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn btn-primary" onclick="refreshPeers()">Refresh</button>
+      <div style="margin-top:12px;font-size:12px;color:var(--text2)">
+        Agent Card for this node: <a href="/.well-known/agent.json" target="_blank" style="color:var(--blue)">/.well-known/agent.json</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Learnings Page (LEARNED.md) -->
+  <div id="page-learned" class="page" style="display:none">
+    <div class="page-title">Learnings</div>
+    <div class="page-subtitle">Agent-extracted insights from completed tasks (LEARNED.md — ACE loop)</div>
+    <div id="learned-content">
+      <div class="card" style="padding:24px;text-align:center;color:var(--text2)">Loading learnings...</div>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text2)">
+      LEARNED.md is written by Nexus after each completed task. Clear with <code>clawctl workspace reset-learned</code>
+    </div>
+  </div>
+
+<script>
+// ── Token Usage ───────────────────────────────────────────────────────────────
+async function loadTokens(){
+  try {
+    const r = await fetch('/api/tokens');
+    const d = await r.json();
+    const workspaces = d.workspaces || [];
+    if(!workspaces.length){
+      document.getElementById('token-content').innerHTML =
+        '<div class="card" style="padding:24px;text-align:center;color:var(--text2)">No token usage recorded yet. Start chatting with Nexus.</div>';
+      return;
+    }
+    let html = '<div style="display:flex;flex-direction:column;gap:10px">';
+    workspaces.forEach(function(ws){
+      const pct = Math.min(100, Math.round((ws.tokens_today||0)/100000*100));
+      const color = pct > 80 ? 'var(--red)' : pct > 50 ? 'var(--orange)' : 'var(--green)';
+      html += '<div class="card" style="padding:16px">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+      html += '<span style="font-weight:500">'+ws.workspace_id+'</span>';
+      html += '<span style="color:'+color+';font-size:13px">'+((ws.tokens_today||0).toLocaleString())+' today</span>';
+      html += '</div>';
+      html += '<div style="background:var(--bg3);border-radius:4px;height:6px;overflow:hidden">';
+      html += '<div style="background:'+color+';width:'+pct+'%;height:100%;transition:width .3s"></div>';
+      html += '</div>';
+      html += '<div style="font-size:11px;color:var(--text2);margin-top:6px">';
+      html += 'This week: '+((ws.tokens_week||0).toLocaleString())+'  ·  Limit: 100,000/day';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    document.getElementById('token-content').innerHTML = html;
+  } catch(e) {
+    document.getElementById('token-content').innerHTML =
+      '<div class="card" style="padding:16px;color:var(--text2)">metricd unavailable. Start services: <code>clawctl start</code></div>';
+  }
+}
+
+// ── A2A Peers ────────────────────────────────────────────────────────────────
+async function refreshPeers(){
+  document.getElementById('peers-content').innerHTML =
+    '<div class="card" style="padding:24px;text-align:center;color:var(--text2)">Scanning...</div>';
+  try {
+    const r = await fetch('/api/peers');
+    const d = await r.json();
+    const peers = d.peers || [];
+    if(!peers.length){
+      document.getElementById('peers-content').innerHTML =
+        '<div class="card" style="padding:24px;text-align:center;color:var(--text2)">No peers discovered. Ensure other ClawOS nodes are running on this network with a2ad enabled.</div>';
+      return;
+    }
+    let html = '<div style="display:flex;flex-direction:column;gap:10px">';
+    peers.forEach(function(p){
+      html += '<div class="card" style="padding:16px;display:flex;align-items:center;justify-content:space-between">';
+      html += '<div>';
+      html += '<div style="font-weight:500">'+p.name+'</div>';
+      html += '<div style="font-size:12px;color:var(--text2)">'+p.url+'</div>';
+      html += '</div>';
+      html += '<button class="btn btn-primary" style="font-size:12px" onclick="delegateTask('+JSON.stringify(p.url)+')">Delegate</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+    document.getElementById('peers-content').innerHTML = html;
+  } catch(e) {
+    document.getElementById('peers-content').innerHTML =
+      '<div class="card" style="padding:16px;color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+
+function delegateTask(peerUrl){
+  const task = prompt('Task to delegate to '+peerUrl+':');
+  if(!task) return;
+  fetch('/api/delegate', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({peer_url: peerUrl, task: task})
+  }).then(r=>r.json()).then(d=>{
+    alert('Result: '+(d.result||d.error||JSON.stringify(d)));
+  }).catch(e=>alert('Error: '+e.message));
+}
+
+// ── Learnings (LEARNED.md) ────────────────────────────────────────────────────
+async function loadLearned(){
+  try {
+    const r = await fetch('/api/learned');
+    const d = await r.json();
+    const content = d.content || '';
+    if(!content.trim()){
+      document.getElementById('learned-content').innerHTML =
+        '<div class="card" style="padding:24px;text-align:center;color:var(--text2)">No learnings yet. Complete a few tasks and LEARNED.md will be populated automatically.</div>';
+      return;
+    }
+    const lines = content.split('\n').filter(l=>l.trim());
+    let html = '<div class="card" style="padding:20px">';
+    lines.forEach(function(line){
+      const isComment = line.trim().startsWith('<!--');
+      if(isComment){
+        html += '<div style="font-size:11px;color:var(--text2);margin:12px 0 4px">' + line.replace(/<!--\s*|\s*-->/g,'').trim() + '</div>';
+      } else if(line.trim()){
+        html += '<div style="padding:4px 0;border-bottom:1px solid var(--sep)">'+line.trim()+'</div>';
+      }
+    });
+    html += '</div>';
+    document.getElementById('learned-content').innerHTML = html;
+  } catch(e) {
+    document.getElementById('learned-content').innerHTML =
+      '<div class="card" style="padding:16px;color:var(--text2)">Could not load LEARNED.md</div>';
+  }
+}
+
+// Hook new pages into nav
+const _origNav = window._clawosNav || null;
+document.addEventListener('DOMContentLoaded', function(){
+  const origNav = window.nav;
+  window.nav = function(name, el){
+    origNav(name, el);
+    if(name === 'tokens') loadTokens();
+    if(name === 'peers')  refreshPeers();
+    if(name === 'learned') loadLearned();
+  };
+});
+</script>
+
 </body>
 </html>

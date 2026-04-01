@@ -65,3 +65,62 @@ def get_service() -> GatewayService:
     if _svc is None:
         _svc = GatewayService()
     return _svc
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# A2A client: delegate tasks to remote ClawOS peers
+# PicoClaw bridge: route Tier A inbound messages to picoclawd
+# ══════════════════════════════════════════════════════════════════════════════
+
+async def delegate_to_peer(peer_url: str, intent: str,
+                            workspace: str = "nexus_default") -> str:
+    """Send task to a remote ClawOS A2A node. Returns result text."""
+    import json
+    import urllib.request
+    from clawos_core.util.ids import task_id
+
+    payload = json.dumps({
+        "id": task_id(),
+        "message": {"parts": [{"type": "text", "text": intent}]},
+        "metadata": {"workspace": workspace},
+    }).encode()
+    try:
+        req = urllib.request.Request(
+            peer_url.rstrip("/") + "/tasks/send",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        from clawos_core.constants import A2A_BEARER_TOKEN_ENV
+        import os
+        token = os.environ.get(A2A_BEARER_TOKEN_ENV, "")
+        if token:
+            req.add_header("Authorization", f"Bearer {token}")
+
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+        artifacts = data.get("artifacts", [])
+        if artifacts:
+            parts = artifacts[0].get("parts", [])
+            if parts:
+                return parts[0].get("text", "[no response]")
+        return "[no result]"
+    except Exception as e:
+        return f"[A2A ERROR] {e}"
+
+
+def get_a2a_peers() -> list[dict]:
+    """Return list of discovered A2A peers on LAN."""
+    try:
+        from services.a2ad.discovery import get_peers
+        return get_peers()
+    except Exception:
+        return []
+
+
+def route_to_picoclaw(message: str, sender: str = "") -> str:
+    """Route message to PicoClaw on Tier A hardware."""
+    try:
+        from services.picoclawd.bridge import send
+        return send(message, sender)
+    except Exception as e:
+        return f"[PICOCLAW UNAVAILABLE] {e}"

@@ -127,7 +127,10 @@ def probe() -> HardwareProfile:
     gpu_name, vram = _gpu_info()
     has_mic, rate, dev = _audio_info()
 
-    if ram >= 32:
+    # Tier D: GPU VRAM >= 10GB (gaming/workstation with big GPU)
+    if vram >= 10.0:
+        tier = "D"
+    elif ram >= 30:
         tier = "C"
     elif ram >= 14:
         tier = "B"
@@ -163,3 +166,22 @@ def load_saved() -> HardwareProfile:
         d = json.loads(HARDWARE_JSON.read_text())
         return HardwareProfile(**d)
     return probe()
+
+
+def is_tier_d(hw: HardwareProfile = None) -> bool:
+    """Tier D: GPU VRAM >= 10GB."""
+    if hw is None:
+        hw = load_saved()
+    return hw.gpu_vram_gb >= 10.0
+
+
+def get_tier(hw: HardwareProfile = None) -> str:
+    if hw is None:
+        hw = load_saved()
+    if hw.gpu_vram_gb >= 10.0:
+        return "D"
+    if hw.ram_gb >= 30:
+        return "C"
+    if hw.ram_gb >= 14:
+        return "B"
+    return "A"

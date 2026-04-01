@@ -6,7 +6,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from clawos_core.util.ids import task_id, session_id, entry_id, req_id
 from clawos_core.util.time import now_iso
 
@@ -73,7 +73,7 @@ class Task:
     finished_at: Optional[str] = None
     result:      Optional[str] = None
     error:       Optional[str] = None
-    channel:     str        = "cli"     # cli | whatsapp | dashboard
+    channel:     str        = "cli"     # cli | whatsapp | dashboard | a2a
 
     def to_dict(self) -> dict:
         d = vars(self).copy()
@@ -88,7 +88,7 @@ class Session:
     session_id:   str        = field(default_factory=session_id)
     created_at:   str        = field(default_factory=now_iso)
     channel:      str        = "cli"
-    contact_id:   str        = ""   # WhatsApp JID or channel-specific ID
+    contact_id:   str        = ""
     history:      list       = field(default_factory=list)
     turn:         int        = 0
 
@@ -111,3 +111,87 @@ class ToolResult:
     output:     str
     decision:   str     = "ALLOW"
     duration_s: float   = 0.0
+
+
+# ── metricd: Token usage ──────────────────────────────────────────────────────
+@dataclass
+class TokenUsage:
+    """OTel GenAI span data for one LLM call or tool execution."""
+    span_type:      str        # "llm" | "tool"
+    model:          str        = ""
+    provider:       str        = "ollama"
+    input_tokens:   int        = 0
+    output_tokens:  int        = 0
+    latency_ms:     float      = 0.0
+    workspace_id:   str        = ""
+    task_id:        str        = ""
+    tool_name:      str        = ""
+    tool_target:    str        = ""
+    tool_decision:  str        = ""
+    tier:           str        = "C"
+    timestamp:      str        = field(default_factory=now_iso)
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+    def to_dict(self) -> dict:
+        return vars(self).copy()
+
+
+# ── A2A Protocol ──────────────────────────────────────────────────────────────
+@dataclass
+class AgentSkill:
+    name:        str
+    description: str
+
+
+@dataclass
+class AgentCard:
+    """Served at GET /.well-known/agent.json — A2A agent discovery."""
+    name:         str
+    description:  str
+    url:          str
+    version:      str        = "1.0"
+    skills:       List[AgentSkill] = field(default_factory=list)
+    tier:         str        = "C"
+    model:        str        = "qwen2.5:7b"
+    voice:        bool       = False
+    offline:      bool       = True
+    workspace_id: str        = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "url": self.url,
+            "version": self.version,
+            "authentication": {"schemes": ["Bearer"]},
+            "capabilities": {"streaming": True, "pushNotifications": False},
+            "skills": [{"name": s.name, "description": s.description} for s in self.skills],
+            "metadata": {
+                "tier": self.tier,
+                "model": self.model,
+                "voice": self.voice,
+                "offline": self.offline,
+                "workspace_id": self.workspace_id,
+            }
+        }
+
+
+@dataclass
+class A2ATask:
+    """Inbound task received via A2A protocol."""
+    task_id:     str        = field(default_factory=task_id)
+    intent:      str        = ""
+    workspace:   str        = "nexus_default"
+    sender_url:  str        = ""
+    auth_token:  str        = ""
+    status:      str        = "pending"
+    created_at:  str        = field(default_factory=now_iso)
+    result:      Optional[str] = None
+
+    def to_dict(self) -> dict:
+        d = vars(self).copy()
+        d.pop("auth_token", None)   # never serialize token
+        return d

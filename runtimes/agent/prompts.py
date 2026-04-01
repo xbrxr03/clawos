@@ -3,6 +3,16 @@ ClawOS agent prompts.
 SYSTEM_PROMPT is static — no dynamic fields (enables prompt cache hits).
 Dynamic info goes in build_user_message() injected into the user turn.
 Nanobot PR #1704 pattern: static system + dynamic user message.
+
+Memory injection order (per turn):
+  1. PINNED.md   — always, durable operator facts
+  2. WORKFLOW.md — if task in progress
+  3. LEARNED.md  — always, ACE self-improving loop learnings
+  4. ChromaDB    — semantic recall
+  5. FTS5        — keyword recall
+  6. RAG context — if document search result
+  7. Skills      — if applicable
+  8. Session header + user input
 """
 from clawos_core.util.time import now_stamp
 
@@ -39,10 +49,11 @@ RULES:
 def build_user_message(user_input: str, session_id: str, turn: int,
                        memory_context: str = "",
                        skills_block: str = "",
-                       rag_context: str = "") -> str:
+                       rag_context: str = "",
+                       learned_context: str = "") -> str:
     """
     Assemble the user message for this turn.
-    Order: memory context → RAG docs → skills → session header → user input.
+    Order: memory context → LEARNED.md → RAG docs → skills → session header → user input.
 
     All dynamic info lives here (not in the system prompt) so the
     system prompt stays static and benefits from prompt cache hits.
@@ -50,11 +61,19 @@ def build_user_message(user_input: str, session_id: str, turn: int,
     """
     header = f"[session:{session_id[:8]} turn:{turn} time:{now_stamp()}]\n"
     parts  = []
+
     if memory_context:
         parts.append(memory_context)
+
+    # Layer 3: LEARNED.md — ACE self-improving loop
+    if learned_context and learned_context.strip():
+        parts.append(f"<learnings>\n{learned_context.strip()}\n</learnings>")
+
     if rag_context:
         parts.append(rag_context)
+
     if skills_block:
         parts.append(skills_block)
+
     parts.append(header + user_input)
     return "\n\n".join(parts)

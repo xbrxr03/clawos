@@ -32,6 +32,18 @@ class AgentManager:
 
     async def _get_session(self, workspace_id: str):
         if workspace_id not in self._sessions:
+            # Tier D: check VRAM before starting new parallel session
+            try:
+                from services.modeld.service import get_vram_scheduler
+                sched = get_vram_scheduler()
+                ok, reason = sched.can_start(workspace_id)
+                if not ok:
+                    log.warning(f"VRAM guard blocked new session: {reason}")
+                    raise RuntimeError(f"VRAM limit: {reason}")
+                sched.register(workspace_id, "")
+            except ImportError:
+                pass
+
             from runtimes.agent.runtime import build_runtime
             self._sessions[workspace_id] = await build_runtime(workspace_id)
             log.info(f"New session for workspace: {workspace_id}")

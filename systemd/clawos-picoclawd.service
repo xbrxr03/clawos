@@ -1,0 +1,16 @@
+[Unit]
+Description=ClawOS picoclawd — PicoClaw edge runtime manager (Tier A ARM only)
+After=network.target ollama.service
+Wants=ollama.service
+ConditionHost=
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m services.picoclawd.main
+WorkingDirectory=%h/clawos
+Environment=PYTHONPATH=%h/clawos
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=clawos.target

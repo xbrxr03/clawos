@@ -142,9 +142,10 @@ class AgentRuntime:
         skills_block = self._get_skills_block(user_input)
 
         rag_ctx  = self._get_rag_context(user_input)
+        learned_ctx = self._get_learned_context()
         user_msg = build_user_message(
             user_input, self.session.session_id, self._turn,
-            mem_ctx, skills_block, rag_ctx
+            mem_ctx, skills_block, rag_ctx, learned_ctx
         )
 
         trimmed   = self._history[-(MAX_HISTORY * 2):]
@@ -213,6 +214,15 @@ class AgentRuntime:
         self.session  = Session(workspace_id=self.workspace_id)
         if self.memory:
             self.memory.clear_workflow(self.workspace_id)
+
+
+    async def _run_ace(self, task_result: str):
+        """ACE self-improving loop — extract learnings after task completion."""
+        try:
+            from services.memd.service import run_ace_loop
+            await run_ace_loop(task_result, self.workspace_id)
+        except Exception:
+            pass
 
 
 async def build_runtime(workspace_id: str = DEFAULT_WORKSPACE,
