@@ -292,9 +292,9 @@ if [ -t 0 ] && [ -t 1 ]; then
   echo ""
   echo -e "  ${D}  Press Ctrl+C to skip and use local models instead.${RESET}"
   echo ""
-  # `ollama run` triggers the correct device auth flow (not `ollama login`)
-  # and proves inference works before we continue
-  if echo "" | timeout 300 "$OLLAMA_BIN" run kimi-k2.5:cloud 2>&1; then
+  # `ollama launch` blocks and waits for device auth to complete.
+  # (piping to `ollama run` exits immediately with code 0 without auth)
+  if timeout 300 "$OLLAMA_BIN" launch openclaw --model kimi-k2.5:cloud 2>&1; then
     OLLAMA_LOGGED_IN=true
     ok "Kimi K2.5 authorized — device registered for cloud inference"
   else
