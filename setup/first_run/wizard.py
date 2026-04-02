@@ -18,6 +18,7 @@ SCREENS = [
     ("runtime_choice",   "setup.first_run.screens.runtime_choice"),
     ("api_keys",         "setup.first_run.screens.api_keys"),        # NEW
     ("workspace_setup",  "setup.first_run.screens.workspace_setup"),
+    ("user_profile",     "setup.first_run.screens.user_profile"),
     ("voice_setup",      "setup.first_run.screens.voice_setup"),
     ("model_setup",      "setup.first_run.screens.model_setup"),
     ("whatsapp_setup",   "setup.first_run.screens.whatsapp_setup"),

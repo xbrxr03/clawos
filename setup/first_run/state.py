@@ -50,6 +50,9 @@ class WizardState:
     # Policy
     policy_mode:    str   = "recommended"
 
+    # User profile (Phase 11 — capability discovery)
+    user_profile:   str   = ""   # developer|content_creator|researcher|business|general
+
     # Wizard progress
     completed:      bool  = False
     screens_done:   list  = field(default_factory=list)

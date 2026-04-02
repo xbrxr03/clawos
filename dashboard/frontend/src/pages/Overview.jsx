@@ -1,4 +1,89 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { StatCard, Card, Row, StatusDot, Badge, SectionLabel, Ts, Empty } from '../components/ui.jsx'
+
+const QUICK_ACTIONS = [
+  { id: 'organize-downloads', label: 'Organize Downloads', icon: '📁', color: 'var(--blue)'   },
+  { id: 'disk-report',        label: 'Disk Report',        icon: '💽', color: 'var(--green)'  },
+  { id: 'repo-summary',       label: 'Repo Summary',       icon: '🔧', color: 'var(--purple)' },
+  { id: 'daily-digest',       label: 'Daily Digest',       icon: '📰', color: 'var(--orange)' },
+]
+
+function QuickActions() {
+  const [running, setRunning] = useState(null)
+  const [result,  setResult]  = useState(null)
+  const navigate = useNavigate()
+
+  async function fire(id) {
+    setRunning(id)
+    setResult(null)
+    try {
+      const r = await fetch(`/api/workflows/${id}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: {}, workspace: 'nexus_default' }),
+      })
+      const data = await r.json()
+      setResult({ id, ok: data.status !== 'failed', msg: (data.output || data.error || '').slice(0, 120) })
+    } catch (e) {
+      setResult({ id, ok: false, msg: e.message })
+    }
+    setRunning(null)
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 20px' }}>
+        {QUICK_ACTIONS.map(({ id, label, icon, color }) => (
+          <button
+            key={id}
+            disabled={running !== null}
+            onClick={() => fire(id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 14px', borderRadius: 10, cursor: running ? 'not-allowed' : 'pointer',
+              border: '1px solid var(--border)',
+              background: running === id ? 'var(--surface-2)' : 'var(--surface)',
+              opacity: running !== null && running !== id ? 0.5 : 1,
+              transition: 'all 0.15s', textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: 18, lineHeight: 1 }}>{icon}</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)' }}>{label}</div>
+              <div style={{ fontSize: 10, color: color, marginTop: 2 }}>
+                {running === id ? 'running…' : 'one-click'}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+      {result && (
+        <div style={{ padding: '8px 20px 0' }}>
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, fontSize: 12,
+            background: result.ok ? 'rgba(52,211,153,0.08)' : 'rgba(248,113,113,0.08)',
+            border: `1px solid ${result.ok ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
+            color: result.ok ? 'var(--green)' : 'var(--red)',
+          }}>
+            {result.msg || (result.ok ? 'Done' : 'Failed')}
+          </div>
+        </div>
+      )}
+      <div style={{ padding: '8px 20px 0' }}>
+        <button
+          onClick={() => navigate('/workflows')}
+          style={{
+            fontSize: 12, color: 'var(--blue)', background: 'none',
+            border: 'none', cursor: 'pointer', padding: 0,
+          }}
+        >
+          Browse all workflows →
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export function Overview({ services, tasks, approvals, events, models, runtimes = {} }) {
   const counts = {
@@ -20,6 +105,10 @@ export function Overview({ services, tasks, approvals, events, models, runtimes 
           Agent runtime · {upCount}/{svcEntries.length} services up
         </div>
       </div>
+
+      {/* Quick Actions */}
+      <SectionLabel>Quick Actions</SectionLabel>
+      <QuickActions />
 
       {/* Task counts */}
       <SectionLabel>Tasks</SectionLabel>
