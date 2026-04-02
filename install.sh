@@ -98,6 +98,21 @@ echo ""
 divider
 echo ""
 
+# ── Ollama account prompt (required for Kimi K2.5) ───────────────────────────
+if [ -t 0 ] && [ -t 1 ]; then
+  echo -e "  ${W}${BOLD}Before we begin — Ollama account required${RESET}"
+  echo ""
+  echo -e "  ClawOS comes with ${B}Kimi K2.5${RESET} — a free cloud AI model."
+  echo -e "  You need a free Ollama account to use it."
+  echo ""
+  echo -e "  ${B}  → https://ollama.com/signup${RESET}"
+  echo ""
+  echo -e "  Sign up (or log in) in your browser, then come back here."
+  echo -e "  ${D}  Press Enter when ready, or Ctrl+C to cancel.${RESET}"
+  echo ""
+  read -r _OLLAMA_READY
+fi
+
 # ── Config ────────────────────────────────────────────────────────────────────
 CLAWOS_REPO="${CLAWOS_REPO:-https://github.com/xbrxr03/clawos}"
 INSTALL_DIR="${CLAWOS_DIR:-$HOME/clawos}"
@@ -593,9 +608,18 @@ Environment=HOME=${HOME}
 WantedBy=default.target
 EOF
 
+  # Kill any background ollama started with nohup so systemd can own the port cleanly
+  pkill -f "ollama serve" >/dev/null 2>&1 || true
+  sleep 1
+
   systemctl --user daemon-reload
   systemctl --user enable ollama.service >/dev/null 2>&1 || true
   systemctl --user restart ollama.service >/dev/null 2>&1 || true
+  # Wait for ollama to be ready before continuing
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 1
+    curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
+  done
   ok "Ollama starts on boot"
 
   bash "${INSTALL_DIR}/scripts/setup-systemd.sh" >/dev/null 2>&1 && ok "ClawOS starts on boot" || warn "ClawOS autostart setup failed"
@@ -714,6 +738,17 @@ else
 fi
 echo -e "  ${D}  GitHub:                  ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
 echo ""
+
+# ── Ensure ollama + gateway are fresh before TUI launch ──────────────────────
+if [ "$OLLAMA_LOGGED_IN" = "true" ] && systemd_user_ready; then
+  systemctl --user restart ollama.service >/dev/null 2>&1 || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 1
+    curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
+  done
+  systemctl --user restart openclaw-gateway.service >/dev/null 2>&1 || true
+  sleep 3
+fi
 
 # ── Launch OpenClaw TUI (Kimi K2.5 first response) ───────────────────────────
 if [ -t 0 ] && [ -t 1 ] && [ "$OPENCLAW_OK" = "true" ] && [ "$OLLAMA_LOGGED_IN" = "true" ]; then
