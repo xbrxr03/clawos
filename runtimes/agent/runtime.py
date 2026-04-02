@@ -103,6 +103,14 @@ class AgentRuntime:
         top = self._skills.top(user_input)
         return format_skills_block(top)
 
+    def _get_learned_context(self) -> str:
+        """Read LEARNED.md from the workspace — written by the ACE self-improving loop."""
+        try:
+            from services.memd.service import get_learned
+            return get_learned(self.workspace_id)
+        except Exception:
+            return ""
+
     def _get_rag_context(self, user_input: str) -> str:
         """
         Query the workspace RAG index for relevant document chunks.

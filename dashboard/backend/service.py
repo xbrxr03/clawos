@@ -582,6 +582,54 @@ async def api_learned():
     except Exception as e:
         return {"content": "", "error": str(e)}
 
+# ── Workflows API ────────────────────────────────────────────────────────────
+@app.get("/api/workflows/list")
+async def api_workflows_list(category: str = None, search: str = None):
+    try:
+        from workflows.engine import get_engine
+        eng = get_engine()
+        eng.load_registry()
+        wfs = eng.list_workflows(category=category, search=search)
+        return [
+            {
+                "id":          m.id,
+                "name":        m.name,
+                "category":    m.category,
+                "description": m.description,
+                "tags":        m.tags,
+                "requires":    m.requires,
+                "destructive": m.destructive,
+                "timeout_s":   m.timeout_s,
+            }
+            for m in wfs
+        ]
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/api/workflows/{workflow_id}/run")
+async def api_workflow_run(workflow_id: str, body: dict = None):
+    try:
+        from workflows.engine import get_engine
+        eng          = get_engine()
+        body         = body or {}
+        wf_args      = body.get("args", {})
+        workspace_id = body.get("workspace_id", "nexus_default")
+        result = await eng.run(workflow_id, wf_args, workspace_id=workspace_id)
+        return {
+            "status":   result.status,
+            "output":   result.output,
+            "error":    result.error,
+            "metadata": result.metadata,
+        }
+    except KeyError:
+        from fastapi import HTTPException
+        raise HTTPException(404, f"Workflow not found: {workflow_id}")
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(500, str(e))
+
+
 # ── A2A Agent Card (serve from dashd too for convenience) ────────────────────
 @app.get("/.well-known/agent.json")
 async def agent_card():

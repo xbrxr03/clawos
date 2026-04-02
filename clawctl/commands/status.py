@@ -58,28 +58,35 @@ def run():
 
     print()
 
-    # ClawOS services
-    use_systemd = shutil.which("systemctl") is not None
-    for svc in ["policyd","memd","modeld","agentd","toolbridge","voiced","clawd","dashd","gatewayd"]:
-        if use_systemd:
-            st = _systemd(svc)
-            icon = _ok if st == "active" else (_warn if st == "inactive" else _fail)
-            print("  " + icon(f"{PURPLE}{svc:<12}{RESET} {st}"))
+    # ClawOS daemon — all core services run in-process inside clawos.service
+    daemon_active = False
+    try:
+        r = subprocess.run(
+            ["systemctl", "--user", "is-active", "clawos.service"],
+            capture_output=True, text=True, timeout=3
+        )
+        daemon_active = r.stdout.strip() == "active"
+    except Exception:
+        pass
+
+    dash_ok = _http_ok("http://localhost:7070/health") or _http_ok("http://localhost:7070/api/health")
+
+    if daemon_active:
+        print("  " + _ok(f"{PURPLE}clawos.service{RESET}  active"))
+    else:
+        print("  " + _warn(f"{PURPLE}clawos.service{RESET}  inactive  {_dim('clawctl start')}"))
+
+    # Individual in-process services — show running if daemon is up
+    in_process = ["policyd", "memd", "modeld", "agentd", "toolbridge", "voiced", "clawd"]
+    for svc in in_process:
+        if daemon_active:
+            print("  " + _ok(f"{PURPLE}{svc:<12}{RESET} running {_dim('(in-process)')}"))
         else:
-            # Dev mode — check by port
-            port_map = {"dashd": 7070, "agentd": 7072, "clawd": 7071}
-            p = port_map.get(svc)
-            if p:
-                up = _http_ok(f"http://localhost:{p}/api/health")
-                icon = _ok if up else _fail
-                print("  " + icon(f"{PURPLE}{svc:<12}{RESET} {'running' if up else 'not running'}"))
-            else:
-                print(f"  {_dim('·')}  {PURPLE}{svc:<12}{RESET} {_dim('(systemd not available)')}")
+            print("  " + _warn(f"{PURPLE}{svc:<12}{RESET} inactive"))
 
     print()
 
     # Dashboard
-    dash_ok = _http_ok("http://localhost:7070/api/health")
     print("  " + (_ok(f"dashboard    {_dim('http://localhost:7070')}")
                   if dash_ok else _dim("·  dashboard    not running")))
 
