@@ -277,6 +277,50 @@ def cmd_setup():
     subprocess.run([sys.executable, str(wizard), "--reset"])
 
 
+# ── use-kimi ──────────────────────────────────────────────────────────────────
+def cmd_use_kimi():
+    """Log in to Ollama, pull kimi-k2.5, and reconfigure OpenClaw to use it."""
+    import subprocess, json
+    from pathlib import Path
+
+    print(f"\n  {_p(CYAN, '◆')}  Switching OpenClaw to Kimi K2.5\n")
+
+    # Step 1: ollama login
+    print(f"  {_d('·')} Signing in to Ollama (a browser link will appear)...\n")
+    result = subprocess.run(["ollama", "login"])
+    if result.returncode != 0:
+        print(f"\n  {_p(RED, '✗')}  Ollama login failed or was cancelled.\n")
+        return
+
+    # Step 2: pull kimi-k2.5
+    print(f"\n  {_p(GREEN, '✓')}  Signed in.\n")
+    print(f"  {_d('·')} Registering kimi-k2.5...\n")
+    result = subprocess.run(["ollama", "pull", "kimi-k2.5"])
+    if result.returncode != 0:
+        print(f"\n  {_p(RED, '✗')}  Could not pull kimi-k2.5. Check your Ollama account.\n")
+        return
+
+    # Step 3: update ~/.openclaw/openclaw.json
+    config_path = Path.home() / ".openclaw" / "openclaw.json"
+    try:
+        cfg = json.loads(config_path.read_text())
+        providers = cfg.setdefault("models", {}).setdefault("providers", {})
+        ollama_models = providers.setdefault("ollama", {}).setdefault("models", [])
+        # Insert kimi-k2.5 at the front if not already present
+        ids = [m["id"] for m in ollama_models]
+        if "kimi-k2.5" not in ids:
+            ollama_models.insert(0, {"id": "kimi-k2.5", "name": "kimi-k2.5", "contextWindow": 131072})
+        # Set as primary
+        cfg.setdefault("agents", {}).setdefault("defaults", {}).setdefault("model", {})["primary"] = "ollama/kimi-k2.5"
+        config_path.write_text(json.dumps(cfg, indent=2))
+        print(f"\n  {_p(GREEN, '✓')}  OpenClaw reconfigured → kimi-k2.5")
+    except Exception as e:
+        print(f"\n  {_p(RED, '✗')}  Could not update openclaw.json: {e}\n")
+        return
+
+    print(f"\n  {_p(GREEN, '✓')}  Done. Launch with:  {_p(CYAN, 'openclaw tui')}\n")
+
+
 # ── scan ──────────────────────────────────────────────────────────────────────
 def cmd_scan(text: str):
     """Run the prompt injection scanner on a piece of text."""
@@ -900,6 +944,9 @@ def main(argv: list = None):
 
     elif first == "setup":
         cmd_setup()
+
+    elif first == "use-kimi":
+        cmd_use_kimi()
 
     elif first == "scan":
         text = " ".join(argv[1:])
