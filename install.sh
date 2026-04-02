@@ -442,10 +442,10 @@ if [ "$OLLAMA_LOGGED_IN" = "true" ]; then
   step "Registering Kimi K2.5"
   info "Kimi K2.5 streams from Ollama's cloud — no large local download."
   echo ""
-  if "$OLLAMA_BIN" pull kimi-k2.5 2>&1 | while IFS= read -r line; do
+  if "$OLLAMA_BIN" pull kimi-k2.5:cloud 2>&1 | while IFS= read -r line; do
     printf "    ${D}%s${RESET}\n" "$line"
   done; then
-    OPENCLAW_MODEL="kimi-k2.5"
+    OPENCLAW_MODEL="kimi-k2.5:cloud"
     ok "Kimi K2.5 ready — OpenClaw will use it as its model"
   else
     warn "Could not register Kimi K2.5 — OpenClaw will use local model ($MODEL)"
@@ -471,7 +471,7 @@ if [ "$OPENCLAW_OK" = "true" ]; then
           {
             "id": "$OPENCLAW_MODEL",
             "name": "$OPENCLAW_MODEL",
-            "contextWindow": 131072
+            "contextWindow": 262144
           },
           {
             "id": "$MODEL",
