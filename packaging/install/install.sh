@@ -1,6 +1,6 @@
 #!/bin/bash
 # ClawOS — one-command installer
-# curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 set -uo pipefail
 
 # ── Colours ───────────────────────────────────────────────────────────────────
