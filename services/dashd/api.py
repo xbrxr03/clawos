@@ -166,6 +166,69 @@ def create_app() -> "FastAPI":
         from services.modeld.ollama_client import list_models, is_running
         return {"running": is_running(), "models": list_models()}
 
+    # ── Workflow endpoints (Phase 11) ─────────────────────────────────────────
+
+    @app.get("/api/workflows/list")
+    async def list_workflows(category: str = None, search: str = None):
+        try:
+            from workflows.engine import get_engine
+            eng = get_engine()
+            eng.load_registry()
+            wfs = eng.list_workflows(category=category, search=search)
+            return [
+                {
+                    "id":          w.id,
+                    "name":        w.name,
+                    "category":    w.category,
+                    "description": w.description,
+                    "tags":        w.tags,
+                    "requires":    w.requires,
+                    "destructive": w.destructive,
+                    "timeout_s":   w.timeout_s,
+                }
+                for w in wfs
+            ]
+        except Exception as e:
+            raise HTTPException(500, str(e))
+
+    @app.post("/api/workflows/{workflow_id}/run")
+    async def run_workflow(workflow_id: str, body: dict = None):
+        wf_args      = (body or {}).get("args", {})
+        workspace_id = (body or {}).get("workspace", "nexus_default")
+        try:
+            from workflows.engine import get_engine
+            eng = get_engine()
+            eng.load_registry()
+            await mgr.broadcast({
+                "type": "workflow_progress",
+                "data": {"id": workflow_id, "status": "running"},
+            })
+            result = await eng.run(workflow_id, wf_args, workspace_id=workspace_id)
+            await mgr.broadcast({
+                "type": "workflow_progress",
+                "data": {
+                    "id":     workflow_id,
+                    "status": result.status.value,
+                    "output": result.output[:500] if result.output else "",
+                },
+            })
+            return {
+                "status":   result.status.value,
+                "output":   result.output,
+                "metadata": result.metadata,
+                "error":    result.error,
+            }
+        except KeyError:
+            raise HTTPException(404, f"Workflow not found: {workflow_id}")
+        except Exception as e:
+            await mgr.broadcast({
+                "type": "workflow_error",
+                "data": {"id": workflow_id, "error": str(e)},
+            })
+            raise HTTPException(500, str(e))
+
+    # ── WebSocket ─────────────────────────────────────────────────────────────
+
     @app.websocket("/ws")
     async def ws_endpoint(websocket: WebSocket):
         await mgr.connect(websocket)

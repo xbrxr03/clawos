@@ -84,10 +84,6 @@ def run(state) -> bool:
             import shutil
             if shutil.which("openclaw"):
                 print("  Starting OpenClaw...")
-                subprocess.run(["openclaw", "gateway", "stop"], capture_output=True)
-                # Kill any leftover gateway processes
-                subprocess.run(["pkill", "-f", "openclaw-gateway"], capture_output=True)
-                import time as _t; _t.sleep(2)
                 print()
                 print("  Tips:")
                 print("    • Connect WhatsApp:  openclaw configure --section channels")

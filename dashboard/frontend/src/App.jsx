@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar.jsx'
 import { Overview } from './pages/Overview.jsx'
 import { Tasks, Approvals, Models, Memory, Audit } from './pages/pages.jsx'
+import { Workflows } from './pages/Workflows.jsx'
 import { useClawOS } from './hooks/useClawOS.js'
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
               <Route path="/tasks"     element={<Tasks tasks={tasks} />} />
               <Route path="/approvals" element={<Approvals approvals={approvals} />} />
               <Route path="/models"    element={<Models models={models} pullProgress={pullProgress} />} />
+              <Route path="/workflows"  element={<Workflows />} />
               <Route path="/memory"    element={<Memory />} />
               <Route path="/audit"     element={<Audit events={events} />} />
             </Routes>

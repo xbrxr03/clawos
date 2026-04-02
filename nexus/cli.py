@@ -33,7 +33,7 @@ if str(_ROOT) not in sys.path:
 RESERVED = {
     "status", "logs", "audit", "memory", "workspace", "model",
     "policy", "approve", "deny", "setup", "scan",
-    "secret", "project", "command", "plan",
+    "secret", "project", "command", "plan", "workflow",
     # aliases
     "ws", "mod",
 }
@@ -748,6 +748,106 @@ def cmd_project(args: list):
         print(f"\n  Unknown subcommand: {sub}\n")
 
 
+async def cmd_workflow(args: list):
+    """nexus workflow [list|run|info|suggest] [...options]"""
+    sub = args[0].lower() if args else "list"
+
+    if sub == "list":
+        category = None
+        search   = None
+        i = 1
+        while i < len(args):
+            if args[i] in ("--category", "-c") and i + 1 < len(args):
+                category = args[i + 1]; i += 2
+            elif args[i] in ("--search", "-s") and i + 1 < len(args):
+                search = args[i + 1]; i += 2
+            else:
+                i += 1
+        from workflows.engine import get_engine
+        eng = get_engine()
+        eng.load_registry()
+        workflows = eng.list_workflows(category=category, search=search)
+        if not workflows:
+            print("\n  No workflows found.\n")
+            return
+        current_cat = None
+        print()
+        for meta in workflows:
+            if meta.category != current_cat:
+                current_cat = meta.category
+                print(f"  {_p(CYAN, meta.category.upper())}")
+            tag = f"  {_p(AMBER, '[destructive]')}" if meta.destructive else ""
+            print(f"    {_p(GREEN, meta.id):<40}  {meta.description}{tag}")
+        print(f"\n  {len(workflows)} workflows. Run: nexus workflow run <id>\n")
+
+    elif sub == "run":
+        if len(args) < 2:
+            print("\n  Usage: nexus workflow run <id> [key=value ...]\n")
+            return
+        workflow_id = args[1]
+        wf_args = {}
+        for a in args[2:]:
+            if "=" in a:
+                k, v = a.split("=", 1)
+                wf_args[k.strip()] = v.strip()
+        from workflows.engine import get_engine
+        eng = get_engine()
+        eng.load_registry()
+        if workflow_id not in eng._registry:
+            print(f"\n  Unknown workflow: {workflow_id}")
+            print("  Run 'nexus workflow list' to see available workflows.\n")
+            return
+        meta = eng._registry[workflow_id].META
+        print(f"\n  Running: {meta.name}")
+        print(f"  {meta.description}")
+        print()
+        result = await eng.run(workflow_id, wf_args)
+        if result.output:
+            print(result.output)
+        if result.error:
+            print(f"\n  {_p(AMBER, 'Error:')} {result.error}")
+        ok_color = GREEN if result.status.value == "ok" else AMBER
+        print(f"\n  Status: {_p(ok_color, result.status.value)}\n")
+
+    elif sub == "info":
+        if len(args) < 2:
+            print("\n  Usage: nexus workflow info <id>\n")
+            return
+        workflow_id = args[1]
+        from workflows.engine import get_engine
+        eng = get_engine()
+        eng.load_registry()
+        if workflow_id not in eng._registry:
+            print(f"\n  Unknown workflow: {workflow_id}\n")
+            return
+        meta = eng._registry[workflow_id].META
+        print(f"\n  {_p(CYAN, meta.name)}")
+        print(f"  ID:          {meta.id}")
+        print(f"  Category:    {meta.category}")
+        print(f"  Description: {meta.description}")
+        print(f"  Tags:        {', '.join(meta.tags) or 'none'}")
+        print(f"  Requires:    {', '.join(meta.requires) or 'none'}")
+        print(f"  Destructive: {'yes' if meta.destructive else 'no'}")
+        print(f"  Timeout:     {meta.timeout_s}s")
+        print(f"\n  Run: nexus workflow run {meta.id}\n")
+
+    elif sub == "suggest":
+        user_profile = args[1] if len(args) > 1 else ""
+        from workflows.discovery import CapabilityScanner
+        print("\n  Scanning your machine...")
+        scanner     = CapabilityScanner()
+        profile     = scanner.scan()
+        suggestions = scanner.suggest(profile, user_profile)
+        top = suggestions[:5]
+        print(f"\n  {_p(CYAN, 'Try these first:')}\n")
+        for s in top:
+            print(f"  {_p(GREEN, s.workflow_id):<40}  {s.reason}  ({s.relevance:.0%})")
+        print(f"\n  Run: nexus workflow run <id>\n")
+
+    else:
+        print(f"\n  Usage: nexus workflow [list|run|info|suggest]\n")
+
+
 def main(argv: list = None):
     if argv is None:
         argv = sys.argv[1:]
@@ -827,6 +927,10 @@ def main(argv: list = None):
 
     elif first == "project":
         cmd_project(argv[1:])
+
+    elif first == "workflow":
+        import asyncio
+        asyncio.run(cmd_workflow(argv[1:]))
 
     else:
         # Everything else → natural language shell request

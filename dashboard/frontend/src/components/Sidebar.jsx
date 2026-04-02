@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom'
 
 const NAV = [
-  { to: '/',          label: 'Overview',  icon: <IconOverview /> },
-  { to: '/tasks',     label: 'Tasks',     icon: <IconTasks />    },
-  { to: '/approvals', label: 'Approvals', icon: <IconShield />   },
-  { to: '/models',    label: 'Models',    icon: <IconCpu />      },
-  { to: '/memory',    label: 'Memory',    icon: <IconDb />       },
-  { to: '/audit',     label: 'Audit Log', icon: <IconLog />      },
+  { to: '/',           label: 'Overview',   icon: <IconOverview />   },
+  { to: '/tasks',      label: 'Tasks',      icon: <IconTasks />      },
+  { to: '/approvals',  label: 'Approvals',  icon: <IconShield />     },
+  { to: '/workflows',  label: 'Workflows',  icon: <IconWorkflows />  },
+  { to: '/models',     label: 'Models',     icon: <IconCpu />        },
+  { to: '/memory',     label: 'Memory',     icon: <IconDb />         },
+  { to: '/audit',      label: 'Audit Log',  icon: <IconLog />        },
 ]
 
 export function Sidebar({ connected, services, approvalCount }) {
@@ -171,5 +172,14 @@ function IconLog() {
   return <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
     <rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
     <path d="M5 5h5M5 7.5h5M5 10h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+  </svg>
+}
+function IconWorkflows() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+    <path d="M2 4.5h4M2 10.5h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    <circle cx="8.5" cy="4.5" r="2" stroke="currentColor" strokeWidth="1.2"/>
+    <circle cx="8.5" cy="10.5" r="2" stroke="currentColor" strokeWidth="1.2"/>
+    <path d="M10.5 4.5h2.5M10.5 10.5h2.5M6 4.5H4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    <path d="M8.5 6.5v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
   </svg>
 }
