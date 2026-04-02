@@ -255,6 +255,23 @@ fi
 OLLAMA_BIN="$(command -v ollama || true)"
 [ -n "$OLLAMA_BIN" ] || die "Ollama install finished but binary was not found in PATH"
 
+# ── Ollama login (required for cloud models like Kimi K2.5) ──────────────────
+OLLAMA_LOGGED_IN=false
+if [ -t 0 ] && [ -t 1 ]; then
+  step "Sign in to Ollama"
+  echo ""
+  echo -e "  ${W}${BOLD}Kimi K2.5 runs on Ollama's cloud — sign in to unlock it.${RESET}"
+  echo -e "  ${D}A link will appear below. Open it, create a free account, then${RESET}"
+  echo -e "  ${D}return here. Press Ctrl+C at any time to skip and use local models.${RESET}"
+  echo ""
+  if "$OLLAMA_BIN" login 2>&1; then
+    OLLAMA_LOGGED_IN=true
+    ok "Signed in to Ollama"
+  else
+    warn "Ollama login skipped — OpenClaw will use local model instead"
+  fi
+fi
+
 if ! curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
   nohup "$OLLAMA_BIN" serve >/dev/null 2>&1 &
   for _ in 1 2 3 4 5 6 7 8 9 10; do
@@ -419,6 +436,22 @@ else
   fi
 fi
 
+# ── Pull Kimi K2.5 (cloud model via Ollama) ──────────────────────────────────
+OPENCLAW_MODEL="$MODEL"   # default: local model
+if [ "$OLLAMA_LOGGED_IN" = "true" ]; then
+  step "Registering Kimi K2.5"
+  info "Kimi K2.5 streams from Ollama's cloud — no large local download."
+  echo ""
+  if "$OLLAMA_BIN" pull kimi-k2.5 2>&1 | while IFS= read -r line; do
+    printf "    ${D}%s${RESET}\n" "$line"
+  done; then
+    OPENCLAW_MODEL="kimi-k2.5"
+    ok "Kimi K2.5 ready — OpenClaw will use it as its model"
+  else
+    warn "Could not register Kimi K2.5 — OpenClaw will use local model ($MODEL)"
+  fi
+fi
+
 # ── Configure OpenClaw ────────────────────────────────────────────────────────
 step "Configuring OpenClaw"
 
@@ -436,8 +469,13 @@ if [ "$OPENCLAW_OK" = "true" ]; then
         "baseUrl": "http://127.0.0.1:11434",
         "models": [
           {
+            "id": "$OPENCLAW_MODEL",
+            "name": "$OPENCLAW_MODEL",
+            "contextWindow": 131072
+          },
+          {
             "id": "$MODEL",
-            "name": "$MODEL",
+            "name": "$MODEL (local fallback)",
             "contextWindow": 32768
           },
           {
@@ -452,7 +490,7 @@ if [ "$OPENCLAW_OK" = "true" ]; then
   "agents": {
     "defaults": {
       "model": {
-        "primary": "ollama/$MODEL"
+        "primary": "ollama/$OPENCLAW_MODEL"
       },
       "memorySearch": {
         "enabled": false
@@ -462,7 +500,7 @@ if [ "$OPENCLAW_OK" = "true" ]; then
 }
 EOF
 
-  ok "OpenClaw configured — offline · $MODEL"
+  ok "OpenClaw configured — model: $OPENCLAW_MODEL"
   ok "OpenClaw config permissions tightened"
   ok "OpenClaw session store ready"
 else
@@ -649,7 +687,7 @@ echo ""
 
 if [ "$OPENCLAW_OK" = "true" ]; then
   echo -e "  ${B}  openclaw tui${RESET}"
-  echo -e "  ${D}  OpenClaw TUI · gateway local:${OPENCLAW_GATEWAY_PORT} · model ${MODEL}${RESET}"
+  echo -e "  ${D}  OpenClaw TUI · gateway local:${OPENCLAW_GATEWAY_PORT} · model ${OPENCLAW_MODEL}${RESET}"
   echo ""
   echo -e "  ${B}  openclaw configure --section channels${RESET}"
   echo -e "  ${D}  Connect WhatsApp or other channels${RESET}"
@@ -673,3 +711,14 @@ else
 fi
 echo -e "  ${D}  GitHub:                  ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
 echo ""
+
+# ── Launch OpenClaw TUI (Kimi K2.5 first response) ───────────────────────────
+if [ -t 0 ] && [ -t 1 ] && [ "$OPENCLAW_OK" = "true" ] && [ "$OLLAMA_LOGGED_IN" = "true" ]; then
+  divider
+  echo ""
+  echo -e "  ${G}${BOLD}Launching OpenClaw · Kimi K2.5${RESET}"
+  echo -e "  ${D}Your AI is ready. Type anything to start.${RESET}"
+  echo ""
+  sleep 1
+  openclaw tui
+fi
