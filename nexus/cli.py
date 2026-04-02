@@ -295,9 +295,9 @@ def cmd_use_kimi():
     # Step 2: pull kimi-k2.5
     print(f"\n  {_p(GREEN, '✓')}  Signed in.\n")
     print(f"  {_d('·')} Registering kimi-k2.5...\n")
-    result = subprocess.run(["ollama", "pull", "kimi-k2.5"])
+    result = subprocess.run(["ollama", "pull", "kimi-k2.5:cloud"])
     if result.returncode != 0:
-        print(f"\n  {_p(RED, '✗')}  Could not pull kimi-k2.5. Check your Ollama account.\n")
+        print(f"\n  {_p(RED, '✗')}  Could not pull kimi-k2.5:cloud. Check your Ollama account.\n")
         return
 
     # Step 3: update ~/.openclaw/openclaw.json
@@ -306,12 +306,12 @@ def cmd_use_kimi():
         cfg = json.loads(config_path.read_text())
         providers = cfg.setdefault("models", {}).setdefault("providers", {})
         ollama_models = providers.setdefault("ollama", {}).setdefault("models", [])
-        # Insert kimi-k2.5 at the front if not already present
+        # Insert kimi-k2.5:cloud at the front if not already present
         ids = [m["id"] for m in ollama_models]
-        if "kimi-k2.5" not in ids:
-            ollama_models.insert(0, {"id": "kimi-k2.5", "name": "kimi-k2.5", "contextWindow": 131072})
+        if "kimi-k2.5:cloud" not in ids:
+            ollama_models.insert(0, {"id": "kimi-k2.5:cloud", "name": "kimi-k2.5:cloud", "contextWindow": 262144})
         # Set as primary
-        cfg.setdefault("agents", {}).setdefault("defaults", {}).setdefault("model", {})["primary"] = "ollama/kimi-k2.5"
+        cfg.setdefault("agents", {}).setdefault("defaults", {}).setdefault("model", {})["primary"] = "ollama/kimi-k2.5:cloud"
         config_path.write_text(json.dumps(cfg, indent=2))
         print(f"\n  {_p(GREEN, '✓')}  OpenClaw reconfigured → kimi-k2.5")
     except Exception as e:
