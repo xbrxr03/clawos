@@ -98,21 +98,6 @@ echo ""
 divider
 echo ""
 
-# ── Ollama account prompt (required for Kimi K2.5) ───────────────────────────
-if [ -t 0 ] && [ -t 1 ]; then
-  echo -e "  ${W}${BOLD}Before we begin — Ollama account required${RESET}"
-  echo ""
-  echo -e "  ClawOS comes with ${B}Kimi K2.5${RESET} — a free cloud AI model."
-  echo -e "  You need a free Ollama account to use it."
-  echo ""
-  echo -e "  ${B}  → https://ollama.com/signup${RESET}"
-  echo ""
-  echo -e "  Sign up (or log in) in your browser, then come back here."
-  echo -e "  ${D}  Press Enter when ready, or Ctrl+C to cancel.${RESET}"
-  echo ""
-  read -r _OLLAMA_READY
-fi
-
 # ── Config ────────────────────────────────────────────────────────────────────
 CLAWOS_REPO="${CLAWOS_REPO:-https://github.com/xbrxr03/clawos}"
 INSTALL_DIR="${CLAWOS_DIR:-$HOME/clawos}"
@@ -279,29 +264,6 @@ if ! curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
   done
 fi
 
-# ── Authorize device for Kimi K2.5 cloud inference ───────────────────────────
-OLLAMA_LOGGED_IN=false
-if [ -t 0 ] && [ -t 1 ]; then
-  step "Sign in to Ollama for Kimi K2.5"
-  echo ""
-  echo -e "  ${W}${BOLD}Authorizing this device for Kimi K2.5 cloud inference.${RESET}"
-  echo -e "  ${D}A sign-in URL will appear below. Open it in your browser.${RESET}"
-  echo ""
-  echo -e "  ${Y}${BOLD}  ⚠  The URL may wrap across multiple lines.${RESET}"
-  echo -e "  ${Y}     Copy ALL lines of the URL — missing any part will cause 'invalid key'.${RESET}"
-  echo ""
-  echo -e "  ${D}  Press Ctrl+C to skip and use local models instead.${RESET}"
-  echo ""
-  # `ollama launch` blocks and waits for device auth to complete.
-  # (piping to `ollama run` exits immediately with code 0 without auth)
-  if timeout 300 "$OLLAMA_BIN" launch openclaw --model kimi-k2.5:cloud 2>&1; then
-    OLLAMA_LOGGED_IN=true
-    ok "Kimi K2.5 authorized — device registered for cloud inference"
-  else
-    warn "Sign-in skipped or timed out — OpenClaw will use local model instead"
-  fi
-fi
-
 curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 \
   && ok "Ollama server running" \
   || warn "Ollama not responding yet — user service will still be installed"
@@ -458,12 +420,8 @@ else
   fi
 fi
 
-# ── Set OpenClaw model ────────────────────────────────────────────────────────
-OPENCLAW_MODEL="$MODEL"   # default: local model
-if [ "$OLLAMA_LOGGED_IN" = "true" ]; then
-  OPENCLAW_MODEL="kimi-k2.5:cloud"
-  ok "OpenClaw model set to kimi-k2.5:cloud"
-fi
+# OpenClaw uses Kimi K2.5 — auth handled at the end via ollama launch
+OPENCLAW_MODEL="kimi-k2.5:cloud"
 
 # ── Configure OpenClaw ────────────────────────────────────────────────────────
 step "Configuring OpenClaw"
@@ -606,18 +564,10 @@ Environment=HOME=${HOME}
 WantedBy=default.target
 EOF
 
-  # Kill any background ollama started with nohup so systemd can own the port cleanly
-  pkill -f "ollama serve" >/dev/null 2>&1 || true
-  sleep 1
-
   systemctl --user daemon-reload
   systemctl --user enable ollama.service >/dev/null 2>&1 || true
-  systemctl --user restart ollama.service >/dev/null 2>&1 || true
-  # Wait for ollama to be ready before continuing
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    sleep 1
-    curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
-  done
+  # Don't restart ollama during install — the nohup daemon has credentials loaded.
+  # systemd will own it cleanly on next boot.
   ok "Ollama starts on boot"
 
   bash "${INSTALL_DIR}/scripts/setup-systemd.sh" >/dev/null 2>&1 && ok "ClawOS starts on boot" || warn "ClawOS autostart setup failed"
@@ -716,9 +666,6 @@ if [ "$OPENCLAW_OK" = "true" ]; then
   echo ""
 fi
 
-echo -e "  ${B}  nexus use-kimi${RESET}"
-echo -e "  ${D}  Switch OpenClaw to Kimi K2.5 (Ollama account required)${RESET}"
-echo ""
 echo -e "  ${D}  Reload shell if needed:  ${RESET}${B}source ~/.bashrc${RESET}"
 echo -e "  ${D}  Re-run wizard:           ${RESET}${B}python3 -m setup.first_run.wizard --reset${RESET}"
 
@@ -737,24 +684,14 @@ fi
 echo -e "  ${D}  GitHub:                  ${RESET}${D}github.com/xbrxr03/clawos${RESET}"
 echo ""
 
-# ── Ensure ollama + gateway are fresh before TUI launch ──────────────────────
-if [ "$OLLAMA_LOGGED_IN" = "true" ] && systemd_user_ready; then
-  systemctl --user restart ollama.service >/dev/null 2>&1 || true
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    sleep 1
-    curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
-  done
-  systemctl --user restart openclaw-gateway.service >/dev/null 2>&1 || true
-  sleep 3
-fi
-
-# ── Launch OpenClaw TUI (Kimi K2.5 first response) ───────────────────────────
-if [ -t 0 ] && [ -t 1 ] && [ "$OPENCLAW_OK" = "true" ] && [ "$OLLAMA_LOGGED_IN" = "true" ]; then
+# ── Launch OpenClaw with Kimi K2.5 ───────────────────────────────────────────
+# ollama launch handles auth (shows sign-in URL if needed) then opens the TUI
+if [ -t 0 ] && [ -t 1 ] && [ "$OPENCLAW_OK" = "true" ]; then
   divider
   echo ""
   echo -e "  ${G}${BOLD}Launching OpenClaw · Kimi K2.5${RESET}"
-  echo -e "  ${D}Your AI is ready. Type anything to start.${RESET}"
+  echo -e "  ${D}Sign in to Ollama when prompted, then your AI is ready.${RESET}"
   echo ""
   sleep 1
-  openclaw tui
+  ollama launch openclaw --model kimi-k2.5:cloud
 fi

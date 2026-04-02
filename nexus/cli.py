@@ -279,46 +279,44 @@ def cmd_setup():
 
 # ── use-kimi ──────────────────────────────────────────────────────────────────
 def cmd_use_kimi():
-    """Log in to Ollama, pull kimi-k2.5, and reconfigure OpenClaw to use it."""
+    """Authorize this device for Kimi K2.5 and reconfigure OpenClaw to use it."""
     import subprocess, json
     from pathlib import Path
 
     print(f"\n  {_p(CYAN, '◆')}  Switching OpenClaw to Kimi K2.5\n")
+    print(f"  {_d('·')} A sign-in URL will appear below. Open it in your browser.\n")
+    print(f"  {_p(AMBER, '  ⚠  The URL may wrap — copy ALL lines into your browser.')}\n")
 
-    # Step 1: ollama login
-    print(f"  {_d('·')} Signing in to Ollama (a browser link will appear)...\n")
-    result = subprocess.run(["ollama", "login"])
+    # Step 1: device auth via ollama launch (blocks until user signs in)
+    result = subprocess.run(["ollama", "launch", "openclaw", "--model", "kimi-k2.5:cloud"])
     if result.returncode != 0:
-        print(f"\n  {_p(RED, '✗')}  Ollama login failed or was cancelled.\n")
+        print(f"\n  {_p(RED, '✗')}  Sign-in cancelled or failed.\n")
         return
 
-    # Step 2: pull kimi-k2.5
-    print(f"\n  {_p(GREEN, '✓')}  Signed in.\n")
-    print(f"  {_d('·')} Registering kimi-k2.5...\n")
-    result = subprocess.run(["ollama", "pull", "kimi-k2.5:cloud"])
-    if result.returncode != 0:
-        print(f"\n  {_p(RED, '✗')}  Could not pull kimi-k2.5:cloud. Check your Ollama account.\n")
-        return
-
-    # Step 3: update ~/.openclaw/openclaw.json
+    # Step 2: update ~/.openclaw/openclaw.json
+    print(f"\n  {_p(GREEN, '✓')}  Device authorized.\n")
     config_path = Path.home() / ".openclaw" / "openclaw.json"
     try:
         cfg = json.loads(config_path.read_text())
         providers = cfg.setdefault("models", {}).setdefault("providers", {})
         ollama_models = providers.setdefault("ollama", {}).setdefault("models", [])
-        # Insert kimi-k2.5:cloud at the front if not already present
         ids = [m["id"] for m in ollama_models]
         if "kimi-k2.5:cloud" not in ids:
             ollama_models.insert(0, {"id": "kimi-k2.5:cloud", "name": "kimi-k2.5:cloud", "contextWindow": 262144})
-        # Set as primary
         cfg.setdefault("agents", {}).setdefault("defaults", {}).setdefault("model", {})["primary"] = "ollama/kimi-k2.5:cloud"
         config_path.write_text(json.dumps(cfg, indent=2))
-        print(f"\n  {_p(GREEN, '✓')}  OpenClaw reconfigured → kimi-k2.5")
+        print(f"  {_p(GREEN, '✓')}  OpenClaw reconfigured → kimi-k2.5:cloud\n")
     except Exception as e:
         print(f"\n  {_p(RED, '✗')}  Could not update openclaw.json: {e}\n")
         return
 
-    print(f"\n  {_p(GREEN, '✓')}  Done. Launch with:  {_p(CYAN, 'openclaw tui')}\n")
+    # Step 3: restart gateway so it picks up the new model
+    subprocess.run(["systemctl", "--user", "restart", "openclaw-gateway.service"],
+                   capture_output=True)
+    import time; time.sleep(2)
+
+    print(f"  {_p(GREEN, '✓')}  Done. Launching OpenClaw...\n")
+    subprocess.run(["openclaw", "tui"])
 
 
 # ── scan ──────────────────────────────────────────────────────────────────────
