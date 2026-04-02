@@ -270,29 +270,36 @@ fi
 OLLAMA_BIN="$(command -v ollama || true)"
 [ -n "$OLLAMA_BIN" ] || die "Ollama install finished but binary was not found in PATH"
 
-# ── Ollama login (required for cloud models like Kimi K2.5) ──────────────────
-OLLAMA_LOGGED_IN=false
-if [ -t 0 ] && [ -t 1 ]; then
-  step "Sign in to Ollama"
-  echo ""
-  echo -e "  ${W}${BOLD}Kimi K2.5 runs on Ollama's cloud — sign in to unlock it.${RESET}"
-  echo -e "  ${D}A link will appear below. Open it, create a free account, then${RESET}"
-  echo -e "  ${D}return here. Press Ctrl+C at any time to skip and use local models.${RESET}"
-  echo ""
-  if "$OLLAMA_BIN" login 2>&1; then
-    OLLAMA_LOGGED_IN=true
-    ok "Signed in to Ollama"
-  else
-    warn "Ollama login skipped — OpenClaw will use local model instead"
-  fi
-fi
-
+# ── Start Ollama serve ────────────────────────────────────────────────────────
 if ! curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
   nohup "$OLLAMA_BIN" serve >/dev/null 2>&1 &
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     sleep 1
     curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
   done
+fi
+
+# ── Authorize device for Kimi K2.5 cloud inference ───────────────────────────
+OLLAMA_LOGGED_IN=false
+if [ -t 0 ] && [ -t 1 ]; then
+  step "Sign in to Ollama for Kimi K2.5"
+  echo ""
+  echo -e "  ${W}${BOLD}Authorizing this device for Kimi K2.5 cloud inference.${RESET}"
+  echo -e "  ${D}A sign-in URL will appear below. Open it in your browser.${RESET}"
+  echo ""
+  echo -e "  ${Y}${BOLD}  ⚠  The URL may wrap across multiple lines.${RESET}"
+  echo -e "  ${Y}     Copy ALL lines of the URL — missing any part will cause 'invalid key'.${RESET}"
+  echo ""
+  echo -e "  ${D}  Press Ctrl+C to skip and use local models instead.${RESET}"
+  echo ""
+  # `ollama run` triggers the correct device auth flow (not `ollama login`)
+  # and proves inference works before we continue
+  if echo "" | timeout 300 "$OLLAMA_BIN" run kimi-k2.5:cloud 2>&1; then
+    OLLAMA_LOGGED_IN=true
+    ok "Kimi K2.5 authorized — device registered for cloud inference"
+  else
+    warn "Sign-in skipped or timed out — OpenClaw will use local model instead"
+  fi
 fi
 
 curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 \
@@ -451,20 +458,11 @@ else
   fi
 fi
 
-# ── Pull Kimi K2.5 (cloud model via Ollama) ──────────────────────────────────
+# ── Set OpenClaw model ────────────────────────────────────────────────────────
 OPENCLAW_MODEL="$MODEL"   # default: local model
 if [ "$OLLAMA_LOGGED_IN" = "true" ]; then
-  step "Registering Kimi K2.5"
-  info "Kimi K2.5 streams from Ollama's cloud — no large local download."
-  echo ""
-  if "$OLLAMA_BIN" pull kimi-k2.5:cloud 2>&1 | while IFS= read -r line; do
-    printf "    ${D}%s${RESET}\n" "$line"
-  done; then
-    OPENCLAW_MODEL="kimi-k2.5:cloud"
-    ok "Kimi K2.5 ready — OpenClaw will use it as its model"
-  else
-    warn "Could not register Kimi K2.5 — OpenClaw will use local model ($MODEL)"
-  fi
+  OPENCLAW_MODEL="kimi-k2.5:cloud"
+  ok "OpenClaw model set to kimi-k2.5:cloud"
 fi
 
 # ── Configure OpenClaw ────────────────────────────────────────────────────────
