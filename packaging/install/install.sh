@@ -85,7 +85,13 @@ fi
 [ "$RAM_GB" -lt "$MIN_RAM_GB" ] && die "Not enough RAM: ${RAM_GB}GB found, ${MIN_RAM_GB}GB required."
 ok "RAM: ${RAM_GB}GB"
 
-DISK_FREE=$(df -BG "$HOME" | awk 'NR==2 {gsub("G",""); print $4}')
+if df -BG "$HOME" >/dev/null 2>&1; then
+  # Linux: df -BG prints sizes in gigabytes, available is column 4
+  DISK_FREE=$(df -BG "$HOME" | awk 'NR==2 {gsub("G",""); print $4}')
+else
+  # macOS: df -g prints sizes in gigabytes, available is column 4
+  DISK_FREE=$(df -g "$HOME" | awk 'NR==2 {print $4}')
+fi
 [ "${DISK_FREE:-0}" -lt 10 ] && die "Not enough disk: ${DISK_FREE}GB free, need 10GB."
 ok "Disk: ${DISK_FREE}GB free"
 
