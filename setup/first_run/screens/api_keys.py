@@ -78,7 +78,9 @@ def run(state) -> bool:
 
         print()
 
-    provided = {k: v for k, v in collected.items() if v}
+    provided  = {k: v for k, v in collected.items() if v}
+    new_keys  = {k: v for k, v in collected.items() if v and k not in existing}
+    kept_keys = {k: v for k, v in collected.items() if v and k in existing}
 
     if not provided:
         print(f"  {D}No keys provided — using local models only.{R}")
@@ -87,10 +89,13 @@ def run(state) -> bool:
         state.mark_done("api_keys")
         return True
 
-    print(f"  {D}Placing keys...{R}")
-    results = place_all(provided)
-    total_placements = sum(len(locs) for locs in results.values())
-    print(f"  {G}✓{R}  {len(results)} key(s) saved and placed in {total_placements} location(s)")
+    if new_keys:
+        print(f"  {D}Placing keys...{R}")
+        results = place_all(new_keys)
+        total_placements = sum(len(locs) for locs in results.values())
+        print(f"  {G}✓{R}  {len(new_keys)} key(s) saved and placed in {total_placements} location(s)")
+    if kept_keys:
+        print(f"  {D}Kept {len(kept_keys)} existing key(s) unchanged.{R}")
     print()
 
     state.api_keys_configured = list(provided.keys())

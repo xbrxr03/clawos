@@ -75,11 +75,16 @@ def run(state) -> bool:
     if not raw:
         selected = list(recommended)
     else:
-        parts    = raw.replace(",", "+").replace(" ", "+").split("+")
+        # Support both "n+p+o" and "npo" style input
+        if "+" in raw or "," in raw or " " in raw:
+            parts = raw.replace(",", "+").replace(" ", "+").split("+")
+        else:
+            # No delimiter — treat each char as a selection e.g. "npo"
+            parts = list(raw)
         selected = []
         for part in parts:
             part = part.strip()
-            if part in ("n", "nexus"):     selected.append("nexus")
+            if part in ("n", "nexus"):      selected.append("nexus")
             elif part in ("p", "picoclaw"): selected.append("picoclaw")
             elif part in ("o", "openclaw"): selected.append("openclaw")
         if "nexus" not in selected:
