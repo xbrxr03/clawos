@@ -286,14 +286,16 @@ OPENCLAW_OK=false
 if ! command -v node >/dev/null 2>&1; then
   warn "Skipping OpenClaw — Node.js not available"
 else
+  # Use user-local npm prefix so openclaw can self-update without needing sudo.
+  # Binaries land in ~/.local/bin which is already in PATH.
+  npm config set prefix "$HOME/.local" 2>/dev/null || true
+  export PATH="$HOME/.local/bin:$PATH"
+
   if command -v openclaw >/dev/null 2>&1; then
     ok "OpenClaw already installed"
     OPENCLAW_OK=true
   else
-    if [ -d "/usr/lib/node_modules" ]; then sudo chmod -R 755 /usr/lib/node_modules 2>/dev/null || true; fi
-    if run_with_spinner "Installing OpenClaw via npm" sudo npm install -g openclaw@latest --quiet; then
-      :
-    elif run_with_spinner "Retrying OpenClaw install (user scope)" npm install -g openclaw@latest --quiet; then
+    if run_with_spinner "Installing OpenClaw via npm" npm install -g openclaw@latest --quiet; then
       :
     else
       warn "OpenClaw install failed"

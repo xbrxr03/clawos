@@ -159,15 +159,21 @@ step "Installing OpenClaw"
 
 if ! command -v node &>/dev/null; then
   warn "Skipping — Node.js not available"
-elif command -v openclaw &>/dev/null; then
-  ok "OpenClaw already installed"
 else
-  (npm install -g openclaw@latest --quiet 2>/dev/null) \
-    & spinner $! "Installing OpenClaw via npm"
-  wait $! || warn "OpenClaw npm install failed — try: sudo npm install -g openclaw"
-  command -v openclaw &>/dev/null \
-    && ok "OpenClaw installed" \
-    || warn "OpenClaw not found after install"
+  # User-local prefix so openclaw can self-update without sudo (avoids EACCES)
+  npm config set prefix "$HOME/.local" 2>/dev/null || true
+  export PATH="$HOME/.local/bin:$PATH"
+
+  if command -v openclaw &>/dev/null; then
+    ok "OpenClaw already installed"
+  else
+    (npm install -g openclaw@latest --quiet 2>/dev/null) \
+      & spinner $! "Installing OpenClaw via npm"
+    wait $! || warn "OpenClaw npm install failed"
+    command -v openclaw &>/dev/null \
+      && ok "OpenClaw installed" \
+      || warn "OpenClaw not found after install"
+  fi
 fi
 
 # ── Clone ClawOS ──────────────────────────────────────────────────────────────
