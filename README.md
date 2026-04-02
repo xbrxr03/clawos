@@ -37,9 +37,10 @@ After one command:
 - **OpenClaw** — pre-configured for offline Ollama, no API keys required
 - **Ollama** — local model runtime, right model for your hardware pulled automatically
 - **Nexus** — native Python agent with memory, tools, and voice
+- **29 one-command workflows** — organize downloads, summarize PDFs, review PRs, disk reports, daily digest, and more — all offline
 - **WhatsApp bridge** — text your AI from your phone
 - **policyd** — every tool call gated and audited before it runs
-- **Dashboard** — web UI showing tasks, approvals, models, memory, audit log
+- **Dashboard** — web UI showing tasks, approvals, models, memory, audit log, and workflows
 - **Full OpenClaw ecosystem** — 13,700+ skills and more to come
 
 ```
@@ -53,6 +54,18 @@ nexus › I can read and write files, search the web, remember things
 you › create a file called notes.txt with my meeting agenda
 nexus › Created notes.txt in your workspace.
 ```
+
+Or run any of the 29 built-in workflows from the terminal:
+
+```bash
+nexus workflow list                        # browse all 29 workflows
+nexus workflow run organize-downloads      # sort your Downloads folder
+nexus workflow run summarize-pdf           # summarize a PDF
+nexus workflow run disk-report             # see what's eating your disk
+nexus workflow suggest developer           # get suggestions based on your setup
+```
+
+Or use the dashboard — navigate to the Workflows tab, pick one, click Run.
 
 ---
 
@@ -207,9 +220,13 @@ clawos
 - [x] One-command installer — Ubuntu, Debian, macOS
 - [x] OpenClaw offline + WhatsApp
 - [x] Dashboard — FastAPI + WebSocket + React
-- [ ] systemd service units
-- [ ] First-run wizard
-- [ ] claw CLI — 12 commands, prompt injection scanner
+- [x] systemd service units
+- [x] First-run wizard — hardware profiling, model selection, API key vault
+- [x] nexus CLI — 12 commands, RAG pipeline, project upload/query
+- [x] Key vault — secretd, per-service credential isolation
+- [x] OpenRouter support — use cloud models as fallback
+- [x] 29 offline workflows — files, documents, developer, content, system, data categories
+- [x] Capability discovery — auto-suggests workflows based on your hardware and profile
 - [ ] **Bootable ISO** — flash and boot, no install needed (final stage)
 
 ---
