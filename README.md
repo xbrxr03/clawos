@@ -3,10 +3,10 @@
 > OpenClaw on your own hardware. One command. No API keys. No monthly bill.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 ```
 
-In 25 seconds you have the full OpenClaw ecosystem running locally — offline, private, and free.
+In ~4 minutes you have the full OpenClaw ecosystem running locally — offline, private, and free.
 
 ---
 
@@ -93,7 +93,7 @@ GPU optional. NVIDIA (CUDA) and AMD (ROCm) both supported via Ollama.
 ClawOS works on RPi 5 8GB. The installer detects ARM and pulls `qwen2.5:1.5b` automatically — no configuration needed.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 ```
 
 Expected response time: 2–4 seconds for short answers on RPi 5.
@@ -115,7 +115,7 @@ ollama pull nomic-embed-text
 **On the ClawOS machine** — set the host before installing or running:
 ```bash
 export OLLAMA_HOST=http://192.168.1.50:11434   # replace with your server IP
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 ```
 
 To make it permanent:
@@ -131,10 +131,12 @@ ClawOS will use the remote server for all inference — the local machine only r
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 ```
 
 Handles everything: Ollama, Node.js, Python dependencies, model download, OpenClaw configuration, and the `clawos` command. No prompts. No choices. Just works.
+
+> **Why not `curl | bash`?** Piping directly kills the TTY so interactive steps (Ollama login, first-run wizard, OpenClaw TUI launch) are silently skipped. The two-step command above keeps stdin attached.
 
 **After install:**
 
