@@ -694,6 +694,9 @@ if [ "$OPENCLAW_OK" = "true" ]; then
   echo ""
 fi
 
+echo -e "  ${B}  nexus use-kimi${RESET}"
+echo -e "  ${D}  Switch OpenClaw to Kimi K2.5 (Ollama account required)${RESET}"
+echo ""
 echo -e "  ${D}  Reload shell if needed:  ${RESET}${B}source ~/.bashrc${RESET}"
 echo -e "  ${D}  Re-run wizard:           ${RESET}${B}python3 -m setup.first_run.wizard --reset${RESET}"
 
