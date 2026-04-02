@@ -1,6 +1,6 @@
 import { StatCard, Card, Row, StatusDot, Badge, SectionLabel, Ts, Empty } from '../components/ui.jsx'
 
-export function Overview({ services, tasks, approvals, events, models }) {
+export function Overview({ services, tasks, approvals, events, models, runtimes = {} }) {
   const counts = {
     active:    tasks.active?.length    ?? 0,
     queued:    tasks.queued?.length    ?? 0,
@@ -101,6 +101,43 @@ export function Overview({ services, tasks, approvals, events, models }) {
             })}
           </Card>
         </div>
+      </div>
+
+
+      {/* Runtimes */}
+      <SectionLabel>Runtimes</SectionLabel>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, padding: '0 20px' }}>
+        {[
+          { id: 'nexus',    label: 'Nexus',    desc: 'native agent' },
+          { id: 'picoclaw', label: 'PicoClaw', desc: 'edge worker'  },
+          { id: 'openclaw', label: 'OpenClaw', desc: 'skill ecosystem' },
+        ].map(({ id, label, desc }) => {
+          const rt = runtimes[id] || {}
+          const installed = rt.installed ?? false
+          const running   = rt.running   ?? false
+          const model     = rt.model     || '—'
+          const statusColor = running ? 'var(--green)' : installed ? 'var(--orange)' : 'var(--text-3)'
+          const statusText  = running ? 'running' : installed ? 'installed' : 'not installed'
+          return (
+            <div key={id} style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '14px 16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, fontSize: 13 }}>{label}</span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 4 }}>{desc}</div>
+              <div style={{ fontSize: 11, color: statusColor, fontWeight: 500 }}>{statusText}</div>
+              {installed && (
+                <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3 }}
+                  className="mono">{model}</div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Models */}

@@ -17,4 +17,5 @@ export const api = {
   workspaces:  ()   => r('GET',    '/workspaces'),
   system:      ()   => r('GET',    '/system'),
   services:    ()   => r('GET',    '/services'),
+  runtimes:    ()   => r('GET',    '/runtimes'),
 }

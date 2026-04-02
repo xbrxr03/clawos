@@ -5,7 +5,7 @@ import { Tasks, Approvals, Models, Memory, Audit } from './pages/pages.jsx'
 import { useClawOS } from './hooks/useClawOS.js'
 
 export default function App() {
-  const { connected, events, approvals, services, tasks, models, pullProgress } = useClawOS()
+  const { connected, events, approvals, services, tasks, models, pullProgress, runtimes } = useClawOS()
 
   return (
     <BrowserRouter>
@@ -24,7 +24,7 @@ export default function App() {
           />
           <main style={{ flex:1, overflowY:'auto', position:'relative' }}>
             <Routes>
-              <Route path="/" element={<Overview services={services} tasks={tasks} approvals={approvals} events={events} models={models} />} />
+              <Route path="/" element={<Overview services={services} tasks={tasks} approvals={approvals} events={events} models={models} runtimes={runtimes} />} />
               <Route path="/tasks"     element={<Tasks tasks={tasks} />} />
               <Route path="/approvals" element={<Approvals approvals={approvals} />} />
               <Route path="/models"    element={<Models models={models} pullProgress={pullProgress} />} />

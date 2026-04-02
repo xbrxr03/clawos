@@ -593,6 +593,69 @@ async def agent_card():
     except Exception as e:
         return {"error": str(e)}
 
+
+
+# ── REST: Runtimes status ─────────────────────────────────────────────────────
+@app.get("/api/runtimes")
+async def api_runtimes():
+    """Return status of all three runtimes: Nexus, PicoClaw, OpenClaw."""
+    import shutil, subprocess
+
+    # Nexus — always running if ClawOS daemon is running
+    daemon_status = "unknown"
+    try:
+        r = await asyncio.create_subprocess_exec(
+            "systemctl", "--user", "is-active", "clawos.service",
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+        out, _ = await r.communicate()
+        daemon_status = out.decode().strip()
+    except Exception:
+        pass
+    nexus_running = daemon_status == "active"
+
+    # PicoClaw — check binary + version
+    picoclaw_ok = shutil.which("picoclaw") is not None
+    picoclaw_running = False
+    if picoclaw_ok:
+        try:
+            r = subprocess.run(["picoclaw", "--version"],
+                               capture_output=True, timeout=2)
+            picoclaw_running = r.returncode == 0
+        except Exception:
+            pass
+
+    # OpenClaw — check binary + gateway health on port 18789
+    openclaw_ok = shutil.which("openclaw") is not None
+    openclaw_running = False
+    if openclaw_ok:
+        try:
+            async with httpx.AsyncClient() as c:
+                r = await c.get("http://127.0.0.1:18789/health", timeout=1.5)
+                openclaw_running = r.status_code == 200
+        except Exception:
+            pass
+
+    # Detect configured model from openclaw.json if available
+    import json as _json
+    from pathlib import Path as _Path
+    oc_model = "cloud"
+    try:
+        oc_cfg = _Path.home() / ".openclaw" / "openclaw.json"
+        if oc_cfg.exists():
+            cfg = _json.loads(oc_cfg.read_text())
+            primary = cfg.get("agents", {}).get("defaults", {}).get("model", {}).get("primary", "")
+            if primary:
+                oc_model = primary.split("/")[-1] if "/" in primary else primary
+    except Exception:
+        pass
+
+    return {
+        "nexus":    {"installed": True,           "running": nexus_running,    "model": "local"},
+        "picoclaw": {"installed": picoclaw_ok,     "running": picoclaw_running, "model": "local"},
+        "openclaw": {"installed": openclaw_ok,     "running": openclaw_running, "model": oc_model},
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("service:app", host="0.0.0.0", port=7070, reload=False, log_level="info")

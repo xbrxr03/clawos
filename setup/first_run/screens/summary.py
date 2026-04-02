@@ -11,16 +11,18 @@ from pathlib import Path
 
 
 def run(state) -> bool:
-    runtime_label = {
-        "core":     "Nexus (native Python agent)",
-        "openclaw": "OpenClaw (full ecosystem, Ollama offline)",
-        "both":     "Both (Nexus default + OpenClaw available)",
-    }.get(state.runtime, state.runtime)
+    runtimes = getattr(state, "runtimes", ["nexus"])
+    api_keys = getattr(state, "api_keys_configured", [])
+
+    runtime_cmd = {
+        "nexus":    ("Nexus",    "run: clawos"),
+        "picoclaw": ("PicoClaw", "automatic — background worker"),
+        "openclaw": ("OpenClaw", "run: openclaw tui  or  openclaw gateway --port 18789"),
+    }
 
     print("\n  ── Setup Complete ──────────────────────────────")
     print()
     print(f"  Profile:    {state.profile} (Tier {state.hw_tier}, {state.ram_gb}GB RAM)")
-    print(f"  Runtime:    {runtime_label}")
     print(f"  Model:      {state.model}")
     print(f"  Workspace:  {state.workspace_id}")
     print(f"  Voice:      {state.voice_mode}")
@@ -29,18 +31,36 @@ def run(state) -> bool:
     print()
     print("  ─────────────────────────────────────────────")
     print()
-    print("  Start ClawOS:")
+    print("  Runtimes:")
     print()
-    print(f"    openclaw gateway --allow-unconfigured  — start OpenClaw")
-    print(f"    http://localhost:7070                  — dashboard")
-    print(f"    nexus                                  — lightweight fallback")
-    if state.whatsapp_enabled:
-        print("    Message yourself on WhatsApp           — voice/text to Nexus")
+    for rt in runtimes:
+        name, cmd = runtime_cmd.get(rt, (rt, ""))
+        print(f"    ✓  {name:<10}  — {cmd}")
+    print()
+
+    if api_keys:
+        key_labels = {
+            "OPENROUTER_API_KEY": "OpenRouter",
+            "OPENAI_API_KEY":     "OpenAI",
+            "ANTHROPIC_API_KEY":  "Anthropic",
+            "GROQ_API_KEY":       "Groq",
+            "ELEVENLABS_API_KEY": "ElevenLabs",
+        }
+        names = ", ".join(key_labels.get(k, k) for k in api_keys)
+        print(f"  API keys configured: {names}")
+        print(f"  Keys stored securely. To update: nexus setup --from api_keys")
+    else:
+        print("  No API keys — local models only.")
+        print("  To add keys later: nexus setup --from api_keys")
+    print()
+    print("  Dashboard: http://localhost:7070")
+    print()
+    print("  ─────────────────────────────────────────────")
     print()
     print("  Useful commands:")
     print("    clawctl status                       — service health")
     print("    clawctl doctor                       — diagnose issues")
-    print("    clawctl model pull <name>         — pull more models")
+    print("    clawctl model pull <n>               — pull more models")
     print("    python3 -m setup.first_run.wizard    — re-run this wizard")
     print()
 

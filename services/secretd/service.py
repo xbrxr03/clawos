@@ -190,6 +190,21 @@ class SecretsStore:
         """Return all secrets as plain dict for env injection."""
         return dict(self._get_store())
 
+    def export_to_env(self):
+        """
+        Export all stored secrets into os.environ.
+        Called early in daemon startup so all child processes inherit keys.
+        """
+        store = self._get_store()
+        for k, v in store.items():
+            env_key = k.upper()
+            os.environ.setdefault(env_key, v)
+        log.info(f"secretd: exported {len(store)} secrets to environment")
+
+    def count(self) -> int:
+        """Return number of stored secrets."""
+        return len(self._get_store())
+
 
 # ── Singleton ─────────────────────────────────────────────────────────────────
 

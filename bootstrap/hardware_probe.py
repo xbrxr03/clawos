@@ -153,10 +153,13 @@ def probe() -> HardwareProfile:
 
 
 def probe_and_save() -> HardwareProfile:
+    import os
     from clawos_core.constants import HARDWARE_JSON
     HARDWARE_JSON.parent.mkdir(parents=True, exist_ok=True)
     hw = probe()
     HARDWARE_JSON.write_text(json.dumps(asdict(hw), indent=2))
+    # Export tier so wizard and install.sh can read it
+    os.environ["CLAWOS_DETECTED_TIER"] = hw.tier
     return hw
 
 

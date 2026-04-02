@@ -22,43 +22,87 @@ GOOD_MODELS = {
 CTX_CAP = 8192  # hard cap for local models — prevents 262k OOM (qwen3 bug)
 
 
-def gen_config(model: str = "qwen2.5:7b") -> dict:
+def gen_config(model: str = "qwen2.5:7b", openrouter_key: str = "") -> dict:
     """
-    Pre-patched openclaw.json for offline Ollama.
+    Pre-patched openclaw.json for offline Ollama + optional OpenRouter cloud.
+    If openrouter_key is provided, includes OpenRouter as a provider and sets
+    Kimi k2.5 as the default agent model.
     Critical: api must be 'openai-completions' (not 'openai-responses').
     baseUrl must include /v1.
     """
-    m = GOOD_MODELS.get(model, {"ctx": CTX_CAP, "maxOutput": 4096})
+    import os
+    key = openrouter_key or os.environ.get("OPENROUTER_API_KEY", "") or "__OPENROUTER_API_KEY__"
+
+    m   = GOOD_MODELS.get(model, {"ctx": CTX_CAP, "maxOutput": 4096})
     ctx = min(m["ctx"], CTX_CAP) if "cloud" not in model else m["ctx"]
+
+    providers = {
+        "ollama": {
+            "baseUrl": "http://127.0.0.1:11434/v1",
+            "apiKey":  "ollama-local",
+            "api":     "openai-completions",
+            "models":  [{
+                "id":              model,
+                "name":            model,
+                "contextWindow":   ctx,
+                "maxOutput":       m["maxOutput"],
+                "inputCostPer1M":  0,
+                "outputCostPer1M": 0,
+                "capabilities":    ["tools", "streaming"],
+            }]
+        }
+    }
+
+    # Add OpenRouter provider (always included so placer.py can write the key later)
+    providers["openrouter"] = {
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKey":  key,
+        "api":     "openai-completions",
+        "models": [
+            {
+                "id":            "moonshotai/kimi-k2",
+                "name":          "Kimi k2.5",
+                "contextWindow": 131072,
+                "maxOutput":     8192,
+                "capabilities":  ["tools", "streaming"],
+            },
+            {
+                "id":            "openai/gpt-4o",
+                "name":          "GPT-4o",
+                "contextWindow": 128000,
+                "maxOutput":     4096,
+                "capabilities":  ["tools", "streaming"],
+            },
+            {
+                "id":            "anthropic/claude-sonnet-4-20250514",
+                "name":          "Claude Sonnet",
+                "contextWindow": 200000,
+                "maxOutput":     8192,
+                "capabilities":  ["tools", "streaming"],
+            },
+        ]
+    }
+
+    # Default model: Kimi if OpenRouter key provided, else local Ollama
+    has_cloud = bool(openrouter_key or (os.environ.get("OPENROUTER_API_KEY", "") not in ("", "__OPENROUTER_API_KEY__")))
+    default_model = "openrouter/moonshotai/kimi-k2" if has_cloud else f"ollama/{model}"
+
     return {
+        "gateway": {"mode": "local", "port": 18789},
         "models": {
-            "providers": {
-                "ollama": {
-                    "baseUrl": "http://127.0.0.1:11434/v1",
-                    "apiKey":  "ollama-local",
-                    "api":     "openai-completions",
-                    "models":  [{
-                        "id":              model,
-                        "name":            model,
-                        "contextWindow":   ctx,
-                        "maxOutput":       m["maxOutput"],
-                        "inputCostPer1M":  0,
-                        "outputCostPer1M": 0,
-                        "capabilities":    ["tools", "streaming"],
-                    }]
-                }
-            }
+            "providers": providers
         },
         "agents": {
             "defaults": {
-                "model": {"primary": f"ollama/{model}"}
+                "model": {"primary": default_model},
+                "memorySearch": {"enabled": False},
             }
         },
-        "cloud":   {"enabled": False, "fallback": False},
+        "cloud":   {"enabled": has_cloud, "fallback": False},
         "network": {
-            "mode":                "offline",
+            "mode":                "offline" if not has_cloud else "hybrid",
             "allow_local_network": True,
-            "allow_internet":      False,
+            "allow_internet":      has_cloud,
         },
         "skills": {
             "web-browser":  {"offline_behavior": "disable"},
@@ -78,9 +122,9 @@ def apply_auth_fix() -> Path:
     return AUTH_FIX_PATH
 
 
-def write_config(model: str = "qwen2.5:7b") -> Path:
+def write_config(model: str = "qwen2.5:7b", openrouter_key: str = "") -> Path:
     OPENCLAW_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(json.dumps(gen_config(model), indent=2))
+    CONFIG_PATH.write_text(json.dumps(gen_config(model, openrouter_key=openrouter_key), indent=2))
     return CONFIG_PATH
 
 

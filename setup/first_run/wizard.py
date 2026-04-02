@@ -1,7 +1,7 @@
 """
 ClawOS First-Run Wizard
 ========================
-9-screen terminal wizard. Idempotent — skips completed screens.
+10-screen terminal wizard. Idempotent — skips completed screens.
 Usage: python3 -m setup.first_run.wizard [--reset] [--from <screen>]
 """
 import sys
@@ -16,6 +16,7 @@ SCREENS = [
     ("welcome",          "setup.first_run.screens.welcome"),
     ("hardware_profile", "setup.first_run.screens.hardware_profile"),
     ("runtime_choice",   "setup.first_run.screens.runtime_choice"),
+    ("api_keys",         "setup.first_run.screens.api_keys"),        # NEW
     ("workspace_setup",  "setup.first_run.screens.workspace_setup"),
     ("voice_setup",      "setup.first_run.screens.voice_setup"),
     ("model_setup",      "setup.first_run.screens.model_setup"),
@@ -38,7 +39,6 @@ def run(reset: bool = False, from_screen: str = None):
             start_idx = names.index(from_screen)
 
     for name, module_path in SCREENS[start_idx:]:
-        # Skip already-done screens (unless --reset)
         if name in state.screens_done and not reset and name != "summary":
             print(f"  (skipping {name} — already done)")
             continue
@@ -68,8 +68,8 @@ def main():
         print("  Run manually: nexus setup")
         return
     parser = argparse.ArgumentParser(description="ClawOS First-Run Wizard")
-    parser.add_argument("--reset",   action="store_true", help="Start from scratch")
-    parser.add_argument("--from",    dest="from_screen",  help="Start from specific screen")
+    parser.add_argument("--reset",      action="store_true",  help="Start from scratch")
+    parser.add_argument("--from",       dest="from_screen",   help="Start from specific screen")
     args = parser.parse_args()
     run(reset=args.reset, from_screen=args.from_screen)
 

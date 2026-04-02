@@ -11,6 +11,7 @@ STATE_FILE = CONFIG_DIR / "wizard_state.json"
 class WizardState:
     # Hardware
     hw_tier:        str   = "B"
+    hardware_tier:  str   = "B"   # alias used by new screens
     ram_gb:         float = 16.0
     gpu_vram_gb:    float = 0.0
     has_mic:        bool  = True
@@ -18,8 +19,17 @@ class WizardState:
     # Profile
     profile:        str   = "balanced"
 
-    # Runtime choice
+    # Runtime choice — new multi-select
+    runtimes:       list  = field(default_factory=lambda: ["nexus", "picoclaw"])
+    # Backward compat single field
     runtime:        str   = "core"      # core | openclaw | both
+
+    # API keys configured during wizard
+    api_keys_configured: list = field(default_factory=list)
+
+    # PicoClaw / A2A add-ons
+    enable_picoclaw: bool = False
+    enable_a2a:      bool = False
 
     # Workspace
     workspace_id:   str   = "nexus_default"
@@ -61,4 +71,7 @@ class WizardState:
     def mark_done(self, screen: str):
         if screen not in self.screens_done:
             self.screens_done.append(screen)
+        # Keep hw_tier and hardware_tier in sync
+        if self.hardware_tier != self.hw_tier:
+            self.hardware_tier = self.hw_tier
         self.save()

@@ -29,6 +29,7 @@ def run(state) -> bool:
 
     state.profile        = profile
     state.hw_tier        = hw.tier
+    state.hardware_tier  = hw.tier  # sync both fields
     state.ram_gb         = hw.ram_gb
     state.gpu_vram_gb    = hw.gpu_vram_gb
     state.has_mic        = hw.has_mic

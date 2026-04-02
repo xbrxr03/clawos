@@ -10,6 +10,7 @@ export function useClawOS() {
   const [tasks,       setTasks]       = useState({ active:[], queued:[], failed:[], completed:[] })
   const [models,      setModels]      = useState({ models:[], default:'qwen2.5:7b' })
   const [pullProgress,setPullProgress]= useState({})
+  const [runtimes,    setRuntimes]     = useState({})
 
   const pushEvent = useCallback(e => setEvents(p => [e, ...p].slice(0, 300)), [])
 
@@ -93,5 +94,19 @@ export function useClawOS() {
     return () => clearInterval(interval)
   }, [])
 
-  return { connected, events, approvals, services, tasks, models, pullProgress }
+  // Poll runtimes every 10 seconds
+  useEffect(() => {
+    const fetchRuntimes = async () => {
+      try {
+        const r = await fetch('/api/runtimes')
+        const data = await r.json()
+        setRuntimes(data)
+      } catch(e) {}
+    }
+    fetchRuntimes()
+    const id = setInterval(fetchRuntimes, 10000)
+    return () => clearInterval(id)
+  }, [])
+
+  return { connected, events, approvals, services, tasks, models, pullProgress, runtimes }
 }

@@ -16,6 +16,22 @@ def select(hw: HardwareProfile) -> str:
         return "lowram"
 
 
+def select_with_bundle(hw: HardwareProfile) -> dict:
+    """
+    Return {"profile": str, "runtimes": list, "tier": str}.
+    Used by install.sh and hardware_profile wizard screen.
+    """
+    profile = select(hw)
+    tier    = hw.tier
+    if tier in ("C", "D"):
+        runtimes = ["nexus", "picoclaw", "openclaw"]
+    elif tier == "B":
+        runtimes = ["nexus", "picoclaw", "openclaw"]
+    else:  # A
+        runtimes = ["nexus", "picoclaw"]
+    return {"profile": profile, "runtimes": runtimes, "tier": tier}
+
+
 def openclaw_feasible(hw: HardwareProfile) -> bool:
     """OpenClaw needs Node.js + enough RAM for model + Node overhead."""
     return hw.ram_gb >= 14

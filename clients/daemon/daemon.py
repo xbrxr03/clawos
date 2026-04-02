@@ -32,6 +32,15 @@ log = logging.getLogger("clawosd")
 async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
     log.info("ClawOS daemon starting...")
 
+    # Export stored secrets to environment early — child processes inherit them
+    try:
+        from services.secretd.service import get_store
+        store = get_store()
+        store.export_to_env()
+        log.info(f"secretd: {store.count()} secret(s) loaded into environment")
+    except Exception as e:
+        log.warning(f"secretd export failed (non-fatal): {e}")
+
     # Import and start the same services the REPL uses
     try:
         from runtimes.agent.runtime import build_runtime

@@ -172,6 +172,28 @@ if [ "$IS_ARM" = "true" ] && [ "$PROFILE" != "lowram" ]; then
 fi
 ok "Hardware: $TIER"
 
+# Export tier letter for wizard and bootstrap
+case "$PROFILE" in
+  lowram)      TIER_LETTER="A" ;;
+  balanced)    TIER_LETTER="B" ;;
+  performance) TIER_LETTER="C" ;;
+  gaming)      TIER_LETTER="C" ;;
+  *)           TIER_LETTER="B" ;;
+esac
+export CLAWOS_DETECTED_TIER="$TIER_LETTER"
+
+# Set runtime bundle based on tier (can be overridden with CLAWOS_RUNTIMES env)
+CLAWOS_RUNTIMES="${CLAWOS_RUNTIMES:-}"
+if [ -z "$CLAWOS_RUNTIMES" ]; then
+  case "$PROFILE" in
+    lowram)      CLAWOS_RUNTIMES="nexus,picoclaw" ;;
+    balanced)    CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
+    performance) CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
+    gaming)      CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
+  esac
+fi
+export CLAWOS_RUNTIMES
+
 case "$PROFILE" in
   lowram)
     MODEL="qwen2.5:1.5b"
@@ -319,6 +341,24 @@ ok "pyyaml  fastapi  chromadb  ollama  json_repair  pypdf  python-docx"
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 step "Bootstrapping Nexus"
+
+# Optional: prompt for OpenRouter key during non-interactive curl|bash installs
+if [ -t 0 ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
+  step "API Keys (optional)"
+  echo ""
+  echo -e "  ${D}OpenRouter gives you 200+ cloud models including Kimi k2.5.${RESET}"
+  echo -e "  ${D}Get a key at: https://openrouter.ai/keys${RESET}"
+  echo -e "  ${D}Press Enter to skip and use local models only.${RESET}"
+  echo ""
+  read -s -p "  OpenRouter API key: " OPENROUTER_KEY
+  echo ""
+  if [ -n "$OPENROUTER_KEY" ]; then
+    export OPENROUTER_API_KEY="$OPENROUTER_KEY"
+    ok "OpenRouter key saved"
+  else
+    info "Skipped — using local models. Run 'nexus setup' to add keys later."
+  fi
+fi
 
 run_with_spinner "Running bootstrap ($PROFILE profile)" \
   python3 -m bootstrap.bootstrap --profile "$PROFILE" --yes
