@@ -484,6 +484,10 @@ async def get_workspaces() -> list:
         if ws_dir.is_dir():
             pinned = ws_dir / "PINNED.md"
             workflow = ws_dir / "WORKFLOW.md"
+            try:
+                file_count = sum(1 for f in ws_dir.iterdir() if f.is_file())
+            except Exception:
+                file_count = 0
             workspaces.append({
                 "name": ws_dir.name,
                 "path": str(ws_dir),
@@ -492,6 +496,7 @@ async def get_workspaces() -> list:
                 "pinned_preview": _read_preview(pinned),
                 "workflow_preview": _read_preview(workflow),
                 "modified": ws_dir.stat().st_mtime,
+                "file_count": file_count,
             })
     return workspaces
 
@@ -582,6 +587,37 @@ async def api_learned():
         return {"content": content, "workspace": DEFAULT_WORKSPACE}
     except Exception as e:
         return {"content": "", "error": str(e)}
+
+# ── REST: Agents ─────────────────────────────────────────────────────────────
+@app.get("/api/agents")
+async def api_agents():
+    """Return active agentd sessions with workspace, turn count, model."""
+    try:
+        from services.agentd.service import get_manager
+        mgr = get_manager()
+        sessions = []
+        for workspace_id, runtime in mgr._sessions.items():
+            sessions.append({
+                "workspace_id": workspace_id,
+                "session_id":   runtime.session.session_id,
+                "turn":         runtime._turn,
+                "model":        runtime.model,
+            })
+        return {"sessions": sessions}
+    except Exception as e:
+        return {"sessions": [], "error": str(e)}
+
+
+@app.post("/api/agents/{workspace_id}/reset")
+async def api_agent_reset(workspace_id: str):
+    try:
+        from services.agentd.service import get_manager
+        mgr = get_manager()
+        await mgr.reset_session(workspace_id)
+        return {"ok": True, "workspace_id": workspace_id}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 
 # ── Nexus Chat API ───────────────────────────────────────────────────────────
 @app.post("/api/nexus/chat")

@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom'
 
 const NAV = [
-  { to: '/',           label: 'Overview',   icon: <IconOverview />   },
-  { to: '/tasks',      label: 'Tasks',      icon: <IconTasks />      },
-  { to: '/approvals',  label: 'Approvals',  icon: <IconShield />     },
-  { to: '/workflows',  label: 'Workflows',  icon: <IconWorkflows />  },
-  { to: '/models',     label: 'Models',     icon: <IconCpu />        },
-  { to: '/memory',     label: 'Memory',     icon: <IconDb />         },
-  { to: '/audit',      label: 'Audit Log',  icon: <IconLog />        },
+  { to: '/',           label: 'Overview',          icon: <IconOverview />   },
+  { to: '/tasks',      label: 'Tasks',             icon: <IconTasks />      },
+  { to: '/approvals',  label: 'Approvals',         icon: <IconShield />     },
+  { to: '/agents',     label: 'Agents',            icon: <IconAgents />     },
+  { to: '/workflows',  label: 'Workflows',         icon: <IconWorkflows />  },
+  { to: '/models',     label: 'Models',            icon: <IconCpu />        },
+  { to: '/memory',     label: 'Memory',            icon: <IconDb />         },
+  { to: '/audit',      label: 'Audit Log',         icon: <IconLog />        },
 ]
 
 export function Sidebar({ connected, services, approvalCount }) {
@@ -178,6 +179,14 @@ function IconLog() {
   return <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
     <rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
     <path d="M5 5h5M5 7.5h5M5 10h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+  </svg>
+}
+function IconAgents() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+    <circle cx="7.5" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
+    <path d="M2 13c0-3.04 2.46-5.5 5.5-5.5S13 9.96 13 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    <circle cx="12" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.1"/>
+    <path d="M13.5 11.5c0-1.38-.9-2.56-2.14-3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
   </svg>
 }
 function IconCommand() {
