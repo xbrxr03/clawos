@@ -521,27 +521,29 @@ ok "clawos  clawctl"
 
 # ── Autostart ─────────────────────────────────────────────────────────────────
 
-# ── PicoClaw (Tier A ARM only) ────────────────────────────────────────────────
-if [ "$IS_ARM" = "true" ] && [ "$PROFILE" = "lowram" ]; then
-  step "Installing PicoClaw edge runtime (Tier A ARM)"
-  PICOCLAW_ARCH="arm64"
+# ── PicoClaw (all architectures, when selected in wizard) ─────────────────────
+if echo "${CLAWOS_RUNTIMES}" | grep -q "picoclaw"; then
+  step "Installing PicoClaw lightweight runtime"
   case "$(uname -m)" in
     armv7l|armv8l|armhf) PICOCLAW_ARCH="arm32" ;;
     aarch64|arm64)        PICOCLAW_ARCH="arm64" ;;
     riscv64)              PICOCLAW_ARCH="riscv64" ;;
+    x86_64|amd64)         PICOCLAW_ARCH="amd64" ;;
+    *)                    PICOCLAW_ARCH="amd64" ;;
   esac
   PICOCLAW_URL="https://github.com/sipeed/picoclaw/releases/download/v0.2.4/picoclaw-linux-${PICOCLAW_ARCH}"
   if command -v picoclaw &>/dev/null; then
     ok "PicoClaw already installed"
   else
-    run_with_spinner "Downloading PicoClaw (${PICOCLAW_ARCH})" \
-      wget -q -O /tmp/picoclaw "$PICOCLAW_URL" && \
+    info "Downloading PicoClaw (${PICOCLAW_ARCH})..."
+    if wget -q --timeout=30 -O /tmp/picoclaw "$PICOCLAW_URL" 2>/dev/null; then
       sudo mv /tmp/picoclaw /usr/local/bin/picoclaw && \
-      sudo chmod +x /usr/local/bin/picoclaw
+        sudo chmod +x /usr/local/bin/picoclaw
+    fi
     if command -v picoclaw &>/dev/null; then
       ok "PicoClaw installed"
     else
-      warn "PicoClaw download failed — will retry on first boot"
+      warn "PicoClaw download failed — skipping (not critical)"
     fi
   fi
   mkdir -p "$HOME/.picoclaw"
