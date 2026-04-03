@@ -41,9 +41,12 @@ policy:
     - fs.read
     - fs.write
     - fs.list
+    - fs.search
     - web.search
     - memory.read
     - memory.write
+    - shell.restricted
+    - system.info
 
 workspace:
   default: "nexus_default"
