@@ -3,29 +3,29 @@ import subprocess
 import shutil
 from clawctl.ui.banner import success, error
 
+# All core services run in-process inside clawos.service.
+DAEMON_UNIT = "clawos.service"
+
 
 def run(service: str = None):
     print()
     if not shutil.which("systemctl"):
-        # Kill by process name in dev mode
+        # Dev mode — kill the daemon process
         import subprocess as sp
-        targets = [service] if service else [
-            "policyd.main","memd.main","modeld.main",
-            "agentd.main","dashd.main","clawd.service"
-        ]
-        sp.run(["pkill", "-f", f"clawos"], capture_output=True)
-        success("Stopped ClawOS processes")
+        sp.run(["pkill", "-f", "clients/daemon/daemon.py"], capture_output=True)
+        success("Stopped ClawOS daemon")
         return
 
-    svcs = [f"clawos-{service}"] if service else [
-        f"clawos-{s}" for s in
-        ["dashd","clawd","agentd","toolbridge","modeld","memd","policyd"]
-    ]
-    for svc in svcs:
-        r = subprocess.run(["systemctl","--user","stop",f"{svc}.service"],
-                           capture_output=True)
-        if r.returncode == 0:
-            success(f"Stopped {svc}")
+    # All services run inside the single daemon — stop the whole thing.
+    r = subprocess.run(
+        ["systemctl", "--user", "stop", DAEMON_UNIT],
+        capture_output=True,
+    )
+    if r.returncode == 0:
+        if service:
+            success(f"clawos.service stopped ({service} ran in-process)")
         else:
-            error(f"Could not stop {svc}")
+            success("clawos.service stopped")
+    else:
+        error(f"Could not stop clawos.service: {r.stderr.decode().strip()}")
     print()
