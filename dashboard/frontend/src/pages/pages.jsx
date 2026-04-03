@@ -590,192 +590,329 @@ export function NexusCommand() {
   )
 }
 
-// ── Agents & Workspaces ───────────────────────────────────────────────────────
-function _reltime(date) {
-  const sec = Math.floor((Date.now() - date.getTime()) / 1000)
-  if (sec < 60)    return 'just now'
-  if (sec < 3600)  return `${Math.floor(sec / 60)}m ago`
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`
-  return `${Math.floor(sec / 86400)}d ago`
+// ── Runtime Network ───────────────────────────────────────────────────────────
+const RT_COLORS = {
+  nexus:    { primary: '#4f8ef7', dim: 'rgba(79,142,247,0.1)',  border: 'rgba(79,142,247,0.25)'  },
+  picoclaw: { primary: '#f59e0b', dim: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.25)'  },
+  openclaw: { primary: '#a78bfa', dim: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' },
 }
 
-export function Agents() {
-  const [workspaces, setWorkspaces] = useState([])
-  const [sessions,   setSessions]   = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [resetting,  setResetting]  = useState(null)
+const BUBBLE_PALETTE = [
+  '#4f8ef7','#34d399','#f59e0b','#a78bfa','#f87171','#38bdf8','#fb923c','#a3e635','#e879f9','#2dd4bf',
+]
+
+function wsColor(name) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % BUBBLE_PALETTE.length
+  return BUBBLE_PALETTE[h]
+}
+
+function AgentBubble({ name, turns, active, onReset, resetting }) {
+  const color   = wsColor(name)
+  const initial = name.charAt(0).toUpperCase()
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'default' }}
+         title={`${name} · ${turns} turns · click to reset`}
+         onClick={onReset}>
+      <div style={{ position: 'relative' }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: '50%',
+          background: color + '18',
+          border: `2px solid ${color}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, fontWeight: 700, color,
+          boxShadow: active ? `0 0 14px ${color}55` : 'none',
+          opacity: resetting ? 0.4 : 1,
+          transition: 'opacity 0.2s, box-shadow 0.2s',
+          cursor: 'pointer',
+        }}>
+          {initial}
+        </div>
+        {turns > 0 && (
+          <div style={{
+            position: 'absolute', bottom: -1, right: -1,
+            background: color, color: '#fff', fontSize: 9, fontWeight: 700,
+            borderRadius: 8, padding: '1px 5px', border: '1.5px solid #080b14',
+          }}>{turns}</div>
+        )}
+        {active && (
+          <div style={{
+            position: 'absolute', top: 0, right: 0,
+            width: 10, height: 10, borderRadius: '50%',
+            background: 'var(--green)', border: '1.5px solid #080b14',
+            boxShadow: '0 0 6px var(--green)',
+          }} />
+        )}
+      </div>
+      <div style={{
+        fontSize: 9, color: 'var(--text-3)', maxWidth: 58,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        textAlign: 'center', fontFamily: 'JetBrains Mono, monospace',
+      }}>{name}</div>
+    </div>
+  )
+}
+
+function PeerBubble({ peer }) {
+  const color   = '#a78bfa'
+  const label   = peer.name || peer.host || 'peer'
+  const initial = label.charAt(0).toUpperCase()
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+         title={peer.url ?? label}>
+      <div style={{
+        width: 44, height: 44, borderRadius: '50%',
+        background: color + '18', border: `2px solid ${color}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 16, fontWeight: 700, color,
+        boxShadow: `0 0 10px ${color}44`,
+      }}>{initial}</div>
+      <div style={{
+        fontSize: 9, color: 'var(--text-3)', maxWidth: 58,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        textAlign: 'center',
+      }}>{label}</div>
+    </div>
+  )
+}
+
+function RuntimeZone({ name, label, icon, colors, installed, running, model, emptyText, children }) {
+  return (
+    <div style={{
+      flex: 1, borderRadius: 16, overflow: 'hidden',
+      border: `1px solid ${running ? colors.border : 'var(--border)'}`,
+      background: 'rgba(8,11,20,0.55)',
+      display: 'flex', flexDirection: 'column',
+      minHeight: 300,
+      transition: 'border-color 0.3s',
+    }}>
+      <div style={{ height: 3, background: running ? colors.primary : 'rgba(255,255,255,0.04)', transition: 'background 0.3s' }} />
+
+      {/* Header */}
+      <div style={{ padding: '16px 18px 14px', borderBottom: '1px solid var(--sep)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+            background: running ? colors.dim : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${running ? colors.border : 'rgba(255,255,255,0.07)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, transition: 'all 0.3s',
+          }}>{icon}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.2px' }}>{label}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2, fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {model}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: running ? colors.primary : installed ? 'var(--orange)' : 'rgba(255,255,255,0.2)',
+              boxShadow: running ? `0 0 7px ${colors.primary}` : 'none',
+              transition: 'all 0.3s',
+            }} />
+            <span style={{ fontSize: 11, color: running ? colors.primary : 'var(--text-3)', transition: 'color 0.3s' }}>
+              {running ? 'running' : installed ? 'idle' : 'not found'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sub-agents area */}
+      <div style={{
+        flex: 1, padding: '16px 18px',
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignContent: 'flex-start',
+      }}>
+        {children ?? (
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 36 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{emptyText ?? 'No active sessions'}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LiveFeed({ events }) {
+  const items = events.filter(e =>
+    ['task_update','audit_event','approval_pending','approval_resolved'].includes(e.type)
+  ).slice(0, 80)
+
+  function label(e) {
+    const d = e.data ?? {}
+    if (e.type === 'task_update')       return `${d.status ?? 'update'}: ${(d.intent ?? d.description ?? '').slice(0, 55)}`
+    if (e.type === 'audit_event')       return `${(d.decision ?? '').toUpperCase()} ${d.tool ?? ''} ${d.target ? `→ ${String(d.target).slice(0, 25)}` : ''}`
+    if (e.type === 'approval_pending')  return `⏸ approval needed: ${d.tool ?? ''} on ${String(d.target ?? '').slice(0, 25)}`
+    if (e.type === 'approval_resolved') return `${d.decision === 'approved' ? '✓' : '✕'} ${d.approval_id?.slice(0, 8)}`
+    return e.type
+  }
+
+  function color(e) {
+    if (e.type === 'approval_pending')  return 'var(--orange)'
+    if (e.type === 'approval_resolved') return e.data?.decision === 'approved' ? 'var(--green)' : 'var(--red)'
+    if (e.type === 'audit_event') {
+      const d = e.data?.decision ?? ''
+      if (d === 'approved' || d === 'allow') return 'var(--green)'
+      if (d === 'denied'   || d === 'deny')  return 'var(--red)'
+    }
+    if (e.type === 'task_update') {
+      const s = e.data?.status ?? ''
+      if (s === 'completed') return 'var(--green)'
+      if (s === 'failed')    return 'var(--red)'
+      if (s === 'running')   return 'var(--blue)'
+    }
+    return 'var(--text-3)'
+  }
+
+  return (
+    <div style={{
+      width: 272, flexShrink: 0,
+      borderLeft: '1px solid var(--sep)',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    }}>
+      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--sep)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 5px var(--green)' }} />
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+            Live Activity
+          </span>
+        </div>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+        {items.length === 0 ? (
+          <div style={{ padding: '28px 16px', fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
+            Waiting for activity…
+          </div>
+        ) : items.map((e, i) => (
+          <div key={i} style={{ padding: '8px 16px', borderBottom: '1px solid rgba(255,255,255,0.025)' }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', fontFamily: 'JetBrains Mono,monospace', marginBottom: 2 }}>
+              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </div>
+            <div style={{ fontSize: 11, color: color(e), lineHeight: 1.45, wordBreak: 'break-word' }}>
+              {label(e)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function Agents({ events = [], runtimes = {} }) {
+  const [sessions,  setSessions]  = useState([])
+  const [peers,     setPeers]     = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [resetting, setResetting] = useState(null)
 
   async function load() {
     setLoading(true)
     try {
-      const [wss, agts] = await Promise.all([
-        api.workspaces(),
+      const [agts, prs] = await Promise.all([
         api.agents(),
+        fetch('/api/peers').then(r => r.json()).catch(() => ({ peers: [] })),
       ])
-      setWorkspaces(wss)
       setSessions(agts.sessions ?? [])
+      setPeers(prs.peers ?? [])
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
   }
 
-  async function resetAgent(workspace_id) {
+  async function resetSession(workspace_id) {
     setResetting(workspace_id)
     try { await api.resetAgent(workspace_id) } catch(e) { console.error(e) }
     setResetting(null)
-    load()
+    api.agents().then(d => setSessions(d.sessions ?? [])).catch(() => {})
   }
 
   useEffect(() => { load() }, [])
 
-  const activeWs = new Set(sessions.map(s => s.workspace_id))
+  // Poll sessions every 6s
+  useEffect(() => {
+    const id = setInterval(() => {
+      api.agents().then(d => setSessions(d.sessions ?? [])).catch(() => {})
+    }, 6000)
+    return () => clearInterval(id)
+  }, [])
+
+  const nexus    = runtimes.nexus    ?? {}
+  const picoclaw = runtimes.picoclaw ?? {}
+  const openclaw = runtimes.openclaw ?? {}
+  const total    = [nexus, picoclaw, openclaw].filter(r => r.running).length
 
   return (
-    <div className="fade-up" style={{ padding: '0 0 48px' }}>
-      <div style={{ padding: '32px 24px 0', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--sep)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>Agents & Workspaces</div>
-          <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
-            {sessions.length} active session{sessions.length !== 1 ? 's' : ''} · {workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px' }}>Runtime Network</div>
+          <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
+            {total} runtime{total !== 1 ? 's' : ''} active · {sessions.length} session{sessions.length !== 1 ? 's' : ''} · {peers.length} peer{peers.length !== 1 ? 's' : ''}
           </div>
         </div>
         <Btn size="sm" onClick={load} disabled={loading}>{loading ? '…' : 'Refresh'}</Btn>
       </div>
 
-      {/* Active sessions */}
-      {sessions.length > 0 && (
-        <>
-          <SectionLabel>Active Sessions · {sessions.length}</SectionLabel>
-          <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-            {sessions.map(s => (
-              <div key={s.workspace_id} className="glass" style={{
-                padding: '14px 16px', borderRadius: 14,
-                border: '1px solid rgba(52,211,153,0.2)',
-                boxShadow: '0 0 16px rgba(52,211,153,0.05)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: 'var(--green)', boxShadow: '0 0 6px var(--green)', flexShrink: 0,
-                  }} />
-                  <div className="mono" style={{
-                    fontSize: 13, fontWeight: 500, flex: 1,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{s.workspace_id}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                  <Badge color="gray">{s.turn} turns</Badge>
-                  <Badge color="blue">{s.model?.split(':')[0] ?? 'local'}</Badge>
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>
-                  {(s.session_id ?? '').slice(0, 14)}…
-                </div>
-                <button
-                  onClick={() => resetAgent(s.workspace_id)}
-                  disabled={resetting === s.workspace_id}
-                  style={{
-                    width: '100%', padding: '6px', borderRadius: 8,
-                    border: '1px solid var(--border)', background: 'transparent',
-                    color: 'var(--text-2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                    opacity: resetting === s.workspace_id ? 0.5 : 1,
-                  }}
-                >
-                  {resetting === s.workspace_id ? 'Resetting…' : 'Reset Session'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {/* Body */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Three zones */}
+        <div style={{ flex: 1, padding: '16px', display: 'flex', gap: 12, overflow: 'hidden' }}>
 
-      {/* Workspaces grid */}
-      <SectionLabel>Workspaces · {workspaces.length}</SectionLabel>
-      <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-        {workspaces.length === 0 ? (
-          <div style={{ gridColumn: '1 / -1' }}>
-            <Card><Empty>No workspaces found</Empty></Card>
-          </div>
-        ) : workspaces.map(ws => {
-          const isActive = activeWs.has(ws.name)
-          const lastMod  = ws.modified ? new Date(ws.modified * 1000) : null
-          const relTime  = lastMod ? _reltime(lastMod) : null
+          {/* Nexus */}
+          <RuntimeZone
+            name="nexus" label="Nexus" icon="⬡"
+            colors={RT_COLORS.nexus}
+            installed={nexus.installed ?? true}
+            running={nexus.running}
+            model={`local · ${nexus.model ?? 'qwen2.5:7b'}`}
+            emptyText="No active sessions — chat in Nexus Command"
+          >
+            {sessions.length > 0 ? sessions.map(s => (
+              <AgentBubble
+                key={s.workspace_id}
+                name={s.workspace_id}
+                turns={s.turn}
+                active={s.turn > 0}
+                resetting={resetting === s.workspace_id}
+                onReset={() => resetSession(s.workspace_id)}
+              />
+            )) : undefined}
+          </RuntimeZone>
 
-          return (
-            <div key={ws.name} className="glass" style={{
-              borderRadius: 14, overflow: 'hidden',
-              border: `1px solid ${isActive ? 'rgba(52,211,153,0.25)' : 'var(--border)'}`,
-              transition: 'border-color 0.2s',
-            }}>
-              {/* Top accent bar */}
-              <div style={{
-                height: 3,
-                background: isActive
-                  ? 'linear-gradient(90deg, var(--green), var(--blue))'
-                  : 'transparent',
-              }} />
+          {/* PicoClaw */}
+          <RuntimeZone
+            name="picoclaw" label="PicoClaw" icon="⚡"
+            colors={RT_COLORS.picoclaw}
+            installed={picoclaw.installed}
+            running={picoclaw.running}
+            model="edge · on-device inference"
+            emptyText={
+              picoclaw.running ? 'Running — no sub-agents exposed'
+              : picoclaw.installed ? 'Installed — not running'
+              : 'Not installed on this device'
+            }
+          />
 
-              <div style={{ padding: '14px 16px' }}>
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                    background: isActive ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${isActive ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.07)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                      <rect x="1" y="3.5" width="13" height="9" rx="1.5" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2"/>
-                      <path d="M1 7h13" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2"/>
-                      <path d="M4.5 3.5V2.5" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2" strokeLinecap="round"/>
-                      <path d="M10.5 3.5V2.5" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2" strokeLinecap="round"/>
-                    </svg>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="mono" style={{
-                      fontSize: 13, fontWeight: 600,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{ws.name}</div>
-                    {relTime && <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{relTime}</div>}
-                  </div>
-                  {isActive && (
-                    <div style={{
-                      width: 7, height: 7, borderRadius: '50%',
-                      background: 'var(--green)', boxShadow: '0 0 5px var(--green)', flexShrink: 0,
-                    }} />
-                  )}
-                </div>
+          {/* OpenClaw */}
+          <RuntimeZone
+            name="openclaw" label="OpenClaw" icon="☁"
+            colors={RT_COLORS.openclaw}
+            installed={openclaw.installed}
+            running={openclaw.running}
+            model={`gateway · ${openclaw.model ?? 'cloud'}`}
+            emptyText={
+              !openclaw.installed ? 'Not installed'
+              : !openclaw.running ? 'Gateway offline'
+              : 'No peers discovered yet'
+            }
+          >
+            {peers.length > 0 ? peers.map((p, i) => (
+              <PeerBubble key={i} peer={p} />
+            )) : undefined}
+          </RuntimeZone>
+        </div>
 
-                {/* Badges */}
-                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
-                  {ws.file_count > 0 && <Badge color="gray">{ws.file_count} file{ws.file_count !== 1 ? 's' : ''}</Badge>}
-                  {ws.has_pinned   && <Badge color="green">PINNED</Badge>}
-                  {ws.has_workflow && <Badge color="blue">WORKFLOW</Badge>}
-                  {isActive       && <Badge color="green">active</Badge>}
-                </div>
-
-                {/* Pinned preview */}
-                {ws.pinned_preview && (
-                  <div style={{
-                    fontSize: 10, color: 'var(--text-3)', fontFamily: 'JetBrains Mono, monospace',
-                    background: 'rgba(0,0,0,0.25)', borderRadius: 6, padding: '6px 8px',
-                    maxHeight: 50, overflow: 'hidden', marginBottom: 10, lineHeight: 1.5,
-                    borderLeft: '2px solid rgba(52,211,153,0.3)',
-                  }}>
-                    {ws.pinned_preview.slice(0, 90)}{ws.pinned_preview.length > 90 ? '…' : ''}
-                  </div>
-                )}
-
-                <a href="/command" style={{
-                  display: 'block', textAlign: 'center', padding: '7px',
-                  borderRadius: 8, border: '1px solid var(--border)', background: 'transparent',
-                  color: 'var(--text-2)', fontSize: 12, fontFamily: 'inherit',
-                  textDecoration: 'none',
-                }}>
-                  Open in Command
-                </a>
-              </div>
-            </div>
-          )
-        })}
+        {/* Live activity feed */}
+        <LiveFeed events={events} />
       </div>
     </div>
   )
