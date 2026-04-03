@@ -253,8 +253,8 @@ done
 if [ -n "$OLLAMA_BIN" ]; then
   ok "Ollama already installed ($OLLAMA_BIN)"
 else
-  run_with_spinner "Downloading and installing Ollama" \
-    bash -lc 'curl -fsSL https://ollama.com/install.sh | sh'
+  info "Downloading Ollama — this may take a few minutes..."
+  bash -lc 'curl -fsSL https://ollama.com/install.sh | sh' 2>&1 | sed 's/^/    /'
   # Re-probe after install
   OLLAMA_BIN="$(command -v ollama 2>/dev/null || echo "")"
   for _p in /usr/local/bin/ollama /usr/bin/ollama "$HOME/.local/bin/ollama"; do
