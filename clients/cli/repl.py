@@ -259,7 +259,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
             elif cmd == "/status":
                 from services.modeld.ollama_client import is_running, list_models
                 running = is_running()
-                models  = [m.get("name","?") for m in list_models()]
+                models  = [getattr(m, "model", None) or (m.get("model") if isinstance(m, dict) else None) or (m.get("name") if isinstance(m, dict) else None) or "?" for m in list_models()]
                 print(f"\n  {_b(PURPLE, 'Status')}")
                 icon = _p(GREEN, '✓') if running else _p(RED, '✗')
                 print(f"  {icon} Ollama:    {'running' if running else 'not running'}")
