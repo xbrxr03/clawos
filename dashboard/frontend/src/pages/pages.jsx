@@ -472,7 +472,12 @@ export function NexusCommand() {
         body: JSON.stringify({ message: text }),
       })
       const data = await r.json()
-      setMessages(m => [...m, { role: 'nexus', text: data.reply ?? data.error ?? '(no response)', ts: Date.now() }])
+      setMessages(m => [...m, {
+        role: 'nexus',
+        text: data.reply ?? data.error ?? '(no response)',
+        tool_steps: data.tool_steps ?? [],
+        ts: Date.now(),
+      }])
     } catch(e) {
       setMessages(m => [...m, { role: 'nexus', text: `Error: ${e.message}`, ts: Date.now(), error: true }])
     }
@@ -499,6 +504,25 @@ export function NexusCommand() {
             flexDirection: 'column',
             alignItems: m.role === 'user' ? 'flex-end' : 'flex-start',
           }}>
+            {/* Tool steps chips */}
+            {m.role === 'nexus' && m.tool_steps?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6, maxWidth: '75%' }}>
+                {m.tool_steps.map((s, j) => (
+                  <div key={j} style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '2px 8px', borderRadius: 6, fontSize: 10,
+                    background: s.denied ? 'rgba(248,113,113,0.1)' : s.pending_approval ? 'rgba(251,146,60,0.1)' : 'rgba(52,211,153,0.1)',
+                    border: `1px solid ${s.denied ? 'rgba(248,113,113,0.2)' : s.pending_approval ? 'rgba(251,146,60,0.2)' : 'rgba(52,211,153,0.2)'}`,
+                    color: s.denied ? 'var(--red)' : s.pending_approval ? 'var(--orange)' : 'var(--green)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}>
+                    <span>{s.denied ? '✕' : s.pending_approval ? '⏸' : '✓'}</span>
+                    <span>{s.tool}</span>
+                    {s.target && <span style={{ opacity: 0.7 }}>({s.target.length > 30 ? s.target.slice(0,30)+'…' : s.target})</span>}
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{
               maxWidth: '75%',
               padding: '10px 14px',

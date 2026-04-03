@@ -216,6 +216,83 @@ class AgentRuntime:
         self._history.append({"role": "assistant",  "content": fallback})
         return fallback
 
+    async def chat_with_steps(self, user_input: str) -> dict:
+        """Like chat() but also returns tool_steps list for UI display."""
+        self._turn       += 1
+        self.session.turn = self._turn
+
+        sys_prompt   = self._build_system_prompt()
+        mem_ctx      = self._get_memory_context(user_input)
+        skills_block = self._get_skills_block(user_input)
+        rag_ctx      = self._get_rag_context(user_input)
+        learned_ctx  = self._get_learned_context()
+        user_msg     = build_user_message(
+            user_input, self.session.session_id, self._turn,
+            mem_ctx, skills_block, rag_ctx, learned_ctx
+        )
+
+        trimmed  = self._history[-(MAX_HISTORY * 2):]
+        messages = ([{"role": "system", "content": sys_prompt}]
+                    + trimmed
+                    + [{"role": "user", "content": user_msg}])
+
+        if self.memory:
+            asyncio.create_task(
+                self.memory.remember_async(f"User: {user_input}",
+                                           self.workspace_id, source="user")
+            )
+
+        tool_steps = []
+
+        for _ in range(MAX_ITERATIONS):
+            try:
+                raw = await _call_llm(messages, self.model)
+            except RuntimeError as e:
+                return {"reply": f"Could not reach language model: {e}", "tool_steps": tool_steps}
+
+            parsed = parse_response(raw)
+
+            if "final_answer" in parsed:
+                answer = str(parsed["final_answer"]).strip()
+                self._history.append({"role": "user",      "content": user_input})
+                self._history.append({"role": "assistant",  "content": answer})
+                if self.memory:
+                    asyncio.create_task(
+                        self.memory.remember_async(f"Nexus: {answer}",
+                                                   self.workspace_id, source="agent")
+                    )
+                return {"reply": answer, "tool_steps": tool_steps}
+
+            if "parse_error" in parsed:
+                messages.append({"role": "assistant", "content": raw})
+                messages.append({"role": "user", "content":
+                    'Use valid JSON: {"final_answer": "..."} or {"action": "...", "action_input": "..."}'})
+                continue
+
+            if "action" in parsed:
+                tool    = str(parsed.get("action", ""))
+                target  = str(parsed.get("action_input", ""))
+                content = str(parsed.get("content", ""))
+                result  = (await self.bridge.run(tool, target, content=content)
+                           if self.bridge else "[ERROR] No tool bridge")
+                step_label = f"{tool}: {target[:60]}"
+                denied = "DENIED" in str(result) or "not granted" in str(result)
+                tool_steps.append({"tool": tool, "target": target[:60],
+                                   "denied": denied, "pending_approval": "pending" in str(result).lower()})
+                messages.append({"role": "assistant", "content": raw})
+                messages.append({"role": "user",      "content": f"Observation: {result}"})
+                continue
+
+            messages.append({"role": "assistant", "content": raw})
+            messages.append({"role": "user", "content":
+                'Use the JSON format: {"final_answer": "..."} or {"action": "...", "action_input": "..."}'})
+
+        fallback = "Reached max reasoning steps. " + (
+            f"Tools used: {', '.join(s['tool'] for s in tool_steps)}." if tool_steps else "Try rephrasing.")
+        self._history.append({"role": "user",      "content": user_input})
+        self._history.append({"role": "assistant",  "content": fallback})
+        return {"reply": fallback, "tool_steps": tool_steps}
+
     async def reset(self):
         self._history.clear()
         self._turn    = 0
@@ -250,8 +327,9 @@ async def build_runtime(workspace_id: str = DEFAULT_WORKSPACE,
         workspace_id  = workspace_id,
         task_id       = task_id(),
         granted_tools = get("policy.default_grants",
-                            ["fs.read", "fs.write", "fs.list",
-                             "web.search", "memory.read", "memory.write"]),
+                            ["fs.read", "fs.write", "fs.list", "fs.search",
+                             "web.search", "memory.read", "memory.write",
+                             "shell.restricted", "system.info"]),
     )
     bridge = ToolBridge(policy_client=policy, memory_service=memory,
                         workspace_id=workspace_id)

@@ -225,31 +225,30 @@ class PolicyEngine:
         except Exception:
             pass
 
-        # Terminal prompt (fallback when no dashboard/WhatsApp)
-        print(f"\n  ⏸  Approval required [{req.request_id}]")
-        print(f"     Tool:   {tool}")
-        print(f"     Target: {target[:80]}")
-        if content:
-            print(f"     Content: {content[:100]}...")
-        print(f"     [a]pprove / [d]eny: ", end="", flush=True)
+        # Log approval request — decision comes from dashboard UI or terminal
+        log.info(f"Approval required [{req.request_id}] {tool} on '{target[:60]}'")
+        import sys
+        if sys.stdin.isatty():
+            # Interactive terminal: print prompt and race stdin vs event
+            print(f"\n  ⏸  Approval required [{req.request_id}]")
+            print(f"     Tool:   {tool}")
+            print(f"     Target: {target[:80]}")
+            if content:
+                print(f"     Content: {content[:100]}...")
+            print(f"     Approve in dashboard or type [a]pprove/[d]eny: ", end="", flush=True)
 
-        loop = asyncio.get_event_loop()
+        # Wait for either dashboard approval (event) or timeout
         try:
-            choice = await asyncio.wait_for(
-                loop.run_in_executor(None, input, ""),
-                timeout=APPROVAL_TIMEOUT_S
-            )
+            await asyncio.wait_for(req.event.wait(), timeout=APPROVAL_TIMEOUT_S)
+            decision = req.decision if req.decision is not None else Decision.DENY
         except asyncio.TimeoutError:
-            choice = "d"
-            print("timeout — auto-denied")
+            decision = Decision.DENY
+            log.info(f"Approval timeout — auto-denied [{req.request_id}]")
 
-        decision = Decision.ALLOW if choice.strip().lower() in ("a", "approve", "y", "yes", "") \
-                   else Decision.DENY
         reason = f"human {'approved' if decision == Decision.ALLOW else 'denied'} [{req.request_id}]"
 
-        req.decision = decision
-        req.event.set()
-        del self._pending[req.request_id]
+        if req.request_id in self._pending:
+            del self._pending[req.request_id]
 
         self._db.execute(
             "UPDATE approvals SET decision=?, decided_at=? WHERE request_id=?",

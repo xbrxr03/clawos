@@ -590,12 +590,12 @@ async def api_nexus_chat(body: dict):
     if not message:
         return {"reply": "", "error": "empty message"}
     try:
-        from runtimes.agent.runtime import AgentRuntime
-        rt = AgentRuntime(workspace_id="nexus_default")
-        reply = await rt.chat(message)
-        return {"reply": reply}
+        from services.agentd.service import get_manager
+        mgr = get_manager()
+        result = await mgr.chat_direct_with_steps(message, workspace_id="nexus_default")
+        return result  # {"reply": str, "tool_steps": list}
     except Exception as e:
-        return {"reply": "", "error": str(e)}
+        return {"reply": "", "error": str(e), "tool_steps": []}
 
 # ── Workflows API ────────────────────────────────────────────────────────────
 @app.get("/api/workflows/list")
