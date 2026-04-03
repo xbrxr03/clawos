@@ -521,27 +521,32 @@ ok "clawos  clawctl"
 
 # ── Autostart ─────────────────────────────────────────────────────────────────
 
-# ── PicoClaw (Tier A ARM only) ────────────────────────────────────────────────
-if [ "$IS_ARM" = "true" ] && [ "$PROFILE" = "lowram" ]; then
-  step "Installing PicoClaw edge runtime (Tier A ARM)"
-  PICOCLAW_ARCH="arm64"
-  case "$(uname -m)" in
-    armv7l|armv8l|armhf) PICOCLAW_ARCH="arm32" ;;
-    aarch64|arm64)        PICOCLAW_ARCH="arm64" ;;
-    riscv64)              PICOCLAW_ARCH="riscv64" ;;
-  esac
-  PICOCLAW_URL="https://github.com/sipeed/picoclaw/releases/download/v0.2.4/picoclaw-linux-${PICOCLAW_ARCH}"
+# ── PicoClaw (all architectures, when selected in wizard) ─────────────────────
+if echo "${CLAWOS_RUNTIMES}" | grep -q "picoclaw"; then
+  step "Installing PicoClaw lightweight runtime"
   if command -v picoclaw &>/dev/null; then
     ok "PicoClaw already installed"
   else
-    run_with_spinner "Downloading PicoClaw (${PICOCLAW_ARCH})" \
-      wget -q -O /tmp/picoclaw "$PICOCLAW_URL" && \
-      sudo mv /tmp/picoclaw /usr/local/bin/picoclaw && \
-      sudo chmod +x /usr/local/bin/picoclaw
+    # Resolve arch for GitHub release tarball
+    case "$(uname -m)" in
+      armv7l|armv8l|armhf) _PC_ARCH="armv7" ;;
+      aarch64|arm64)        _PC_ARCH="arm64" ;;
+      riscv64)              _PC_ARCH="riscv64" ;;
+      x86_64|amd64)         _PC_ARCH="x86_64" ;;
+      *)                    _PC_ARCH="x86_64" ;;
+    esac
+    _PC_VER="$(curl -fsSL https://api.github.com/repos/sipeed/picoclaw/releases/latest 2>/dev/null \
+      | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')"
+    _PC_VER="${_PC_VER:-0.2.5}"
+    _PC_URL="https://github.com/sipeed/picoclaw/releases/download/v${_PC_VER}/picoclaw_Linux_${_PC_ARCH}.tar.gz"
+    info "Downloading PicoClaw ${_PC_VER} (${_PC_ARCH})..."
+    if curl -fsSL --max-time 30 "$_PC_URL" | tar -xz -C /tmp picoclaw 2>/dev/null; then
+      sudo mv /tmp/picoclaw /usr/local/bin/picoclaw && sudo chmod +x /usr/local/bin/picoclaw
+    fi
     if command -v picoclaw &>/dev/null; then
       ok "PicoClaw installed"
     else
-      warn "PicoClaw download failed — will retry on first boot"
+      warn "PicoClaw download failed — skipping (not critical)"
     fi
   fi
   mkdir -p "$HOME/.picoclaw"
