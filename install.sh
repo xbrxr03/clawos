@@ -244,15 +244,25 @@ ok "git  curl  sqlite3  python3-pip"
 # ── Ollama ────────────────────────────────────────────────────────────────────
 step "Setting up Ollama"
 
-if command -v ollama >/dev/null 2>&1; then
-  ok "Ollama already installed"
+# Check PATH and known install locations — non-login shells may not have /usr/local/bin
+OLLAMA_BIN="$(command -v ollama 2>/dev/null || echo "")"
+for _p in /usr/local/bin/ollama /usr/bin/ollama "$HOME/.local/bin/ollama"; do
+  [ -z "$OLLAMA_BIN" ] && [ -x "$_p" ] && OLLAMA_BIN="$_p"
+done
+
+if [ -n "$OLLAMA_BIN" ]; then
+  ok "Ollama already installed ($OLLAMA_BIN)"
 else
   run_with_spinner "Downloading and installing Ollama" \
     bash -lc 'curl -fsSL https://ollama.com/install.sh | sh'
+  # Re-probe after install
+  OLLAMA_BIN="$(command -v ollama 2>/dev/null || echo "")"
+  for _p in /usr/local/bin/ollama /usr/bin/ollama "$HOME/.local/bin/ollama"; do
+    [ -z "$OLLAMA_BIN" ] && [ -x "$_p" ] && OLLAMA_BIN="$_p"
+  done
   ok "Ollama installed"
 fi
 
-OLLAMA_BIN="$(command -v ollama || true)"
 [ -n "$OLLAMA_BIN" ] || die "Ollama install finished but binary was not found in PATH"
 
 # ── Start Ollama serve ────────────────────────────────────────────────────────
