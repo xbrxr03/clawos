@@ -13,6 +13,7 @@ StandardError=append:/home/user/clawos/logs/clawosd.log
 Environment=PYTHONPATH=/home/user/clawos
 Environment=CLAWOS_HOME=/home/user/clawos
 Environment=OLLAMA_HOST=http://localhost:11434
+Environment="PATH=/home/user/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
 [Install]
 WantedBy=default.target
