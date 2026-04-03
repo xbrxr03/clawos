@@ -97,20 +97,26 @@ export function Sidebar({ connected, services, approvalCount }) {
           </NavLink>
         ))}
       
-      <a
-        href="http://localhost:5180"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
+      <NavLink
+        to="/command"
+        style={({ isActive }) => ({
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '8px 16px', borderRadius: 8, margin: '2px 8px',
-          cursor: 'pointer', color: '#2997FF', textDecoration: 'none',
-          fontSize: 14, marginTop: 'auto', fontWeight: 400,
-        }}
-        title="Open Nexus Command (openclaw-office)"
+          padding: '8px 10px', borderRadius: 10, margin: '2px 0',
+          textDecoration: 'none',
+          color: isActive ? 'var(--blue)' : 'var(--text-2)',
+          background: isActive ? 'var(--blue-dim)' : 'transparent',
+          border: isActive ? '1px solid rgba(79,142,247,0.2)' : '1px solid transparent',
+          fontSize: 13, fontWeight: isActive ? 500 : 400, transition: 'all 0.15s',
+        })}
+        title="Send a command directly to Nexus"
       >
-        ⬡ Nexus Command
-      </a>
+        {({ isActive }) => (
+          <>
+            <span style={{ opacity: isActive ? 1 : 0.6, display: 'flex' }}><IconCommand /></span>
+            <span style={{ flex: 1 }}>Nexus Command</span>
+          </>
+        )}
+      </NavLink>
 </nav>
 
       {/* Footer */}
@@ -172,6 +178,12 @@ function IconLog() {
   return <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
     <rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
     <path d="M5 5h5M5 7.5h5M5 10h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+  </svg>
+}
+function IconCommand() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+    <path d="M2 4.5l3.5 3-3.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8 10.5h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
   </svg>
 }
 function IconWorkflows() {
