@@ -27,7 +27,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Overview services={services} tasks={tasks} approvals={approvals} events={events} models={models} runtimes={runtimes} />} />
               <Route path="/tasks"     element={<Tasks tasks={tasks} />} />
-              <Route path="/agents"    element={<Agents />} />
+              <Route path="/agents"    element={<Agents events={events} runtimes={runtimes} />} />
               <Route path="/approvals" element={<Approvals approvals={approvals} />} />
               <Route path="/models"    element={<Models models={models} pullProgress={pullProgress} />} />
               <Route path="/workflows"  element={<Workflows />} />

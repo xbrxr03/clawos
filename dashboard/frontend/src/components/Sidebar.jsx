@@ -4,7 +4,7 @@ const NAV = [
   { to: '/',           label: 'Overview',          icon: <IconOverview />   },
   { to: '/tasks',      label: 'Tasks',             icon: <IconTasks />      },
   { to: '/approvals',  label: 'Approvals',         icon: <IconShield />     },
-  { to: '/agents',     label: 'Agents',            icon: <IconAgents />     },
+  { to: '/agents',     label: 'Network',           icon: <IconAgents />     },
   { to: '/workflows',  label: 'Workflows',         icon: <IconWorkflows />  },
   { to: '/models',     label: 'Models',            icon: <IconCpu />        },
   { to: '/memory',     label: 'Memory',            icon: <IconDb />         },
