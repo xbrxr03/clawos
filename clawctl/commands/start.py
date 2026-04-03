@@ -6,6 +6,10 @@ from clawctl.ui.banner import success, error, info
 
 ROOT = Path(__file__).parent.parent.parent
 
+# All core services run in-process inside clawos.service.
+# Individual clawos-{svc}.service units do not exist.
+DAEMON_UNIT = "clawos.service"
+
 
 def _start_dev(service: str = None):
     """Start in dev mode (no systemd)."""
@@ -35,17 +39,19 @@ def _start_dev(service: str = None):
 
 
 def _start_systemd(service: str = None):
-    svcs = [f"clawos-{service}"] if service else [
-        f"clawos-{s}" for s in
-        ["policyd","memd","modeld","toolbridge","agentd","clawd","dashd"]
-    ]
-    for svc in svcs:
-        r = subprocess.run(["systemctl","--user","start",f"{svc}.service"],
-                           capture_output=True)
-        if r.returncode == 0:
-            success(f"Started {svc}")
+    # All services live inside the single clawos.service daemon.
+    # Starting a named sub-service restarts the whole daemon.
+    r = subprocess.run(
+        ["systemctl", "--user", "start", DAEMON_UNIT],
+        capture_output=True,
+    )
+    if r.returncode == 0:
+        if service:
+            success(f"clawos.service started ({service} runs in-process)")
         else:
-            error(f"Failed to start {svc}")
+            success("clawos.service started")
+    else:
+        error(f"Failed to start clawos.service: {r.stderr.decode().strip()}")
 
 
 def run(service: str = None, dev: bool = False):

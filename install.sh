@@ -557,9 +557,14 @@ Description=Ollama AI Runtime
 After=network.target
 
 [Service]
-ExecStart=${OLLAMA_BIN} serve
-Restart=always
-RestartSec=3
+# If ollama is already running (e.g. started by the installer nohup),
+# exit 0 immediately so systemd considers the service active without
+# trying to bind the port again.
+ExecStart=/bin/sh -c 'nc -z localhost 11434 2>/dev/null && exit 0; exec ${OLLAMA_BIN} serve'
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=30
 Environment=HOME=${HOME}
 
 [Install]

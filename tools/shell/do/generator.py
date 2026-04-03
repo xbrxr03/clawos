@@ -86,6 +86,41 @@ def _parse(raw: str) -> list[str]:
     return [cleaned]
 
 
+def _normalise_request(request: str) -> str:
+    """
+    Replace /home/<username> style paths in the request with ~ so the
+    model never sees an absolute home path and doesn't get confused by
+    its own PATH RULES instruction (which forbids generating /home/...).
+    """
+    import re
+    import os
+    home = os.path.expanduser("~")
+    # Replace the literal home path with ~
+    request = request.replace(home, "~")
+    # Also replace /home/<any-word> patterns that look like home dirs
+    request = re.sub(r"/home/\w+", "~", request)
+    return request
+
+
+def _validate(commands: list[str]) -> list[str]:
+    """
+    Reject obviously broken outputs like bare '.' or empty strings.
+    A valid command must contain at least one space or be a known
+    single-word command (ls, pwd, etc.).
+    """
+    KNOWN_SINGLE = {"ls", "pwd", "whoami", "date", "uptime", "df", "free", "uname"}
+    good = []
+    for cmd in commands:
+        cmd = cmd.strip()
+        if not cmd:
+            continue
+        if " " not in cmd and cmd not in KNOWN_SINGLE and not cmd.startswith(("~/", "/", "~")):
+            # Likely garbage — skip
+            continue
+        good.append(cmd)
+    return good
+
+
 def generate(request: str, context: dict, model: str = None) -> list[str]:
     """
     Generate shell command(s) for the given natural language request.
@@ -98,6 +133,9 @@ def generate(request: str, context: dict, model: str = None) -> list[str]:
         return []
 
     model = model or os.environ.get("CLAWDO_MODEL", DEFAULT_MODEL)
+
+    # Normalise /home/<user> → ~ before sending to model
+    request = _normalise_request(request)
 
     # Build context block for user message (dynamic info stays OUT of system prompt)
     from tools.shell.do.context import format_context
@@ -114,7 +152,7 @@ def generate(request: str, context: dict, model: str = None) -> list[str]:
             options={"temperature": 0.1},
         )
         raw = resp["message"]["content"]
-        return _parse(raw)
+        return _validate(_parse(raw))
     except Exception as e:
         print(f"  [error] Ollama call failed: {e}")
         return []
