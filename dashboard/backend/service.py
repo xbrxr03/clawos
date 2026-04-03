@@ -20,6 +20,7 @@ import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 HOME = Path.home()
@@ -710,4 +711,14 @@ if __name__ == "__main__":
 
 _static = Path(__file__).parent / "static"
 if _static.exists():
-    app.mount("/", StaticFiles(directory=str(_static), html=True), name="static")
+    # SPA catch-all: serve index.html for any non-API, non-asset path
+    # so React Router handles /workflows, /settings, etc.
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        index = _static / "index.html"
+        asset = _static / full_path
+        if asset.exists() and asset.is_file():
+            return FileResponse(str(asset))
+        return FileResponse(str(index))
+
+    app.mount("/assets", StaticFiles(directory=str(_static / "assets")), name="assets")
