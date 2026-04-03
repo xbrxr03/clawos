@@ -98,6 +98,12 @@ class AgentManager:
         session = await self._get_session(workspace_id)
         return await session.chat(message)
 
+    async def chat_direct_with_steps(self, message: str,
+                                      workspace_id: str = DEFAULT_WORKSPACE) -> dict:
+        """Direct chat returning reply + tool_steps for dashboard display."""
+        session = await self._get_session(workspace_id)
+        return await session.chat_with_steps(message)
+
     async def reset_session(self, workspace_id: str):
         if workspace_id in self._sessions:
             await self._sessions[workspace_id].reset()
