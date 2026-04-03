@@ -668,7 +668,7 @@ async def api_runtimes():
     picoclaw_running = False
     if picoclaw_ok:
         try:
-            r = subprocess.run(["picoclaw", "--version"],
+            r = subprocess.run(["picoclaw", "version"],
                                capture_output=True, timeout=2)
             picoclaw_running = r.returncode == 0
         except Exception:
