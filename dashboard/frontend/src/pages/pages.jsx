@@ -590,6 +590,197 @@ export function NexusCommand() {
   )
 }
 
+// ── Agents & Workspaces ───────────────────────────────────────────────────────
+function _reltime(date) {
+  const sec = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (sec < 60)    return 'just now'
+  if (sec < 3600)  return `${Math.floor(sec / 60)}m ago`
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`
+  return `${Math.floor(sec / 86400)}d ago`
+}
+
+export function Agents() {
+  const [workspaces, setWorkspaces] = useState([])
+  const [sessions,   setSessions]   = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [resetting,  setResetting]  = useState(null)
+
+  async function load() {
+    setLoading(true)
+    try {
+      const [wss, agts] = await Promise.all([
+        api.workspaces(),
+        api.agents(),
+      ])
+      setWorkspaces(wss)
+      setSessions(agts.sessions ?? [])
+    } catch(e) { console.error(e) }
+    finally { setLoading(false) }
+  }
+
+  async function resetAgent(workspace_id) {
+    setResetting(workspace_id)
+    try { await api.resetAgent(workspace_id) } catch(e) { console.error(e) }
+    setResetting(null)
+    load()
+  }
+
+  useEffect(() => { load() }, [])
+
+  const activeWs = new Set(sessions.map(s => s.workspace_id))
+
+  return (
+    <div className="fade-up" style={{ padding: '0 0 48px' }}>
+      <div style={{ padding: '32px 24px 0', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>Agents & Workspaces</div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
+            {sessions.length} active session{sessions.length !== 1 ? 's' : ''} · {workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <Btn size="sm" onClick={load} disabled={loading}>{loading ? '…' : 'Refresh'}</Btn>
+      </div>
+
+      {/* Active sessions */}
+      {sessions.length > 0 && (
+        <>
+          <SectionLabel>Active Sessions · {sessions.length}</SectionLabel>
+          <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+            {sessions.map(s => (
+              <div key={s.workspace_id} className="glass" style={{
+                padding: '14px 16px', borderRadius: 14,
+                border: '1px solid rgba(52,211,153,0.2)',
+                boxShadow: '0 0 16px rgba(52,211,153,0.05)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: 'var(--green)', boxShadow: '0 0 6px var(--green)', flexShrink: 0,
+                  }} />
+                  <div className="mono" style={{
+                    fontSize: 13, fontWeight: 500, flex: 1,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{s.workspace_id}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                  <Badge color="gray">{s.turn} turns</Badge>
+                  <Badge color="blue">{s.model?.split(':')[0] ?? 'local'}</Badge>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>
+                  {(s.session_id ?? '').slice(0, 14)}…
+                </div>
+                <button
+                  onClick={() => resetAgent(s.workspace_id)}
+                  disabled={resetting === s.workspace_id}
+                  style={{
+                    width: '100%', padding: '6px', borderRadius: 8,
+                    border: '1px solid var(--border)', background: 'transparent',
+                    color: 'var(--text-2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                    opacity: resetting === s.workspace_id ? 0.5 : 1,
+                  }}
+                >
+                  {resetting === s.workspace_id ? 'Resetting…' : 'Reset Session'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Workspaces grid */}
+      <SectionLabel>Workspaces · {workspaces.length}</SectionLabel>
+      <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+        {workspaces.length === 0 ? (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Card><Empty>No workspaces found</Empty></Card>
+          </div>
+        ) : workspaces.map(ws => {
+          const isActive = activeWs.has(ws.name)
+          const lastMod  = ws.modified ? new Date(ws.modified * 1000) : null
+          const relTime  = lastMod ? _reltime(lastMod) : null
+
+          return (
+            <div key={ws.name} className="glass" style={{
+              borderRadius: 14, overflow: 'hidden',
+              border: `1px solid ${isActive ? 'rgba(52,211,153,0.25)' : 'var(--border)'}`,
+              transition: 'border-color 0.2s',
+            }}>
+              {/* Top accent bar */}
+              <div style={{
+                height: 3,
+                background: isActive
+                  ? 'linear-gradient(90deg, var(--green), var(--blue))'
+                  : 'transparent',
+              }} />
+
+              <div style={{ padding: '14px 16px' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                    background: isActive ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${isActive ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                      <rect x="1" y="3.5" width="13" height="9" rx="1.5" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2"/>
+                      <path d="M1 7h13" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2"/>
+                      <path d="M4.5 3.5V2.5" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M10.5 3.5V2.5" stroke={isActive ? 'var(--green)' : 'var(--text-3)'} strokeWidth="1.2" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="mono" style={{
+                      fontSize: 13, fontWeight: 600,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{ws.name}</div>
+                    {relTime && <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{relTime}</div>}
+                  </div>
+                  {isActive && (
+                    <div style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: 'var(--green)', boxShadow: '0 0 5px var(--green)', flexShrink: 0,
+                    }} />
+                  )}
+                </div>
+
+                {/* Badges */}
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                  {ws.file_count > 0 && <Badge color="gray">{ws.file_count} file{ws.file_count !== 1 ? 's' : ''}</Badge>}
+                  {ws.has_pinned   && <Badge color="green">PINNED</Badge>}
+                  {ws.has_workflow && <Badge color="blue">WORKFLOW</Badge>}
+                  {isActive       && <Badge color="green">active</Badge>}
+                </div>
+
+                {/* Pinned preview */}
+                {ws.pinned_preview && (
+                  <div style={{
+                    fontSize: 10, color: 'var(--text-3)', fontFamily: 'JetBrains Mono, monospace',
+                    background: 'rgba(0,0,0,0.25)', borderRadius: 6, padding: '6px 8px',
+                    maxHeight: 50, overflow: 'hidden', marginBottom: 10, lineHeight: 1.5,
+                    borderLeft: '2px solid rgba(52,211,153,0.3)',
+                  }}>
+                    {ws.pinned_preview.slice(0, 90)}{ws.pinned_preview.length > 90 ? '…' : ''}
+                  </div>
+                )}
+
+                <a href="/command" style={{
+                  display: 'block', textAlign: 'center', padding: '7px',
+                  borderRadius: 8, border: '1px solid var(--border)', background: 'transparent',
+                  color: 'var(--text-2)', fontSize: 12, fontFamily: 'inherit',
+                  textDecoration: 'none',
+                }}>
+                  Open in Command
+                </a>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Audit ─────────────────────────────────────────────────────────────────────
 export function Audit({ events }) {
   const [entries, setEntries] = useState([])

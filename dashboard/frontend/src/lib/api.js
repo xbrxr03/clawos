@@ -18,4 +18,6 @@ export const api = {
   system:      ()   => r('GET',    '/system'),
   services:    ()   => r('GET',    '/services'),
   runtimes:    ()   => r('GET',    '/runtimes'),
+  agents:      ()   => r('GET',    '/agents'),
+  resetAgent:  id   => r('POST',   `/agents/${encodeURIComponent(id)}/reset`),
 }
