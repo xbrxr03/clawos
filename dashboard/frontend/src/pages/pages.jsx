@@ -451,6 +451,121 @@ export function Memory() {
   )
 }
 
+// ── Nexus Command ─────────────────────────────────────────────────────────────
+export function NexusCommand() {
+  const [messages, setMessages] = useState([])
+  const [input, setInput]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const bottomRef               = useState(null)
+
+  async function send() {
+    const text = input.trim()
+    if (!text || loading) return
+    const userMsg = { role: 'user', text, ts: Date.now() }
+    setMessages(m => [...m, userMsg])
+    setInput('')
+    setLoading(true)
+    try {
+      const r = await fetch('/api/nexus/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      })
+      const data = await r.json()
+      setMessages(m => [...m, { role: 'nexus', text: data.reply ?? data.error ?? '(no response)', ts: Date.now() }])
+    } catch(e) {
+      setMessages(m => [...m, { role: 'nexus', text: `Error: ${e.message}`, ts: Date.now(), error: true }])
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fade-up" style={{ padding: '0 0 0', display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <div style={{ padding: '32px 24px 16px', borderBottom: '1px solid var(--sep)', flexShrink: 0 }}>
+        <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>Nexus Command</div>
+        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>Chat directly with your local Nexus agent</div>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {messages.length === 0 && (
+          <div style={{ color: 'var(--text-3)', fontSize: 13, textAlign: 'center', marginTop: 40 }}>
+            Send a message to start chatting with Nexus
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: m.role === 'user' ? 'flex-end' : 'flex-start',
+          }}>
+            <div style={{
+              maxWidth: '75%',
+              padding: '10px 14px',
+              borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+              background: m.role === 'user' ? 'var(--blue)' : m.error ? 'rgba(248,113,113,0.12)' : 'var(--surface)',
+              border: m.role === 'user' ? 'none' : `1px solid ${m.error ? 'rgba(248,113,113,0.2)' : 'var(--border)'}`,
+              color: m.role === 'user' ? '#fff' : m.error ? 'var(--red)' : 'var(--text)',
+              fontSize: 13,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}>
+              {m.text}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3, paddingLeft: 4, paddingRight: 4 }}>
+              {m.role === 'user' ? 'you' : 'nexus'} · {new Date(m.ts).toLocaleTimeString()}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            <div style={{
+              padding: '10px 14px', borderRadius: '14px 14px 14px 4px',
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              fontSize: 13, color: 'var(--text-3)',
+            }}>
+              thinking…
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div style={{ padding: '12px 20px 20px', borderTop: '1px solid var(--sep)', flexShrink: 0, display: 'flex', gap: 10 }}>
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+          placeholder="Ask Nexus anything…"
+          disabled={loading}
+          autoFocus
+          style={{
+            flex: 1, padding: '12px 16px', borderRadius: 12,
+            border: '1px solid var(--border)', background: 'var(--surface)',
+            color: 'var(--text)', fontSize: 14, outline: 'none',
+            opacity: loading ? 0.6 : 1,
+          }}
+        />
+        <button
+          onClick={send}
+          disabled={loading || !input.trim()}
+          style={{
+            padding: '12px 20px', borderRadius: 12, border: 'none',
+            background: 'var(--blue)', color: '#fff', fontSize: 14,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading || !input.trim() ? 0.5 : 1,
+            transition: 'opacity 0.15s',
+          }}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Audit ─────────────────────────────────────────────────────────────────────
 export function Audit({ events }) {
   const [entries, setEntries] = useState([])

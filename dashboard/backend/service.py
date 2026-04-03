@@ -583,6 +583,20 @@ async def api_learned():
     except Exception as e:
         return {"content": "", "error": str(e)}
 
+# ── Nexus Chat API ───────────────────────────────────────────────────────────
+@app.post("/api/nexus/chat")
+async def api_nexus_chat(body: dict):
+    message = (body.get("message") or "").strip()
+    if not message:
+        return {"reply": "", "error": "empty message"}
+    try:
+        from runtimes.agent.runtime import AgentRuntime
+        rt = AgentRuntime(workspace_id="nexus_default")
+        reply = await rt.chat(message)
+        return {"reply": reply}
+    except Exception as e:
+        return {"reply": "", "error": str(e)}
+
 # ── Workflows API ────────────────────────────────────────────────────────────
 @app.get("/api/workflows/list")
 async def api_workflows_list(category: str = None, search: str = None):

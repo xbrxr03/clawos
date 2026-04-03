@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar.jsx'
 import { Overview } from './pages/Overview.jsx'
-import { Tasks, Approvals, Models, Memory, Audit } from './pages/pages.jsx'
+import { Tasks, Approvals, Models, Memory, Audit, NexusCommand } from './pages/pages.jsx'
 import { Workflows } from './pages/Workflows.jsx'
 import { useClawOS } from './hooks/useClawOS.js'
 
@@ -32,6 +32,7 @@ export default function App() {
               <Route path="/workflows"  element={<Workflows />} />
               <Route path="/memory"    element={<Memory />} />
               <Route path="/audit"     element={<Audit events={events} />} />
+              <Route path="/command"   element={<NexusCommand />} />
             </Routes>
           </main>
         </div>
