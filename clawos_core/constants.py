@@ -41,6 +41,8 @@ MEMORY_FTS_DB    = MEMORY_DIR / "fts.db"
 HARDWARE_JSON    = CONFIG_DIR / "hardware.json"
 CLAWOS_CONFIG    = CONFIG_DIR / "clawos.yaml"
 OTEL_JSONL       = LOGS_DIR / "otel.jsonl"
+SETUP_STATE_JSON = CONFIG_DIR / "setup_state.json"
+SUPPORT_DIR      = CLAWOS_DIR / "support"
 
 # Voice models
 PIPER_MODEL      = VOICE_DIR / "en_US-lessac-medium.onnx"
@@ -58,6 +60,7 @@ SERVICES = [
     "clawd",
     "dashd",
     "a2ad",
+    "setupd",
     "picoclawd",
     "gatewayd",
 ]
@@ -71,6 +74,7 @@ PORT_POLICYD    = 7074
 PORT_MODELD     = 7075
 PORT_METRICD    = 7076
 PORT_A2AD       = 7083
+PORT_SETUPD     = 7084
 PORT_PICOCLAWD  = 18800
 PORT_GATEWAYD   = 18789
 PORT_OLLAMA     = 11434

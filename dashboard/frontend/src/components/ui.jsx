@@ -20,7 +20,7 @@ export function Badge({ children, color = 'gray' }) {
   return <span className={`pill ${color}`}>{children}</span>
 }
 
-export function Card({ children, style, className = '' }) {
+export function Card({ children, style = undefined, className = '' }) {
   return (
     <div className={`glass ${className}`} style={style}>
       {children}

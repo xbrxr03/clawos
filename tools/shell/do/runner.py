@@ -15,6 +15,14 @@ from pathlib import Path
 from typing import Optional
 
 
+_WINDOWS_CMD_BUILTINS = {
+    "assoc", "break", "call", "cd", "chcp", "chdir", "cls", "copy", "date",
+    "del", "dir", "echo", "erase", "for", "ftype", "md", "mkdir", "move",
+    "path", "pause", "popd", "prompt", "pushd", "rd", "ren", "rename",
+    "rmdir", "set", "start", "time", "title", "type", "ver", "vol",
+}
+
+
 def _audit_path() -> Path:
     """Audit log lives in ~/clawos/logs/ when in ClawOS mode, else ~/.clawos/do-audit.jsonl."""
     try:
@@ -75,6 +83,16 @@ def _write_audit(
         f.write(json.dumps(entry_data) + "\n")
 
 
+def _should_use_windows_shell(cmd: str, argv: list[str]) -> bool:
+    if _os.name != "nt":
+        return False
+    if not argv:
+        return True
+    if argv[0].lower() in _WINDOWS_CMD_BUILTINS:
+        return True
+    return any(ch in cmd for ch in ("|", "&", ">", "<", "(", ")"))
+
+
 def run_commands(
     commands: list[str],
     request: str,
@@ -102,11 +120,18 @@ def run_commands(
             import shlex as _shlex
             try:
                 import re as _re
-                cmd = _re.sub(r"(?<![\w])~(?![\w])", _os.path.expanduser("~"), cmd)
-                _argv = _shlex.split(cmd)
+                home_dir = _os.path.expanduser("~")
+                cmd = _re.sub(r"(?<![\w])~(?![\w])", lambda _m: home_dir, cmd)
+                _argv = _shlex.split(cmd, posix=(_os.name != "nt"))
             except ValueError:
-                _argv = ["bash", "-c", cmd]
-            result = subprocess.run(_argv, text=True)
+                if _os.name == "nt":
+                    _argv = ["cmd", "/d", "/c", cmd]
+                else:
+                    _argv = ["bash", "-c", cmd]
+            if _should_use_windows_shell(cmd, _argv):
+                result = subprocess.run(["cmd", "/d", "/c", cmd], text=True)
+            else:
+                result = subprocess.run(_argv, text=True)
             last_code = result.returncode
         except KeyboardInterrupt:
             print()

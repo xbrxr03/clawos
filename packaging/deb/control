@@ -1,0 +1,9 @@
+Package: clawos-command-center
+Version: __VERSION__
+Section: utils
+Priority: optional
+Architecture: __ARCH__
+Maintainer: ClawOS
+Depends: python3, python3-pip, curl
+Description: ClawOS Command Center desktop package
+ Apple-like OpenClaw operating system command center for ClawOS host installs.

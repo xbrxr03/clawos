@@ -14,19 +14,23 @@ META = WorkflowMeta(
 )
 
 
-def _run(cmd: str) -> str:
+def _run(argv: list[str]) -> str:
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+        r = subprocess.run(argv, capture_output=True, text=True, timeout=10)
         return r.stdout.strip() or r.stderr.strip()
+    except FileNotFoundError:
+        return "(command unavailable)"
     except Exception as e:
         return f"(error: {e})"
 
 
 async def run(args: dict, agent) -> WorkflowResult:
     # Gather real data first
-    ps_out     = _run("ps aux --sort=-%cpu | head -20")
-    mem_out    = _run("free -h")
-    uptime_out = _run("uptime")
+    ps_out     = _run(["ps", "aux", "--sort=-%cpu"])
+    if ps_out and not ps_out.startswith("(error:") and not ps_out.startswith("(command unavailable)"):
+        ps_out = "\n".join(ps_out.splitlines()[:20])
+    mem_out    = _run(["free", "-h"])
+    uptime_out = _run(["uptime"])
 
     prompt = (
         "You have real system data below. Write a clean process report.\n\n"

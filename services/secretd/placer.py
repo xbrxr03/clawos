@@ -8,6 +8,7 @@ Idempotent — safe to run multiple times.
 import json
 import os
 import re
+import shlex
 from pathlib import Path
 from clawos_core.key_registry import KEY_REGISTRY
 
@@ -59,14 +60,19 @@ def _place_env(key_id: str, value: str, filepath: str, var_name: str) -> str:
     path = Path(filepath).expanduser()
     if not path.exists():
         return ""
-    content = path.read_text()
-    line = f'export {var_name}="{value}"'
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var_name):
+        raise ValueError(f"Invalid shell variable name: {var_name}")
+    if "\n" in value or "\r" in value:
+        raise ValueError(f"Multiline values cannot be injected into shell rc files for {key_id}")
+
+    content = path.read_text(encoding="utf-8", errors="replace")
+    line = f"export {var_name}={shlex.quote(value)}"
     pattern = rf'^export {re.escape(var_name)}=.*$'
     if re.search(pattern, content, re.MULTILINE):
         content = re.sub(pattern, line, content, flags=re.MULTILINE)
     else:
         content = content.rstrip("\n") + f"\n{line}\n"
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
     return str(path)
 
 

@@ -18,7 +18,10 @@ build/
 /dist/
 dashboard/backend/static/
 dashboard/frontend/node_modules/
-dashboard/frontend/package-lock.json
+dashboard/frontend/storybook-static/
+dashboard/frontend/test-results/
+dashboard/frontend/playwright-report/
+dashboard/frontend/.vite/
 run/
 *.zip
 services/__init__.py

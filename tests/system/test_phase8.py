@@ -21,6 +21,13 @@ E2E    = "--e2e" in sys.argv
 passed = failed = 0
 
 
+def close_rag(rag):
+    try:
+        rag.close()
+    except Exception:
+        pass
+
+
 def ok(name):
     global passed; passed += 1
     print(f"  \u2713  {name}")
@@ -175,6 +182,7 @@ try:
         assert rag._is_toc_page("Chapter 1 ........ 5\nChapter 2 ........ 12\nChapter 3 ........ 18", 3)
         assert not rag._is_toc_page("The quick brown fox jumps over the lazy dog. " * 10, 1)
         ok("_is_toc_page() detects table of contents")
+        close_rag(rag)
 except Exception as e:
     fail("RAGService text utilities", str(e))
 
@@ -208,6 +216,7 @@ try:
         assert rag._detect_chunk_type(proc_text) == "procedure"
 
         ok("_detect_chunk_type() correctly identifies warning and procedure")
+        close_rag(rag)
 except Exception as e:
     fail("chunk quality + type detection", str(e))
 
@@ -235,6 +244,7 @@ try:
         id2 = rag._build_chunk_id(f1, 1, 1, "hello world content here")
         assert id1 == id2
         ok("_build_chunk_id() is deterministic for same content")
+        close_rag(rag)
 except Exception as e:
     fail("chunk_text + build_chunk_id", str(e))
 
@@ -273,6 +283,7 @@ try:
         md_pages = rag._extract_text(md_file)
         assert len(md_pages) > 0
         ok(f"_extract_text() produces {len(md_pages)} virtual pages from .md")
+        close_rag(rag)
 except Exception as e:
     fail("text/md extraction", str(e))
 
@@ -336,6 +347,7 @@ try:
         files2 = rag.list_files()
         assert len(files2) == 0
         ok("forget() removes document from index")
+        close_rag(rag)
 except Exception as e:
     fail("RAG SQLite ingestion", str(e))
 
@@ -392,6 +404,7 @@ try:
         assert "No relevant" in result_empty["answer"]
         assert result_empty["trust_label"] == "No Results"
         ok("answer() handles empty retrieval gracefully")
+        close_rag(rag)
 except Exception as e:
     fail("RAG retrieval + answer", str(e))
 
@@ -441,6 +454,7 @@ try:
         out3 = rag._sanitize_output(bad2, "query", results, fallback)
         assert "Answer:" in out3
         ok("_sanitize_output() triggers fallback on missing format")
+        close_rag(rag)
 except Exception as e:
     fail("output sanitization", str(e))
 
@@ -551,6 +565,7 @@ if E2E:
                 emb = rag._embed(["test sentence for embedding"])
                 assert emb[0] is not None and len(emb[0]) > 0
                 ok(f"Live embedding returned vector of length {len(emb[0])}")
+            close_rag(rag)
     except Exception as e:
         fail("E2E embedding", str(e))
 else:

@@ -1,0 +1,53 @@
+name: release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Linux packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync
+
+      - name: Build command center frontend
+        working-directory: dashboard/frontend
+        run: |
+          npm ci
+          npm run build
+          npm run build-storybook
+
+      - name: Build Debian desktop package
+        run: |
+          bash packaging/deb/build_deb.sh --skip-frontend-build
+
+      - name: Build release manifest
+        run: |
+          mkdir -p dist/release
+          cp -r services/dashd/static dist/release/command-center-static
+          cp dist/*.deb dist/release/ 2>/dev/null || true
+          cp dist/*.sha256 dist/release/ 2>/dev/null || true
+          cp -r dashboard/frontend/storybook-static dist/release/storybook-static || true
+          printf "artifact-set=clawos\n" > dist/release/manifest.txt
+          find dist/release -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 | xargs -0 sha256sum > dist/release/SHA256SUMS.txt
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawos-release-bundle
+          path: dist/release

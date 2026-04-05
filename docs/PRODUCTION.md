@@ -68,3 +68,9 @@ Run them with:
 ```bash
 pytest tests/system/test_dashd_security.py tests/system/test_a2a_security.py
 ```
+
+For the broader repo validation path, including frontend and direct acceptance scripts, run:
+
+```bash
+python scripts/verify_repo.py
+```

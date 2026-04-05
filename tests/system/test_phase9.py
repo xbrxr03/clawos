@@ -15,6 +15,10 @@ passed = 0
 failed = 0
 
 
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="ignore")
+
+
 def ok(label: str):
     global passed
     passed += 1
@@ -32,7 +36,7 @@ def fail(label: str, reason: str = ""):
 
 # ── Security: no shell=True in agent-exposed paths ────────────────────────────
 def test_no_shell_true_toolbridge():
-    f = (ROOT / "services" / "toolbridge" / "service.py").read_text()
+    f = read_text(ROOT / "services" / "toolbridge" / "service.py")
     lines_with_shell_true = [
         l for l in f.splitlines()
         if "shell=True" in l and not l.strip().startswith("#")
@@ -44,7 +48,7 @@ def test_no_shell_true_toolbridge():
 
 
 def test_no_shell_true_runner():
-    f = (ROOT / "tools" / "shell" / "do" / "runner.py").read_text()
+    f = read_text(ROOT / "tools" / "shell" / "do" / "runner.py")
     lines = [l for l in f.splitlines() if "shell=True" in l and not l.strip().startswith("#")]
     if not lines:
         ok("do/runner: no shell=True")
@@ -53,7 +57,7 @@ def test_no_shell_true_runner():
 
 
 def test_no_shell_true_doctor():
-    f = (ROOT / "clawctl" / "commands" / "doctor.py").read_text()
+    f = read_text(ROOT / "clawctl" / "commands" / "doctor.py")
     lines = [l for l in f.splitlines() if "shell=True" in l and not l.strip().startswith("#")]
     if not lines:
         ok("doctor: no shell=True")
@@ -63,7 +67,7 @@ def test_no_shell_true_doctor():
 
 # ── Security: dashd bound to 127.0.0.1 ───────────────────────────────────────
 def test_dashd_localhost():
-    f = (ROOT / "services" / "dashd" / "api.py").read_text()
+    f = read_text(ROOT / "services" / "dashd" / "api.py")
     if '0.0.0.0' not in f and '127.0.0.1' in f:
         ok("dashd: bound to 127.0.0.1")
     elif '0.0.0.0' not in f:
@@ -73,7 +77,7 @@ def test_dashd_localhost():
 
 
 def test_dashd_bearer_token():
-    f = (ROOT / "services" / "dashd" / "api.py").read_text()
+    f = read_text(ROOT / "services" / "dashd" / "api.py")
     if "DASHBOARD_TOKEN" in f and "Bearer" in f:
         ok("dashd: bearer token auth present")
     else:
@@ -82,7 +86,7 @@ def test_dashd_bearer_token():
 
 # ── Security: SQLite WAL mode ─────────────────────────────────────────────────
 def test_sqlite_wal_policyd():
-    f = (ROOT / "services" / "policyd" / "service.py").read_text()
+    f = read_text(ROOT / "services" / "policyd" / "service.py")
     if "journal_mode=WAL" in f:
         ok("policyd: SQLite WAL mode")
     else:
@@ -90,7 +94,7 @@ def test_sqlite_wal_policyd():
 
 
 def test_sqlite_wal_audit():
-    f = (ROOT / "clawos_core" / "logging" / "audit.py").read_text()
+    f = read_text(ROOT / "clawos_core" / "logging" / "audit.py")
     if "journal_mode=WAL" in f:
         ok("audit: SQLite WAL mode")
     else:
@@ -107,9 +111,9 @@ def test_port_gatewayd():
 
 
 def test_a2a_ports():
-    from clawos_core.constants import A2A_PORT_NEXUS, A2A_PORT_RAGD
-    if A2A_PORT_NEXUS == 7081:
-        ok("constants: A2A_PORT_NEXUS=7081")
+    from clawos_core.constants import A2A_PORT_NEXUS, A2A_PORT_RAGD, PORT_A2AD
+    if A2A_PORT_NEXUS == PORT_A2AD == 7083:
+        ok("constants: A2A_PORT_NEXUS aliases PORT_A2AD=7083")
     else:
         fail("constants: A2A_PORT_NEXUS wrong", str(A2A_PORT_NEXUS))
     if A2A_PORT_RAGD == 7082:
@@ -159,7 +163,7 @@ def test_sys_exit_guards():
     for f in sorted(test_dir.glob("test_phase*.py")):
         if f.name == "test_phase9.py":
             continue
-        content = f.read_text()
+        content = read_text(f)
         lines = content.splitlines()
         for i, line in enumerate(lines):
             if "sys.exit" in line:
@@ -175,7 +179,7 @@ def test_sys_exit_guards():
 
 # ── A2A: clawd has A2A server code ────────────────────────────────────────────
 def test_clawd_a2a():
-    f = (ROOT / "services" / "clawd" / "service.py").read_text()
+    f = read_text(ROOT / "services" / "clawd" / "service.py")
     if "agent-card.json" in f and "/a2a/tasks/send" in f:
         ok("clawd: A2A endpoint present")
     else:
@@ -183,7 +187,7 @@ def test_clawd_a2a():
 
 
 def test_memd_ragd_a2a():
-    f = (ROOT / "services" / "memd" / "service.py").read_text()
+    f = read_text(ROOT / "services" / "memd" / "service.py")
     if "agent-card.json" in f and "RAGd" in f:
         ok("memd: RAGd A2A endpoint present")
     else:
@@ -202,7 +206,7 @@ def test_rag_skill():
 # ── capabilityd: service and manifests ───────────────────────────────────────
 def test_capabilityd_service():
     f = ROOT / "services" / "capabilityd" / "service.py"
-    if f.exists() and "CapabilityGraph" in f.read_text():
+    if f.exists() and "CapabilityGraph" in read_text(f):
         ok("capabilityd: service.py present")
     else:
         fail("capabilityd: service.py missing")
@@ -219,7 +223,7 @@ def test_capability_manifests():
 # ── Voice: wake word and tray ─────────────────────────────────────────────────
 def test_wake_word():
     f = ROOT / "services" / "voiced" / "wake.py"
-    if f.exists() and "WakeWordDetector" in f.read_text():
+    if f.exists() and "WakeWordDetector" in read_text(f):
         ok("voiced: wake.py present")
     else:
         fail("voiced: wake.py missing")
@@ -227,14 +231,14 @@ def test_wake_word():
 
 def test_voice_tray():
     f = ROOT / "services" / "voiced" / "tray.py"
-    if f.exists() and "VoiceTray" in f.read_text():
+    if f.exists() and "VoiceTray" in read_text(f):
         ok("voiced: tray.py present")
     else:
         fail("voiced: tray.py missing")
 
 
 def test_talk_mode():
-    f = (ROOT / "services" / "voiced" / "service.py").read_text()
+    f = read_text(ROOT / "services" / "voiced" / "service.py")
     if "TALK_MODE_TIMEOUT" in f and "run_voice_session" in f:
         ok("voiced: talk mode present")
     else:
@@ -243,7 +247,7 @@ def test_talk_mode():
 
 # ── Plan mode ────────────────────────────────────────────────────────────────
 def test_plan_mode_cli():
-    f = (ROOT / "nexus" / "cli.py").read_text()
+    f = read_text(ROOT / "nexus" / "cli.py")
     if "_run_plan_mode" in f and '"plan"' in f:
         ok("nexus/cli: plan mode present")
     else:
@@ -251,7 +255,7 @@ def test_plan_mode_cli():
 
 
 def test_plan_mode_repl():
-    f = (ROOT / "clients" / "cli" / "repl.py").read_text()
+    f = read_text(ROOT / "clients" / "cli" / "repl.py")
     if "/plan" in f:
         ok("repl: /plan slash command present")
     else:
@@ -262,7 +266,7 @@ def test_plan_mode_repl():
 def test_gtk_wizard():
     f = ROOT / "setup" / "first_run" / "gtk_wizard.py"
     if f.exists():
-        content = f.read_text()
+        content = read_text(f)
         screens = ["welcome", "hardware", "edition", "model",
                    "workspace", "voice", "openclaw", "review", "install", "complete"]
         missing = [s for s in screens if f"_screen_{s}" not in content]
@@ -277,14 +281,14 @@ def test_gtk_wizard():
 # ── Nexus Command ─────────────────────────────────────────────────────────────
 def test_nexus_command():
     f = ROOT / "dashboard" / "nexus-command" / "serve.py"
-    if f.exists() and "openclaw-office" in f.read_text():
+    if f.exists() and "openclaw-office" in read_text(f):
         ok("nexus-command: serve.py present")
     else:
         fail("nexus-command: serve.py missing")
 
 
 def test_nexus_command_cli():
-    f = (ROOT / "nexus" / "cli.py").read_text()
+    f = read_text(ROOT / "nexus" / "cli.py")
     if "cmd_command" in f and '"command"' in f:
         ok("nexus/cli: 'command' subcommand present")
     else:
@@ -294,8 +298,9 @@ def test_nexus_command_cli():
 # ── ISO build pipeline ────────────────────────────────────────────────────────
 def test_iso_chroot():
     f = ROOT / "packaging" / "iso" / "chroot_install.sh"
-    if f.exists() and "gtk_wizard" in f.read_text():
-        ok("ISO: chroot_install.sh present with wizard reference")
+    content = read_text(f) if f.exists() else ""
+    if f.exists() and "dashboard/frontend" in content and "clawos-setup.desktop" in content:
+        ok("ISO: chroot_install.sh builds the frontend and wires setup autostart")
     else:
         fail("ISO: chroot_install.sh missing or incomplete")
 
@@ -311,7 +316,7 @@ def test_no_malformed_dir():
 
 # ── modeld: task routing present ─────────────────────────────────────────────
 def test_modeld_routing():
-    f = (ROOT / "services" / "modeld" / "service.py").read_text()
+    f = read_text(ROOT / "services" / "modeld" / "service.py")
     if "TASK_ROUTING" in f and "classify_task" in f:
         ok("modeld: task-aware routing present")
     else:
@@ -320,7 +325,7 @@ def test_modeld_routing():
 
 # ── gatewayd: WhatsApp wired ──────────────────────────────────────────────────
 def test_gatewayd_whatsapp():
-    f = (ROOT / "services" / "gatewayd" / "service.py").read_text()
+    f = read_text(ROOT / "services" / "gatewayd" / "service.py")
     if "WhatsAppChannel" in f and "on_message" in f:
         ok("gatewayd: WhatsApp channel wired")
     else:

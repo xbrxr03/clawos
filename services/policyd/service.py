@@ -6,10 +6,12 @@ Every tool call passes through here. No exceptions.
 Refactored from policyd.py to use clawos_core primitives.
 """
 import asyncio
+import ipaddress
 import logging
 import sqlite3
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from clawos_core.constants import (
     POLICYD_DB, CLAWOS_DIR, TOOL_SCORE_QUEUE, APPROVAL_TIMEOUT_S
@@ -129,6 +131,14 @@ class PolicyEngine:
         """)
         self._db.commit()
 
+    def close(self):
+        if self._db is not None:
+            try:
+                self._db.close()
+            except Exception:
+                pass
+            self._db = None
+
     def _is_blocked_path(self, target: str) -> bool:
         expanded = target.replace("~", str(Path.home()))
         return any(b.replace("~", str(Path.home())) in expanded for b in BLOCKED_PATHS)
@@ -141,6 +151,43 @@ class PolicyEngine:
             return str(tp).startswith(str(ws_root.resolve()))
         except Exception:
             return True
+
+    def _blocked_url_reason(self, target: str) -> str:
+        try:
+            parsed = urlparse((target or "").strip())
+        except Exception:
+            return "invalid url"
+
+        if parsed.scheme not in {"http", "https"}:
+            return "unsupported url scheme"
+        if not parsed.hostname:
+            return "invalid url host"
+        if parsed.username or parsed.password:
+            return "credentials in url not allowed"
+
+        host = parsed.hostname.strip().lower().rstrip(".")
+        if not host:
+            return "invalid url host"
+        if host in {"localhost", "metadata.google.internal"}:
+            return "local or metadata url blocked"
+        if host.endswith(".local") or host.endswith(".internal") or "." not in host:
+            return "local network url blocked"
+
+        try:
+            ip = ipaddress.ip_address(host)
+        except ValueError:
+            return ""
+
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        ):
+            return "private or local network url blocked"
+        return ""
 
     def _record(self, decision: Decision, reason: str, tool: str,
                 target: str, task_id: str, workspace_id: str) -> tuple:
@@ -175,6 +222,11 @@ class PolicyEngine:
                     Decision.DENY, f"path outside workspace ({workspace_id})",
                     tool, target, task_id, workspace_id
                 )
+
+        if tool in ("web.fetch", "web.download", "api.external"):
+            blocked_reason = self._blocked_url_reason(target)
+            if blocked_reason:
+                return self._record(Decision.DENY, blocked_reason, tool, target, task_id, workspace_id)
 
         # Prompt injection scan on tool inputs (Phase 6)
         if _SCANNER_OK and content:

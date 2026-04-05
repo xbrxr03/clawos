@@ -92,13 +92,8 @@ def ensure_node() -> bool:
             brew = _ensure_homebrew()
             subprocess.run([brew, "install", "node"], check=True)
         else:
-            subprocess.run(
-                "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -",
-                shell=True,
-                check=True,
-                executable="/bin/bash",
-            )
-            subprocess.run(["sudo", "apt-get", "install", "-y", "nodejs"], check=True)
+            subprocess.run(["sudo", "apt-get", "update"], check=True)
+            subprocess.run(["sudo", "apt-get", "install", "-y", "nodejs", "npm"], check=True)
         ver = _node_version()
         if ver >= NODE_MIN_VER:
             print(f"  ✓  Node.js v{ver} installed")
@@ -107,7 +102,11 @@ def ensure_node() -> bool:
         return False
     except Exception as exc:
         print(f"  ✗  {exc}")
-        print("  Manual: brew install node" if is_macos() else "  Manual: sudo apt install nodejs")
+        print(
+            "  Manual: brew install node"
+            if is_macos()
+            else "  Manual: install Node.js 22+ from your distro or the official NodeSource package instructions"
+        )
         return False
 
 

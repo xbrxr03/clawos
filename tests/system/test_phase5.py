@@ -15,6 +15,7 @@ import asyncio
 import tempfile
 import subprocess
 import json
+import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
@@ -22,6 +23,14 @@ sys.path.insert(0, str(ROOT))
 
 E2E    = "--e2e" in sys.argv
 passed = failed = 0
+
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def can_run_bash_syntax() -> bool:
+    return os.name != "nt" and bool(shutil.which("bash"))
 
 
 def ok(name):
@@ -428,7 +437,7 @@ section("9. dev_boot.sh — port guard present")
 try:
     dev_boot = ROOT / "scripts" / "dev_boot.sh"
     assert dev_boot.exists(), "dev_boot.sh missing"
-    content = dev_boot.read_text()
+    content = read_text(dev_boot)
     assert "port_in_use" in content, "port_in_use function missing"
     assert "7070" in content, "port 7070 not referenced"
     assert "already running" in content or "Skipping" in content or "skip" in content.lower()
@@ -439,12 +448,12 @@ except Exception as e:
 try:
     import subprocess, shutil
     dev_boot = ROOT / "scripts" / "dev_boot.sh"
-    if shutil.which("bash"):
+    if can_run_bash_syntax():
         r = subprocess.run(["bash", "-n", str(dev_boot)], capture_output=True, text=True)
         assert r.returncode == 0, f"bash -n failed: {r.stderr.strip()[:80]}"
         ok("dev_boot.sh bash -n syntax check passed")
     else:
-        ok("dev_boot.sh syntax check skipped (bash not available)")
+        ok("dev_boot.sh syntax check skipped on this platform")
 except Exception as e:
     fail("dev_boot.sh syntax", str(e))
 
@@ -455,20 +464,24 @@ section("10. install.sh wizard integration")
 try:
     install_sh = ROOT / "install.sh"
     assert install_sh.exists()
-    content = install_sh.read_text()
-    assert "setup.first_run.wizard" in content, "wizard not called from install.sh"
-    assert "wizard_state.json" in content or "WIZARD_STATE" in content, "wizard state check missing"
-    ok("install.sh calls setup.first_run.wizard on first install")
+    content = read_text(install_sh)
+    assert "launch_command_center.py" in content, "command-center launcher missing"
+    assert "--route /setup" in content, "setup route launcher missing"
+    assert "clawos-setup" in content, "GUI setup command missing"
+    assert "setup.first_run.wizard" in content, "terminal fallback wizard missing"
+    ok("install.sh launches GUI setup first and keeps terminal wizard as fallback")
 except Exception as e:
     fail("install.sh wizard call", str(e))
 
 try:
     import subprocess, shutil
     install_sh = ROOT / "install.sh"
-    if shutil.which("bash"):
+    if can_run_bash_syntax():
         r = subprocess.run(["bash", "-n", str(install_sh)], capture_output=True, text=True)
         assert r.returncode == 0, f"bash -n failed: {r.stderr.strip()[:100]}"
         ok("install.sh bash -n syntax check passed")
+    else:
+        ok("install.sh syntax check skipped on this platform")
 except Exception as e:
     fail("install.sh syntax", str(e))
 
@@ -477,7 +490,7 @@ except Exception as e:
 section("11. repl — /do uses built-in claw-do")
 
 try:
-    repl_text = (ROOT / "clients" / "cli" / "repl.py").read_text()
+    repl_text = read_text(ROOT / "clients" / "cli" / "repl.py")
     assert "tools.shell.do.cli" in repl_text, "/do not using tools.shell.do.cli"
     assert "clawdo" not in repl_text or "clawdo_integrated" not in repl_text,         "old external clawdo path still in repl"
     ok("repl.py /do handler uses built-in tools.shell.do.cli")
@@ -485,7 +498,7 @@ except Exception as e:
     fail("repl /do handler", str(e))
 
 try:
-    repl_text = (ROOT / "clients" / "cli" / "repl.py").read_text()
+    repl_text = read_text(ROOT / "clients" / "cli" / "repl.py")
     assert "/home/user/clawdo" not in repl_text, "hardcoded /home/user/clawdo still present"
     ok("repl.py has no hardcoded /home/user/clawdo path")
 except Exception as e:

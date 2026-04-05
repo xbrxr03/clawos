@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 from clawos_core.config.loader import get as get_config
 from clawos_core.constants import (
@@ -28,11 +29,16 @@ from clawos_core.events.bus import EV_SERVICE_DOWN, EV_SERVICE_UP, get_bus
 log = logging.getLogger("dashd")
 
 DEFAULT_COOKIE_NAME = "clawos_dashboard"
+SETUP_ACCESS_HEADER = "x-clawos-setup"
+SETUP_ACCESS_VALUE = "1"
 DASHBOARD_HTML = Path(__file__).parent.parent.parent / "clients" / "dashboard" / "index.html"
+DASHBOARD_STATIC_DIR = Path(__file__).parent / "static"
+DASHBOARD_STATIC_INDEX = DASHBOARD_STATIC_DIR / "index.html"
 
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
-    from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+    from fastapi.staticfiles import StaticFiles
     import uvicorn
 
     FASTAPI_OK = True
@@ -95,6 +101,23 @@ def _coerce_bool(value: Any, default: bool) -> bool:
 def _is_loopback_host(host: str) -> bool:
     host = (host or "").strip().lower()
     return host in {"127.0.0.1", "localhost", "::1"}
+
+
+def _origin_is_trusted(origin: str) -> bool:
+    if not origin:
+        return True
+    try:
+        parsed = urlparse(origin)
+    except Exception:
+        return False
+    return parsed.scheme in {"http", "https"} and _is_loopback_host(parsed.hostname or "")
+
+
+def _has_setup_access(request: Request) -> bool:
+    header_value = request.headers.get(SETUP_ACCESS_HEADER, "").strip()
+    if header_value != SETUP_ACCESS_VALUE:
+        return False
+    return _origin_is_trusted(request.headers.get("origin", ""))
 
 
 def _dashboard_token_file() -> Path:
@@ -178,6 +201,19 @@ def require_auth(request: Request, authorization: str = Header(default="")):
     )
 
 
+def require_setup_access(request: Request, authorization: str = Header(default="")):
+    settings: DashboardSettings = request.app.state.settings
+    if _is_request_authorized(request, authorization=authorization):
+        return
+    if _is_loopback_host(settings.host) and _has_setup_access(request):
+        return
+    raise HTTPException(
+        status_code=401,
+        detail="Unauthorized",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
 def _normalize_event(event: dict) -> dict:
     return {
         "type": event.get("type", "event"),
@@ -237,6 +273,12 @@ def _collect_service_health() -> dict[str, dict]:
         from services.policyd.health import health as policyd_health
 
         checks["policyd"] = policyd_health
+    except Exception:
+        pass
+    try:
+        from services.setupd.health import health as setupd_health
+
+        checks["setupd"] = setupd_health
     except Exception:
         pass
 
@@ -371,6 +413,8 @@ def _build_snapshot(app: "FastAPI") -> dict:
         "services": _collect_service_health(),
         "events": list(app.state.event_history),
         "models": _collect_models(),
+        "tasks": [],
+        "approvals": [],
     }
 
 
@@ -392,6 +436,14 @@ def _websocket_authorized(websocket: WebSocket) -> bool:
         or websocket.cookies.get(settings.cookie_name, "")
     )
     return _token_matches(token, settings.token)
+
+
+def _setup_websocket_authorized(websocket: WebSocket) -> bool:
+    settings: DashboardSettings = websocket.app.state.settings
+    setup_signal = websocket.query_params.get("setup", "").strip() == SETUP_ACCESS_VALUE
+    if _is_loopback_host(settings.host) and setup_signal and _origin_is_trusted(websocket.headers.get("origin", "")):
+        return True
+    return _websocket_authorized(websocket)
 
 
 def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
@@ -447,6 +499,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
     @app.get("/", response_class=HTMLResponse)
     async def root():
+        if DASHBOARD_STATIC_INDEX.exists():
+            return FileResponse(str(DASHBOARD_STATIC_INDEX))
         if DASHBOARD_HTML.exists():
             return HTMLResponse(DASHBOARD_HTML.read_text(encoding="utf-8", errors="ignore"))
         return HTMLResponse("<h1>ClawOS Dashboard</h1><p>Frontend not found.</p>")
@@ -457,6 +511,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         return {
             "status": "ok",
             "auth_required": settings_obj.auth_required,
+            "host": settings_obj.host,
+            "port": settings_obj.port,
+            "local_only": _is_loopback_host(settings_obj.host),
             "services": _collect_service_health(),
             "models": _collect_models(),
         }
@@ -589,6 +646,89 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     async def workspaces():
         return {"workspaces": _list_workspaces()}
 
+    @app.get("/api/setup/state", dependencies=[Depends(require_setup_access)])
+    async def setup_state():
+        from services.setupd.service import get_service
+
+        return get_service().to_dict()
+
+    @app.post("/api/setup/plan", dependencies=[Depends(require_setup_access)])
+    async def setup_plan():
+        from services.setupd.service import get_service
+
+        return get_service().build_plan()
+
+    @app.post("/api/setup/apply", dependencies=[Depends(require_setup_access)])
+    async def setup_apply():
+        from services.setupd.service import get_service
+
+        return get_service().apply()
+
+    @app.post("/api/setup/retry", dependencies=[Depends(require_setup_access)])
+    async def setup_retry():
+        from services.setupd.service import get_service
+
+        return get_service().retry()
+
+    @app.post("/api/setup/repair", dependencies=[Depends(require_setup_access)])
+    async def setup_repair():
+        from services.setupd.service import get_service
+
+        return get_service().repair()
+
+    @app.post("/api/setup/cancel", dependencies=[Depends(require_setup_access)])
+    async def setup_cancel():
+        from services.setupd.service import get_service
+
+        return get_service().cancel()
+
+    @app.get("/api/setup/logs", dependencies=[Depends(require_setup_access)])
+    async def setup_logs():
+        from services.setupd.service import get_service
+
+        return {"logs": get_service().get_state().logs}
+
+    @app.get("/api/setup/diagnostics", dependencies=[Depends(require_setup_access)])
+    async def setup_diagnostics():
+        from services.setupd.service import get_service
+
+        return get_service().diagnostics()
+
+    @app.post("/api/support/bundle", dependencies=[Depends(require_setup_access)])
+    async def support_bundle():
+        from tools.support.support_bundle import create_support_bundle
+
+        bundle = create_support_bundle()
+        return {"path": str(bundle), "name": bundle.name}
+
+    @app.get("/api/desktop/posture", dependencies=[Depends(require_auth)])
+    async def desktop_posture_endpoint():
+        from clawos_core.desktop_integration import desktop_posture
+
+        return desktop_posture()
+
+    @app.post("/api/desktop/launch-on-login", dependencies=[Depends(require_auth)])
+    async def desktop_launch_on_login(body: dict = None):
+        from clawos_core.desktop_integration import (
+            desktop_posture,
+            disable_launch_on_login,
+            enable_launch_on_login,
+        )
+
+        payload = body or {}
+        enabled = bool(payload.get("enabled", True))
+        command = str(payload.get("command", "")).strip() or None
+
+        try:
+            changed_path = enable_launch_on_login(command) if enabled else disable_launch_on_login()
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+
+        response = desktop_posture()
+        response["changed_path"] = str(changed_path) if changed_path else response.get("launch_on_login_path", "")
+        response["message"] = "Launch on login enabled" if enabled else "Launch on login disabled"
+        return response
+
     @app.get("/api/models", dependencies=[Depends(require_auth)])
     async def models():
         model_snapshot = _collect_models()
@@ -678,6 +818,42 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             mgr.disconnect(websocket)
         except Exception:
             mgr.disconnect(websocket)
+
+    @app.websocket("/ws/setup")
+    async def setup_ws_endpoint(websocket: WebSocket):
+        if not _setup_websocket_authorized(websocket):
+            await websocket.close(code=4401)
+            return
+
+        from services.setupd.service import get_service
+
+        service = get_service()
+        await websocket.accept()
+        service._listeners.add(websocket)
+        try:
+            await websocket.send_json({"type": "setup_state", "data": service.to_dict()})
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            service._listeners.discard(websocket)
+        except Exception:
+            service._listeners.discard(websocket)
+
+    if DASHBOARD_STATIC_DIR.exists():
+        assets_dir = DASHBOARD_STATIC_DIR / "assets"
+        if assets_dir.exists():
+            app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def spa_fallback(full_path: str):
+            if not full_path or full_path.startswith("api") or full_path.startswith("ws"):
+                raise HTTPException(status_code=404, detail="Not found")
+            asset = DASHBOARD_STATIC_DIR / full_path
+            if asset.exists() and asset.is_file():
+                return FileResponse(str(asset))
+            if DASHBOARD_STATIC_INDEX.exists():
+                return FileResponse(str(DASHBOARD_STATIC_INDEX))
+            raise HTTPException(status_code=404, detail="Not found")
 
     return app
 

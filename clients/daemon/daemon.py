@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from clawos_core.constants import DEFAULT_WORKSPACE, PORT_DASHD
+from clawos_core.constants import DEFAULT_WORKSPACE, PORT_DASHD, PORT_SETUPD
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,17 +68,30 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
     # Also start dashd if available
     try:
         import uvicorn
-        from services.dashd.api import create_app
+        from services.dashd.api import create_app, load_dashboard_settings
+        from services.setupd.service import create_app as create_setup_app
+
+        dash_settings = load_dashboard_settings()
 
         config = uvicorn.Config(
             create_app(),
-            host="0.0.0.0",
-            port=PORT_DASHD,
+            host=dash_settings.host,
+            port=dash_settings.port,
             log_level="warning",
         )
         server = uvicorn.Server(config)
         asyncio.create_task(server.serve())
         log.info(f"Dashboard started: http://localhost:{PORT_DASHD}")
+
+        setup_config = uvicorn.Config(
+            create_setup_app(),
+            host="127.0.0.1",
+            port=PORT_SETUPD,
+            log_level="warning",
+        )
+        setup_server = uvicorn.Server(setup_config)
+        asyncio.create_task(setup_server.serve())
+        log.info(f"Setup service started: http://127.0.0.1:{PORT_SETUPD}")
     except Exception as dashd_error:
         try:
             import uvicorn

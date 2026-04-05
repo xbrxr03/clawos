@@ -20,6 +20,10 @@ E2E    = "--e2e" in sys.argv
 passed = failed = 0
 
 
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="ignore")
+
+
 def ok(name):
     global passed; passed += 1
     print(f"  ✓  {name}")
@@ -63,22 +67,23 @@ except Exception as e:
 
 try:
     from openclaw_integration.config_gen import gen_config
-    cfg = gen_config("qwen3:8b")
+    cfg = gen_config("qwen2.5:7b")
     model = cfg["models"]["providers"]["ollama"]["models"][0]
-    assert model["id"] == "qwen3:8b"
-    assert model["contextWindow"] == 131072
+    assert model["id"] == "qwen2.5:7b"
+    assert model["contextWindow"] == 8192
     assert model["inputCostPer1M"] == 0
-    assert cfg["agents"]["defaults"]["model"]["primary"] == "ollama/qwen3:8b"
-    ok("qwen3:8b config — ctx=131072, cost=0, primary set correctly")
+    assert cfg["agents"]["defaults"]["model"]["primary"] == "ollama/qwen2.5:7b"
+    assert "openrouter" in cfg["models"]["providers"]
+    ok("qwen2.5:7b config — ctx=8192, cost=0, primary set correctly")
 except Exception as e:
     fail("config model fields", str(e))
 
 try:
     from openclaw_integration.config_gen import GOOD_MODELS
-    assert "qwen2.5:7b" not in GOOD_MODELS, "qwen2.5:7b must NOT be in GOOD_MODELS"
     assert "qwen2.5:7b" in GOOD_MODELS
-    assert "qwen3:8b" in GOOD_MODELS
-    ok("GOOD_MODELS excludes qwen2.5:7b, includes qwen2.5:7b and qwen3:8b")
+    assert "qwen3:8b" not in GOOD_MODELS
+    assert "kimi-k2.5:cloud" in GOOD_MODELS
+    ok("GOOD_MODELS keeps qwen2.5:7b + kimi cloud and excludes qwen3")
 except Exception as e:
     fail("GOOD_MODELS contents", str(e))
 
@@ -198,12 +203,12 @@ except Exception as e:
     fail("ISO build files", str(e))
 
 try:
-    chroot = (ROOT / "packaging" / "iso" / "chroot_install.sh").read_text()
-    assert "openclaw@latest" in chroot
-    assert "auth-profiles.json" in chroot
-    assert "ollama-local" in chroot
-    assert "openai-completions" in chroot or "openclaw.json" in chroot
-    ok("chroot_install.sh bakes OpenClaw + auth fix + offline config")
+    chroot = read_text(ROOT / "packaging" / "iso" / "chroot_install.sh")
+    assert "dashboard/frontend" in chroot
+    assert "npm run build" in chroot
+    assert "clawos-setup.desktop" in chroot
+    assert "clawos-command-center.desktop" in chroot
+    ok("chroot_install.sh builds the canonical frontend and wires setup autostart")
 except Exception as e:
     fail("chroot_install.sh content", str(e))
 
@@ -212,14 +217,14 @@ except Exception as e:
 section("8. README (launch weapon check)")
 
 try:
-    readme = (ROOT / "README.md").read_text()
+    readme = read_text(ROOT / "README.md").lower()
     checks = [
-        ("dd if=clawos.iso",    "has dd flash command"),
-        ("No API keys",          "mentions no API keys"),
-        ("No monthly bill",      "mentions no monthly bill"),
-        ("Bootable ISO",         "has comparison table"),
-        ("clawctl openclaw",     "shows openclaw commands"),
-        ("OpenClaw ecosystem",   "mentions OpenClaw ecosystem"),
+        ("no api keys",          "mentions no API keys"),
+        ("no monthly bill",      "mentions no monthly bill"),
+        ("bootable iso",         "mentions bootable ISO destination"),
+        ("openclaw ecosystem",   "mentions OpenClaw ecosystem"),
+        ("macos 14+",            "mentions macOS support"),
+        ("curl -fssl https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh", "shows installer command"),
     ]
     for snippet, desc in checks:
         assert snippet in readme, f"missing: {snippet}"
@@ -268,4 +273,4 @@ else:
     print("  ✓  all passed")
 print()
 if __name__ == "__main__":
-    
+    raise SystemExit(1 if failed else 0)

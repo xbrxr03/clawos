@@ -128,7 +128,7 @@ ensure_homebrew() {
     step "Installing Homebrew"
     info "Homebrew is the supported package path for macOS dependencies."
     run_with_spinner "Running Homebrew installer" \
-      bash -lc 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
+      bash -lc 'tmp="$(mktemp /tmp/clawos-homebrew.XXXXXX.sh)" && curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o "$tmp" && NONINTERACTIVE=1 /bin/bash "$tmp" && rm -f "$tmp"' \
       || die "Homebrew install failed"
     BREW_BIN="$(command -v brew 2>/dev/null || true)"
     if [ -z "$BREW_BIN" ]; then
@@ -175,10 +175,10 @@ install_ollama() {
   else
     if [ "$PLATFORM" = "macos" ] && [ -n "${BREW_BIN:-}" ]; then
       run_with_spinner "Installing Ollama with Homebrew" "$BREW_BIN" install ollama \
-        || run_with_spinner "Falling back to Ollama installer" bash -lc 'curl -fsSL https://ollama.com/install.sh | sh' \
+        || run_with_spinner "Falling back to Ollama installer" bash -lc 'tmp="$(mktemp /tmp/clawos-ollama.XXXXXX.sh)" && curl -fsSL https://ollama.com/install.sh -o "$tmp" && sh "$tmp" && rm -f "$tmp"' \
         || die "Ollama install failed"
     else
-      run_with_spinner "Downloading Ollama" bash -lc 'curl -fsSL https://ollama.com/install.sh | sh' \
+      run_with_spinner "Downloading Ollama" bash -lc 'tmp="$(mktemp /tmp/clawos-ollama.XXXXXX.sh)" && curl -fsSL https://ollama.com/install.sh -o "$tmp" && sh "$tmp" && rm -f "$tmp"' \
         || die "Ollama install failed"
     fi
     refresh_shell_env
@@ -214,7 +214,7 @@ install_node() {
       || die "Node.js install failed"
   else
     run_with_spinner "Installing Node.js LTS" \
-      bash -lc 'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y -qq nodejs' \
+      bash -lc 'sudo apt-get update -qq && sudo apt-get install -y -qq nodejs npm' \
       || die "Node.js install failed"
   fi
 
@@ -280,6 +280,35 @@ install_python_packages() {
   fi
 
   ok "pyyaml  fastapi  chromadb  ollama  pypdf  python-docx"
+}
+
+build_command_center() {
+  step "Building Command Center"
+
+  if [ ! -d "$INSTALL_DIR/dashboard/frontend" ]; then
+    warn "dashboard/frontend not found - skipping frontend build"
+    return 0
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    warn "npm not found - skipping frontend build"
+    return 0
+  fi
+
+  if run_with_spinner "Installing frontend dependencies" \
+    bash -lc "cd \"$INSTALL_DIR/dashboard/frontend\" && npm install"; then
+    :
+  else
+    warn "npm install failed - skipping frontend build"
+    return 0
+  fi
+
+  if run_with_spinner "Building frontend bundle" \
+    bash -lc "cd \"$INSTALL_DIR/dashboard/frontend\" && npm run build"; then
+    ok "Command Center frontend built"
+  else
+    warn "Frontend build failed - legacy dashboard fallback remains available"
+  fi
 }
 
 configure_openclaw() {
@@ -362,13 +391,25 @@ export PYTHONPATH="${INSTALL_DIR}"
 exec python3 "${INSTALL_DIR}/clawctl/main.py" "\$@"
 EOF
 
+  write_file_if_changed "$HOME/.local/bin/clawos-command-center" 755 <<EOF
+#!/usr/bin/env bash
+export PYTHONPATH="${INSTALL_DIR}"
+exec python3 "${INSTALL_DIR}/clients/desktop/launch_command_center.py" "\$@"
+EOF
+
+  write_file_if_changed "$HOME/.local/bin/clawos-setup" 755 <<EOF
+#!/usr/bin/env bash
+export PYTHONPATH="${INSTALL_DIR}"
+exec python3 "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route /setup "\$@"
+EOF
+
   ensure_path_line "$HOME/.bashrc"
   ensure_path_line "$HOME/.zshrc"
   ensure_path_line "$HOME/.zprofile"
   ensure_path_line "$HOME/.profile"
   export PATH="$HOME/.local/bin:$PATH"
 
-  ok "clawos  clawctl  nexus"
+  ok "clawos  clawctl  nexus  clawos-command-center  clawos-setup"
 }
 
 install_picoclaw_if_needed() {
@@ -398,7 +439,7 @@ install_picoclaw_if_needed() {
     _PC_VER="${_PC_VER:-0.2.5}"
     _PC_URL="https://github.com/sipeed/picoclaw/releases/download/v${_PC_VER}/picoclaw_Linux_${_PC_ARCH}.tar.gz"
 
-    if run_with_spinner "Downloading PicoClaw" bash -lc "curl -fsSL --max-time 30 '$_PC_URL' | tar -xz -C /tmp picoclaw"; then
+    if run_with_spinner "Downloading PicoClaw" bash -lc "tmp=\$(mktemp /tmp/picoclaw.XXXXXX.tar.gz) && curl -fsSL --max-time 30 '$_PC_URL' -o \"\$tmp\" && tar -xzf \"\$tmp\" -C /tmp picoclaw && rm -f \"\$tmp\""; then
       sudo mv /tmp/picoclaw /usr/local/bin/picoclaw && sudo chmod +x /usr/local/bin/picoclaw
     fi
 
@@ -692,6 +733,7 @@ cd "$INSTALL_DIR" || die "Install directory not found: $INSTALL_DIR"
 export PYTHONPATH="$INSTALL_DIR"
 
 install_python_packages
+build_command_center
 
 step "Bootstrapping Nexus"
 if [ -t 0 ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
@@ -770,14 +812,18 @@ else
   echo -e "  ${D}Reload shell if needed:${RESET} ${B}source ~/.bashrc${RESET}"
 fi
 echo -e "  ${D}Service manager:${RESET} ${B}$(platform_name)${RESET} (${D}$([ "$PLATFORM" = "macos" ] && echo launchd || echo systemd)${RESET}${B})${RESET}"
-echo -e "  ${D}Re-run wizard:${RESET} ${B}python3 -m setup.first_run.wizard --reset${RESET}"
+echo -e "  ${D}Open setup:${RESET} ${B}clawos-setup${RESET}"
+echo -e "  ${D}Open home:${RESET} ${B}clawos-command-center${RESET}"
 echo ""
 
 if [ -t 0 ] && [ -t 1 ]; then
-  echo -e "  ${B}Starting setup wizard...${RESET}"
+  echo -e "  ${B}Opening ClawOS Setup...${RESET}"
   echo ""
-  python3 -m setup.first_run.wizard
+  if ! clawos-setup --timeout 180; then
+    warn "GUI setup launch failed - falling back to the terminal wizard"
+    python3 -m setup.first_run.wizard
+  fi
 else
-  echo -e "  ${D}Non-interactive install detected. Run ${RESET}${B}nexus setup${RESET}${D} later.${RESET}"
+  echo -e "  ${D}Non-interactive install detected. Run ${RESET}${B}clawos-setup${RESET}${D} or ${RESET}${B}nexus setup${RESET}${D} later.${RESET}"
   echo ""
 fi
