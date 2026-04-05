@@ -23,6 +23,10 @@ SHELL_ALLOWLIST = [
     r'^python3?\s', r'^pip\s', r'^git\s',
 ]
 
+TOOL_ALIASES = {
+    "shell.run": "shell.restricted",
+}
+
 ALL_TOOL_DESCRIPTIONS = {
     "fs.read":          "Read a file. Input: path relative to workspace.",
     "fs.write":         "Write content to a file. Input: filename + content field.",
@@ -31,7 +35,7 @@ ALL_TOOL_DESCRIPTIONS = {
     "fs.search":        "Search files by content. Input: query string.",
     "web.search":       "Search the web. Input: search query.",
     "web.fetch":        "Fetch a URL. Input: full URL.",
-    "shell.restricted": "Run allowlisted shell command. Input: command string.",
+    "shell.restricted": "Run allowlisted shell command. Alias: shell.run. Input: command string.",
     "memory.read":      "Search memory. Input: query string.",
     "memory.write":     "Save to memory. Input: text to remember.",
     "memory.delete":    "Delete a memory. Input: memory_id.",
@@ -73,30 +77,31 @@ class ToolBridge:
     async def run(self, tool: str, target: str, content: str = "", **kwargs) -> str:
         if not content and "content" in kwargs:
             content = kwargs["content"]
+        normalized_tool = TOOL_ALIASES.get(tool, tool)
 
         # Resolve paths before policyd check
         check_target = target
-        if tool in ("fs.read", "fs.write", "fs.list", "fs.delete", "fs.search"):
+        if normalized_tool in ("fs.read", "fs.write", "fs.list", "fs.delete", "fs.search"):
             check_target = str(self._resolve_path(target))
 
-        decision, reason = await self.policy.check(tool, check_target, content)
+        decision, reason = await self.policy.check(normalized_tool, check_target, content)
 
         if decision == "DENY":
-            log.warning(f"Tool blocked: {tool}({target[:50]}) — {reason}")
+            log.warning(f"Tool blocked: {normalized_tool}({target[:50]}) — {reason}")
             return f"[DENIED] {reason}"
         if decision == "QUEUE":
-            return f"[PENDING APPROVAL] {tool}({target})"
+            return f"[PENDING APPROVAL] {normalized_tool}({target})"
 
         try:
-            result = await self._execute(tool, target, content)
+            result = await self._execute(normalized_tool, target, content)
         except Exception as e:
-            result = f"[ERROR] {tool} failed: {e}"
-            log.error(f"Tool error: {tool}({target[:40]}): {e}")
+            result = f"[ERROR] {normalized_tool} failed: {e}"
+            log.error(f"Tool error: {normalized_tool}({target[:40]}): {e}")
 
         # AfterToolCall hooks
         try:
             ctx = {"workspace_id": self.workspace, "task_id": self.policy.task_id}
-            await self.policy._get_engine().hooks.run_after(tool, target, result, ctx)
+            await self.policy._get_engine().hooks.run_after(normalized_tool, target, result, ctx)
         except Exception:
             pass
 
@@ -188,6 +193,19 @@ class ToolBridge:
             files = result.stdout.strip().split("\n")
             files = [f for f in files if f]
             return "\n".join(files[:20]) if files else "[SEARCH] No matches"
+        except FileNotFoundError:
+            matches = []
+            for path in self._ws_root.rglob("*"):
+                if len(matches) >= 20:
+                    break
+                if not path.is_file() or path.suffix.lower() not in (".md", ".txt"):
+                    continue
+                try:
+                    if query in path.read_text(encoding="utf-8", errors="replace"):
+                        matches.append(str(path))
+                except Exception:
+                    continue
+            return "\n".join(matches) if matches else "[SEARCH] No matches"
         except Exception as e:
             return f"[ERROR] {e}"
 
@@ -256,18 +274,52 @@ class ToolBridge:
 
     def _system_info(self) -> str:
         import shutil
-        disk = shutil.disk_usage("/")
-        try:
-            with open("/proc/meminfo") as f:
-                meminfo = {l.split()[0].rstrip(":"): int(l.split()[1])
-                           for l in f if l.split()[0].rstrip(":") in
-                           ("MemTotal", "MemAvailable")}
-            ram_used = round((meminfo["MemTotal"] - meminfo["MemAvailable"]) * 1024 / 1e9, 1)
-            ram_total = round(meminfo["MemTotal"] * 1024 / 1e9, 1)
-        except Exception:
-            ram_used = ram_total = 0
+        disk_root = Path.cwd().anchor or "/"
+        disk = shutil.disk_usage(disk_root)
+        ram_used, ram_total = self._memory_usage_gb()
         return (f"Disk: {round(disk.free/1e9,1)}GB free of {round(disk.total/1e9,1)}GB | "
                 f"RAM: {ram_used}/{ram_total}GB used")
+
+    def _memory_usage_gb(self) -> tuple[float, float]:
+        try:
+            with open("/proc/meminfo") as f:
+                meminfo = {
+                    line.split()[0].rstrip(":"): int(line.split()[1])
+                    for line in f
+                    if line.split()[0].rstrip(":") in ("MemTotal", "MemAvailable")
+                }
+            ram_used = round((meminfo["MemTotal"] - meminfo["MemAvailable"]) * 1024 / 1e9, 1)
+            ram_total = round(meminfo["MemTotal"] * 1024 / 1e9, 1)
+            return ram_used, ram_total
+        except Exception:
+            pass
+
+        try:
+            import ctypes
+
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            stat = MEMORYSTATUSEX()
+            stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                ram_total = round(stat.ullTotalPhys / 1e9, 1)
+                ram_used = round((stat.ullTotalPhys - stat.ullAvailPhys) / 1e9, 1)
+                return ram_used, ram_total
+        except Exception:
+            pass
+
+        return 0, 0
 
     def _ws_create(self, name: str) -> str:
         ws = workspace_path(name)

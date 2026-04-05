@@ -37,7 +37,7 @@ async def run(args: dict, agent) -> WorkflowResult:
         "<key config options if any>\n\n"
         "## License\n"
         "<license>\n\n"
-        "Save the README.md to: {path}/README.md"
+        f"Save the README.md to: {path / 'README.md'}"
     )
 
     try:

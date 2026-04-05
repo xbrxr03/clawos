@@ -92,16 +92,37 @@ class AgentManager:
         tasks.sort(key=lambda t: t.created_at, reverse=True)
         return [t.to_dict() for t in tasks[:limit]]
 
+    def _derive_channel(self, channel: str = "cli", source: str = "") -> str:
+        if channel and channel != "cli":
+            return channel
+        if source:
+            return source.split(":", 1)[0]
+        return channel or "cli"
+
+    def _apply_session_context(self, session, channel: str = "cli", source: str = "") -> None:
+        try:
+            session.session.channel = self._derive_channel(channel, source)
+            if source:
+                session.session.contact_id = source
+        except Exception:
+            pass
+
     async def chat_direct(self, message: str,
-                          workspace_id: str = DEFAULT_WORKSPACE) -> str:
+                          workspace_id: str = DEFAULT_WORKSPACE,
+                          channel: str = "cli",
+                          source: str = "") -> str:
         """Direct chat — bypasses task queue for interactive CLI use."""
         session = await self._get_session(workspace_id)
+        self._apply_session_context(session, channel=channel, source=source)
         return await session.chat(message)
 
     async def chat_direct_with_steps(self, message: str,
-                                      workspace_id: str = DEFAULT_WORKSPACE) -> dict:
+                                      workspace_id: str = DEFAULT_WORKSPACE,
+                                      channel: str = "cli",
+                                      source: str = "") -> dict:
         """Direct chat returning reply + tool_steps for dashboard display."""
         session = await self._get_session(workspace_id)
+        self._apply_session_context(session, channel=channel, source=source)
         return await session.chat_with_steps(message)
 
     async def reset_session(self, workspace_id: str):
@@ -118,18 +139,40 @@ class AgentManager:
             from clawos_core.constants import PORT_AGENTD, DEFAULT_WORKSPACE
             api = FastAPI(title="agentd API")
 
+            def _parse_body(body: dict | None) -> tuple[str, str, str]:
+                body = body or {}
+                intent = str(body.get("intent") or body.get("task") or "").strip()
+                workspace = str(body.get("workspace") or DEFAULT_WORKSPACE)
+                channel = str(body.get("channel") or body.get("source") or "api")
+                return intent, workspace, self._derive_channel(channel=channel)
+
+            async def _submit_from_body(body: dict | None):
+                intent, workspace, channel = _parse_body(body)
+                if not intent:
+                    return {"error": "no intent"}
+                task = await self.submit(intent, workspace, channel=channel)
+                return {"task_id": task.task_id, "status": "queued"}
+
+            @api.get("/health")
+            def health_endpoint():
+                return {
+                    "status": "ok",
+                    "running": self._running,
+                    "tasks": len(self._tasks),
+                    "sessions": len(self._sessions),
+                }
+
             @api.get("/tasks")
-            def list_tasks_endpoint():
-                return self.list_tasks(50)
+            def list_tasks_endpoint(limit: int = 50):
+                return self.list_tasks(limit)
 
             @api.post("/submit")
             async def submit_endpoint(body: dict):
-                intent = body.get("intent", "")
-                workspace = body.get("workspace", DEFAULT_WORKSPACE)
-                if not intent:
-                    return {"error": "no intent"}
-                task = await self.submit(intent, workspace)
-                return {"task_id": task.task_id, "status": "queued"}
+                return await _submit_from_body(body)
+
+            @api.post("/tasks")
+            async def submit_legacy_endpoint(body: dict):
+                return await _submit_from_body(body)
 
             config = uvicorn.Config(api, host="127.0.0.1", port=PORT_AGENTD,
                                     log_level="warning")

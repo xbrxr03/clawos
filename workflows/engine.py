@@ -172,17 +172,17 @@ class WorkflowEngine:
     async def _gate_policyd(self, workflow_id: str, workspace_id: str) -> bool:
         """Gate destructive workflow through policyd. Returns True = allowed."""
         try:
-            from services.policyd.service import get_policy_engine
-            from clawos_core.models import task_id as _tid
-            engine = get_policy_engine()
+            from services.policyd.service import get_engine
+            from clawos_core.models import Decision
+            from clawos_core.util.ids import task_id as next_task_id
+            engine = get_engine()
             decision, _ = await engine.evaluate(
                 tool="workflow.destructive",
                 target=workflow_id,
-                task_id=_tid(),
+                task_id=next_task_id(),
                 workspace_id=workspace_id,
-                granted_tools=[],
+                granted_tools=["workflow.destructive"],
             )
-            from services.policyd.service import Decision
             return decision == Decision.ALLOW
         except Exception:
             # If policyd unavailable, default deny for destructive
@@ -203,9 +203,8 @@ class WorkflowEngine:
     async def _emit(self, event_type: str, data: dict) -> None:
         """Emit to event bus if available — never raises."""
         try:
-            from clawos_core.events import get_bus
-            bus = get_bus()
-            await bus.emit(event_type, data)
+            from clawos_core.events.bus import get_bus
+            await get_bus().publish(event_type, data)
         except Exception:
             pass
 

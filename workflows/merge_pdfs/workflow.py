@@ -26,11 +26,11 @@ async def run(args: dict, agent) -> WorkflowResult:
         f"Merge these PDF files into one: {files}\n"
         f"Output file: {output}\n\n"
         "Use one of these methods (try in order):\n"
-        "1. shell.run: pdfunite {files} {output}\n"
-        "2. shell.run: gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile={output} {files}\n"
+        f"1. shell.run: pdfunite {files} {output}\n"
+        f"2. shell.run: gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile={output} {files}\n"
         "3. Python: use PyPDF2 or pypdf to merge the files.\n\n"
         "After merging, confirm the output file exists and report its size.\n"
-        "End with: Merged N files into {output} (XMB)."
+        f"End with: Merged N files into {output} (XMB)."
     )
 
     try:
