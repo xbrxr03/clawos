@@ -3,97 +3,269 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClawOS</title>
+<title>ClawOS Dashboard</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #141414; color: #f5f5f7; font-family: Inter, -apple-system, sans-serif; font-size: 14px; display: flex; height: 100vh; overflow: hidden; }
-  
-  /* Sidebar */
-  #sidebar { width: 200px; background: #1c1c1e; border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; }
-  #logo { padding: 8px 16px 20px; font-weight: 700; font-size: 16px; color: #f5f5f7; }
-  #logo span { font-size: 11px; font-weight: 400; color: rgba(245,245,247,0.45); display: block; margin-top: 2px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; margin: 1px 8px; border-radius: 8px; cursor: pointer; color: rgba(245,245,247,0.55); font-size: 13px; transition: all 0.15s; }
+  body {
+    background: #141414;
+    color: #f5f5f7;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #auth-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(10, 10, 12, 0.82);
+    backdrop-filter: blur(12px);
+    z-index: 30;
+  }
+  #auth-overlay.visible { display: flex; }
+  .auth-card {
+    width: min(420px, 100%);
+    background: #1c1c1e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+  }
+  .auth-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .auth-copy { color: rgba(245,245,247,0.55); font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+  #auth-token {
+    width: 100%;
+    padding: 11px 14px;
+    margin-bottom: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: #f5f5f7;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
+  #auth-token:focus { border-color: #2997FF; }
+  .auth-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #2997FF;
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  #auth-message {
+    min-height: 18px;
+    margin-top: 12px;
+    color: rgba(245,245,247,0.55);
+    font-size: 12px;
+  }
+
+  #sidebar {
+    width: 220px;
+    background: #1c1c1e;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    flex-shrink: 0;
+  }
+  #logo {
+    padding: 8px 16px 20px;
+    font-weight: 700;
+    font-size: 16px;
+    color: #f5f5f7;
+  }
+  #logo span {
+    display: block;
+    margin-top: 2px;
+    color: rgba(245,245,247,0.45);
+    font-size: 11px;
+    font-weight: 400;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    margin: 1px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: rgba(245,245,247,0.55);
+    font-size: 13px;
+    transition: all 0.15s;
+  }
   .nav-item:hover { background: rgba(255,255,255,0.05); color: #f5f5f7; }
   .nav-item.active { background: rgba(255,255,255,0.08); color: #f5f5f7; font-weight: 500; }
-  #nexus-cmd { margin-top: auto; padding: 8px 16px; font-size: 12px; color: #2997FF; cursor: pointer; text-decoration: none; display: block; }
-  #status-bar { padding: 12px 16px 8px; font-size: 11px; color: rgba(245,245,247,0.4); display: flex; align-items: center; gap: 6px; }
+  #nexus-cmd {
+    margin-top: auto;
+    padding: 8px 16px;
+    color: #2997FF;
+    font-size: 12px;
+    text-decoration: none;
+    display: block;
+  }
+  #logout-btn {
+    margin: 8px 16px 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    color: rgba(245,245,247,0.55);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+  #logout-btn:hover { background: rgba(255,255,255,0.05); color: #f5f5f7; }
+  #status-bar {
+    padding: 12px 16px 8px;
+    font-size: 11px;
+    color: rgba(245,245,247,0.4);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: #30D158; }
   .dot.red { background: #FF453A; }
 
-  /* Main */
   #main { flex: 1; overflow-y: auto; padding: 24px; }
   .page { display: none; }
   .page.active { display: block; }
   h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
   .subtitle { color: rgba(245,245,247,0.45); font-size: 13px; margin-bottom: 24px; }
 
-  /* Cards */
-  .card { background: #1c1c1e; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; }
+  .card {
+    background: #1c1c1e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 16px;
+  }
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
   .stat-val { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
   .stat-val.green { color: #30D158; }
   .stat-val.red { color: #FF453A; }
-  .stat-val.amber { color: #FF9F0A; }
   .stat-label { font-size: 12px; color: rgba(245,245,247,0.45); margin-top: 4px; }
-  .section-label { font-size: 11px; font-weight: 600; color: rgba(245,245,247,0.3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-  
-  /* Services */
-  .service-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-  .service-row:last-child { border-bottom: none; }
-  .service-name { flex: 1; font-size: 13px; }
-  .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(245,245,247,0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .service-row,
+  .model-row,
+  .audit-row,
+  .ws-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .service-row:last-child,
+  .model-row:last-child,
+  .audit-row:last-child,
+  .ws-row:last-child,
+  .task-row:last-child,
+  .event-row:last-child { border-bottom: none; }
+  .service-name, .model-name, .ws-name { flex: 1; }
+  .model-name, .ws-name, .audit-tool, .task-meta, .event-time, .latency { font-family: monospace; }
+  .model-size, .ws-count, .latency, .event-time { color: rgba(245,245,247,0.3); font-size: 11px; }
+  .badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
   .badge.green { background: rgba(48,209,88,0.12); color: #30D158; }
   .badge.red { background: rgba(255,69,58,0.12); color: #FF453A; }
   .badge.amber { background: rgba(255,159,10,0.12); color: #FF9F0A; }
   .badge.blue { background: rgba(41,151,255,0.12); color: #2997FF; }
-  .latency { font-size: 11px; color: rgba(245,245,247,0.3); font-family: monospace; }
 
-  /* Events */
-  .event-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
-  .event-row:last-child { border-bottom: none; }
-  .event-type { color: rgba(245,245,247,0.45); font-family: monospace; width: 100px; flex-shrink: 0; }
-  .event-detail { flex: 1; color: rgba(245,245,247,0.7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .event-time { color: rgba(245,245,247,0.3); font-family: monospace; flex-shrink: 0; }
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 12px;
+  }
+  .event-type { width: 100px; flex-shrink: 0; color: rgba(245,245,247,0.45); font-family: monospace; }
+  .event-detail, .audit-target {
+    flex: 1;
+    color: rgba(245,245,247,0.7);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-  /* Tasks */
   .task-input-row { display: flex; gap: 8px; margin-bottom: 16px; }
-  .task-input-row input { flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f5f5f7; font-size: 14px; font-family: inherit; outline: none; }
+  .task-input-row input {
+    flex: 1;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: #f5f5f7;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
   .task-input-row input:focus { border-color: #2997FF; }
-  .run-btn { padding: 10px 20px; background: #2997FF; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .run-btn {
+    padding: 10px 20px;
+    background: #2997FF;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
   .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .tabs { display: flex; gap: 2px; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 3px; margin-bottom: 16px; }
-  .tab { flex: 1; padding: 6px; border-radius: 8px; border: none; background: transparent; color: rgba(245,245,247,0.45); font-size: 12px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 16px;
+  }
+  .tab {
+    flex: 1;
+    padding: 6px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: rgba(245,245,247,0.45);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
   .tab.active { background: rgba(255,255,255,0.08); color: #f5f5f7; font-weight: 500; }
   .task-row { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-  .task-row:last-child { border-bottom: none; }
   .task-intent { font-size: 13px; margin-bottom: 4px; }
-  .task-meta { font-size: 11px; color: rgba(245,245,247,0.35); font-family: monospace; }
+  .task-meta { font-size: 11px; color: rgba(245,245,247,0.35); }
   .task-result { font-size: 12px; color: rgba(245,245,247,0.6); margin-top: 6px; white-space: pre-wrap; }
   .empty { text-align: center; padding: 48px; color: rgba(245,245,247,0.3); font-size: 13px; }
 
-  /* Models */
-  .model-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-  .model-row:last-child { border-bottom: none; }
-  .model-name { flex: 1; font-size: 13px; font-family: monospace; }
-  .model-size { font-size: 11px; color: rgba(245,245,247,0.35); }
-
-  /* Audit */
-  .audit-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
-  .audit-row:last-child { border-bottom: none; }
   .audit-icon { width: 16px; text-align: center; flex-shrink: 0; }
-  .audit-tool { font-family: monospace; color: rgba(245,245,247,0.6); width: 120px; flex-shrink: 0; }
-  .audit-target { flex: 1; color: rgba(245,245,247,0.45); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .audit-tool { width: 120px; flex-shrink: 0; color: rgba(245,245,247,0.6); }
   .audit-time { color: rgba(245,245,247,0.3); font-family: monospace; flex-shrink: 0; }
-
-  /* Memory */
-  .mem-layer { margin-bottom: 12px; }
-  .mem-layer-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; color: rgba(245,245,247,0.7); }
   .mem-val { font-size: 24px; font-weight: 700; color: #BF5AF2; }
-  .ws-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
-  .ws-row:last-child { border-bottom: none; }
-  .ws-name { flex: 1; font-family: monospace; }
-  .ws-count { color: rgba(245,245,247,0.4); font-size: 12px; }
 
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -102,21 +274,30 @@
 </head>
 <body>
 
+<div id="auth-overlay">
+  <form class="auth-card" id="auth-form">
+    <div class="auth-title">Dashboard Login</div>
+    <div class="auth-copy">Enter the dashboard token to unlock the local dashboard.</div>
+    <input type="password" id="auth-token" placeholder="Paste dashboard token" autocomplete="current-password">
+    <button type="submit" class="auth-btn">Unlock dashboard</button>
+    <div id="auth-message"></div>
+  </form>
+</div>
+
 <div id="sidebar">
   <div id="logo">ClawOS <span>agent runtime</span></div>
-  <div class="nav-item active" onclick="showPage('overview')">⬡ Overview</div>
-  <div class="nav-item" onclick="showPage('tasks')">≡ Tasks</div>
-  <div class="nav-item" onclick="showPage('approvals')">○ Approvals</div>
-  <div class="nav-item" onclick="showPage('models')">⬡ Models</div>
-  <div class="nav-item" onclick="showPage('memory')">⬡ Memory</div>
-  <div class="nav-item" onclick="showPage('audit')">≡ Audit Log</div>
-  <a id="nexus-cmd" href="http://localhost:5180" target="_blank">⬡ Nexus Command</a>
-  <div id="status-bar"><div class="dot" id="ws-dot"></div><span id="ws-label">Connecting...</span></div>
+  <div class="nav-item active" data-page="overview" onclick="showPage('overview')">Overview</div>
+  <div class="nav-item" data-page="tasks" onclick="showPage('tasks')">Tasks</div>
+  <div class="nav-item" data-page="approvals" onclick="showPage('approvals')">Approvals</div>
+  <div class="nav-item" data-page="models" onclick="showPage('models')">Models</div>
+  <div class="nav-item" data-page="memory" onclick="showPage('memory')">Memory</div>
+  <div class="nav-item" data-page="audit" onclick="showPage('audit')">Audit Log</div>
+  <a id="nexus-cmd" href="http://localhost:5180" target="_blank">Nexus Command</a>
+  <button id="logout-btn" onclick="logout()">Log Out</button>
+  <div id="status-bar"><div class="dot red" id="ws-dot"></div><span id="ws-label">Checking access...</span></div>
 </div>
 
 <div id="main">
-
-  <!-- Overview -->
   <div class="page active" id="page-overview">
     <h1>Overview</h1>
     <div class="subtitle" id="overview-subtitle">Agent runtime</div>
@@ -142,7 +323,6 @@
     </div>
   </div>
 
-  <!-- Tasks -->
   <div class="page" id="page-tasks">
     <h1>Tasks</h1>
     <div class="subtitle">Submit tasks to Nexus</div>
@@ -151,29 +331,26 @@
       <button class="run-btn" id="run-btn" onclick="submitTask()">Run</button>
     </div>
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('active',this)">active</button>
-      <button class="tab" onclick="switchTab('queued',this)">queued</button>
-      <button class="tab" onclick="switchTab('failed',this)">failed</button>
-      <button class="tab" onclick="switchTab('completed',this)">completed</button>
+      <button class="tab active" onclick="switchTab('active', this)">active</button>
+      <button class="tab" onclick="switchTab('queued', this)">queued</button>
+      <button class="tab" onclick="switchTab('failed', this)">failed</button>
+      <button class="tab" onclick="switchTab('completed', this)">completed</button>
     </div>
     <div class="card" id="tasks-list"></div>
   </div>
 
-  <!-- Approvals -->
   <div class="page" id="page-approvals">
     <h1>Approvals</h1>
     <div class="subtitle">Pending tool approvals</div>
     <div class="card" id="approvals-list"><div class="empty">No pending approvals</div></div>
   </div>
 
-  <!-- Models -->
   <div class="page" id="page-models">
     <h1>Models</h1>
     <div class="subtitle">Ollama model management</div>
     <div class="card" id="models-list"></div>
   </div>
 
-  <!-- Memory -->
   <div class="page" id="page-memory">
     <h1>Memory</h1>
     <div class="subtitle">4-layer memory system</div>
@@ -184,25 +361,51 @@
     </div>
   </div>
 
-  <!-- Audit -->
   <div class="page" id="page-audit">
     <h1>Audit Log</h1>
     <div class="subtitle">Merkle-chained audit trail</div>
     <div class="card" id="audit-list"></div>
   </div>
-
 </div>
 
 <script>
 let state = { services:{}, tasks:[], events:[], models:[], approvals:[], audit:[], memory:{}, workspaces:[] }
 let currentTab = 'active'
 let ws = null
+let wsPingTimer = null
+let tasksPollTimer = null
+let session = { ready:false, auth_required:false, authenticated:false }
+
+function setConnectionStatus(connected, label) {
+  document.getElementById('ws-dot').className = connected ? 'dot' : 'dot red'
+  document.getElementById('ws-label').textContent = label
+}
+
+function showAuthOverlay(message) {
+  document.getElementById('auth-overlay').classList.add('visible')
+  document.getElementById('auth-message').textContent = message || ''
+  document.getElementById('auth-token').focus()
+}
+
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').classList.remove('visible')
+  document.getElementById('auth-message').textContent = ''
+  document.getElementById('auth-token').value = ''
+}
+
+function updateOverviewSubtitle() {
+  const services = Object.values(state.services || {})
+  const up = services.filter(s => s.status === 'up' || s.status === 'running').length
+  document.getElementById('overview-subtitle').textContent = `Agent runtime · ${up}/${services.length || 0} services up`
+}
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.querySelectorAll('#sidebar .nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === name)
+  })
   document.getElementById('page-' + name).classList.add('active')
-  event.target.classList.add('active')
+  if (name === 'approvals') loadApprovals()
   if (name === 'audit') loadAudit()
   if (name === 'memory') loadMemory()
   if (name === 'models') loadModels()
@@ -215,110 +418,193 @@ function switchTab(tab, el) {
   renderTasks()
 }
 
-// WebSocket
+async function apiFetch(url, options) {
+  const response = await fetch(url, options)
+  if (response.status === 401) {
+    session.authenticated = false
+    stopTaskPolling()
+    disconnectWs()
+    showAuthOverlay('Dashboard authentication required.')
+    setConnectionStatus(false, 'Login required')
+    throw new Error('Unauthorized')
+  }
+  return response
+}
+
+function disconnectWs() {
+  if (wsPingTimer) {
+    clearInterval(wsPingTimer)
+    wsPingTimer = null
+  }
+  if (ws) {
+    const sock = ws
+    ws = null
+    sock.onclose = null
+    try { sock.close() } catch (e) {}
+  }
+}
+
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/ws`)
+  if (ws || (session.auth_required && !session.authenticated)) return
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+  ws = new WebSocket(`${proto}://${location.host}/ws`)
   ws.onopen = () => {
-    document.getElementById('ws-dot').className = 'dot'
-    document.getElementById('ws-label').textContent = 'Connected'
+    setConnectionStatus(true, 'Connected')
+    if (wsPingTimer) clearInterval(wsPingTimer)
+    wsPingTimer = setInterval(() => {
+      if (ws && ws.readyState === 1) ws.send('ping')
+    }, 20000)
   }
   ws.onclose = () => {
-    document.getElementById('ws-dot').className = 'dot red'
-    document.getElementById('ws-label').textContent = 'Disconnected'
-    setTimeout(connect, 3000)
+    if (wsPingTimer) {
+      clearInterval(wsPingTimer)
+      wsPingTimer = null
+    }
+    ws = null
+    if (session.auth_required && !session.authenticated) {
+      setConnectionStatus(false, 'Login required')
+      return
+    }
+    setConnectionStatus(false, 'Disconnected')
+    setTimeout(() => {
+      if (!ws && (!session.auth_required || session.authenticated)) connect()
+    }, 3000)
   }
   ws.onmessage = e => {
     const msg = JSON.parse(e.data)
     if (msg.type === 'snapshot') {
       state.services = msg.data.services || {}
-      state.events = (msg.data.events || []).slice(-20)
+      state.events = (msg.data.events || []).slice(0, 20)
       state.models = msg.data.models || []
       renderAll()
     } else if (msg.type === 'service_health') {
-      state.services = msg.data
+      state.services = msg.data || {}
       renderServices()
+      updateOverviewSubtitle()
     } else if (msg.type === 'audit_event') {
       state.events.unshift(msg.data)
       state.events = state.events.slice(0, 20)
       renderEvents()
     }
   }
-  setInterval(() => ws && ws.readyState === 1 && ws.send('ping'), 20000)
 }
 
-// Poll tasks every 3s
-setInterval(async () => {
-  try {
-    const r = await fetch('/api/tasks')
-    const data = await r.json()
-    if (Array.isArray(data)) {
-      state.tasks = data
-      renderTasks()
-      const active = data.filter(t => t.status === 'active' || t.status === 'running').length
-      const queued = data.filter(t => t.status === 'queued').length
-      const failed = data.filter(t => t.status === 'failed').length
-      const completed = data.filter(t => t.status === 'completed').length
-      document.getElementById('stat-active').textContent = active
-      document.getElementById('stat-queued').textContent = queued
-      document.getElementById('stat-failed').textContent = failed
-      document.getElementById('stat-completed').textContent = completed
-      document.getElementById('overview-subtitle').textContent = `Agent runtime · ${Object.keys(state.services).length}/5 services up`
-    }
-  } catch(e) {}
-}, 3000)
+function startTaskPolling() {
+  if (tasksPollTimer) return
+  pollTasks()
+  tasksPollTimer = setInterval(pollTasks, 3000)
+}
 
-function renderAll() { renderServices(); renderEvents(); renderOverviewModels() }
+function stopTaskPolling() {
+  if (!tasksPollTimer) return
+  clearInterval(tasksPollTimer)
+  tasksPollTimer = null
+}
+
+async function pollTasks() {
+  try {
+    const response = await apiFetch('/api/tasks')
+    const data = await response.json()
+    if (!Array.isArray(data)) return
+    state.tasks = data
+    renderTasks()
+    const active = data.filter(t => t.status === 'active' || t.status === 'running').length
+    const queued = data.filter(t => t.status === 'queued').length
+    const failed = data.filter(t => t.status === 'failed').length
+    const completed = data.filter(t => t.status === 'completed').length
+    document.getElementById('stat-active').textContent = active
+    document.getElementById('stat-queued').textContent = queued
+    document.getElementById('stat-failed').textContent = failed
+    document.getElementById('stat-completed').textContent = completed
+    updateOverviewSubtitle()
+  } catch (e) {}
+}
+
+function renderAll() {
+  renderServices()
+  renderEvents()
+  renderOverviewModels()
+  renderTasks()
+  updateOverviewSubtitle()
+}
 
 function renderServices() {
   const el = document.getElementById('services-list')
-  const svcs = state.services
-  if (!svcs || !Object.keys(svcs).length) { el.innerHTML = '<div class="empty">No service data</div>'; return }
-  el.innerHTML = Object.entries(svcs).map(([name, s]) => `
+  const services = state.services
+  if (!services || !Object.keys(services).length) {
+    el.innerHTML = '<div class="empty">No service data</div>'
+    return
+  }
+  el.innerHTML = Object.entries(services).map(([name, svc]) => `
     <div class="service-row">
-      <div class="dot ${s.status === 'running' || s.status === 'up' ? '' : 'red'}"></div>
+      <div class="dot ${svc.status === 'up' || svc.status === 'running' ? '' : 'red'}"></div>
       <div class="service-name">${name}</div>
-      ${s.latency_ms ? `<div class="latency">${s.latency_ms}ms</div>` : ''}
-      <div class="badge ${s.status === 'running' || s.status === 'up' ? 'green' : 'red'}">${s.status || 'unknown'}</div>
+      ${svc.latency_ms ? `<div class="latency">${svc.latency_ms}ms</div>` : ''}
+      <div class="badge ${svc.status === 'up' || svc.status === 'running' ? 'green' : (svc.status === 'degraded' ? 'amber' : 'red')}">${svc.status || 'unknown'}</div>
     </div>`).join('')
 }
 
 function renderEvents() {
   const el = document.getElementById('events-list')
-  if (!state.events.length) { el.innerHTML = '<div class="empty">No events yet</div>'; return }
-  el.innerHTML = state.events.slice(0,15).map(e => `
+  if (!state.events.length) {
+    el.innerHTML = '<div class="empty">No events yet</div>'
+    return
+  }
+  el.innerHTML = state.events.slice(0, 15).map(ev => `
     <div class="event-row">
-      <div class="event-type">${e.type || e.event_type || 'event'}</div>
-      <div class="event-detail">${JSON.stringify(e.data || e).slice(0,60)}</div>
-      <div class="event-time">${new Date().toLocaleTimeString()}</div>
+      <div class="event-type">${ev.type || 'event'}</div>
+      <div class="event-detail">${JSON.stringify(ev.data || ev).slice(0, 80)}</div>
+      <div class="event-time">${ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()}</div>
     </div>`).join('')
 }
 
 function renderOverviewModels() {
   const el = document.getElementById('overview-models')
-  if (!state.models.length) { el.innerHTML = '<div class="empty">No models</div>'; return }
-  el.innerHTML = state.models.map(m => `
+  if (!state.models.length) {
+    el.innerHTML = '<div class="empty">No models</div>'
+    return
+  }
+  el.innerHTML = state.models.map(model => `
     <div class="model-row">
-      <div class="dot ${m.running ? '' : 'red'}" style="background:${m.running ? '#30D158' : '#555'}"></div>
-      <div class="model-name">${m.name}</div>
-      ${m.default ? '<div class="badge blue">default</div>' : ''}
-      ${m.running ? '<div class="badge green">running</div>' : ''}
-      <div class="model-size">${m.size || ''}</div>
+      <div class="dot ${model.running ? '' : 'red'}" style="background:${model.running ? '#30D158' : '#555'}"></div>
+      <div class="model-name">${model.name}</div>
+      ${model.default ? '<div class="badge blue">default</div>' : ''}
+      ${model.running ? '<div class="badge green">running</div>' : ''}
+      <div class="model-size">${model.size || ''}</div>
     </div>`).join('')
 }
 
 function renderTasks() {
   const el = document.getElementById('tasks-list')
-  const filtered = state.tasks.filter(t => {
-    if (currentTab === 'active') return t.status === 'active' || t.status === 'running'
-    return t.status === currentTab
+  const filtered = state.tasks.filter(task => {
+    if (currentTab === 'active') return task.status === 'active' || task.status === 'running'
+    return task.status === currentTab
   })
-  if (!filtered.length) { el.innerHTML = `<div class="empty">No ${currentTab} tasks</div>`; return }
-  el.innerHTML = filtered.map(t => `
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty">No ${currentTab} tasks</div>`
+    return
+  }
+  el.innerHTML = filtered.map(task => `
     <div class="task-row">
-      <div class="task-intent">${t.intent}</div>
-      <div class="task-meta">${t.task_id} · ${t.workspace} · ${t.status} · ${t.finished_at ? new Date(t.finished_at).toLocaleTimeString() : 'running...'}</div>
-      ${t.result ? `<div class="task-result">${t.result}</div>` : ''}
-      ${t.error ? `<div class="task-result" style="color:#FF453A">${t.error}</div>` : ''}
+      <div class="task-intent">${task.intent}</div>
+      <div class="task-meta">${task.task_id} · ${task.workspace} · ${task.status} · ${task.finished_at ? new Date(task.finished_at).toLocaleTimeString() : 'running...'}</div>
+      ${task.result ? `<div class="task-result">${task.result}</div>` : ''}
+      ${task.error ? `<div class="task-result" style="color:#FF453A">${task.error}</div>` : ''}
+    </div>`).join('')
+}
+
+function renderApprovals() {
+  const el = document.getElementById('approvals-list')
+  if (!state.approvals.length) {
+    el.innerHTML = '<div class="empty">No pending approvals</div>'
+    return
+  }
+  el.innerHTML = state.approvals.map(item => `
+    <div class="audit-row">
+      <div class="audit-icon">?</div>
+      <div class="audit-tool">${item.tool || 'tool'}</div>
+      <div class="audit-target">${item.target || item.workspace || ''}</div>
+      <div class="audit-time">${(item.created_at || '').slice(11,16)}</div>
     </div>`).join('')
 }
 
@@ -330,74 +616,164 @@ async function submitTask() {
   btn.disabled = true
   btn.textContent = '...'
   try {
-    await fetch('/api/tasks/submit', {
+    const response = await apiFetch('/api/tasks/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ intent })
+      body: JSON.stringify({ intent }),
     })
+    if (!response.ok) throw new Error(await response.text())
     input.value = ''
     switchTab('queued', document.querySelectorAll('.tab')[1])
     setTimeout(() => switchTab('completed', document.querySelectorAll('.tab')[3]), 5000)
-  } catch(e) { alert('Submit failed: ' + e) }
+    pollTasks()
+  } catch (e) {
+    alert('Submit failed: ' + e.message)
+  }
   btn.disabled = false
   btn.textContent = 'Run'
 }
 
+async function loadApprovals() {
+  try {
+    const response = await apiFetch('/api/approvals')
+    state.approvals = await response.json()
+    renderApprovals()
+  } catch (e) {}
+}
+
 async function loadAudit() {
   try {
-    const r = await fetch('/api/audit')
-    const data = await r.json()
+    const response = await apiFetch('/api/audit')
+    const data = await response.json()
     const entries = data.entries || data || []
     const el = document.getElementById('audit-list')
-    if (!entries.length) { el.innerHTML = '<div class="empty">No audit entries</div>'; return }
-    el.innerHTML = entries.slice(0,50).map(e => `
+    if (!entries.length) {
+      el.innerHTML = '<div class="empty">No audit entries</div>'
+      return
+    }
+    el.innerHTML = entries.slice(0, 50).map(entry => `
       <div class="audit-row">
-        <div class="audit-icon">${e.decision === 'ALLOW' ? '✓' : '✗'}</div>
-        <div class="audit-tool">${e.tool || '?'}</div>
-        <div class="audit-target">${e.target || ''}</div>
-        <div class="audit-time">${(e.timestamp||'').slice(11,16)}</div>
+        <div class="audit-icon">${entry.decision === 'ALLOW' ? 'OK' : 'NO'}</div>
+        <div class="audit-tool">${entry.tool || '?'}</div>
+        <div class="audit-target">${entry.target || ''}</div>
+        <div class="audit-time">${(entry.timestamp || '').slice(11,16)}</div>
       </div>`).join('')
-  } catch(e) {}
+  } catch (e) {}
 }
 
 async function loadMemory() {
   try {
-    const r = await fetch('/api/memory/nexus_default')
-    const data = await r.json()
+    const response = await apiFetch('/api/memory/nexus_default')
+    const data = await response.json()
+    state.memory = data
     document.getElementById('mem-layers').innerHTML = `
-      <div class="card mem-layer"><div class="mem-val">${data.pinned_lines||0}</div><div class="stat-label">PINNED.md · Layer 1</div></div>
-      <div class="card mem-layer"><div class="mem-val">${data.workflow_lines||0}</div><div class="stat-label">WORKFLOW.md · Layer 2</div></div>
-      <div class="card mem-layer"><div class="mem-val" style="color:#2997FF">${data.chroma_count||0}</div><div class="stat-label">ChromaDB · Layer 3</div></div>
-      <div class="card mem-layer"><div class="mem-val" style="color:#FF9F0A">${data.fts_count||0}</div><div class="stat-label">SQLite FTS5 · Layer 4</div></div>`
-    const wsr = await fetch('/api/workspaces')
-    const ws = await wsr.json()
-    const workspaces = ws.workspaces || ws || []
-    document.getElementById('workspaces-list').innerHTML = workspaces.map(w => `
+      <div class="card"><div class="mem-val">${data.pinned_lines || 0}</div><div class="stat-label">PINNED.md · Layer 1</div></div>
+      <div class="card"><div class="mem-val">${data.workflow_lines || 0}</div><div class="stat-label">WORKFLOW.md · Layer 2</div></div>
+      <div class="card"><div class="mem-val" style="color:#2997FF">${data.chroma_count || 0}</div><div class="stat-label">ChromaDB · Layer 3</div></div>
+      <div class="card"><div class="mem-val" style="color:#FF9F0A">${data.fts_count || 0}</div><div class="stat-label">SQLite FTS5 · Layer 4</div></div>`
+    const workspacesResponse = await apiFetch('/api/workspaces')
+    const payload = await workspacesResponse.json()
+    state.workspaces = payload.workspaces || payload || []
+    document.getElementById('workspaces-list').innerHTML = state.workspaces.map(wsItem => `
       <div class="ws-row">
-        <div class="dot" style="background:${w.has_pinned ? '#30D158' : '#555'}"></div>
-        <div class="ws-name">${w.name}</div>
-        <div class="ws-count">${w.memory_count||0} memories</div>
+        <div class="dot" style="background:${wsItem.has_pinned ? '#30D158' : '#555'}"></div>
+        <div class="ws-name">${wsItem.name}</div>
+        <div class="ws-count">${wsItem.memory_count || 0} memories</div>
       </div>`).join('') || '<div class="empty">No workspaces</div>'
-  } catch(e) {}
+  } catch (e) {}
 }
 
 async function loadModels() {
   try {
-    const r = await fetch('/api/models')
-    const data = await r.json()
-    const models = data.models || data || []
-    document.getElementById('models-list').innerHTML = models.map(m => `
+    const response = await apiFetch('/api/models')
+    const data = await response.json()
+    state.models = data.models || data || []
+    document.getElementById('models-list').innerHTML = state.models.map(model => `
       <div class="model-row">
-        <div class="dot" style="background:${m.running ? '#30D158' : '#555'}"></div>
-        <div class="model-name">${m.name}</div>
-        ${m.default ? '<div class="badge blue">default</div>' : ''}
-        ${m.running ? '<div class="badge green">running</div>' : ''}
-        <div class="model-size">${m.size||''}</div>
+        <div class="dot" style="background:${model.running ? '#30D158' : '#555'}"></div>
+        <div class="model-name">${model.name}</div>
+        ${model.default ? '<div class="badge blue">default</div>' : ''}
+        ${model.running ? '<div class="badge green">running</div>' : ''}
+        <div class="model-size">${model.size || ''}</div>
       </div>`).join('') || '<div class="empty">No models</div>'
-  } catch(e) {}
+    renderOverviewModels()
+  } catch (e) {}
 }
 
-connect()
+async function login(ev) {
+  ev.preventDefault()
+  const token = document.getElementById('auth-token').value.trim()
+  if (!token) {
+    showAuthOverlay('Paste the dashboard token first.')
+    return
+  }
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+    if (response.status === 401) {
+      showAuthOverlay('That token was rejected.')
+      return
+    }
+    if (!response.ok) throw new Error(await response.text())
+    session.authenticated = true
+    hideAuthOverlay()
+    setConnectionStatus(false, 'Connecting...')
+    startTaskPolling()
+    connect()
+    pollTasks()
+    loadModels()
+  } catch (e) {
+    showAuthOverlay('Login failed. Try again.')
+  }
+}
+
+async function logout() {
+  try {
+    await fetch('/api/logout', { method: 'POST' })
+  } catch (e) {}
+  session.authenticated = false
+  stopTaskPolling()
+  disconnectWs()
+  if (session.auth_required) {
+    showAuthOverlay('You are signed out.')
+    setConnectionStatus(false, 'Login required')
+  } else {
+    setConnectionStatus(false, 'Disconnected')
+  }
+}
+
+async function initSession() {
+  setConnectionStatus(false, 'Checking access...')
+  try {
+    const response = await fetch('/api/session')
+    const data = await response.json()
+    session = {
+      ready: true,
+      auth_required: !!data.auth_required,
+      authenticated: !!data.authenticated,
+    }
+    document.getElementById('logout-btn').style.display = session.auth_required ? 'block' : 'none'
+    if (session.auth_required && !session.authenticated) {
+      showAuthOverlay('Enter the dashboard token from your ClawOS config to continue.')
+      setConnectionStatus(false, 'Login required')
+      return
+    }
+    hideAuthOverlay()
+    setConnectionStatus(false, 'Connecting...')
+    startTaskPolling()
+    connect()
+    pollTasks()
+    loadModels()
+  } catch (e) {
+    setConnectionStatus(false, 'Unavailable')
+  }
+}
+
+document.getElementById('auth-form').addEventListener('submit', login)
+initSession()
 </script>
 </body>
 </html>

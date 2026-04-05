@@ -58,10 +58,11 @@ def service_hint(action: str, service_name: str = "clawos.service") -> str:
     if manager == "launchd":
         label = launch_agent_label(service_name)
         plist = launch_agent_path(service_name)
+        plist_display = plist.as_posix()
         if action == "start":
-            return f"launchctl bootstrap {user_domain_target()} {plist}"
+            return f"launchctl bootstrap {user_domain_target()} {plist_display}"
         if action == "stop":
-            return f"launchctl bootout {user_domain_target()} {plist}"
+            return f"launchctl bootout {user_domain_target()} {plist_display}"
         if action == "restart":
             return f"launchctl kickstart -k {user_domain_target()}/{label}"
         if action == "status":

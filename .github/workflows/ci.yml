@@ -47,4 +47,4 @@ jobs:
 
       - name: Run workflow smoke tests
         run: |
-          pytest tests/system/test_phase11.py tests/system/test_workflow_engine_platforms.py
+          pytest tests/system/test_phase11.py tests/system/test_workflow_engine_platforms.py tests/system/test_platform_service_manager.py tests/system/test_dashd_security.py tests/system/test_a2a_security.py

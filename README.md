@@ -12,7 +12,7 @@ In ~4 minutes you have the full OpenClaw ecosystem running locally — offline, 
 
 ## What ClawOS is (and isn't)
 
-ClawOS is currently a **one-command installer** that turns Ubuntu/Debian and macOS 14+ machines into a working OpenClaw environment. Linux is still the most battle-tested path; macOS support now uses Homebrew plus `launchd` and is documented in [docs/MACOS.md](docs/MACOS.md).
+ClawOS is currently a **one-command installer** that turns Ubuntu/Debian and macOS 14+ machines into a working OpenClaw environment. Linux is still the most battle-tested path; macOS support now uses Homebrew plus `launchd` and is documented in [docs/MACOS.md](docs/MACOS.md). Production deployment notes live in [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
 The end goal is a **bootable ISO** — flash a USB, boot, your AI is ready. That's the last stage on the roadmap. We're building in public and shipping working software at each stage instead of waiting until it's perfect.
 
