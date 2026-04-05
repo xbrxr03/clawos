@@ -20,7 +20,7 @@ async def run(args: dict, agent) -> WorkflowResult:
 
     prompt = (
         f"Find duplicate files in: {target}\n\n"
-        "1. Use shell.run: find {target} -type f | xargs md5sum 2>/dev/null | sort | "
+        f"1. Use shell.run: find {target} -type f | xargs md5sum 2>/dev/null | sort | "
         "awk 'BEGIN{{p=\"\"}} {{if($1==p)print; p=$1}}' | head -40\n"
         "2. Group files by hash to identify duplicates.\n"
         "3. Report: total duplicates found, total space wasted.\n"

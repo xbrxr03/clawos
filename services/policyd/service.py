@@ -48,6 +48,7 @@ TOOL_SCORES: dict[str, int] = {
     "workspace.create": 20,
     "workspace.delete": 75,
     "system.info":      8,
+    "workflow.destructive": 70,
 }
 
 BLOCKED_PATHS = [

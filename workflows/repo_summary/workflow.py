@@ -24,7 +24,7 @@ async def run(args: dict, agent) -> WorkflowResult:
         "Instructions:\n"
         "1. Use fs.list and fs.read to inspect the repo structure.\n"
         "2. Read README.md if it exists.\n"
-        "3. Check the last 10 git commits (use shell.run: git -C {path} log --oneline -10).\n"
+        f"3. Check the last 10 git commits (use shell.run: git -C {path} log --oneline -10).\n"
         "4. Identify the main language and frameworks used.\n"
         "5. Write a summary:\n\n"
         "**Repository:** <name>\n"

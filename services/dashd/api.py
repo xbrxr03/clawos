@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from clawos_core.constants import PORT_DASHD
+from clawos_core.constants import PORT_DASHD, DEFAULT_WORKSPACE
 from clawos_core.events.bus import get_bus
 
 log = logging.getLogger("dashd")
@@ -104,7 +104,11 @@ def create_app() -> "FastAPI":
         try:
             import httpx
             async with httpx.AsyncClient() as client:
-                r = await client.get(f"http://127.0.0.1:7072/tasks", timeout=2.0)
+                r = await client.get(
+                    "http://127.0.0.1:7072/tasks",
+                    params={"limit": limit},
+                    timeout=2.0,
+                )
                 return r.json()
         except Exception:
             from services.agentd.service import get_manager
@@ -132,7 +136,7 @@ def create_app() -> "FastAPI":
     @app.post("/api/chat")
     async def chat(body: dict):
         msg       = body.get("message", "").strip()
-        workspace = body.get("workspace", "default")
+        workspace = body.get("workspace", DEFAULT_WORKSPACE)
         if not msg:
             raise HTTPException(400, "message required")
         from services.agentd.service import get_manager

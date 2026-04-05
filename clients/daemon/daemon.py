@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from clawos_core.constants import DEFAULT_WORKSPACE
+from clawos_core.constants import DEFAULT_WORKSPACE, PORT_DASHD
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,21 +68,37 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
     # Also start dashd if available
     try:
         import uvicorn
-        dashboard_dir = Path(__file__).parent.parent.parent / "dashboard" / "backend"
-        if (dashboard_dir / "service.py").exists():
-            sys.path.insert(0, str(dashboard_dir))
-            config = uvicorn.Config(
-                "service:app",
-                host="0.0.0.0",
-                port=7070,
-                log_level="warning",
-                
+        from services.dashd.api import create_app
+
+        config = uvicorn.Config(
+            create_app(),
+            host="0.0.0.0",
+            port=PORT_DASHD,
+            log_level="warning",
+        )
+        server = uvicorn.Server(config)
+        asyncio.create_task(server.serve())
+        log.info(f"Dashboard started: http://localhost:{PORT_DASHD}")
+    except Exception as dashd_error:
+        try:
+            import uvicorn
+            dashboard_dir = Path(__file__).parent.parent.parent / "dashboard" / "backend"
+            if (dashboard_dir / "service.py").exists():
+                sys.path.insert(0, str(dashboard_dir))
+                config = uvicorn.Config(
+                    "service:app",
+                    host="0.0.0.0",
+                    port=7070,
+                    log_level="warning",
+                )
+                server = uvicorn.Server(config)
+                asyncio.create_task(server.serve())
+                log.info("Legacy dashboard started: http://localhost:7070")
+        except Exception as legacy_error:
+            log.warning(
+                f"Dashboard not started: canonical dashd failed ({dashd_error}); "
+                f"legacy backend failed ({legacy_error})"
             )
-            server = uvicorn.Server(config)
-            asyncio.create_task(server.serve())
-            log.info("Dashboard started: http://localhost:7070")
-    except Exception as e:
-        log.warning(f"Dashboard not started: {e}")
 
     # Handle shutdown signals gracefully
     stop_event = asyncio.Event()

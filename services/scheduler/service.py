@@ -31,10 +31,11 @@ from pathlib import Path
 
 import httpx
 import yaml
+from clawos_core.constants import DEFAULT_WORKSPACE, PORT_AGENTD
 
 CLAWOS_HOME = Path(os.environ.get("CLAWOS_HOME", Path.home() / "clawos"))
 SCHEDULES_FILE = CLAWOS_HOME / "configs" / "schedules.yaml"
-AGENTD_URL = "http://localhost:7072"
+AGENTD_URL = f"http://127.0.0.1:{PORT_AGENTD}"
 HEALTH_PORT = 7077
 LOG_FILE = CLAWOS_HOME / "logs" / "scheduler.log"
 
@@ -97,22 +98,22 @@ async def dispatch_task(schedule: dict) -> None:
     """
     task_id = schedule.get("id", "unknown")
     task_text = schedule.get("task", "")
-    workspace = schedule.get("workspace", "jarvis_default")
+    workspace = schedule.get("workspace", DEFAULT_WORKSPACE)
 
     log.info(f"Dispatching scheduled task: {task_id}")
 
     payload = {
-        "task": task_text,
+        "intent": task_text,
         "workspace": workspace,
-        "source": "scheduler",
+        "channel": "scheduler",
         "schedule_id": task_id,
         "session_id": f"sched-{task_id}-{int(time.time())}",
     }
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(f"{AGENTD_URL}/tasks", json=payload)
-            if resp.status_code == 200:
+            resp = await client.post(f"{AGENTD_URL}/submit", json=payload)
+            if resp.status_code < 300:
                 data = resp.json()
                 log.info(f"Task {task_id} queued — task_id: {data.get('task_id')}")
             else:

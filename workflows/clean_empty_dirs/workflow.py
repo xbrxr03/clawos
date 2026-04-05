@@ -20,9 +20,9 @@ async def run(args: dict, agent) -> WorkflowResult:
 
     prompt = (
         f"Find and remove empty directories under: {target}\n\n"
-        "1. Use shell.run: find {target} -type d -empty 2>/dev/null | head -50\n"
+        f"1. Use shell.run: find {target} -type d -empty 2>/dev/null | head -50\n"
         "2. List the empty directories found.\n"
-        + ("3. Remove them using: find {target} -type d -empty -delete 2>/dev/null\n"
+        + (f"3. Remove them using: find {target} -type d -empty -delete 2>/dev/null\n"
            if not dry_run else
            "3. Do NOT delete — just report what would be removed.\n") +
         "End with: Found N empty directories."
