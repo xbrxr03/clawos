@@ -1,36 +1,76 @@
-"""clean-empty-dirs — recursively find and remove empty directories."""
+"""clean-empty-dirs - recursively find and optionally remove empty directories."""
+
+from __future__ import annotations
+
+import os
 from pathlib import Path
+
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus
+from workflows.helpers import parse_bool
 
 META = WorkflowMeta(
-    id          = "clean-empty-dirs",
-    name        = "Clean Empty Dirs",
-    category    = "files",
-    description = "Recursively find and remove empty directories",
-    tags        = ["files", "cleanup"],
-    requires    = [],
-    destructive = True,
-    timeout_s   = 60,
+    id="clean-empty-dirs",
+    name="Clean Empty Dirs",
+    category="files",
+    description="Recursively find and remove empty directories",
+    tags=["files", "cleanup"],
+    requires=[],
+    destructive=True,
+    platforms=["linux", "macos", "windows"],
+    needs_agent=False,
+    timeout_s=60,
 )
 
 
 async def run(args: dict, agent) -> WorkflowResult:
-    target  = args.get("dir") or str(Path.home())
-    dry_run = args.get("dry_run", False)
-
-    prompt = (
-        f"Find and remove empty directories under: {target}\n\n"
-        f"1. Use shell.run: find {target} -type d -empty 2>/dev/null | head -50\n"
-        "2. List the empty directories found.\n"
-        + (f"3. Remove them using: find {target} -type d -empty -delete 2>/dev/null\n"
-           if not dry_run else
-           "3. Do NOT delete — just report what would be removed.\n") +
-        "End with: Found N empty directories."
-        + (" Removed N." if not dry_run else "")
-    )
-
     try:
-        output = await agent.chat(prompt)
-        return WorkflowResult(status=WorkflowStatus.OK, output=output)
+        target = Path(args.get("dir") or Path.home()).expanduser().resolve()
+        dry_run = parse_bool(args.get("dry_run"))
+
+        if not target.exists():
+            return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=f"Directory not found: {target}")
+
+        empty_dirs: list[Path] = []
+        removed = 0
+        for root, dirnames, _ in os.walk(target, topdown=False):
+            for dirname in dirnames:
+                candidate = Path(root) / dirname
+                try:
+                    if any(candidate.iterdir()):
+                        continue
+                except (OSError, PermissionError):
+                    continue
+                empty_dirs.append(candidate)
+                if not dry_run:
+                    try:
+                        candidate.rmdir()
+                        removed += 1
+                    except OSError:
+                        continue
+
+        empty_dirs.sort(key=lambda item: str(item))
+        lines = [
+            "**Empty Directory Report**",
+            f"- Target: {target}",
+            f"- Found: {len(empty_dirs)}",
+        ]
+        if dry_run:
+            lines.append("- Mode: dry run")
+        else:
+            lines.append(f"- Removed: {removed}")
+
+        if empty_dirs:
+            lines.extend(["", "**Directories:**"])
+            lines.extend(f"- {path}" for path in empty_dirs[:25])
+            if len(empty_dirs) > 25:
+                lines.append(f"- ... and {len(empty_dirs) - 25} more")
+        else:
+            lines.extend(["", "No empty directories found."])
+
+        return WorkflowResult(
+            status=WorkflowStatus.OK,
+            output="\n".join(lines),
+            metadata={"found": len(empty_dirs), "removed": removed, "dry_run": dry_run},
+        )
     except Exception as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

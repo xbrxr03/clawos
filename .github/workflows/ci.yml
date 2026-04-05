@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest pyyaml aiohttp fastapi "uvicorn[standard]" click json-repair pypdf python-docx aiofiles httpx gitpython rich
+
+      - name: Check installer scripts
+        shell: bash
+        run: |
+          bash -n install.sh
+          bash -n packaging/install/install.sh
+          bash -n scripts/setup-launchd.sh
+          bash -n scripts/setup-systemd.sh
+
+      - name: Compile Python files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import py_compile
+          import subprocess
+
+          files = subprocess.check_output(["git", "ls-files", "*.py"], text=True).splitlines()
+          for path in files:
+              py_compile.compile(path, doraise=True)
+          print(f"compiled {len(files)} python files")
+          PY
+
+      - name: Run workflow smoke tests
+        run: |
+          pytest tests/system/test_phase11.py tests/system/test_workflow_engine_platforms.py

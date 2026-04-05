@@ -10,6 +10,7 @@ Environment overrides:
 """
 import os
 from pathlib import Path
+from clawos_core.platform import launch_agents_dir, platform_key
 
 # ── Version ───────────────────────────────────────────────────────────────────
 VERSION      = "0.1.0"
@@ -17,13 +18,16 @@ CODENAME     = "Nexus"
 VERSION_FULL = f"{VERSION} {CODENAME}"
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-CLAWOS_DIR       = Path.home() / "clawos"
+CLAWOS_DIR       = Path(os.environ.get("CLAWOS_DIR", str(Path.home() / "clawos"))).expanduser()
 CONFIG_DIR       = CLAWOS_DIR / "config"
 LOGS_DIR         = CLAWOS_DIR / "logs"
 MEMORY_DIR       = CLAWOS_DIR / "memory"
 WORKSPACE_DIR    = CLAWOS_DIR / "workspace"
 VOICE_DIR        = CLAWOS_DIR / "voice"
 SERVICES_DIR     = Path(__file__).parent.parent
+RUNTIME_PLATFORM = platform_key()
+LAUNCH_AGENTS_DIR = launch_agents_dir()
+SYSTEMD_USER_DIR  = Path.home() / ".config" / "systemd" / "user"
 
 # Runtime data (systemd standard locations for a real install)
 VAR_LIB_DIR      = Path("/var/lib/clawos")

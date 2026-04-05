@@ -6,7 +6,7 @@ Used by systemd to keep services alive as a background process.
 
 Usage:
     python3 ~/clawos/clients/daemon/daemon.py
-    systemctl --user start clawos
+    Use clawctl start or the platform user service manager
 """
 import asyncio
 import logging

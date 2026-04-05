@@ -311,8 +311,11 @@ def cmd_use_kimi():
         return
 
     # Step 3: restart gateway so it picks up the new model
-    subprocess.run(["systemctl", "--user", "restart", "openclaw-gateway.service"],
-                   capture_output=True)
+    try:
+        from clawos_core.service_manager import restart as restart_service
+        restart_service("openclaw-gateway.service")
+    except Exception:
+        pass
     import time; time.sleep(2)
 
     print(f"  {_p(GREEN, '✓')}  Done. Launching OpenClaw...\n")
@@ -863,12 +866,15 @@ async def cmd_workflow(args: list):
             print(f"\n  Unknown workflow: {workflow_id}\n")
             return
         meta = eng._registry[workflow_id].META
+        platform_text = ", ".join(meta.platforms) if meta.platforms else "all"
         print(f"\n  {_p(CYAN, meta.name)}")
         print(f"  ID:          {meta.id}")
         print(f"  Category:    {meta.category}")
         print(f"  Description: {meta.description}")
         print(f"  Tags:        {', '.join(meta.tags) or 'none'}")
         print(f"  Requires:    {', '.join(meta.requires) or 'none'}")
+        print(f"  Platforms:   {platform_text}")
+        print(f"  Agent:       {'required' if meta.needs_agent else 'direct'}")
         print(f"  Destructive: {'yes' if meta.destructive else 'no'}")
         print(f"  Timeout:     {meta.timeout_s}s")
         print(f"\n  Run: nexus workflow run {meta.id}\n")

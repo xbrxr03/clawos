@@ -5,6 +5,7 @@ Shows real-time download progress in terminal.
 import subprocess
 import sys
 import shutil
+from clawos_core.service_manager import service_hint
 
 
 def ollama_running() -> bool:
@@ -75,7 +76,7 @@ def ensure_model(model: str) -> bool:
                 print(" ready")
                 break
         else:
-            print(" failed to start")
+            print(f" failed to start ({service_hint('start', 'ollama.service')})")
             return False
 
     return pull(model)

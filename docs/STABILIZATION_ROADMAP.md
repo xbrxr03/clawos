@@ -27,17 +27,18 @@ Definition of done: there is one obvious way to boot ClawOS locally and one obvi
 
 - Audit the 10 most useful workflows first: repo summary, PR review, README generation, PDF summarization, organize downloads, disk report, log summarize, changelog, duplicate finder, and empty-dir cleanup.
 - Replace literal placeholder bugs and outdated tool names.
-- Mark Linux-only workflows explicitly instead of silently failing on Windows or macOS.
+- Mark platform support explicitly instead of silently failing on Windows or macOS.
 - Move destructive or multi-step workflows toward small helper functions where prompts alone are too brittle.
 
 Definition of done: the top workflows succeed reliably on supported platforms and fail clearly on unsupported ones.
 
 ## Phase 4: Platform Boundary
 
-- Declare the repo Linux-first for install and system services.
-- Separate “development on Windows/macOS” from “supported install target”.
+- Keep Linux and macOS as explicit install targets.
+- Treat macOS 14+ on Apple Silicon as the primary macOS target and Intel as best-effort.
+- Standardize on `systemd` for Linux and `launchd` for macOS instead of ad hoc service control.
+- Separate "developer checkout on Windows" from "supported local install target".
 - Add graceful fallbacks for non-Linux-only helpers where the cost is low.
-- Patch or template systemd units instead of shipping hardcoded home-directory values.
 
 Definition of done: contributors can tell what is supported, what is partially supported, and what is intentionally out of scope.
 

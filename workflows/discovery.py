@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
+from clawos_core.platform import platform_key
+
 
 # ── Data classes ─────────────────────────────────────────────────────────────
 
@@ -172,6 +174,12 @@ class CapabilityScanner:
         score  = 0.0
         reason = ""
 
+        if meta.platforms:
+            current = self._normalize_platform(platform_key())
+            supported = {self._normalize_platform(name) for name in meta.platforms}
+            if current not in supported:
+                return 0.0, f"Supported on: {', '.join(meta.platforms)}"
+
         # All required binaries present
         if meta.requires:
             present = all(
@@ -212,6 +220,10 @@ class CapabilityScanner:
             reason = meta.description
 
         return max(0.0, score), reason
+
+    def _normalize_platform(self, name: str) -> str:
+        lowered = name.strip().lower()
+        return {"macos": "darwin", "osx": "darwin"}.get(lowered, lowered)
 
     def _file_type_bonus(self, meta, profile: CapabilityProfile) -> float:
         ft = profile.file_types

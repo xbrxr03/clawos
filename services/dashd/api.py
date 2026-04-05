@@ -187,6 +187,8 @@ def create_app() -> "FastAPI":
                     "description": w.description,
                     "tags":        w.tags,
                     "requires":    w.requires,
+                    "platforms":   w.platforms,
+                    "needs_agent": w.needs_agent,
                     "destructive": w.destructive,
                     "timeout_s":   w.timeout_s,
                 }

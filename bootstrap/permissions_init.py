@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 from clawos_core.constants import CONFIG_DIR
+from clawos_core.platform import blocked_paths
 
 DEFAULT_POLICY = {
     "mode": "recommended",
@@ -14,7 +15,7 @@ DEFAULT_POLICY = {
                 "memory.read", "memory.write",
                 "system.info", "workspace.inspect", "workspace.create",
             ],
-            "blocked_paths": ["/etc/shadow", "/etc/passwd", "/.ssh/"],
+            "blocked_paths": blocked_paths(),
             "require_approval": ["fs.delete", "shell.restricted", "web.download"],
         }
     },

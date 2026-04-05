@@ -125,9 +125,9 @@ class ClawOSSetupWindow(Adw.ApplicationWindow):
         try:
             from bootstrap.hardware_probe import probe
             hw = probe()
-            ram = hw.get("ram_gb", "?")
-            gpu = hw.get("gpu_name", "CPU only")
-            tier = hw.get("tier", "B")
+            ram = getattr(hw, "ram_gb", "?")
+            gpu = getattr(hw, "gpu_name", "CPU only")
+            tier = getattr(hw, "tier", "B")
             tier_model = {"A": "qwen2.5:1.5b", "B": "qwen2.5:3b", "C": "qwen2.5:7b"}.get(tier, "qwen2.5:7b")
             self.choices["hardware"] = hw
             self.choices["recommended_model"] = tier_model
@@ -341,7 +341,11 @@ class ClawOSSetupWindow(Adw.ApplicationWindow):
         subprocess.run(["ollama", "pull", model], check=True)
 
     def _start_services(self):
-        subprocess.run(["systemctl", "--user", "enable", "--now", "clawos.service"])
+        try:
+            from clawos_core.service_manager import start as start_service
+            start_service("clawos.service")
+        except Exception:
+            subprocess.run(["systemctl", "--user", "enable", "--now", "clawos.service"])
 
     def _finalize(self):
         WIZARD_DONE_MARKER.parent.mkdir(parents=True, exist_ok=True)

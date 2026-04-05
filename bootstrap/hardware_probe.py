@@ -4,10 +4,15 @@ Detects RAM, GPU, CPU cores, audio devices, disk space.
 Returns a HardwareProfile used by profile_selector.py.
 """
 import json
-import subprocess
 import shutil
 from dataclasses import dataclass, asdict
-from pathlib import Path
+
+from clawos_core.platform import (
+    audio_info,
+    disk_snapshot_gb,
+    gpu_info,
+    ram_snapshot_gb,
+)
 
 
 @dataclass
@@ -26,14 +31,7 @@ class HardwareProfile:
 
 
 def _ram_gb() -> float:
-    try:
-        with open("/proc/meminfo") as f:
-            for line in f:
-                if line.startswith("MemTotal"):
-                    return round(int(line.split()[1]) / 1e6, 1)
-    except Exception:
-        pass
-    return 0.0
+    return ram_snapshot_gb().get("total_gb", 0.0)
 
 
 def _cpu_cores() -> int:
@@ -46,65 +44,17 @@ def _cpu_cores() -> int:
 
 def _disk_free_gb(path: str = "/") -> float:
     try:
-        s = shutil.disk_usage(path)
-        return round(s.free / 1e9, 1)
+        return disk_snapshot_gb(path).get("free_gb", 0.0)
     except Exception:
         return 0.0
 
 
 def _gpu_info() -> tuple[str, float]:
-    """Returns (gpu_name, vram_gb). Checks AMD then NVIDIA."""
-    # AMD via rocm-smi
-    try:
-        r = subprocess.run(["rocm-smi", "--showmeminfo", "vram", "--json"],
-                           capture_output=True, text=True, timeout=3)
-        if r.returncode == 0:
-            data  = json.loads(r.stdout)
-            for card in data.values():
-                vram = int(card.get("VRAM Total Memory (B)", 0)) / 1e9
-                return "AMD RDNA", round(vram, 1)
-    except Exception:
-        pass
-    # AMD via /sys
-    try:
-        for p in Path("/sys/class/drm").glob("card*/device/mem_info_vram_total"):
-            vram = int(p.read_text().strip()) / 1e9
-            name_p = p.parent / "product_name"
-            name   = name_p.read_text().strip() if name_p.exists() else "AMD GPU"
-            return name, round(vram, 1)
-    except Exception:
-        pass
-    # NVIDIA
-    try:
-        r = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=3
-        )
-        if r.returncode == 0:
-            parts = r.stdout.strip().split(",")
-            name  = parts[0].strip()
-            vram  = round(int(parts[1].strip()) / 1024, 1)
-            return name, vram
-    except Exception:
-        pass
-    return "none", 0.0
+    return gpu_info()
 
 
 def _audio_info() -> tuple[bool, int, int]:
-    """Returns (has_mic, sample_rate, device_index)."""
-    # Try pipewire-based arecord
-    try:
-        r = subprocess.run(["arecord", "-l"], capture_output=True, text=True, timeout=3)
-        if "card" in r.stdout.lower():
-            import re
-            cards = re.findall(r"card (\d+):", r.stdout)
-            device_idx = int(cards[0]) if cards else 0
-            return True, 44100, device_idx
-    except Exception:
-        pass
-    # Fallback — assume present on desktop hardware
-    return True, 44100, 0
+    return audio_info()
 
 
 def _check_ollama() -> bool:

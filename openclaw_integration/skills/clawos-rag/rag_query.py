@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Query ClawOS RAGd service from OpenClaw skill."""
-import sys
 import json
+import sys
 import urllib.request
+
+from clawos_core.service_manager import service_hint
 
 
 def main():
@@ -28,7 +30,7 @@ def main():
             print(text)
     except Exception as e:
         print(f"[RAGd unavailable: {e}]")
-        print("Ensure ClawOS services are running: systemctl --user start clawos")
+        print(f"Ensure ClawOS services are running: {service_hint('start', 'clawos.service')}")
 
 
 if __name__ == "__main__":

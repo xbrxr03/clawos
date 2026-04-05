@@ -18,6 +18,7 @@ from clawos_core.models import Decision, AuditEntry, ApprovalRequest
 from clawos_core.util.ids import entry_id, req_id
 from clawos_core.util.time import now_iso
 import clawos_core.logging.audit as audit_log
+from clawos_core.platform import blocked_paths as default_blocked_paths
 
 # Prompt injection scanner (Phase 6)
 try:
@@ -51,10 +52,7 @@ TOOL_SCORES: dict[str, int] = {
     "workflow.destructive": 70,
 }
 
-BLOCKED_PATHS = [
-    "/etc/passwd", "/etc/shadow", "/etc/sudoers",
-    "/.ssh/", "/proc/", "/sys/",
-]
+BLOCKED_PATHS = default_blocked_paths()
 
 
 class HookRegistry:

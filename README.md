@@ -12,7 +12,7 @@ In ~4 minutes you have the full OpenClaw ecosystem running locally — offline, 
 
 ## What ClawOS is (and isn't)
 
-ClawOS is currently a **one-command installer** that turns any Ubuntu/Debian/macOS machine into a working OpenClaw environment. No manual config. No API keys. Just works.
+ClawOS is currently a **one-command installer** that turns Ubuntu/Debian and macOS 14+ machines into a working OpenClaw environment. Linux is still the most battle-tested path; macOS support now uses Homebrew plus `launchd` and is documented in [docs/MACOS.md](docs/MACOS.md).
 
 The end goal is a **bootable ISO** — flash a USB, boot, your AI is ready. That's the last stage on the roadmap. We're building in public and shipping working software at each stage instead of waiting until it's perfect.
 
@@ -71,7 +71,7 @@ Or use the dashboard — navigate to the Workflows tab, pick one, click Run.
 
 ## Requirements
 
-- Ubuntu 24.04, Debian 12, Raspberry Pi OS, or macOS (Apple Silicon + Intel)
+- Ubuntu 24.04, Debian 12, Raspberry Pi OS, or macOS 14+ (Apple Silicon first, Intel best-effort)
 - 8GB RAM minimum
 - 10GB free disk space
 - Internet on first run only (pulls models, then fully offline)
@@ -137,6 +137,8 @@ curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /
 Handles everything: Ollama, Node.js, Python dependencies, model download, OpenClaw configuration, and the `clawos` command. No prompts. No choices. Just works.
 
 > **Why not `curl | bash`?** Piping directly kills the TTY so interactive steps (Ollama login, first-run wizard, OpenClaw TUI launch) are silently skipped. The two-step command above keeps stdin attached.
+
+On macOS, the installer uses Homebrew for core dependencies and installs per-user `launchd` agents for ClawOS and Ollama. The target path is macOS 14+ on Apple Silicon; see [docs/MACOS.md](docs/MACOS.md) for current scope and verification steps.
 
 **After install:**
 
@@ -217,6 +219,8 @@ clawos
 
 ## Roadmap
 
+Linux remains the most battle-tested install path. macOS now uses Homebrew + `launchd`; the primary target is macOS 14+ on Apple Silicon, with Intel as best-effort.
+
 - [x] Core runtime — policyd, memd, toolbridge, agentd, modeld, voiced
 - [x] Voice pipeline — Whisper STT + Piper TTS
 - [x] One-command installer — Ubuntu, Debian, macOS
@@ -234,6 +238,8 @@ clawos
 ---
 
 ## vs. everything else
+
+macOS support in ClawOS now means the Homebrew + `launchd` path described in [docs/MACOS.md](docs/MACOS.md). Apple Silicon is the primary target today.
 
 | | OpenClaw | Nanobot | NanoClaw | ZeroClaw | ClawOS |
 |---|---|---|---|---|---|

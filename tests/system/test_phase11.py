@@ -29,7 +29,9 @@ def test_workflow_meta_fields():
     assert m.category == "files"
     assert isinstance(m.tags, list)
     assert isinstance(m.requires, list)
+    assert isinstance(m.platforms, list)
     assert m.destructive is False
+    assert m.needs_agent is True
     assert m.timeout_s == 120
 
 
