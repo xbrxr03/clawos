@@ -21,20 +21,21 @@ Treat this file as project memory.
 
 ## Current Product Direction
 
-- ClawOS is being shaped into:
-  - a flagship Ubuntu-based AI distro
-  - polished installs for existing Linux and macOS machines
-- UX north star:
-  - Apple-like OpenClaw operating system command center
-  - Finder/Xcode-style shell
-  - OS-home feel
-  - Apple-style onboarding
-- Product stance:
-  - OpenClaw-first
-  - fully open source
-  - no paid tier
-  - local-first by default
-  - provider-neutral internally
+ClawOS is what you get when Apple builds Iron Man's JARVIS for everyone.
+A real AI operating environment. Runs on your hardware. Works offline. Costs nothing.
+Feels like it was made by people who care about every second of the experience.
+
+- **Product shape:** flagship Ubuntu-based AI distro + polished install on existing Linux/macOS
+- **UX north star:** Apple-grade. Every surface is designed, not just functional.
+  First-run wizard feels like Apple setup. Dashboard feels like a command center.
+  Voice feels like JARVIS. Errors are helpful. Empty states are beautiful.
+- **Product stance:**
+  - OpenClaw-first external positioning, provider-neutral internals
+  - Fully open source, AGPL, no paid tier, no telemetry, no call home
+  - Local-first by default, cloud optional and explicit
+- **Roadmap:** docs/ROADMAP.md — stabilize → premium experience → ship v0.1 → platform depth → distro
+- **Promotion:** happening on owned channels (not HN). Assets: dashboard screenshot,
+  setup wizard screenshot, organize-downloads GIF, summarize-pdf GIF, voice demo GIF.
 
 ## Current Canonical Surfaces
 
@@ -187,34 +188,91 @@ Treat this file as project memory.
 
 ## Claude Pickup Point
 
-Claude should pick up from the competitive-platform foundation that is already wired through setup, API, UI, CLI, docs, tests, and security checks.
+Updated 2026-04-06. Previous pickup point preserved below under "Archived Pickup Point".
+
+The project direction is set. The goal is to ship ClawOS v0.1 as something that feels like
+Apple built Iron Man's JARVIS for everyone. Premium quality. No rough edges. Works on consumer
+hardware, offline, free.
+
+The competitive-platform work from the Codex PRs is real and stays — it is sequenced into
+Milestone 4 after the core is polished and shipped.
 
 ### Read these first
 
-- `docs/ARCHITECTURE_CURRENT.md`
-- `docs/STABILIZATION_ROADMAP.md`
-- `docs/COMPETITIVE_PLATFORM.md`
-- `services/dashd/api.py`
-- `services/setupd/service.py`
-- `services/setupd/state.py`
-- `clawos_core/catalog.py`
-- `clawos_core/models/__init__.py`
-- `dashboard/frontend/src/App.tsx`
-- `dashboard/frontend/src/pages/setup/SetupPage.tsx`
+- `docs/PRODUCT_VISION.md` — the brand identity and quality bars (START HERE)
+- `docs/ROADMAP.md` — the canonical finish-line roadmap (replaces STABILIZATION_ROADMAP.md)
+- `docs/ARCHITECTURE_CURRENT.md` — current service layout and canonical paths
+- `docs/COMPETITIVE_PLATFORM.md` — competitive platform primitives and surfaces
+- `services/dashd/api.py` — canonical dashboard backend
+- `services/setupd/service.py` + `state.py` — guided setup control plane
+- `clawos_core/catalog.py` — packs, providers, extensions, traces, eval suites
+- `dashboard/frontend/src/App.tsx` — canonical frontend entry
+- `dashboard/frontend/src/pages/setup/SetupPage.tsx` — first-run wizard
 
 ### Current known-good state
 
-- `python -m pytest tests` passed with `122 passed`
-- `python scripts/security_audit.py` passed
-- CLI competitive commands passed:
+- `python -m pytest tests` → 122 passed
+- `python scripts/security_audit.py` → passed
+- Frontend typecheck + build passing
+- CLI competitive commands verified:
   - `clawctl packs list`
   - `clawctl providers list`
   - `clawctl extensions list`
   - `clawctl benchmark`
   - `clawctl rescue openclaw`
 
-### Best next build order
+### Active milestone: Milestone 1 — Stabilize
 
+Work these in order. Do not start Milestone 2 until all of these are done.
+
+1. **Kill legacy dashboard stack** — archive `dashboard/backend/`, remove all cross-references.
+   Canonical: `services/dashd/api.py` + `dashboard/frontend/`.
+
+2. **Auth hardening** — tighten dashd and a2ad endpoints. Session token rotation after setup.
+   Document final posture in `docs/SECURITY_AUDIT.md`.
+
+3. **Top-10 workflow hardening** — replace prompt-only with deterministic helpers for:
+   organize-downloads, summarize-pdf, repo-summary, pr-review, write-readme,
+   disk-report, log-summarize, changelog, find-duplicates, clean-empty-dirs.
+   Each must succeed 100% on supported platforms and fail clearly on unsupported ones.
+
+4. **Contract alignment** — all callers use `/submit` + `intent`. `shell.restricted` canonical.
+   Destructive gating verified by test. Dead shims removed.
+
+5. **Test floor** — 150+ tests, all green. Regressions on: agentd contract, workflow gating,
+   tool aliases, auth rejection.
+
+### After Milestone 1: Milestone 2 — Premium Experience
+
+See `docs/ROADMAP.md` for the full breakdown. Summary:
+- Design system enforcement (FIGMA_SYSTEM.md as law)
+- First-run wizard redesigned to Apple quality
+- Dashboard polish across all pages
+- Voice pipeline end-to-end
+- WhatsApp bridge reliable
+- Hero workflows demo-quality (organize-downloads + summarize-pdf)
+- AGPL migration
+
+### Guardrails (permanent)
+
+- `dashboard/frontend` is the canonical frontend. Do not add a second one.
+- `services/dashd` is the canonical dashboard backend. Do not split it.
+- `services/setupd` owns guided setup. Do not duplicate setup logic elsewhere.
+- OpenClaw-first external positioning, provider-neutral internals.
+- Zero test failures before shipping any milestone.
+- Security audit and tests both green before any merge.
+- Root cause before patch. One thing at a time.
+
+---
+
+## Archived Pickup Point
+
+> The following was the previous Claude Pickup Point before the 2026-04-06 direction update.
+> Preserved per the update log policy. The build order below was superseded by docs/ROADMAP.md.
+
+Claude should pick up from the competitive-platform foundation that is already wired through setup, API, UI, CLI, docs, tests, and security checks.
+
+Previous best next build order (superseded):
 1. Browser Workbench
 2. Research engine with citations and resumable runs
 3. MCP manager depth
@@ -223,12 +281,3 @@ Claude should pick up from the competitive-platform foundation that is already w
 6. AGPL migration
 7. native packaging validation
 8. real ISO/Calamares validation on target environments
-
-### Important guardrails
-
-- Keep `dashboard/frontend` as the canonical frontend.
-- Keep `services/dashd` as the canonical dashboard backend.
-- Keep `services/setupd` as the guided setup control plane.
-- Preserve the OpenClaw-first external positioning, but keep internals provider-neutral.
-- Do not reintroduce duplicate primary UI paths.
-- Keep security and verification green after every major slice.
