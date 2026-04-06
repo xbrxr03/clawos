@@ -7,11 +7,15 @@ import { useCommandCenter } from './hooks/useCommandCenter'
 const OverviewPage = lazy(() => import('./pages/Overview').then((mod) => ({ default: mod.Overview })))
 const TasksPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Tasks })))
 const ApprovalsPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Approvals })))
+const PacksPage = lazy(() => import('./pages/Packs').then((mod) => ({ default: mod.PacksPage })))
 const ModelsPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Models })))
 const MemoryPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Memory })))
 const AuditPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Audit })))
 const AgentsPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Agents })))
 const NexusCommandPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.NexusCommand })))
+const ProvidersPage = lazy(() => import('./pages/Providers').then((mod) => ({ default: mod.ProvidersPage })))
+const RegistryPage = lazy(() => import('./pages/Registry').then((mod) => ({ default: mod.RegistryPage })))
+const TracesPage = lazy(() => import('./pages/Traces').then((mod) => ({ default: mod.TracesPage })))
 const WorkflowsPage = lazy(() => import('./pages/Workflows').then((mod) => ({ default: mod.Workflows })))
 const SettingsPage = lazy(() => import('./pages/Settings').then((mod) => ({ default: mod.SettingsPage })))
 const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => ({ default: mod.SetupPage })))
@@ -67,7 +71,11 @@ function ShellRoutes({
         />
         <Route path="/tasks" element={<TasksPage tasks={tasks} />} />
         <Route path="/approvals" element={<ApprovalsPage approvals={approvals} />} />
+        <Route path="/packs" element={<PacksPage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />
+        <Route path="/providers" element={<ProvidersPage />} />
+        <Route path="/registry" element={<RegistryPage />} />
+        <Route path="/traces" element={<TracesPage />} />
         <Route path="/models" element={<ModelsPage models={models} pullProgress={pullProgress} />} />
         <Route path="/memory" element={<MemoryPage />} />
         <Route path="/audit" element={<AuditPage events={events} />} />

@@ -253,6 +253,70 @@ else:
         """Run OpenClaw full onboard wizard."""
         from clawctl.commands.openclaw import run_onboard; run_onboard()
 
+    @main.group()
+    def packs():
+        """Manage first-party ClawOS packs."""
+        pass
+
+    @packs.command("list")
+    def packs_list():
+        from clawctl.commands.packs import run_list; run_list()
+
+    @packs.command("install")
+    @click.argument("pack_id")
+    @click.option("--primary", is_flag=True, help="Set as the primary pack")
+    @click.option("--provider", default="", help="Optional provider profile to bind")
+    def packs_install(pack_id, primary, provider):
+        from clawctl.commands.packs import run_install; run_install(pack_id, primary=primary, provider_profile=provider)
+
+    @main.group()
+    def providers():
+        """Manage provider profiles."""
+        pass
+
+    @providers.command("list")
+    def providers_list():
+        from clawctl.commands.providers import run_list; run_list()
+
+    @providers.command("test")
+    @click.argument("profile_id")
+    def providers_test(profile_id):
+        from clawctl.commands.providers import run_test; run_test(profile_id)
+
+    @providers.command("switch")
+    @click.argument("profile_id")
+    def providers_switch(profile_id):
+        from clawctl.commands.providers import run_switch; run_switch(profile_id)
+
+    @main.group()
+    def extensions():
+        """Manage trusted ClawOS extensions."""
+        pass
+
+    @extensions.command("list")
+    def extensions_list():
+        from clawctl.commands.extensions import run_list; run_list()
+
+    @extensions.command("install")
+    @click.argument("extension_id")
+    def extensions_install(extension_id):
+        from clawctl.commands.extensions import run_install; run_install(extension_id)
+
+    @main.group()
+    def rescue():
+        """Import or inspect migration paths."""
+        pass
+
+    @rescue.command("openclaw")
+    @click.option("--path", "path_hint", default="", help="Optional OpenClaw home path")
+    def rescue_openclaw(path_hint):
+        from clawctl.commands.rescue import run_openclaw; run_openclaw(path_hint)
+
+    @main.command()
+    def benchmark():
+        """Show pack eval readiness and trace availability."""
+        from clawctl.commands.benchmark import run; run()
+
     # ── wizard + chat ─────────────────────────────────────────────────────────
     @main.command()
     @click.option("--reset", is_flag=True)

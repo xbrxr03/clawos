@@ -41,6 +41,7 @@ MEMORY_FTS_DB    = MEMORY_DIR / "fts.db"
 HARDWARE_JSON    = CONFIG_DIR / "hardware.json"
 CLAWOS_CONFIG    = CONFIG_DIR / "clawos.yaml"
 OTEL_JSONL       = LOGS_DIR / "otel.jsonl"
+TRACES_JSONL     = LOGS_DIR / "traces.jsonl"
 SETUP_STATE_JSON = CONFIG_DIR / "setup_state.json"
 SUPPORT_DIR      = CLAWOS_DIR / "support"
 

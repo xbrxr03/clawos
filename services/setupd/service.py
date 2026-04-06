@@ -11,6 +11,13 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
+from clawos_core.catalog import (
+    detect_openclaw_install,
+    get_pack,
+    get_provider_profile,
+    make_trace,
+    record_trace,
+)
 from clawos_core.constants import (
     CLAWOS_DIR,
     DEFAULT_WORKSPACE,
@@ -71,21 +78,119 @@ class SetupService:
 
     def build_plan(self) -> dict[str, Any]:
         state = self._state
+        pack = get_pack(state.primary_pack)
+        provider = get_provider_profile(state.selected_provider_profile)
         state.progress_stage = "planned"
         state.plan_steps = [
             "Inspect hardware and service manager",
-            "Bootstrap workspace and memory backends",
+            f"Prepare workspace {state.workspace or DEFAULT_WORKSPACE}",
+            f"Activate primary pack: {pack.name if pack else state.primary_pack}",
+            f"Provision provider profile: {provider.name if provider else state.selected_provider_profile}",
             f"Provision model(s): {', '.join(state.selected_models)}",
-            "Start ClawOS services",
-            "Finalize support and diagnostics paths",
+            "Start ClawOS services and command center surfaces",
+            "Finalize diagnostics, traces, and support paths",
         ]
+        if state.imported_openclaw:
+            state.plan_steps.insert(3, "Import safe OpenClaw config and preserve compatible workflows")
+        if state.installed_extensions:
+            state.plan_steps.insert(
+                4,
+                f"Enable extensions: {', '.join(state.installed_extensions[:4])}",
+            )
         if state.launch_on_login and autostart_supported():
             state.plan_steps.append("Enable Command Center launch on login")
         self._persist()
+        record_trace(
+            make_trace(
+                title="Setup plan created",
+                category="setup",
+                status="planned",
+                provider=state.selected_provider_profile,
+                pack_id=state.primary_pack,
+                tools=["setupd.plan"],
+                metadata={"steps": len(state.plan_steps)},
+            )
+        )
         return {
-            "summary": f"Apply {state.recommended_profile} profile on {state.platform} with {', '.join(state.selected_models)}",
+            "summary": (
+                f"Apply {state.recommended_profile} profile on {state.platform} for "
+                f"{pack.name if pack else state.primary_pack} using {provider.name if provider else state.selected_provider_profile}"
+            ),
             "steps": state.plan_steps,
         }
+
+    def inspect(self) -> dict[str, Any]:
+        state = self._state
+        manifest = detect_openclaw_install()
+        if manifest.config_path or manifest.detected_version:
+            state.imported_openclaw = manifest.to_dict()
+            if manifest.suggested_primary_pack and not state.primary_pack:
+                state.primary_pack = manifest.suggested_primary_pack
+        state.progress_stage = "inspected"
+        self._log("Inspected machine posture and checked for OpenClaw migration data")
+        self._persist()
+        return {"state": self.to_dict(), "openclaw": state.imported_openclaw}
+
+    def select_pack(
+        self,
+        pack_id: str,
+        secondary_packs: Optional[list[str]] = None,
+        provider_profile: str = "",
+    ) -> dict[str, Any]:
+        pack = get_pack(pack_id)
+        if not pack:
+            raise ValueError(f"Unknown pack: {pack_id}")
+
+        state = self._state
+        state.primary_pack = pack.id
+        if secondary_packs is not None:
+            state.secondary_packs = [item for item in secondary_packs if item and item != pack.id]
+        if provider_profile:
+            if not get_provider_profile(provider_profile):
+                raise ValueError(f"Unknown provider profile: {provider_profile}")
+            state.selected_provider_profile = provider_profile
+        for extension_id in pack.extension_recommendations[:2]:
+            if extension_id not in state.installed_extensions:
+                state.installed_extensions.append(extension_id)
+        self._log(f"Selected primary pack {pack.name}")
+        self._persist()
+        record_trace(
+            make_trace(
+                title=f"Selected pack {pack.name}",
+                category="packs",
+                status="completed",
+                provider=state.selected_provider_profile,
+                pack_id=pack.id,
+                tools=["setupd.select-pack"],
+            )
+        )
+        return self.to_dict()
+
+    def import_openclaw(self, source_path: str = "") -> dict[str, Any]:
+        manifest = detect_openclaw_install(source_path)
+        state = self._state
+        state.imported_openclaw = manifest.to_dict()
+        state.enable_openclaw = bool(manifest.config_path or manifest.detected_version)
+        if manifest.suggested_primary_pack and get_pack(manifest.suggested_primary_pack):
+            state.primary_pack = manifest.suggested_primary_pack
+        self._log(
+            "Detected OpenClaw compatibility data"
+            if state.enable_openclaw
+            else "No compatible OpenClaw install was detected"
+        )
+        self._persist()
+        record_trace(
+            make_trace(
+                title="OpenClaw rescue inspection",
+                category="migration",
+                status="completed" if state.enable_openclaw else "warning",
+                provider=state.selected_provider_profile,
+                pack_id=state.primary_pack,
+                tools=["setupd.import-openclaw"],
+                metadata={"source_path": manifest.source_path},
+            )
+        )
+        return manifest.to_dict()
 
     async def _apply(self):
         from bootstrap.bootstrap import run as bootstrap_run
@@ -125,6 +230,17 @@ class SetupService:
             state.progress_stage = "complete"
             state.completion_marker = True
             self._persist()
+            record_trace(
+                make_trace(
+                    title="Setup apply completed",
+                    category="setup",
+                    status="completed",
+                    provider=state.selected_provider_profile,
+                    pack_id=state.primary_pack,
+                    tools=["bootstrap.run", "service.start"],
+                    metadata={"workspace": state.workspace, "profile": state.recommended_profile},
+                )
+            )
             await self.broadcast()
         except Exception as exc:
             state.progress_stage = "error"
@@ -132,6 +248,17 @@ class SetupService:
             state.retry_state = "last_step_failed"
             self._log(f"Setup failed: {exc}")
             self._persist()
+            record_trace(
+                make_trace(
+                    title="Setup apply failed",
+                    category="setup",
+                    status="failed",
+                    provider=state.selected_provider_profile,
+                    pack_id=state.primary_pack,
+                    tools=["bootstrap.run"],
+                    metadata={"error": str(exc)},
+                )
+            )
             await self.broadcast()
         finally:
             self._task = None
@@ -173,6 +300,16 @@ class SetupService:
             state.progress_stage = "complete" if state.completion_marker else "planned"
             self._log("Repair checks complete")
             self._persist()
+            record_trace(
+                make_trace(
+                    title="Setup repair completed",
+                    category="setup",
+                    status="completed",
+                    provider=state.selected_provider_profile,
+                    pack_id=state.primary_pack,
+                    tools=["setupd.repair"],
+                )
+            )
             await self.broadcast()
         except Exception as exc:
             state.progress_stage = "error"
@@ -180,6 +317,17 @@ class SetupService:
             state.retry_state = "repair_failed"
             self._log(f"Repair failed: {exc}")
             self._persist()
+            record_trace(
+                make_trace(
+                    title="Setup repair failed",
+                    category="setup",
+                    status="failed",
+                    provider=state.selected_provider_profile,
+                    pack_id=state.primary_pack,
+                    tools=["setupd.repair"],
+                    metadata={"error": str(exc)},
+                )
+            )
             await self.broadcast()
         finally:
             self._task = None
@@ -279,10 +427,41 @@ def create_app() -> "FastAPI":
         _require_setup_access(request)
         return service.to_dict()
 
+    @app.post("/api/setup/inspect")
+    async def inspect(request: Request):
+        _require_setup_access(request)
+        return service.inspect()
+
     @app.post("/api/setup/plan")
     async def plan(request: Request):
         _require_setup_access(request)
         return service.build_plan()
+
+    @app.post("/api/setup/select-pack")
+    async def select_pack(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        payload = body or {}
+        pack_id = str(payload.get("pack_id", "")).strip()
+        if not pack_id:
+            raise HTTPException(status_code=400, detail="pack_id required")
+        secondary = payload.get("secondary_packs")
+        if secondary is not None and not isinstance(secondary, list):
+            raise HTTPException(status_code=400, detail="secondary_packs must be a list")
+        provider_profile = str(payload.get("provider_profile", "")).strip()
+        try:
+            return service.select_pack(
+                pack_id,
+                secondary_packs=secondary,
+                provider_profile=provider_profile,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/import/openclaw")
+    async def import_openclaw(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        source_path = str((body or {}).get("source_path", "")).strip()
+        return service.import_openclaw(source_path)
 
     @app.post("/api/setup/apply")
     async def apply(request: Request):

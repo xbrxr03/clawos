@@ -20,9 +20,9 @@ export function Badge({ children, color = 'gray' }) {
   return <span className={`pill ${color}`}>{children}</span>
 }
 
-export function Card({ children, style = undefined, className = '' }) {
+export function Card({ children, style = undefined, className = '', ...props }) {
   return (
-    <div className={`glass ${className}`} style={style}>
+    <div className={`glass ${className}`} style={style} {...props}>
       {children}
     </div>
   )

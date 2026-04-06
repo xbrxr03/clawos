@@ -4,7 +4,7 @@ All services import from here — single source of truth for types.
 """
 from __future__ import annotations
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from clawos_core.util.ids import task_id, session_id, entry_id, req_id
@@ -195,3 +195,123 @@ class A2ATask:
         d = vars(self).copy()
         d.pop("auth_token", None)   # never serialize token
         return d
+
+
+@dataclass
+class UseCasePack:
+    id:                      str
+    name:                    str
+    category:                str
+    description:             str
+    wave:                    str = "wave-1"
+    setup_summary:           str = ""
+    dashboards:              List[str] = field(default_factory=list)
+    default_workflows:       List[str] = field(default_factory=list)
+    extension_recommendations: List[str] = field(default_factory=list)
+    provider_recommendations: List[str] = field(default_factory=list)
+    policy_pack:             str = "recommended"
+    eval_suite_id:           str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class ProviderProfile:
+    id:             str
+    name:           str
+    kind:           str
+    endpoint:       str
+    auth_mode:      str
+    default_model:  str
+    fallback_order: List[str] = field(default_factory=list)
+    local_only:     bool = False
+    privacy_posture: str = "local-first"
+    cost_posture:   str = "variable"
+    auth_env:       str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class ExtensionManifest:
+    id:                str
+    name:              str
+    category:          str
+    description:       str
+    trust_tier:        str = "Verified"
+    permissions:       List[str] = field(default_factory=list)
+    network_access:    str = "local-only"
+    supported_platforms: List[str] = field(default_factory=lambda: ["linux", "macos"])
+    packs:             List[str] = field(default_factory=list)
+    requires_secrets:  List[str] = field(default_factory=list)
+    self_hostable:     bool = True
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class WorkflowProgram:
+    id:             str
+    name:           str
+    pack_id:        str
+    summary:        str
+    checkpoints:    List[str] = field(default_factory=list)
+    approval_points: List[str] = field(default_factory=list)
+    triggers:       List[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class TraceRecord:
+    id:             str
+    title:          str
+    category:       str
+    status:         str
+    provider:       str = ""
+    pack_id:        str = ""
+    citations:      int = 0
+    approvals:      int = 0
+    tools:          List[str] = field(default_factory=list)
+    spans:          List[Dict[str, Any]] = field(default_factory=list)
+    metadata:       Dict[str, Any] = field(default_factory=dict)
+    started_at:     str = field(default_factory=now_iso)
+    finished_at:    str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class EvalSuite:
+    id:             str
+    name:           str
+    pack_id:        str
+    description:    str
+    checks:         List[str] = field(default_factory=list)
+    status:         str = "ready"
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class OpenClawImportManifest:
+    source_path:          str
+    config_path:          str = ""
+    detected_version:     str = ""
+    channels:             List[str] = field(default_factory=list)
+    providers:            List[str] = field(default_factory=list)
+    skills:               List[str] = field(default_factory=list)
+    env_summary:          Dict[str, Any] = field(default_factory=dict)
+    migration_actions:    List[str] = field(default_factory=list)
+    blockers:             List[str] = field(default_factory=list)
+    warnings:             List[str] = field(default_factory=list)
+    suggested_primary_pack: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)

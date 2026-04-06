@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge, Card, SectionLabel, StatusDot, Ts } from '../components/ui.jsx'
 import { commandCenterApi } from '../lib/commandCenterApi'
@@ -44,6 +44,9 @@ export function Overview({
   const navigate = useNavigate()
   const [runningAction, setRunningAction] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState('')
+  const [primaryPack, setPrimaryPack] = useState('daily-briefing-os')
+  const [providerProfile, setProviderProfile] = useState('local-ollama')
+  const [traceCount, setTraceCount] = useState(0)
 
   const serviceEntries = Object.entries(services || {})
   const upCount = serviceEntries.filter(([, item]) => item?.status === 'up' || item?.status === 'running').length
@@ -55,6 +58,22 @@ export function Overview({
   }
   const runningModels = (models.models || []).filter((item) => item.running).length
   const defaultModel = models.default || models.models?.[0]?.name || 'qwen2.5:7b'
+
+  useEffect(() => {
+    Promise.all([
+      commandCenterApi.listPacks(),
+      commandCenterApi.listProviders(),
+      commandCenterApi.listTraces(),
+    ])
+      .then(([packs, providers, traces]) => {
+        const primary = (packs || []).find((item: any) => item.primary) || packs?.[0]
+        const provider = (providers || []).find((item: any) => item.selected) || providers?.[0]
+        setPrimaryPack(primary?.name || primary?.id || 'daily-briefing-os')
+        setProviderProfile(provider?.name || provider?.id || 'local-ollama')
+        setTraceCount(Array.isArray(traces) ? traces.length : 0)
+      })
+      .catch(() => null)
+  }, [])
 
   const activity = useMemo(
     () => events.slice(0, 8).map((event, index) => ({ ...event, id: `${event.type || 'event'}-${index}` })),
@@ -142,6 +161,33 @@ export function Overview({
           <Card style={{ padding: 14, color: 'var(--text-2)' }}>{actionMessage}</Card>
         </div>
       )}
+
+      <SectionLabel>Competitive posture</SectionLabel>
+      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+        <Card style={{ padding: 18, display: 'grid', gap: 10 }}>
+          <div className="section-label">Primary pack</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{primaryPack}</div>
+          <div style={{ color: 'var(--text-3)', fontSize: 13 }}>
+            Outcome-first onboarding replaces the generic dashboard pattern.
+          </div>
+        </Card>
+
+        <Card style={{ padding: 18, display: 'grid', gap: 10 }}>
+          <div className="section-label">Provider posture</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{providerProfile}</div>
+          <div style={{ color: 'var(--text-3)', fontSize: 13 }}>
+            Local by default, hybrid convenience when it materially improves execution.
+          </div>
+        </Card>
+
+        <Card style={{ padding: 18, display: 'grid', gap: 10 }}>
+          <div className="section-label">Trace buffer</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{traceCount} recent records</div>
+          <div style={{ color: 'var(--text-3)', fontSize: 13 }}>
+            Product-grade visibility across setup, providers, packs, and delegated work.
+          </div>
+        </Card>
+      </div>
 
       <SectionLabel>System posture</SectionLabel>
       <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>

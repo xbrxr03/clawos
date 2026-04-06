@@ -12,7 +12,7 @@ In ~4 minutes you have the full OpenClaw ecosystem running locally - offline, pr
 
 ## What ClawOS is (and isn't)
 
-ClawOS is currently a **one-command installer** that turns Ubuntu/Debian and macOS 14+ machines into a working OpenClaw environment. Linux is still the most battle-tested path; macOS support now uses Homebrew plus `launchd` and is documented in [docs/MACOS.md](docs/MACOS.md). Production deployment notes live in [docs/PRODUCTION.md](docs/PRODUCTION.md), and the repo verification path lives in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+ClawOS is currently a **one-command installer** that turns Ubuntu/Debian and macOS 14+ machines into a working local AI command center. OpenClaw remains the primary migration wedge, but ClawOS is becoming a pack-first AI operating layer with provider profiles, trusted extensions, local traces, and guided setup. Linux is still the most battle-tested path; macOS support now uses Homebrew plus `launchd` and is documented in [docs/MACOS.md](docs/MACOS.md). Production deployment notes live in [docs/PRODUCTION.md](docs/PRODUCTION.md), the repo verification path lives in [docs/VERIFICATION.md](docs/VERIFICATION.md), and the competitive-platform roadmap now lives in [docs/COMPETITIVE_PLATFORM.md](docs/COMPETITIVE_PLATFORM.md).
 
 A dedicated security-audit path now lives in [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
 
@@ -39,6 +39,11 @@ After one command:
 - **OpenClaw** - pre-configured for offline Ollama, no API keys required
 - **Ollama** - local model runtime, right model for your hardware pulled automatically
 - **Nexus** - native Python agent with memory, tools, and voice
+- **Pack-first setup** - choose a primary job like Daily Briefing OS, Sales and Meeting Operator, Chat-App Command Center, or Coding Autopilot
+- **Provider control plane** - local Ollama by default, with switchable profiles for Anthropic API, OpenAI API, Azure/OpenAI, OpenAI-compatible endpoints, and custom relays
+- **Trusted extension registry** - extensions are labeled by trust tier, network posture, and permission surface
+- **Trace and eval surfaces** - local traces, run inspectors, and pack eval suites are built into the Command Center
+- **OpenClaw rescue** - inspect an existing OpenClaw install, import safe config, and map it into ClawOS packs
 - **29 one-command workflows** - organize downloads, summarize PDFs, review PRs, disk reports, daily digest, and more - all offline
 - **WhatsApp bridge** - text your AI from your phone
 - **policyd** - every tool call gated and audited before it runs
@@ -68,6 +73,23 @@ nexus workflow suggest developer           # get suggestions based on your setup
 ```
 
 Or use the dashboard - navigate to the Workflows tab, pick one, click Run.
+
+You can also inspect the new competitive-platform surfaces directly:
+
+```bash
+clawctl packs list
+clawctl providers list
+clawctl extensions list
+clawctl rescue openclaw
+clawctl benchmark
+```
+
+And in the Command Center:
+
+- **Packs** - install first-party outcome bundles and set your primary pack
+- **Providers** - test and switch model/runtime profiles
+- **Registry** - review trusted extensions and their permission posture
+- **Traces** - inspect local run timelines, outcomes, and pack activity
 
 ---
 

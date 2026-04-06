@@ -10,7 +10,11 @@ export const appNav: AppNavItem[] = [
   { to: '/', label: 'Home', icon: <IconHome /> },
   { to: '/tasks', label: 'Tasks', icon: <IconTasks /> },
   { to: '/approvals', label: 'Approvals', icon: <IconShield /> },
+  { to: '/packs', label: 'Packs', icon: <IconLayers /> },
   { to: '/workflows', label: 'Workflows', icon: <IconWorkflow /> },
+  { to: '/providers', label: 'Providers', icon: <IconNodes /> },
+  { to: '/registry', label: 'Registry', icon: <IconGrid /> },
+  { to: '/traces', label: 'Traces', icon: <IconPulse /> },
   { to: '/models', label: 'Models', icon: <IconCpu /> },
   { to: '/memory', label: 'Memory/Audit', icon: <IconDatabase /> },
   { to: '/settings', label: 'Settings', icon: <IconSettings /> },
@@ -30,6 +34,22 @@ function IconShield() {
 
 function IconWorkflow() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="4" r="1.75" stroke="currentColor" strokeWidth="1.2"/><circle cx="11" cy="12" r="1.75" stroke="currentColor" strokeWidth="1.2"/><path d="M6.3 5 9.7 10.9M10.8 4h2.45m-7.2 8H3.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+
+function IconLayers() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2.25 13 5 8 7.75 3 5 8 2.25ZM3 8.1l5 2.65 5-2.65M3 11.1l5 2.65 5-2.65" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round"/></svg>
+}
+
+function IconNodes() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="4" r="1.75" stroke="currentColor" strokeWidth="1.2"/><circle cx="12" cy="4" r="1.75" stroke="currentColor" strokeWidth="1.2"/><circle cx="8" cy="12" r="1.75" stroke="currentColor" strokeWidth="1.2"/><path d="M5.45 4h5.1M5.1 5.2 7.05 10M10.9 5.2 8.95 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+
+function IconGrid() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2.25" y="2.25" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9.25" y="2.25" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="2.25" y="9.25" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9.25" y="9.25" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>
+}
+
+function IconPulse() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.75 8h2.7l1.4-2.8 2.1 5.6 1.8-3.3h4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
 }
 
 function IconCpu() {

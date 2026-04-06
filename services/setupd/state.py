@@ -26,6 +26,10 @@ class SetupState:
     recommended_profile: str = "balanced"
     selected_runtimes: list[str] = field(default_factory=lambda: ["nexus", "picoclaw"])
     selected_models: list[str] = field(default_factory=lambda: ["qwen2.5:7b"])
+    selected_provider_profile: str = "local-ollama"
+    primary_pack: str = "daily-briefing-os"
+    secondary_packs: list[str] = field(default_factory=lambda: ["coding-autopilot"])
+    installed_extensions: list[str] = field(default_factory=lambda: ["mcp-manager"])
     workspace: str = DEFAULT_WORKSPACE
     voice_enabled: bool = True
     enable_openclaw: bool = False
@@ -37,6 +41,7 @@ class SetupState:
     completion_marker: bool = False
     last_error: str = ""
     plan_steps: list[str] = field(default_factory=list)
+    imported_openclaw: dict[str, Any] = field(default_factory=dict)
 
     def save(self, path: Path | None = None):
         path = path or SETUP_STATE_JSON
@@ -58,9 +63,9 @@ class SetupState:
     def from_machine(cls) -> "SetupState":
         hw = probe()
         bundle = select_with_bundle(hw)
-        state = cls(
+        return cls(
             detected_hardware={
-                "summary": f"Tier {hw.tier} · {hw.ram_gb} GB RAM · {hw.gpu_name}",
+                "summary": f"Tier {hw.tier} - {hw.ram_gb} GB RAM - {hw.gpu_name}",
                 "ram_gb": hw.ram_gb,
                 "gpu_name": hw.gpu_name,
                 "gpu_vram_gb": hw.gpu_vram_gb,
@@ -73,10 +78,13 @@ class SetupState:
             recommended_profile=bundle["profile"],
             selected_runtimes=bundle["runtimes"],
             selected_models=[recommended_model(hw)],
+            selected_provider_profile="local-ollama",
+            primary_pack="daily-briefing-os",
+            secondary_packs=["coding-autopilot"] if hw.ram_gb >= 16 else [],
+            installed_extensions=["mcp-manager"] if hw.ram_gb >= 16 else [],
             voice_enabled=hw.has_mic and hw.ram_gb >= 8,
             enable_openclaw="openclaw" in bundle["runtimes"],
         )
-        return state
 
     @classmethod
     def migrate(cls) -> "SetupState":
@@ -91,6 +99,10 @@ class SetupState:
             state.workspace = legacy.workspace_id or state.workspace
             state.voice_enabled = legacy.voice_enabled
             state.enable_openclaw = legacy.runtime in {"openclaw", "both"} or legacy.whatsapp_enabled
+            state.selected_provider_profile = "local-ollama"
+            state.primary_pack = "chat-app-command-center" if legacy.whatsapp_enabled else state.primary_pack
+            if legacy.runtime in {"openclaw", "both"} and "coding-autopilot" not in state.secondary_packs:
+                state.secondary_packs.append("coding-autopilot")
             state.launch_on_login = True
             state.policy_mode = legacy.policy_mode or state.policy_mode
             state.completion_marker = legacy.completed

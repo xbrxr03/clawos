@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { commandCenterApi, type SetupDiagnostics, type SetupPlan, type SetupState } from '../../lib/commandCenterApi'
+import {
+  commandCenterApi,
+  type OpenClawImportManifest,
+  type ProviderProfile,
+  type SetupDiagnostics,
+  type SetupPlan,
+  type SetupState,
+  type UseCasePack,
+} from '../../lib/commandCenterApi'
 
 export function SetupPage() {
   const [state, setState] = useState<SetupState | null>(null)
   const [plan, setPlan] = useState<SetupPlan | null>(null)
   const [diagnostics, setDiagnostics] = useState<SetupDiagnostics | null>(null)
+  const [packs, setPacks] = useState<UseCasePack[]>([])
+  const [providers, setProviders] = useState<ProviderProfile[]>([])
+  const [importManifest, setImportManifest] = useState<OpenClawImportManifest | null>(null)
   const [bundlePath, setBundlePath] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -23,9 +34,21 @@ export function SetupPage() {
     } catch {}
   }
 
+  const loadCatalog = async () => {
+    try {
+      const [packData, providerData] = await Promise.all([
+        commandCenterApi.listPacks(),
+        commandCenterApi.listProviders(),
+      ])
+      setPacks(Array.isArray(packData) ? packData : [])
+      setProviders(Array.isArray(providerData) ? providerData : [])
+    } catch {}
+  }
+
   useEffect(() => {
     loadState()
     loadDiagnostics()
+    loadCatalog()
   }, [])
 
   useEffect(() => {
@@ -70,6 +93,64 @@ export function SetupPage() {
       await loadState()
     } catch (err: any) {
       setError(err.message || `Request failed for ${action}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const inspectSetup = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const payload = await commandCenterApi.inspectSetup()
+      if (payload.state) setState(payload.state)
+      if (payload.openclaw) setImportManifest(payload.openclaw)
+      await loadCatalog()
+    } catch (err: any) {
+      setError(err.message || 'Failed to inspect setup posture')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const selectPack = async (packId: string) => {
+    setBusy(true)
+    setError('')
+    try {
+      const next = await commandCenterApi.selectSetupPack(packId, state?.secondary_packs || [], state?.selected_provider_profile || '')
+      setState(next)
+      await loadCatalog()
+    } catch (err: any) {
+      setError(err.message || 'Failed to select a pack')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const selectProvider = async (providerId: string) => {
+    setBusy(true)
+    setError('')
+    try {
+      await commandCenterApi.switchProvider(providerId)
+      await loadState()
+      await loadCatalog()
+    } catch (err: any) {
+      setError(err.message || 'Failed to select a provider')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const importOpenClaw = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const manifest = await commandCenterApi.importOpenClaw()
+      setImportManifest(manifest)
+      await loadState()
+      await loadCatalog()
+    } catch (err: any) {
+      setError(err.message || 'Failed to inspect OpenClaw compatibility')
     } finally {
       setBusy(false)
     }
@@ -154,11 +235,50 @@ export function SetupPage() {
               <div className="section-label">Selected defaults</div>
               <div style={{ display: 'grid', gap: 10 }}>
                 <Row label="Workspace" value={state?.workspace || 'nexus_default'} />
+                <Row label="Primary pack" value={state?.primary_pack || 'daily-briefing-os'} />
+                <Row label="Provider" value={state?.selected_provider_profile || 'local-ollama'} />
                 <Row label="Voice" value={state?.voice_enabled ? 'Enabled' : 'Disabled'} />
                 <Row label="OpenClaw" value={state?.enable_openclaw ? 'Install' : 'Skip'} />
                 <Row label="Launch on login" value={state?.launch_on_login === false ? 'Disabled' : 'Enabled'} />
                 <Row label="Policy" value={state?.policy_mode || 'recommended'} />
                 <Row label="Models" value={(state?.selected_models || []).join(', ') || 'qwen2.5:7b'} />
+                <Row label="Extensions" value={(state?.installed_extensions || []).slice(0, 3).join(', ') || 'none yet'} />
+              </div>
+            </div>
+
+            <div className="glass" style={{ padding: 18 }}>
+              <div className="section-label">Choose your primary pack</div>
+              <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                {packs.slice(0, 4).map((pack) => (
+                  <button
+                    key={pack.id}
+                    className={`btn${state?.primary_pack === pack.id ? ' primary' : ''}`}
+                    onClick={() => selectPack(pack.id)}
+                    disabled={busy}
+                    style={{ justifyContent: 'space-between', display: 'flex' }}
+                  >
+                    <span>{pack.name}</span>
+                    <span className="mono" style={{ fontSize: 11 }}>{pack.wave}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass" style={{ padding: 18 }}>
+              <div className="section-label">Provider posture</div>
+              <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                {providers.slice(0, 4).map((provider) => (
+                  <button
+                    key={provider.id}
+                    className={`btn${state?.selected_provider_profile === provider.id ? ' primary' : ''}`}
+                    onClick={() => selectProvider(provider.id)}
+                    disabled={busy}
+                    style={{ justifyContent: 'space-between', display: 'flex' }}
+                  >
+                    <span>{provider.name}</span>
+                    <span className="mono" style={{ fontSize: 11 }}>{provider.status || provider.kind}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -244,8 +364,14 @@ export function SetupPage() {
           </div>
 
           <div style={{ display: 'grid', gap: 10 }}>
+            <button className="btn" onClick={inspectSetup} disabled={busy}>
+              Inspect Machine
+            </button>
             <button className="btn" onClick={() => request('plan')} disabled={busy}>
               Inspect & Plan
+            </button>
+            <button className="btn" onClick={importOpenClaw} disabled={busy}>
+              Import OpenClaw
             </button>
             <button className="btn primary" onClick={() => request('apply')} disabled={busy}>
               Apply Setup
@@ -271,6 +397,18 @@ export function SetupPage() {
             <div className="glass" style={{ padding: 14, borderColor: 'rgba(255,107,107,0.25)' }}>
               <div className="section-label">Last setup error</div>
               <div style={{ color: 'var(--red)', marginTop: 6 }}>{state.last_error}</div>
+            </div>
+          )}
+
+          {importManifest && (
+            <div className="glass" style={{ padding: 14 }}>
+              <div className="section-label">OpenClaw rescue</div>
+              <div style={{ display: 'grid', gap: 8, marginTop: 6, color: 'var(--text-2)' }}>
+                <div>Version: <span className="mono">{importManifest.detected_version || 'not found'}</span></div>
+                <div>Suggested pack: <span className="mono">{importManifest.suggested_primary_pack || 'daily-briefing-os'}</span></div>
+                <div>Providers: <span className="mono">{(importManifest.providers || []).join(', ') || 'none detected'}</span></div>
+                <div>Channels: <span className="mono">{(importManifest.channels || []).join(', ') || 'none detected'}</span></div>
+              </div>
             </div>
           )}
 

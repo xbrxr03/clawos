@@ -16,6 +16,19 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
+from clawos_core.catalog import (
+    get_extension,
+    get_pack,
+    get_provider_profile,
+    list_eval_suites,
+    list_extensions,
+    list_packs,
+    list_provider_profiles,
+    list_traces,
+    make_trace,
+    record_trace,
+    test_provider_profile,
+)
 from clawos_core.config.loader import get as get_config
 from clawos_core.constants import (
     CONFIG_DIR,
@@ -202,6 +215,19 @@ def require_auth(request: Request, authorization: str = Header(default="")):
 
 
 def require_setup_access(request: Request, authorization: str = Header(default="")):
+    settings: DashboardSettings = request.app.state.settings
+    if _is_request_authorized(request, authorization=authorization):
+        return
+    if _is_loopback_host(settings.host) and _has_setup_access(request):
+        return
+    raise HTTPException(
+        status_code=401,
+        detail="Unauthorized",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def require_auth_or_setup_access(request: Request, authorization: str = Header(default="")):
     settings: DashboardSettings = request.app.state.settings
     if _is_request_authorized(request, authorization=authorization):
         return
@@ -406,6 +432,78 @@ def _list_workspaces() -> list[dict]:
         return [
             {"name": DEFAULT_WORKSPACE, "has_pinned": False, "memory_count": 0, "history_count": 0}
         ]
+
+
+def _setup_state():
+    try:
+        from services.setupd.state import SetupState
+
+        return SetupState.load()
+    except Exception:
+        return None
+
+
+def _pack_payloads() -> list[dict]:
+    state = _setup_state()
+    primary = getattr(state, "primary_pack", "")
+    secondary = set(getattr(state, "secondary_packs", []) or [])
+    return [
+        {
+            **pack.to_dict(),
+            "installed": pack.id == primary or pack.id in secondary,
+            "primary": pack.id == primary,
+            "secondary": pack.id in secondary,
+        }
+        for pack in list_packs()
+    ]
+
+
+def _provider_payloads() -> list[dict]:
+    state = _setup_state()
+    selected = getattr(state, "selected_provider_profile", "local-ollama")
+    payloads = []
+    for profile in list_provider_profiles():
+        result = test_provider_profile(profile.id)
+        payloads.append(
+            {
+                **profile.to_dict(),
+                "selected": profile.id == selected,
+                "status": result.get("status", "unknown"),
+                "detail": result.get("detail", ""),
+            }
+        )
+    return payloads
+
+
+def _extension_payloads() -> list[dict]:
+    state = _setup_state()
+    installed = set(getattr(state, "installed_extensions", []) or [])
+    primary = getattr(state, "primary_pack", "")
+    return [
+        {
+            **extension.to_dict(),
+            "installed": extension.id in installed,
+            "recommended_for_primary": primary in extension.packs,
+        }
+        for extension in list_extensions()
+    ]
+
+
+def _eval_payloads() -> list[dict]:
+    state = _setup_state()
+    active_packs = {
+        getattr(state, "primary_pack", ""),
+        *list(getattr(state, "secondary_packs", []) or []),
+    }
+    payloads = []
+    for suite in list_eval_suites():
+        payloads.append(
+            {
+                **suite.to_dict(),
+                "active": suite.pack_id in active_packs,
+            }
+        )
+    return payloads
 
 
 def _build_snapshot(app: "FastAPI") -> dict:
@@ -646,11 +744,201 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     async def workspaces():
         return {"workspaces": _list_workspaces()}
 
+    @app.get("/api/packs", dependencies=[Depends(require_auth_or_setup_access)])
+    async def packs():
+        return _pack_payloads()
+
+    @app.post("/api/packs/install", dependencies=[Depends(require_auth)])
+    async def install_pack(body: dict | None = None):
+        payload = body or {}
+        pack_id = str(payload.get("pack_id", "")).strip()
+        if not pack_id:
+            raise HTTPException(status_code=400, detail="pack_id required")
+        pack = get_pack(pack_id)
+        if not pack:
+            raise HTTPException(status_code=404, detail="Pack not found")
+
+        from services.setupd.state import SetupState
+
+        state = SetupState.load()
+        primary = bool(payload.get("primary", False))
+        if primary or not state.primary_pack:
+            state.primary_pack = pack.id
+            state.secondary_packs = [item for item in state.secondary_packs if item != pack.id]
+        elif pack.id != state.primary_pack and pack.id not in state.secondary_packs:
+            state.secondary_packs.append(pack.id)
+
+        provider_profile = str(payload.get("provider_profile", "")).strip()
+        if provider_profile:
+            if not get_provider_profile(provider_profile):
+                raise HTTPException(status_code=400, detail="Unknown provider profile")
+            state.selected_provider_profile = provider_profile
+
+        for extension_id in pack.extension_recommendations[:2]:
+            if extension_id not in state.installed_extensions:
+                state.installed_extensions.append(extension_id)
+        state.save()
+        record_trace(
+            make_trace(
+                title=f"Installed pack {pack.name}",
+                category="packs",
+                status="completed",
+                provider=state.selected_provider_profile,
+                pack_id=pack.id,
+                tools=["dashd.packs.install"],
+            )
+        )
+        return {"ok": True, "pack": pack.to_dict(), "state": state.__dict__}
+
+    @app.get("/api/providers", dependencies=[Depends(require_auth_or_setup_access)])
+    async def providers():
+        return _provider_payloads()
+
+    @app.post("/api/providers/test", dependencies=[Depends(require_auth_or_setup_access)])
+    async def test_provider(body: dict | None = None):
+        profile_id = str((body or {}).get("id", "")).strip()
+        if not profile_id:
+            raise HTTPException(status_code=400, detail="id required")
+        result = test_provider_profile(profile_id)
+        record_trace(
+            make_trace(
+                title=f"Tested provider {profile_id}",
+                category="providers",
+                status="completed" if result.get("ok") else "warning",
+                provider=profile_id,
+                tools=["dashd.providers.test"],
+                metadata={"status": result.get("status", "unknown")},
+            )
+        )
+        return result
+
+    @app.post("/api/providers/switch", dependencies=[Depends(require_auth_or_setup_access)])
+    async def switch_provider(body: dict | None = None):
+        profile_id = str((body or {}).get("id", "")).strip()
+        profile = get_provider_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Provider profile not found")
+
+        from services.setupd.state import SetupState
+
+        state = SetupState.load()
+        state.selected_provider_profile = profile.id
+        state.save()
+        record_trace(
+            make_trace(
+                title=f"Switched provider to {profile.name}",
+                category="providers",
+                status="completed",
+                provider=profile.id,
+                pack_id=state.primary_pack,
+                tools=["dashd.providers.switch"],
+            )
+        )
+        return {"ok": True, "provider": profile.to_dict(), "state": state.__dict__}
+
+    @app.get("/api/extensions", dependencies=[Depends(require_auth_or_setup_access)])
+    async def extensions():
+        return _extension_payloads()
+
+    @app.post("/api/extensions/install", dependencies=[Depends(require_auth)])
+    async def install_extension(body: dict | None = None):
+        extension_id = str((body or {}).get("id", "")).strip()
+        extension = get_extension(extension_id)
+        if not extension:
+            raise HTTPException(status_code=404, detail="Extension not found")
+
+        from services.setupd.state import SetupState
+
+        state = SetupState.load()
+        if extension.id not in state.installed_extensions:
+            state.installed_extensions.append(extension.id)
+        state.save()
+        record_trace(
+            make_trace(
+                title=f"Installed extension {extension.name}",
+                category="extensions",
+                status="completed",
+                provider=state.selected_provider_profile,
+                pack_id=state.primary_pack,
+                tools=["dashd.extensions.install"],
+            )
+        )
+        return {"ok": True, "extension": extension.to_dict(), "state": state.__dict__}
+
+    @app.get("/api/traces", dependencies=[Depends(require_auth)])
+    async def traces(limit: int = 40):
+        return list_traces(limit)
+
+    @app.get("/api/evals", dependencies=[Depends(require_auth_or_setup_access)])
+    async def evals():
+        return _eval_payloads()
+
+    @app.get("/api/a2a/agent-card", dependencies=[Depends(require_auth)])
+    async def a2a_agent_card():
+        from services.a2ad.agent_card import build_card
+        from services.a2ad.discovery import get_local_ip, get_peers
+
+        return {"card": build_card(local_ip=get_local_ip()).to_dict(), "peers": get_peers()}
+
+    @app.post("/api/a2a/tasks", dependencies=[Depends(require_auth)])
+    async def a2a_tasks(body: dict | None = None):
+        payload = body or {}
+        peer_url = str(payload.get("peer_url", "")).strip()
+        intent = str(payload.get("intent", "")).strip()
+        workspace = str(payload.get("workspace", DEFAULT_WORKSPACE)).strip() or DEFAULT_WORKSPACE
+        if not peer_url or not intent:
+            raise HTTPException(status_code=400, detail="peer_url and intent required")
+
+        from services.gatewayd.service import delegate_to_peer
+
+        result = await delegate_to_peer(peer_url, intent, workspace)
+        record_trace(
+            make_trace(
+                title="Delegated A2A task",
+                category="a2a",
+                status="completed",
+                provider="a2a",
+                tools=["dashd.a2a.tasks"],
+                metadata={"peer_url": peer_url, "workspace": workspace},
+            )
+        )
+        return {"ok": True, "result": result}
+
     @app.get("/api/setup/state", dependencies=[Depends(require_setup_access)])
     async def setup_state():
         from services.setupd.service import get_service
 
         return get_service().to_dict()
+
+    @app.post("/api/setup/inspect", dependencies=[Depends(require_setup_access)])
+    async def setup_inspect():
+        from services.setupd.service import get_service
+
+        return get_service().inspect()
+
+    @app.post("/api/setup/select-pack", dependencies=[Depends(require_setup_access)])
+    async def setup_select_pack(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        payload = body or {}
+        pack_id = str(payload.get("pack_id", "")).strip()
+        if not pack_id:
+            raise HTTPException(status_code=400, detail="pack_id required")
+        secondary = payload.get("secondary_packs")
+        if secondary is not None and not isinstance(secondary, list):
+            raise HTTPException(status_code=400, detail="secondary_packs must be a list")
+        provider_profile = str(payload.get("provider_profile", "")).strip()
+        try:
+            return get_service().select_pack(pack_id, secondary_packs=secondary, provider_profile=provider_profile)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/import/openclaw", dependencies=[Depends(require_setup_access)])
+    async def setup_import_openclaw(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        source_path = str((body or {}).get("source_path", "")).strip()
+        return get_service().import_openclaw(source_path)
 
     @app.post("/api/setup/plan", dependencies=[Depends(require_setup_access)])
     async def setup_plan():

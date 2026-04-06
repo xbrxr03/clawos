@@ -7,6 +7,10 @@ export type SetupState = {
   recommended_profile?: string
   selected_runtimes?: string[]
   selected_models?: string[]
+  selected_provider_profile?: string
+  primary_pack?: string
+  secondary_packs?: string[]
+  installed_extensions?: string[]
   workspace?: string
   voice_enabled?: boolean
   enable_openclaw?: boolean
@@ -17,6 +21,7 @@ export type SetupState = {
   completion_marker?: boolean
   last_error?: string
   plan_steps?: string[]
+  imported_openclaw?: Record<string, unknown>
 }
 
 export type SetupPlan = {
@@ -73,6 +78,96 @@ export type WorkflowRunResult = {
   error?: string
 }
 
+export type UseCasePack = {
+  id: string
+  name: string
+  category: string
+  description: string
+  wave?: string
+  setup_summary?: string
+  dashboards?: string[]
+  default_workflows?: string[]
+  extension_recommendations?: string[]
+  provider_recommendations?: string[]
+  policy_pack?: string
+  eval_suite_id?: string
+  installed?: boolean
+  primary?: boolean
+  secondary?: boolean
+}
+
+export type ProviderProfile = {
+  id: string
+  name: string
+  kind: string
+  endpoint: string
+  auth_mode: string
+  default_model: string
+  fallback_order?: string[]
+  local_only?: boolean
+  privacy_posture?: string
+  cost_posture?: string
+  auth_env?: string
+  selected?: boolean
+  status?: string
+  detail?: string
+}
+
+export type ExtensionManifest = {
+  id: string
+  name: string
+  category: string
+  description: string
+  trust_tier?: string
+  permissions?: string[]
+  network_access?: string
+  supported_platforms?: string[]
+  packs?: string[]
+  requires_secrets?: string[]
+  self_hostable?: boolean
+  installed?: boolean
+  recommended_for_primary?: boolean
+}
+
+export type TraceRecord = {
+  id: string
+  title: string
+  category: string
+  status: string
+  provider?: string
+  pack_id?: string
+  citations?: number
+  approvals?: number
+  tools?: string[]
+  metadata?: Record<string, unknown>
+  started_at?: string
+  finished_at?: string
+}
+
+export type EvalSuite = {
+  id: string
+  name: string
+  pack_id: string
+  description: string
+  checks?: string[]
+  status?: string
+  active?: boolean
+}
+
+export type OpenClawImportManifest = {
+  source_path?: string
+  config_path?: string
+  detected_version?: string
+  channels?: string[]
+  providers?: string[]
+  skills?: string[]
+  env_summary?: Record<string, unknown>
+  migration_actions?: string[]
+  blockers?: string[]
+  warnings?: string[]
+  suggested_primary_pack?: string
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init)
   const text = await response.text()
@@ -98,6 +193,13 @@ function setupHeaders(extra?: HeadersInit): HeadersInit {
   }
 }
 
+function maybeSetupHeaders(extra?: HeadersInit): HeadersInit | undefined {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/setup')) {
+    return setupHeaders(extra)
+  }
+  return extra
+}
+
 export const commandCenterApi = {
   getHealth: () => fetchJson<DashboardHealth>('/api/health'),
   getDesktopPosture: () => fetchJson<DesktopPosture>('/api/desktop/posture'),
@@ -108,7 +210,24 @@ export const commandCenterApi = {
       body: JSON.stringify({ enabled, command }),
     }),
   getSetupState: () => fetchJson<SetupState>('/api/setup/state', { headers: setupHeaders() }),
+  inspectSetup: () =>
+    fetchJson<{ state?: SetupState; openclaw?: OpenClawImportManifest }>('/api/setup/inspect', {
+      method: 'POST',
+      headers: setupHeaders(),
+    }),
   getSetupDiagnostics: () => fetchJson<SetupDiagnostics>('/api/setup/diagnostics', { headers: setupHeaders() }),
+  selectSetupPack: (pack_id: string, secondary_packs: string[] = [], provider_profile = '') =>
+    fetchJson<SetupState>('/api/setup/select-pack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify({ pack_id, secondary_packs, provider_profile }),
+    }),
+  importOpenClaw: (source_path = '') =>
+    fetchJson<OpenClawImportManifest>('/api/setup/import/openclaw', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify({ source_path }),
+    }),
   planSetup: () => fetchJson<SetupPlan>('/api/setup/plan', { method: 'POST', headers: setupHeaders() }),
   applySetup: () =>
     fetchJson<{ ok?: boolean; status?: string }>('/api/setup/apply', { method: 'POST', headers: setupHeaders() }),
@@ -120,6 +239,42 @@ export const commandCenterApi = {
     fetchJson<{ ok?: boolean; status?: string }>('/api/setup/cancel', { method: 'POST', headers: setupHeaders() }),
   createSupportBundle: () =>
     fetchJson<{ path?: string }>('/api/support/bundle', { method: 'POST', headers: setupHeaders() }),
+  listPacks: () => fetchJson<UseCasePack[]>('/api/packs', { headers: maybeSetupHeaders() }),
+  installPack: (pack_id: string, primary = false, provider_profile = '') =>
+    fetchJson<{ ok?: boolean; pack?: UseCasePack; state?: SetupState }>('/api/packs/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pack_id, primary, provider_profile }),
+    }),
+  listProviders: () => fetchJson<ProviderProfile[]>('/api/providers', { headers: maybeSetupHeaders() }),
+  testProvider: (id: string) =>
+    fetchJson<{ ok?: boolean; status?: string; detail?: string; profile?: ProviderProfile }>('/api/providers/test', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ id }),
+    }),
+  switchProvider: (id: string) =>
+    fetchJson<{ ok?: boolean; provider?: ProviderProfile; state?: SetupState }>('/api/providers/switch', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ id }),
+    }),
+  listExtensions: () => fetchJson<ExtensionManifest[]>('/api/extensions', { headers: maybeSetupHeaders() }),
+  installExtension: (id: string) =>
+    fetchJson<{ ok?: boolean; extension?: ExtensionManifest; state?: SetupState }>('/api/extensions/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    }),
+  listTraces: () => fetchJson<TraceRecord[]>('/api/traces'),
+  listEvals: () => fetchJson<EvalSuite[]>('/api/evals', { headers: maybeSetupHeaders() }),
+  getAgentCard: () => fetchJson<{ card?: Record<string, unknown>; peers?: Array<Record<string, unknown>> }>('/api/a2a/agent-card'),
+  delegateA2ATask: (peer_url: string, intent: string, workspace = 'nexus_default') =>
+    fetchJson<{ ok?: boolean; result?: string }>('/api/a2a/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ peer_url, intent, workspace }),
+    }),
   listWorkflows: (params: { category?: string; search?: string } = {}) => {
     const query = new URLSearchParams()
     if (params.category && params.category !== 'all') query.set('category', params.category)
