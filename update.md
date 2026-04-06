@@ -486,6 +486,43 @@ Built the Browser Workbench surface end to end.
 - true native packaging validation
 - real ISO/Calamares validation on native target environments
 
+## Pending Task: macOS-Themed Dashboard Redesign
+
+### Requested by user — 2026-04-06
+
+**What:** Redesign `dashboard/frontend` with a macOS Sonoma/Ventura visual theme. This is a **pure CSS/layout visual redesign** — no backend changes, no new pages, no logic changes.
+
+**Reference:** `C:\Users\Abrxr Hxbib\Downloads\prototype.html` — a single-file HTML mockup showing the desired feature set and page structure. Use this as the feature/page reference, but apply macOS aesthetics instead of its current sci-fi cyan/purple palette.
+
+**Design language:**
+- Vibrancy / frosted glass: `backdrop-filter: blur + saturate` on sidebar, toolbar, cards
+- macOS system colors: `--blue: #007AFF`, `--green: #34C759`, `--red: #FF3B30`, `--orange: #FF9500`
+- Dark bg: `#1C1C1E`; Light bg: `#F2F2F7`
+- Font: `-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui`
+- Traffic light window chrome in Tauri desktop mode (32px title bar, red/yellow/green 12px dots)
+- Compact density — 28px nav rows, 4px progress bars, 0.5px borders
+- Apple-style pill badges, grouped settings rows, segmented log filter control
+- Soft layered shadows, no glows, no text gradients
+
+**Files to modify:**
+- `dashboard/frontend/src/index.css` — full CSS variable + utility class rewrite
+- `dashboard/frontend/src/design/tokens.ts` — update token values
+- `dashboard/frontend/src/app/AppShell.tsx` — traffic light chrome, layout dimensions
+- `dashboard/frontend/src/app/navigation.tsx` — nav item/section styles
+- `dashboard/frontend/src/pages/Overview.tsx` — stat cards, agents list, log panel
+- `dashboard/frontend/src/pages/pages.jsx` — Agents, Tasks, Approvals, Models, Memory
+- `dashboard/frontend/src/pages/Workflows.tsx` — library card redesign
+- `dashboard/frontend/src/pages/Settings.tsx` — grouped macOS-style settings rows
+- `dashboard/frontend/src/pages/Traces.tsx` — segmented filter control, log viewer
+
+**What NOT to change:** backend, API calls, routing, auth, Tauri bridge logic, any `.py` files.
+
+**Full detailed spec:** `C:\Users\Abrxr Hxbib\.claude\plans\floating-conjuring-marble.md`
+
+**Verification:** `npm run dev` → check all 11 pages; toggle light/dark; run Playwright tests; check Storybook.
+
+---
+
 ## Claude Pickup Point
 
 Updated 2026-04-06. Previous pickup point preserved below under "Archived Pickup Point".
