@@ -23,6 +23,10 @@ E2E = "--e2e" in sys.argv
 
 passed = failed = 0
 
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="ignore")
+
 def ok(name):
     global passed
     passed += 1
@@ -37,7 +41,7 @@ def section(title):
     print(f"\n  ── {title}")
 
 def run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 # ── 1. Core utilities ─────────────────────────────────────────────────────────
@@ -217,6 +221,7 @@ try:
         audit.write(e2)
         entries = audit.tail(10)
         assert len(entries) >= 2
+        audit.close_db()
         ok("audit — write entries, tail()")
 except Exception as ex:
     fail("audit write/tail", str(ex))
@@ -307,6 +312,7 @@ try:
 
         tail = engine.get_audit_tail(5)
         assert len(tail) >= 3
+        engine.close()
         ok("policy — audit tail returns entries")
 
 except Exception as ex:
@@ -520,15 +526,16 @@ except Exception as ex:
     fail("dashd create_app", str(ex))
 
 try:
-    from pathlib import Path
-    html = Path(ROOT) / "clients" / "dashboard" / "index.html"
+    from services.dashd.api import DASHBOARD_HTML, DASHBOARD_STATIC_INDEX
+    html = DASHBOARD_STATIC_INDEX if DASHBOARD_STATIC_INDEX.exists() else DASHBOARD_HTML
     assert html.exists()
-    content = html.read_text()
-    assert "CLAWOS" in content
-    assert "WebSocket" in content
-    assert "/api/health" in content
-    assert "approvals" in content
-    ok("dashboard index.html — exists, has WebSocket, approvals, health")
+    content = read_text(html)
+    app_content = read_text(ROOT / "dashboard" / "frontend" / "src" / "App.tsx")
+    assert "ClawOS" in content
+    assert "/setup" in app_content
+    assert "/approvals" in app_content
+    assert "/workflows" in app_content
+    ok("dashboard shell — canonical frontend and setup/approvals/workflows routes present")
 except Exception as ex:
     fail("dashboard html", str(ex))
 

@@ -10,6 +10,7 @@ Environment overrides:
 """
 import os
 from pathlib import Path
+from clawos_core.platform import launch_agents_dir, platform_key
 
 # ── Version ───────────────────────────────────────────────────────────────────
 VERSION      = "0.1.0"
@@ -17,13 +18,16 @@ CODENAME     = "Nexus"
 VERSION_FULL = f"{VERSION} {CODENAME}"
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-CLAWOS_DIR       = Path.home() / "clawos"
+CLAWOS_DIR       = Path(os.environ.get("CLAWOS_DIR", str(Path.home() / "clawos"))).expanduser()
 CONFIG_DIR       = CLAWOS_DIR / "config"
 LOGS_DIR         = CLAWOS_DIR / "logs"
 MEMORY_DIR       = CLAWOS_DIR / "memory"
 WORKSPACE_DIR    = CLAWOS_DIR / "workspace"
 VOICE_DIR        = CLAWOS_DIR / "voice"
 SERVICES_DIR     = Path(__file__).parent.parent
+RUNTIME_PLATFORM = platform_key()
+LAUNCH_AGENTS_DIR = launch_agents_dir()
+SYSTEMD_USER_DIR  = Path.home() / ".config" / "systemd" / "user"
 
 # Runtime data (systemd standard locations for a real install)
 VAR_LIB_DIR      = Path("/var/lib/clawos")
@@ -37,6 +41,9 @@ MEMORY_FTS_DB    = MEMORY_DIR / "fts.db"
 HARDWARE_JSON    = CONFIG_DIR / "hardware.json"
 CLAWOS_CONFIG    = CONFIG_DIR / "clawos.yaml"
 OTEL_JSONL       = LOGS_DIR / "otel.jsonl"
+TRACES_JSONL     = LOGS_DIR / "traces.jsonl"
+SETUP_STATE_JSON = CONFIG_DIR / "setup_state.json"
+SUPPORT_DIR      = CLAWOS_DIR / "support"
 
 # Voice models
 PIPER_MODEL      = VOICE_DIR / "en_US-lessac-medium.onnx"
@@ -54,6 +61,7 @@ SERVICES = [
     "clawd",
     "dashd",
     "a2ad",
+    "setupd",
     "picoclawd",
     "gatewayd",
 ]
@@ -67,6 +75,7 @@ PORT_POLICYD    = 7074
 PORT_MODELD     = 7075
 PORT_METRICD    = 7076
 PORT_A2AD       = 7083
+PORT_SETUPD     = 7084
 PORT_PICOCLAWD  = 18800
 PORT_GATEWAYD   = 18789
 PORT_OLLAMA     = 11434

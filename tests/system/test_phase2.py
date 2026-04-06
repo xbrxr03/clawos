@@ -177,6 +177,7 @@ try:
         import sqlite3
         db = sqlite3.connect(str(constants.MEMORY_FTS_DB))
         tables = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+        db.close()
         assert "memories_meta" in tables
         ok("init_fts() creates FTS5 tables")
 except Exception as e:

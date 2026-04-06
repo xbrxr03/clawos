@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=ClawOS Setup
-Comment=First-run wizard for ClawOS
-Exec=python3 /opt/clawos/setup/first_run/gtk_wizard.py
+Comment=Launch the first-run ClawOS setup experience
+Exec=python3 /opt/clawos/clients/desktop/launch_command_center.py --route /setup --timeout 180 --fallback-gtk
 Icon=system-software-install
 X-GNOME-Autostart-enabled=true
 NotShowIn=

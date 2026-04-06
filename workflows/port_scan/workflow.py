@@ -14,18 +14,24 @@ META = WorkflowMeta(
 )
 
 
-def _run(cmd: str) -> str:
-    try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
-        return r.stdout.strip() or r.stderr.strip()
-    except Exception as e:
-        return f"(error: {e})"
+def _run(candidates: list[list[str]]) -> str:
+    for argv in candidates:
+        try:
+            r = subprocess.run(argv, capture_output=True, text=True, timeout=10)
+            output = r.stdout.strip() or r.stderr.strip()
+            if output:
+                return output
+        except FileNotFoundError:
+            continue
+        except Exception as e:
+            return f"(error: {e})"
+    return "(no port inspection tool available)"
 
 
 async def run(args: dict, agent) -> WorkflowResult:
     # Gather real port data
-    tcp_out = _run("ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null")
-    udp_out = _run("ss -ulnp 2>/dev/null")
+    tcp_out = _run([["ss", "-tlnp"], ["netstat", "-tlnp"]])
+    udp_out = _run([["ss", "-ulnp"], ["netstat", "-ulnp"]])
 
     prompt = (
         "You have real network port data below. Write a clean port report.\n\n"

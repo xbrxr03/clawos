@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Card, Row, StatusDot, Badge, SectionLabel, Ts, Btn, Empty } from '../components/ui.jsx'
 import { api } from '../lib/api.js'
 
-// ── Tasks ─────────────────────────────────────────────────────────────────────
+// Tasks
 const TABS = ['active','queued','failed','completed']
 
 export function Tasks({ tasks }) {
@@ -77,7 +77,7 @@ export function Tasks({ tasks }) {
                     <div>
                       <div className="mono" style={{ fontSize: 13 }}>{t.description ?? t.id}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                        {t.id}{t.agent ? ` · ${t.agent}` : ''}
+                        {t.id}{t.agent ? ` - ${t.agent}` : ''}
                       </div>
                     </div>
                   }
@@ -105,7 +105,7 @@ export function Tasks({ tasks }) {
   )
 }
 
-// ── Approvals ─────────────────────────────────────────────────────────────────
+// Approvals
 export function Approvals({ approvals }) {
   const [deciding, setDeciding] = useState({})
 
@@ -125,11 +125,11 @@ export function Approvals({ approvals }) {
         </div>
       </div>
 
-      <SectionLabel>Inbox {approvals.length > 0 ? `· ${approvals.length}` : ''}</SectionLabel>
+      <SectionLabel>Inbox {approvals.length > 0 ? `- ${approvals.length}` : ''}</SectionLabel>
 
       {approvals.length === 0 ? (
         <div style={{ padding: '0 20px' }}>
-          <Card><Empty>All clear — no pending approvals</Empty></Card>
+          <Card><Empty>All clear - no pending approvals</Empty></Card>
         </div>
       ) : (
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -145,7 +145,7 @@ export function Approvals({ approvals }) {
                     <div>
                       <div className="mono" style={{ fontSize: 15, fontWeight: 500 }}>{a.tool ?? 'unknown.tool'}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>
-                        task: {a.task_id ?? '—'} · agent: {a.agent ?? '—'}
+                        task: {a.task_id ?? '-'} - agent: {a.agent ?? '-'}
                       </div>
                     </div>
                     <Badge color={riskBadge}>{a.risk ?? 'medium'} risk</Badge>
@@ -178,10 +178,10 @@ export function Approvals({ approvals }) {
 
                   <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                     <Btn variant="success" onClick={() => decide(a.id, 'approve')} disabled={!!deciding[a.id]}>
-                      ✓ {deciding[a.id] === 'approve' ? 'Approving…' : 'Approve'}
+                      {deciding[a.id] === 'approve' ? 'Approving...' : 'Approve'}
                     </Btn>
                     <Btn variant="danger" onClick={() => decide(a.id, 'deny')} disabled={!!deciding[a.id]}>
-                      ✕ {deciding[a.id] === 'deny' ? 'Denying…' : 'Deny'}
+                      {deciding[a.id] === 'deny' ? 'Denying...' : 'Deny'}
                     </Btn>
                   </div>
                 </div>
@@ -216,9 +216,9 @@ function TimeoutBar({ timeoutAt }) {
   )
 }
 
-// ── Models ────────────────────────────────────────────────────────────────────
+// Models
 const SUGGESTED = [
-  { name: 'qwen2.5:7b',       size: '4.7GB', note: 'Default · best balance'  },
+  { name: 'qwen2.5:7b',       size: '4.7GB', note: 'Default - best balance'  },
   { name: 'qwen2.5-coder:7b', size: '4.7GB', note: 'Better tool calling'     },
   { name: 'gemma3:4b',        size: '2.5GB', note: 'Low RAM option'          },
   { name: 'llama3.1:8b',      size: '4.9GB', note: 'General purpose'         },
@@ -262,10 +262,10 @@ export function Models({ models, pullProgress }) {
         <Btn variant="primary" onClick={() => pull()}>Pull</Btn>
       </div>
 
-      <SectionLabel>Installed · {installed.length}</SectionLabel>
+      <SectionLabel>Installed - {installed.length}</SectionLabel>
       <div style={{ padding: '0 20px' }}>
         {installed.length === 0 ? (
-          <Card><Empty>No models — is Ollama running?</Empty></Card>
+          <Card><Empty>No models - is Ollama running?</Empty></Card>
         ) : (
           <Card>
             {installed.map(m => {
@@ -322,7 +322,7 @@ export function Models({ models, pullProgress }) {
               center={
                 <div>
                   <div className="mono" style={{ fontSize: 13 }}>{s.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{s.note} · {s.size}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{s.note} - {s.size}</div>
                 </div>
               }
               right={
@@ -334,7 +334,7 @@ export function Models({ models, pullProgress }) {
                       disabled={!!pullProgress[s.name]}
                       style={{ background:'none', border:'none', color:'var(--blue)', cursor:'pointer', fontSize:13, fontFamily:'inherit' }}
                     >
-                      {pullProgress[s.name] ? 'Pulling…' : 'Get'}
+                      {pullProgress[s.name] ? 'Pulling...' : 'Get'}
                     </button>
                   )
               }
@@ -346,7 +346,7 @@ export function Models({ models, pullProgress }) {
   )
 }
 
-// ── Memory ────────────────────────────────────────────────────────────────────
+// Memory
 export function Memory() {
   const [stats, setStats]   = useState(null)
   const [wss, setWss]       = useState([])
@@ -373,26 +373,26 @@ export function Memory() {
           <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>Memory</div>
           <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>4-layer memory system</div>
         </div>
-        <Btn size="sm" onClick={load} disabled={loading}>{loading ? '…' : 'Refresh'}</Btn>
+        <Btn size="sm" onClick={load} disabled={loading}>{loading ? '...' : 'Refresh'}</Btn>
       </div>
 
       <SectionLabel>Layers</SectionLabel>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, padding:'0 20px' }}>
         <div className="stat-card">
-          <div className="stat-val" style={{ color:'var(--green)' }}>{stats?.pinned_lines ?? '—'}<span className="stat-unit">lines</span></div>
-          <div className="stat-label">PINNED.md · Layer 1</div>
+          <div className="stat-val" style={{ color:'var(--green)' }}>{stats?.pinned_lines ?? '-'}<span className="stat-unit">lines</span></div>
+          <div className="stat-label">PINNED.md - Layer 1</div>
         </div>
         <div className="stat-card">
-          <div className="stat-val" style={{ color:'var(--blue)' }}>{stats?.workflow_lines ?? '—'}<span className="stat-unit">lines</span></div>
-          <div className="stat-label">WORKFLOW.md · Layer 2</div>
+          <div className="stat-val" style={{ color:'var(--blue)' }}>{stats?.workflow_lines ?? '-'}<span className="stat-unit">lines</span></div>
+          <div className="stat-label">WORKFLOW.md - Layer 2</div>
         </div>
         <div className="stat-card">
-          <div className="stat-val" style={{ color:'var(--purple)' }}>{stats?.chroma_size_mb ?? '—'}<span className="stat-unit">MB</span></div>
-          <div className="stat-label">ChromaDB · Layer 3</div>
+          <div className="stat-val" style={{ color:'var(--purple)' }}>{stats?.chroma_size_mb ?? '-'}<span className="stat-unit">MB</span></div>
+          <div className="stat-label">ChromaDB - Layer 3</div>
         </div>
         <div className="stat-card">
-          <div className="stat-val" style={{ color:'var(--orange)' }}>{stats?.sqlite_size_mb ?? '—'}<span className="stat-unit">MB</span></div>
-          <div className="stat-label">SQLite FTS5 · Layer 4</div>
+          <div className="stat-val" style={{ color:'var(--orange)' }}>{stats?.sqlite_size_mb ?? '-'}<span className="stat-unit">MB</span></div>
+          <div className="stat-label">SQLite FTS5 - Layer 4</div>
         </div>
       </div>
 
@@ -451,7 +451,7 @@ export function Memory() {
   )
 }
 
-// ── Nexus Command ─────────────────────────────────────────────────────────────
+// Nexus Command
 export function NexusCommand() {
   const [messages, setMessages] = useState([])
   const [input, setInput]       = useState('')
@@ -516,9 +516,9 @@ export function NexusCommand() {
                     color: s.denied ? 'var(--red)' : s.pending_approval ? 'var(--orange)' : 'var(--green)',
                     fontFamily: 'JetBrains Mono, monospace',
                   }}>
-                    <span>{s.denied ? '✕' : s.pending_approval ? '⏸' : '✓'}</span>
+                    <span>{s.denied ? 'x' : s.pending_approval ? 'wait' : 'ok'}</span>
                     <span>{s.tool}</span>
-                    {s.target && <span style={{ opacity: 0.7 }}>({s.target.length > 30 ? s.target.slice(0,30)+'…' : s.target})</span>}
+                    {s.target && <span style={{ opacity: 0.7 }}>({s.target.length > 30 ? s.target.slice(0,30)+'...' : s.target})</span>}
                   </div>
                 ))}
               </div>
@@ -538,7 +538,7 @@ export function NexusCommand() {
               {m.text}
             </div>
             <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3, paddingLeft: 4, paddingRight: 4 }}>
-              {m.role === 'user' ? 'you' : 'nexus'} · {new Date(m.ts).toLocaleTimeString()}
+              {m.role === 'user' ? 'you' : 'nexus'} - {new Date(m.ts).toLocaleTimeString()}
             </div>
           </div>
         ))}
@@ -549,7 +549,7 @@ export function NexusCommand() {
               background: 'var(--surface)', border: '1px solid var(--border)',
               fontSize: 13, color: 'var(--text-3)',
             }}>
-              thinking…
+              thinking...
             </div>
           </div>
         )}
@@ -562,7 +562,7 @@ export function NexusCommand() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-          placeholder="Ask Nexus anything…"
+          placeholder="Ask Nexus anything..."
           disabled={loading}
           autoFocus
           style={{
@@ -590,7 +590,7 @@ export function NexusCommand() {
   )
 }
 
-// ── Runtime Network ───────────────────────────────────────────────────────────
+// Runtime Network
 const RT_COLORS = {
   nexus:    { primary: '#4f8ef7', dim: 'rgba(79,142,247,0.1)',  border: 'rgba(79,142,247,0.25)'  },
   picoclaw: { primary: '#f59e0b', dim: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.25)'  },
@@ -612,7 +612,7 @@ function AgentBubble({ name, turns, active, onReset, resetting }) {
   const initial = name.charAt(0).toUpperCase()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'default' }}
-         title={`${name} · ${turns} turns · click to reset`}
+         title={`${name} - ${turns} turns - click to reset`}
          onClick={onReset}>
       <div style={{ position: 'relative' }}>
         <div style={{
@@ -741,9 +741,9 @@ function LiveFeed({ events }) {
   function label(e) {
     const d = e.data ?? {}
     if (e.type === 'task_update')       return `${d.status ?? 'update'}: ${(d.intent ?? d.description ?? '').slice(0, 55)}`
-    if (e.type === 'audit_event')       return `${(d.decision ?? '').toUpperCase()} ${d.tool ?? ''} ${d.target ? `→ ${String(d.target).slice(0, 25)}` : ''}`
-    if (e.type === 'approval_pending')  return `⏸ approval needed: ${d.tool ?? ''} on ${String(d.target ?? '').slice(0, 25)}`
-    if (e.type === 'approval_resolved') return `${d.decision === 'approved' ? '✓' : '✕'} ${d.approval_id?.slice(0, 8)}`
+    if (e.type === 'audit_event')       return `${(d.decision ?? '').toUpperCase()} ${d.tool ?? ''} ${d.target ? `-> ${String(d.target).slice(0, 25)}` : ''}`
+    if (e.type === 'approval_pending')  return `approval pending: ${d.tool ?? ''} on ${String(d.target ?? '').slice(0, 25)}`
+    if (e.type === 'approval_resolved') return `${d.decision === 'approved' ? 'approved' : 'denied'} ${d.approval_id?.slice(0, 8)}`
     return e.type
   }
 
@@ -781,7 +781,7 @@ function LiveFeed({ events }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
         {items.length === 0 ? (
           <div style={{ padding: '28px 16px', fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
-            Waiting for activity…
+            Waiting for activity...
           </div>
         ) : items.map((e, i) => (
           <div key={i} style={{ padding: '8px 16px', borderBottom: '1px solid rgba(255,255,255,0.025)' }}>
@@ -846,10 +846,10 @@ export function Agents({ events = [], runtimes = {} }) {
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px' }}>Runtime Network</div>
           <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
-            {total} runtime{total !== 1 ? 's' : ''} active · {sessions.length} session{sessions.length !== 1 ? 's' : ''} · {peers.length} peer{peers.length !== 1 ? 's' : ''}
+            {total} runtime{total !== 1 ? 's' : ''} active - {sessions.length} session{sessions.length !== 1 ? 's' : ''} - {peers.length} peer{peers.length !== 1 ? 's' : ''}
           </div>
         </div>
-        <Btn size="sm" onClick={load} disabled={loading}>{loading ? '…' : 'Refresh'}</Btn>
+        <Btn size="sm" onClick={load} disabled={loading}>{loading ? '...' : 'Refresh'}</Btn>
       </div>
 
       {/* Body */}
@@ -859,12 +859,12 @@ export function Agents({ events = [], runtimes = {} }) {
 
           {/* Nexus */}
           <RuntimeZone
-            name="nexus" label="Nexus" icon="⬡"
+            name="nexus" label="Nexus" icon="N"
             colors={RT_COLORS.nexus}
             installed={nexus.installed ?? true}
             running={nexus.running}
-            model={`local · ${nexus.model ?? 'qwen2.5:7b'}`}
-            emptyText="No active sessions — chat in Nexus Command"
+            model={`local - ${nexus.model ?? 'qwen2.5:7b'}`}
+            emptyText="No active sessions - chat in Nexus Command"
           >
             {sessions.length > 0 ? sessions.map(s => (
               <AgentBubble
@@ -880,25 +880,25 @@ export function Agents({ events = [], runtimes = {} }) {
 
           {/* PicoClaw */}
           <RuntimeZone
-            name="picoclaw" label="PicoClaw" icon="⚡"
+            name="picoclaw" label="PicoClaw" icon="P"
             colors={RT_COLORS.picoclaw}
             installed={picoclaw.installed}
             running={picoclaw.running}
-            model="edge · on-device inference"
+            model="edge - on-device inference"
             emptyText={
-              picoclaw.running ? 'Running — no sub-agents exposed'
-              : picoclaw.installed ? 'Installed — not running'
+              picoclaw.running ? 'Running - no sub-agents exposed'
+              : picoclaw.installed ? 'Installed - not running'
               : 'Not installed on this device'
             }
           />
 
           {/* OpenClaw */}
           <RuntimeZone
-            name="openclaw" label="OpenClaw" icon="☁"
+            name="openclaw" label="OpenClaw" icon="O"
             colors={RT_COLORS.openclaw}
             installed={openclaw.installed}
             running={openclaw.running}
-            model={`gateway · ${openclaw.model ?? 'cloud'}`}
+            model={`gateway - ${openclaw.model ?? 'cloud'}`}
             emptyText={
               !openclaw.installed ? 'Not installed'
               : !openclaw.running ? 'Gateway offline'
@@ -918,7 +918,7 @@ export function Agents({ events = [], runtimes = {} }) {
   )
 }
 
-// ── Audit ─────────────────────────────────────────────────────────────────────
+// Audit
 export function Audit({ events }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoad]    = useState(true)
@@ -967,9 +967,9 @@ export function Audit({ events }) {
               fontWeight:500, cursor:'pointer', fontFamily:'inherit',
             }}
           >
-            {live ? '⬤ Live' : '○ Live'}
+            {live ? 'Live On' : 'Live Off'}
           </button>
-          <Btn size="sm" onClick={load} disabled={loading}>{loading ? '…' : 'Reload'}</Btn>
+          <Btn size="sm" onClick={load} disabled={loading}>{loading ? '...' : 'Reload'}</Btn>
         </div>
       </div>
 
@@ -988,7 +988,7 @@ export function Audit({ events }) {
                   left={<span style={{ width:7, height:7, borderRadius:'50%', background:dColor(decision), flexShrink:0 }} />}
                   center={
                     <span className="mono" style={{ fontSize:12, color:tColor(entry.tool), overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {entry.tool ?? entry.type ?? '—'}
+                      {entry.tool ?? entry.type ?? '-'}
                     </span>
                   }
                   right={
@@ -1013,8 +1013,8 @@ export function Audit({ events }) {
                         </div>
                       ))
                     }
-                    {entry.prev_hash  && <div style={{ marginTop:6, color:'var(--text-3)' }}>↑ {entry.prev_hash.slice(0,48)}…</div>}
-                    {entry.entry_hash && <div style={{ color:'var(--text-2)' }}># {entry.entry_hash.slice(0,48)}…</div>}
+                    {entry.prev_hash  && <div style={{ marginTop:6, color:'var(--text-3)' }}>prev: {entry.prev_hash.slice(0,48)}...</div>}
+                    {entry.entry_hash && <div style={{ color:'var(--text-2)' }}># {entry.entry_hash.slice(0,48)}...</div>}
                     <details style={{ marginTop:6 }}>
                       <summary style={{ cursor:'pointer', color:'var(--text-3)', fontSize:10 }}>raw JSON</summary>
                       <pre style={{ marginTop:4, fontSize:10, color:'var(--text-2)', whiteSpace:'pre-wrap', wordBreak:'break-all', maxHeight:180, overflowY:'auto' }}>
@@ -1031,3 +1031,4 @@ export function Audit({ events }) {
     </div>
   )
 }
+

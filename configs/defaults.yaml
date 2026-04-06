@@ -55,7 +55,8 @@ workspace:
 dashboard:
   enabled: true
   port: 7070
-  host: "0.0.0.0"
+  host: "127.0.0.1"
+  auth_required: true
 
 whatsapp:
   enabled: false
@@ -87,8 +88,9 @@ metricd:
 a2a:
   enabled: true
   port: 7083
+  host: "127.0.0.1"
   auth_token: ""           # set to require Bearer token on inbound tasks
-  mdns_enabled: true       # publish _clawos._tcp.local
+  mdns_enabled: false      # publish _clawos._tcp.local only when intentionally exposed
   discovery_interval_s: 60
 
 # ── picoclawd — Tier A edge runtime ───────────────────────────────────────────

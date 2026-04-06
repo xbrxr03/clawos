@@ -1,7 +1,7 @@
 """system.info — return disk usage, RAM free, CPU load, GPU VRAM as JSON."""
 import json
-import shutil
-import subprocess
+
+from clawos_core.platform import disk_snapshot_gb, gpu_info, load_snapshot, ram_snapshot_gb
 
 
 def run(target: str = "") -> str:
@@ -10,52 +10,33 @@ def run(target: str = "") -> str:
 
     # Disk
     try:
-        usage = shutil.disk_usage("/")
-        info["disk"] = {
-            "total_gb":  round(usage.total / 1e9, 1),
-            "used_gb":   round(usage.used  / 1e9, 1),
-            "free_gb":   round(usage.free  / 1e9, 1),
-            "used_pct":  round(usage.used / usage.total * 100, 1),
-        }
+        info["disk"] = disk_snapshot_gb("/")
     except Exception as e:
         info["disk"] = {"error": str(e)}
 
     # RAM
     try:
-        with open("/proc/meminfo") as f:
-            lines = {l.split(":")[0]: int(l.split()[1]) for l in f if ":" in l}
-        total = lines.get("MemTotal", 0)
-        avail = lines.get("MemAvailable", 0)
+        snap = ram_snapshot_gb()
+        total = snap.get("total_gb", 0.0)
+        free = snap.get("free_gb", 0.0)
         info["ram"] = {
-            "total_gb": round(total / 1e6, 1),
-            "free_gb":  round(avail / 1e6, 1),
-            "used_pct": round((total - avail) / total * 100, 1) if total else 0,
+            "total_gb": total,
+            "free_gb": free,
+            "used_pct": round(((total - free) / total) * 100, 1) if total else 0,
         }
     except Exception as e:
         info["ram"] = {"error": str(e)}
 
     # CPU load
     try:
-        with open("/proc/loadavg") as f:
-            parts = f.read().split()
-        info["cpu"] = {"load_1m": float(parts[0]), "load_5m": float(parts[1])}
+        info["cpu"] = load_snapshot() or {"error": "unavailable"}
     except Exception as e:
         info["cpu"] = {"error": str(e)}
 
-    # GPU VRAM (nvidia-smi)
+    # GPU VRAM
     try:
-        r = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total,memory.free",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=3
-        )
-        if r.returncode == 0:
-            parts = [p.strip() for p in r.stdout.strip().split(",")]
-            info["gpu"] = {
-                "name":       parts[0],
-                "vram_total": round(int(parts[1]) / 1024, 1),
-                "vram_free":  round(int(parts[2]) / 1024, 1),
-            }
+        name, vram = gpu_info()
+        info["gpu"] = {"name": name, "vram_total": vram, "available": name != "none"}
     except Exception:
         info["gpu"] = {"available": False}
 

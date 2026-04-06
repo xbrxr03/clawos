@@ -16,11 +16,21 @@ apt-get install -y -q \
     sqlite3
 
 # Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
+tmp_ollama="$(mktemp /tmp/clawos-ollama.XXXXXX.sh)"
+curl -fsSL https://ollama.ai/install.sh -o "$tmp_ollama"
+sh "$tmp_ollama"
+rm -f "$tmp_ollama"
 
 # Copy ClawOS to /opt/clawos
 mkdir -p /opt/clawos
 cp -r /tmp/clawos/* /opt/clawos/ 2>/dev/null || echo "  (copy from /tmp/clawos skipped)"
+
+# Build the canonical frontend so /setup and the new command center shell exist
+cd /opt/clawos/dashboard/frontend
+npm install --no-fund --no-audit
+npm run build
+rm -rf node_modules
+cd /opt/clawos
 
 # Python deps
 pip3 install --break-system-packages \
@@ -37,16 +47,9 @@ wget -q -O /opt/clawos/services/voiced/models/hey_jarvis.onnx \
 
 # First-run autostart
 mkdir -p /etc/xdg/autostart
-cat > /etc/xdg/autostart/clawos-setup.desktop << 'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=ClawOS Setup
-Comment=First-run wizard for ClawOS
-Exec=python3 /opt/clawos/setup/first_run/gtk_wizard.py
-Icon=system-software-install
-X-GNOME-Autostart-enabled=true
-NotShowIn=
-DESKTOP
+cp /opt/clawos/packaging/autostart/clawos-setup.desktop /etc/xdg/autostart/clawos-setup.desktop
+mkdir -p /usr/share/applications
+cp /opt/clawos/packaging/autostart/clawos-command-center.desktop /usr/share/applications/clawos-command-center.desktop
 
 # symlink nexus command
 ln -sf /opt/clawos/nexus/cli.py /usr/local/bin/nexus

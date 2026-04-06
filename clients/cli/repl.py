@@ -54,7 +54,7 @@ HELP = f"""
   {_p(CYAN, '/skills')}           list loaded skills
   {_p(CYAN, '/skills reload')}    rescan skill directories
   {_p(CYAN, '/do')} {_d('<request>')}    natural language shell command
-  {_p(CYAN, '/setup')}            re-run first-run wizard
+  {_p(CYAN, '/setup')}            open the Setup surface or legacy fallback
   {_p(CYAN, '/help')}             show this help
   {_p(CYAN, '/quit')}             exit
 """
@@ -238,12 +238,19 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
 
             elif cmd == "/setup":
                 import subprocess
-                wizard = Path(__file__).parent.parent.parent / "setup" / "first_run" / "wizard.py"
+                root = Path(__file__).parent.parent.parent
+                launcher = root / "clients" / "desktop" / "launch_command_center.py"
+                wizard = root / "setup" / "first_run" / "wizard.py"
+                if launcher.exists():
+                    print("  Opening ClawOS Setup...\n")
+                    result = subprocess.run(["python3", str(launcher), "--route", "/setup", "--timeout", "180"])
+                    if result.returncode == 0:
+                        continue
+                    print("  GUI launch failed - falling back to terminal setup.\n")
                 if wizard.exists():
-                    print(f"  {_p(AMBER, '◆')} Launching setup wizard ...\n")
                     subprocess.run(["python3", str(wizard), "--reset"])
                 else:
-                    print(f"  {_d('Wizard not found at')} {wizard}\n")
+                    print(f"  {_d('Setup flow not found at')} {wizard}\n")
 
             elif cmd == "/workspace":
                 if arg:

@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 
 from clawos_core.constants import CLAWOS_DIR
+from clawos_core.platform import ram_snapshot_gb
 from clawos_core.util.paths import workspace_path
 
 log = logging.getLogger("toolbridge")
@@ -281,45 +282,8 @@ class ToolBridge:
                 f"RAM: {ram_used}/{ram_total}GB used")
 
     def _memory_usage_gb(self) -> tuple[float, float]:
-        try:
-            with open("/proc/meminfo") as f:
-                meminfo = {
-                    line.split()[0].rstrip(":"): int(line.split()[1])
-                    for line in f
-                    if line.split()[0].rstrip(":") in ("MemTotal", "MemAvailable")
-                }
-            ram_used = round((meminfo["MemTotal"] - meminfo["MemAvailable"]) * 1024 / 1e9, 1)
-            ram_total = round(meminfo["MemTotal"] * 1024 / 1e9, 1)
-            return ram_used, ram_total
-        except Exception:
-            pass
-
-        try:
-            import ctypes
-
-            class MEMORYSTATUSEX(ctypes.Structure):
-                _fields_ = [
-                    ("dwLength", ctypes.c_ulong),
-                    ("dwMemoryLoad", ctypes.c_ulong),
-                    ("ullTotalPhys", ctypes.c_ulonglong),
-                    ("ullAvailPhys", ctypes.c_ulonglong),
-                    ("ullTotalPageFile", ctypes.c_ulonglong),
-                    ("ullAvailPageFile", ctypes.c_ulonglong),
-                    ("ullTotalVirtual", ctypes.c_ulonglong),
-                    ("ullAvailVirtual", ctypes.c_ulonglong),
-                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
-                ]
-
-            stat = MEMORYSTATUSEX()
-            stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
-                ram_total = round(stat.ullTotalPhys / 1e9, 1)
-                ram_used = round((stat.ullTotalPhys - stat.ullAvailPhys) / 1e9, 1)
-                return ram_used, ram_total
-        except Exception:
-            pass
-
-        return 0, 0
+        snap = ram_snapshot_gb()
+        return snap.get("used_gb", 0.0), snap.get("total_gb", 0.0)
 
     def _ws_create(self, name: str) -> str:
         ws = workspace_path(name)

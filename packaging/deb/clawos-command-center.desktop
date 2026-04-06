@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ClawOS Command Center
+Comment=Open the ClawOS command center
+Exec=clawos-command-center
+Icon=applications-system
+Terminal=false
+Categories=Utility;System;
+StartupNotify=true
+

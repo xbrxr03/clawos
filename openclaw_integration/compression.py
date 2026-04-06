@@ -172,23 +172,8 @@ def install_rtk(show_progress: bool = True) -> bool:
         except Exception:
             pass
 
-    # Fallback: curl install script
-    try:
-        r = subprocess.run(
-            "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk"
-            "/refs/heads/master/install.sh | sh",
-            shell=True, executable="/bin/bash",
-            timeout=120, capture_output=True
-        )
-        if r.returncode == 0 and rtk_installed():
-            if show_progress:
-                print("  ✓  RTK installed")
-            return True
-    except Exception as e:
-        log.warning(f"RTK curl install failed: {e}")
-
     if show_progress:
-        print("  ⚠  RTK install failed — shell output will not be compressed")
+        print("  ⚠  RTK install skipped — refusing to run a remote shell installer")
         print("     Install manually: cargo install --git https://github.com/rtk-ai/rtk")
     return False
 

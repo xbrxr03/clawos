@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+if [ -d /opt/clawos/packaging/autostart ]; then
+  install -Dm644 /opt/clawos/packaging/autostart/clawos-command-center.desktop \
+    /usr/share/applications/clawos-command-center.desktop || true
+  install -Dm644 /opt/clawos/packaging/autostart/clawos-setup.desktop \
+    /etc/xdg/autostart/clawos-setup.desktop || true
+fi
+
+exit 0

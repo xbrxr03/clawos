@@ -29,14 +29,14 @@ input/channel -> agentd -> AgentRuntime -> policyd -> toolbridge -> local system
 - `services/policyd/service.py`: permission checks, approval queue, audit integration.
 - `services/memd/service.py`: memory layers, FTS, optional vector and knowledge helpers.
 - `services/dashd/api.py`: canonical dashboard API and WebSocket event stream.
-- `clawos_core/`: shared constants, IDs, models, event bus, and utilities.
+- `clawos_core/`: shared constants, IDs, models, event bus, platform, service-manager, and utilities.
 
 ## Supporting Components
 
 - `services/modeld/service.py`: model inventory, health, profile selection, and VRAM helpers.
 - `services/gatewayd/service.py`: WhatsApp bridge and peer delegation entry points.
 - `services/a2ad/service.py`: agent card, peer discovery, and A2A API.
-- `workflows/`: prompt-driven workflows on top of the core runtime.
+- `workflows/`: a mix of agent-backed prompts and direct Python helpers with platform metadata.
 - `openclaw_integration/`: installer and configuration bridge for the OpenClaw ecosystem.
 
 ## Non-Canonical Or Legacy Surfaces
@@ -60,8 +60,8 @@ input/channel -> agentd -> AgentRuntime -> policyd -> toolbridge -> local system
 - `services/`: long-lived service modules and APIs.
 - `runtimes/`: the active agent loop.
 - `clients/`: user-facing interfaces and daemon entrypoints.
-- `workflows/`: prebuilt jobs, mostly prompt-defined.
-- `configs/`, `systemd/`, `setup/`, `bootstrap/`: install and runtime support.
+- `workflows/`: prebuilt jobs and helper-backed workflows.
+- `configs/`, `systemd/`, `setup/`, `bootstrap/`, `scripts/`: install and runtime support.
 - `content_factory_skill/`: separate sidecar project, not part of the core runtime path.
 
 ## Immediate Cleanups Still Needed

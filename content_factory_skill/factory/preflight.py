@@ -334,7 +334,8 @@ if not args.no_piper:
     if model_path.exists() and shutil.which(piper_bin):
         info("Testing speech synthesis...")
         try:
-            out = tempfile.mktemp(suffix=".wav")
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                out = tmp.name
             result = subprocess.run(
                 [piper_bin, "--model", str(model_path), "--output_file", out],
                 input="Preflight check. The factory is ready.",

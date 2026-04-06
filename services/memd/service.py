@@ -45,6 +45,8 @@ def _open_fts() -> sqlite3.Connection:
     """New connection per call — safe for thread pool use."""
     _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(str(_FTS_DB_PATH), check_same_thread=False)
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=5000")
     db.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS memories USING fts5(
             memory_id, workspace_id, text, source, created_at,
@@ -142,11 +144,14 @@ class MemoryService:
 
         # ADD new
         db = _open_fts()
-        db.execute("INSERT INTO memories VALUES (?,?,?,?,?)",
-                   (memory_id, workspace_id, text, source, created))
-        db.execute("INSERT INTO memories_meta VALUES (?,?,?,?,?,?)",
-                   (memory_id, workspace_id, text, source, created, "ACTIVE"))
-        db.commit()
+        try:
+            db.execute("INSERT INTO memories VALUES (?,?,?,?,?)",
+                       (memory_id, workspace_id, text, source, created))
+            db.execute("INSERT INTO memories_meta VALUES (?,?,?,?,?,?)",
+                       (memory_id, workspace_id, text, source, created, "ACTIVE"))
+            db.commit()
+        finally:
+            db.close()
         self.append_history(workspace_id, f"[ADD] {text[:80]}")
         return memory_id
 
@@ -190,6 +195,7 @@ class MemoryService:
                 log.debug(f"ChromaDB recall: {e}")
 
         # Layer 4: SQLite FTS5
+        db = None
         try:
             db  = _open_fts()
             cq  = re.sub(r'[^\w\s]', '', query)
@@ -206,6 +212,9 @@ class MemoryService:
                         chroma_ids.add(mid)
         except Exception as e:
             log.debug(f"FTS5 recall: {e}")
+        finally:
+            if db is not None:
+                db.close()
 
         # Recent history — skip for greetings/acks to prevent session bleed
         _skip_words = {"ok", "okay", "hi", "hello", "hey", "yes", "no",
@@ -231,6 +240,7 @@ class MemoryService:
 
     # ── Delete ────────────────────────────────────────────────────────────────
     def forget(self, memory_id: str, workspace_id: str):
+        db = None
         try:
             db = _open_fts()
             db.execute("UPDATE memories_meta SET lifecycle='DELETED' WHERE memory_id=?",
@@ -239,6 +249,9 @@ class MemoryService:
             db.commit()
         except Exception as e:
             log.warning(f"forget() failed: {e}")
+        finally:
+            if db is not None:
+                db.close()
         if CHROMA_OK:
             try:
                 col = _chroma.get_collection(f"ws_{workspace_id}")
@@ -247,6 +260,7 @@ class MemoryService:
                 pass
 
     def get_all(self, workspace_id: str, limit: int = 100) -> list[dict]:
+        db = None
         try:
             db = _open_fts()
             rows = db.execute(
@@ -259,10 +273,14 @@ class MemoryService:
                     for r in rows]
         except Exception:
             return []
+        finally:
+            if db is not None:
+                db.close()
 
     # ── Helpers ───────────────────────────────────────────────────────────────
     def _find_similar(self, text: str, workspace_id: str,
                       threshold: float = 0.8) -> Optional[dict]:
+        db = None
         try:
             words = set(text.lower().split())
             if len(words) < 3:
@@ -283,9 +301,13 @@ class MemoryService:
                     return {"memory_id": mid, "text": existing}
         except Exception:
             pass
+        finally:
+            if db is not None:
+                db.close()
         return None
 
     def _update_fts(self, memory_id: str, new_text: str, workspace_id: str):
+        db = None
         try:
             db = _open_fts()
             db.execute("DELETE FROM memories WHERE memory_id=?", (memory_id,))
@@ -296,6 +318,9 @@ class MemoryService:
             db.commit()
         except Exception as e:
             log.warning(f"FTS update failed: {e}")
+        finally:
+            if db is not None:
+                db.close()
 
     async def _write_chroma_async(self, memory_id: str, text: str,
                                    workspace_id: str, source: str):

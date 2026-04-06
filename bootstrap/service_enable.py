@@ -1,7 +1,17 @@
-"""Enable and start ClawOS systemd user services."""
-import subprocess
+"""Enable and start ClawOS user services on Linux or macOS."""
 import shutil
+import subprocess
+import sys
 from pathlib import Path
+
+from clawos_core.constants import DEFAULT_WORKSPACE
+from clawos_core.service_manager import (
+    install_launch_agents,
+    is_active,
+    service_hint,
+    service_manager_name,
+    start as start_service,
+)
 
 SYSTEMD_DIR = Path(__file__).parent.parent / "packaging" / "systemd"
 USER_UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
@@ -17,54 +27,92 @@ SERVICES = [
 ]
 
 
-def _run(cmd: list) -> bool:
+def _run(cmd: list[str]) -> bool:
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        return r.returncode == 0
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=10).returncode == 0
     except Exception:
         return False
 
 
 def install_units(project_root: Path = None) -> bool:
-    """Copy systemd unit files to ~/.config/systemd/user/"""
-    if not shutil.which("systemctl"):
-        return False
-    USER_UNIT_DIR.mkdir(parents=True, exist_ok=True)
-    for svc in SERVICES:
-        src = SYSTEMD_DIR / f"{svc}.service"
-        if src.exists():
+    project_root = project_root or Path(__file__).parent.parent
+    manager = service_manager_name()
+
+    if manager == "systemd":
+        USER_UNIT_DIR.mkdir(parents=True, exist_ok=True)
+        for svc in SERVICES:
+            src = SYSTEMD_DIR / f"{svc}.service"
+            if not src.exists():
+                continue
             dst = USER_UNIT_DIR / f"{svc}.service"
-            # Patch ExecStart path if project_root given
-            text = src.read_text()
-            if project_root:
-                text = text.replace("/opt/clawos", str(project_root))
-            dst.write_text(text)
-    _run(["systemctl", "--user", "daemon-reload"])
-    return True
+            text = src.read_text(encoding="utf-8", errors="replace")
+            text = text.replace("/opt/clawos", str(project_root))
+            dst.write_text(text, encoding="utf-8")
+        _run(["systemctl", "--user", "daemon-reload"])
+        return True
+
+    if manager == "launchd":
+        install_launch_agents(
+            project_root=project_root,
+            workspace=DEFAULT_WORKSPACE,
+            python_bin=sys.executable,
+            ollama_bin=shutil.which("ollama") or "ollama",
+        )
+        return True
+
+    return False
 
 
 def enable_all() -> dict:
-    results = {}
-    for svc in SERVICES:
-        ok = _run(["systemctl", "--user", "enable", f"{svc}.service"])
-        results[svc] = "enabled" if ok else "skip"
-    return results
+    manager = service_manager_name()
+    if manager == "systemd":
+        return {
+            svc: ("enabled" if _run(["systemctl", "--user", "enable", f"{svc}.service"]) else "skip")
+            for svc in SERVICES
+        }
+    if manager == "launchd":
+        return {
+            "clawos.service": "installed",
+            "ollama.service": "installed",
+        }
+    return {}
 
 
 def start_all() -> dict:
-    results = {}
-    for svc in SERVICES:
-        ok = _run(["systemctl", "--user", "start", f"{svc}.service"])
-        results[svc] = "started" if ok else "skip"
-    return results
+    manager = service_manager_name()
+    if manager == "systemd":
+        return {
+            svc: ("started" if _run(["systemctl", "--user", "start", f"{svc}.service"]) else "skip")
+            for svc in SERVICES
+        }
+    if manager == "launchd":
+        results = {}
+        for service_name in ("ollama.service", "clawos.service"):
+            ok, _ = start_service(service_name)
+            results[service_name] = "started" if ok else "skip"
+        return results
+    return {}
 
 
 def status_all() -> dict:
-    results = {}
-    for svc in SERVICES:
-        r = subprocess.run(
-            ["systemctl", "--user", "is-active", f"{svc}.service"],
-            capture_output=True, text=True
-        )
-        results[svc] = r.stdout.strip()
-    return results
+    manager = service_manager_name()
+    if manager == "systemd":
+        results = {}
+        for svc in SERVICES:
+            try:
+                proc = subprocess.run(
+                    ["systemctl", "--user", "is-active", f"{svc}.service"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                results[svc] = proc.stdout.strip()
+            except Exception:
+                results[svc] = "unknown"
+        return results
+    if manager == "launchd":
+        return {
+            "clawos.service": "active" if is_active("clawos.service") else "inactive",
+            "ollama.service": "active" if is_active("ollama.service") else "inactive",
+        }
+    return {"clawos.service": f"unmanaged ({service_hint('start', 'clawos.service')})"}

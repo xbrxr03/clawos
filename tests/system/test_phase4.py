@@ -8,6 +8,7 @@ Usage:
   python3 tests/system/test_phase4.py
 """
 import sys
+import os
 import subprocess
 import shutil
 from pathlib import Path
@@ -16,6 +17,14 @@ ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 passed = failed = 0
+
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def can_run_bash_syntax() -> bool:
+    return os.name != "nt" and bool(shutil.which("bash"))
 
 
 def ok(name):
@@ -48,7 +57,7 @@ except Exception as e:
     fail("ISO files", str(e))
 
 try:
-    build = (ISO_DIR / "build_iso.sh").read_text()
+    build = read_text(ISO_DIR / "build_iso.sh")
     checks = [
         ("xorriso",       "uses xorriso for ISO creation"),
         ("mksquashfs",    "uses mksquashfs to repack"),
@@ -64,29 +73,27 @@ except Exception as e:
     fail("build_iso.sh content", str(e))
 
 try:
-    chroot = (ISO_DIR / "chroot_install.sh").read_text()
+    chroot = read_text(ISO_DIR / "chroot_install.sh")
     checks = [
-        ("openclaw@latest",   "installs OpenClaw npm"),
-        ("auth-profiles.json","applies auth fix"),
-        ("ollama-local",      "sets ollama-local token"),
-        ("openai-completions","uses correct API format"),
-        ("clawos-firstboot",  "enables firstboot service"),
-        ("ollama.service",    "enables Ollama service"),
-        ("motd",              "sets MOTD"),
+        ("dashboard/frontend",          "builds the canonical frontend"),
+        ("npm run build",               "builds the frontend bundle"),
+        ("clawos-setup.desktop",        "installs setup autostart"),
+        ("clawos-command-center.desktop", "installs command-center desktop entry"),
+        ("ollama.ai/install.sh",        "installs Ollama in chroot"),
     ]
     for snippet, desc in checks:
-        assert snippet.lower() in chroot.lower(), f"missing: {snippet}"
+        assert snippet.lower() in chroot.lower(), f"missing: {snippet} ({desc})"
     ok(f"chroot_install.sh has all {len(checks)} required elements")
 except Exception as e:
     fail("chroot_install.sh content", str(e))
 
 try:
-    firstboot = (ISO_DIR / "firstboot.sh").read_text()
-    assert "ollama pull qwen2.5:7b" in firstboot
-    assert "firstboot_done" in firstboot
-    assert "bootstrap" in firstboot
-    assert "dev_boot" in firstboot or "services" in firstboot
-    ok("firstboot.sh pulls model + runs bootstrap + marks done")
+    firstboot = read_text(ISO_DIR / "firstboot.sh")
+    assert "launch_command_center.py" in firstboot
+    assert "--route /setup" in firstboot
+    assert "DONE_FLAG" in firstboot
+    assert "first-boot handoff" in firstboot.lower()
+    ok("firstboot.sh hands off into the new /setup experience and marks completion")
 except Exception as e:
     fail("firstboot.sh content", str(e))
 
@@ -95,16 +102,20 @@ except Exception as e:
 section("2. Install script (non-ISO path)")
 
 try:
-    install = (INSTALL_DIR / "install.sh").read_text()
+    install = read_text(INSTALL_DIR / "install.sh")
+    root_install = read_text(ROOT / "install.sh")
     checks = [
-        ("ollama.com/install.sh", "installs Ollama"),
-        ("github.com/you/clawos", "clones correct repo"),
-        ("bootstrap.bootstrap",   "runs bootstrap"),
-        ("clawctl",               "installs clawctl"),
-        ("PATH",                  "updates PATH"),
+        ('exec bash "$REPO_ROOT/install.sh" "$@"', "wrapper delegates to root installer"),
+        ("openclaw@latest",       "root installer installs OpenClaw"),
+        ("dashboard/frontend",    "root installer builds frontend"),
+        ("clawos-setup",          "root installer installs GUI setup launcher"),
+        ("launch_command_center.py", "root installer uses command-center launcher"),
+        ("setup-launchd.sh",      "root installer supports macOS launchd"),
+        ("setup-systemd.sh",      "root installer supports Linux systemd"),
     ]
-    for snippet, _ in checks:
-        assert snippet in install, f"missing: {snippet}"
+    assert checks[0][0] in install, f"missing: {checks[0][0]}"
+    for snippet, _ in checks[1:]:
+        assert snippet in root_install, f"missing: {snippet}"
     ok(f"install.sh has all {len(checks)} required elements")
 except Exception as e:
     fail("install.sh content", str(e))
@@ -144,7 +155,7 @@ for script_name in ["build_iso.sh", "chroot_install.sh",
                else INSTALL_DIR / "install.sh"
         if not path.exists():
             continue
-        if shutil.which("bash"):
+        if can_run_bash_syntax():
             r = subprocess.run(["bash", "-n", str(path)],
                                capture_output=True, text=True)
             if r.returncode == 0:
@@ -152,7 +163,7 @@ for script_name in ["build_iso.sh", "chroot_install.sh",
             else:
                 fail(f"bash -n {path.name}", r.stderr.strip()[:80])
         else:
-            ok(f"{path.name} present (bash not available to syntax check)")
+            ok(f"{path.name} present (bash syntax check skipped on this platform)")
     except Exception as e:
         fail(f"syntax check {script_name}", str(e))
 
@@ -173,15 +184,15 @@ except Exception as e:
 section("6. README final check")
 
 try:
-    readme = (ROOT / "README.md").read_text()
+    readme = read_text(ROOT / "README.md").lower()
     launch_elements = [
-        ("dd if=clawos",    "has dd flash command"),
-        ("No API keys",     "no API keys message"),
-        ("No monthly bill", "no monthly bill message"),
-        ("Bootable ISO",    "comparison table row"),
-        ("OpenClaw",        "mentions OpenClaw"),
-        ("Ollama",          "mentions Ollama"),
-        ("8GB",             "hardware requirements"),
+        ("curl -fssl https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh", "installer command"),
+        ("no api keys",     "no API keys message"),
+        ("no monthly bill", "no monthly bill message"),
+        ("bootable iso",    "bootable ISO roadmap"),
+        ("openclaw",        "mentions OpenClaw"),
+        ("ollama",          "mentions Ollama"),
+        ("8gb",             "hardware requirements"),
     ]
     for snippet, desc in launch_elements:
         assert snippet in readme, f"README missing: '{snippet}' ({desc})"
@@ -217,4 +228,4 @@ else:
     print("  ✓  all passed")
 print()
 if __name__ == "__main__":
-    
+    raise SystemExit(1 if failed else 0)

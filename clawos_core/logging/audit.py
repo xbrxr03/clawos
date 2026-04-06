@@ -39,6 +39,17 @@ def _get_db() -> sqlite3.Connection:
     return _db
 
 
+def close_db():
+    """Release the cached SQLite handle so temp workspaces clean up cleanly."""
+    global _db
+    if _db is not None:
+        try:
+            _db.close()
+        except Exception:
+            pass
+        _db = None
+
+
 def _load_last_hash() -> str:
     try:
         db = _get_db()

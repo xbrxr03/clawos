@@ -11,7 +11,23 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../backend/static',
+    outDir: '../../services/dashd/static',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router-dom')) return 'router'
+            return 'vendor'
+          }
+
+          if (id.includes('src/pages/pages.jsx')) return 'command-center-pages'
+          if (id.includes('src/pages/Workflows')) return 'workflows'
+          if (id.includes('src/pages/Settings')) return 'settings'
+          if (id.includes('src/pages/setup/')) return 'setup'
+          return undefined
+        },
+      },
+    },
   },
 })

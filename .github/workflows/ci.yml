@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest pyyaml aiohttp fastapi "uvicorn[standard]" click json-repair pypdf python-docx aiofiles httpx gitpython rich
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check installer scripts
+        shell: bash
+        run: |
+          bash -n install.sh
+          bash -n packaging/deb/build_deb.sh
+          bash -n packaging/install/install.sh
+          bash -n scripts/setup-launchd.sh
+          bash -n scripts/setup-systemd.sh
+
+      - name: Compile Python files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import py_compile
+          import subprocess
+
+          files = subprocess.check_output(["git", "ls-files", "*.py"], text=True).splitlines()
+          for path in files:
+              py_compile.compile(path, doraise=True)
+          print(f"compiled {len(files)} python files")
+          PY
+
+      - name: Build command center frontend
+        working-directory: dashboard/frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+          npm run build-storybook
+
+      - name: Install Playwright browser
+        working-directory: dashboard/frontend
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
+
+      - name: Run command center visual smoke
+        working-directory: dashboard/frontend
+        run: npm run test:visual
+
+      - name: Run workflow smoke tests
+        run: |
+          pytest tests/system/test_phase11.py tests/system/test_workflow_engine_platforms.py tests/system/test_platform_service_manager.py tests/system/test_desktop_integration.py tests/system/test_dashd_security.py tests/system/test_a2a_security.py tests/system/test_setupd.py tests/system/test_desktop_launcher.py
+
+      - name: Run direct acceptance scripts
+        shell: bash
+        run: |
+          export PYTHONUTF8=1
+          for script in $(ls tests/system/test_phase*.py | sort); do
+            echo "Running ${script}"
+            python "${script}"
+          done

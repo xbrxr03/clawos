@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ClawOS Command Center
+Comment=Launch the ClawOS command center on login
+Exec=python3 /opt/clawos/clients/desktop/launch_command_center.py --route / --timeout 120
+Icon=applications-system
+X-GNOME-Autostart-enabled=true
+Categories=Utility;System;

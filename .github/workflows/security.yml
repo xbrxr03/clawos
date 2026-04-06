@@ -1,0 +1,34 @@
+name: security
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 11 * * 1"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python audit tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pip-audit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        working-directory: dashboard/frontend
+        run: npm ci
+
+      - name: Run security audit
+        run: python scripts/security_audit.py
