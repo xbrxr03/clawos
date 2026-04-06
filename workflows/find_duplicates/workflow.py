@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """find-duplicates - find duplicate files via content hash."""
 
 from __future__ import annotations

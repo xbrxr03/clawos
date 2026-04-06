@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """fs.delete — delete a file or empty directory. Requires policyd score 70+."""
 from pathlib import Path
 

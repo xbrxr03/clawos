@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Response parser using json_repair (from Nanobot research)."""
 import logging
 from clawos_core.util.jsonx import safe_parse

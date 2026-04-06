@@ -211,6 +211,8 @@ export type WorkbenchSession = {
   created_at: string
 }
 
+export type TrustTier = 'trusted' | 'unverified' | 'blocked'
+
 export type PresenceProfile = {
   assistant_identity?: string
   tone?: string
@@ -277,6 +279,66 @@ export type PresencePayload = {
   profile?: PresenceProfile
   autonomy_policy?: AutonomyPolicy
   voice_session?: VoiceSession
+}
+
+export type Peer = {
+  id: string
+  url: string
+  name: string
+  trust_tier: TrustTier
+  description?: string
+  version?: string
+  capabilities?: string[]
+  skills?: string[]
+  last_seen?: string
+  last_error?: string
+  reachable?: boolean
+  added_at: string
+}
+
+export type MCPTool = {
+  name: string
+  description: string
+  server_id?: string
+  server_name?: string
+  inputSchema?: Record<string, unknown>
+  input_schema?: Record<string, unknown>
+}
+
+export type MCPResource = {
+  uri: string
+  name: string
+  description?: string
+  server_id?: string
+  server_name?: string
+  mimeType?: string
+}
+
+export type MCPServer = {
+  id: string
+  name: string
+  transport: 'stdio' | 'http'
+  command?: string[]
+  endpoint?: string
+  env?: Record<string, string>
+  enabled: boolean
+  status: 'disconnected' | 'connected' | 'error'
+  error?: string
+  tools: MCPTool[]
+  resources: MCPResource[]
+  prompts: unknown[]
+  connected_at?: string
+  added_at: string
+}
+
+export type WellKnown = {
+  id: string
+  name: string
+  description: string
+  transport: 'stdio' | 'http'
+  command_template: string[]
+  env_required?: string[]
+  category: string
 }
 
 export type OpenClawImportManifest = {
@@ -446,9 +508,9 @@ export const commandCenterApi = {
     fetchJson<{ ok?: boolean }>(`/api/studio/programs/${id}`, { method: 'DELETE' }),
   deployStudioProgram: (id: string) =>
     fetchJson<{ ok?: boolean; task_id?: string }>(`/api/studio/programs/${id}/deploy`, { method: 'POST' }),
-  listA2APeers: () => fetchJson<unknown[]>('/api/a2a/peers'),
+  listA2APeers: () => fetchJson<Peer[]>('/api/a2a/peers'),
   addA2APeer: (url: string, name = '', trust_tier = 'unverified') =>
-    fetchJson<unknown>('/api/a2a/peers', {
+    fetchJson<Peer>('/api/a2a/peers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, name, trust_tier }),
@@ -456,18 +518,18 @@ export const commandCenterApi = {
   removeA2APeer: (id: string) =>
     fetchJson<{ ok?: boolean }>(`/api/a2a/peers/${id}`, { method: 'DELETE' }),
   setA2ATrust: (id: string, trust_tier: string) =>
-    fetchJson<unknown>(`/api/a2a/peers/${id}/trust`, {
+    fetchJson<Peer>(`/api/a2a/peers/${id}/trust`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ trust_tier }),
     }),
   probeA2APeer: (id: string) =>
-    fetchJson<unknown>(`/api/a2a/peers/${id}/probe`, { method: 'POST' }),
+    fetchJson<Peer>(`/api/a2a/peers/${id}/probe`, { method: 'POST' }),
   getA2ASigningKey: () => fetchJson<{ fingerprint?: string }>('/api/a2a/signing-key'),
-  listMCPServers: () => fetchJson<unknown[]>('/api/mcp/servers'),
-  listMCPWellKnown: () => fetchJson<unknown[]>('/api/mcp/well-known'),
+  listMCPServers: () => fetchJson<MCPServer[]>('/api/mcp/servers'),
+  listMCPWellKnown: () => fetchJson<WellKnown[]>('/api/mcp/well-known'),
   addMCPServer: (params: { name: string; transport: string; command?: string[]; endpoint?: string; env?: Record<string, string> }) =>
-    fetchJson<unknown>('/api/mcp/servers', {
+    fetchJson<MCPServer>('/api/mcp/servers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
@@ -475,9 +537,9 @@ export const commandCenterApi = {
   removeMCPServer: (id: string) =>
     fetchJson<{ ok?: boolean }>(`/api/mcp/servers/${id}`, { method: 'DELETE' }),
   connectMCPServer: (id: string) =>
-    fetchJson<unknown>(`/api/mcp/servers/${id}/connect`, { method: 'POST' }),
-  listMCPTools: () => fetchJson<unknown[]>('/api/mcp/tools'),
-  listMCPResources: () => fetchJson<unknown[]>('/api/mcp/resources'),
+    fetchJson<MCPServer>(`/api/mcp/servers/${id}/connect`, { method: 'POST' }),
+  listMCPTools: () => fetchJson<MCPTool[]>('/api/mcp/tools'),
+  listMCPResources: () => fetchJson<MCPResource[]>('/api/mcp/resources'),
   callMCPTool: (server_id: string, tool: string, arguments_: Record<string, unknown> = {}) =>
     fetchJson<{ ok?: boolean; result?: unknown }>('/api/mcp/call', {
       method: 'POST',

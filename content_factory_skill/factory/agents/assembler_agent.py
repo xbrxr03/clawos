@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 assembler_agent.py — artifact validation and final package assembly.
 

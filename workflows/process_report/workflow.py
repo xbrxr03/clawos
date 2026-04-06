@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """process-report — snapshot running processes, CPU/mem usage, flag anomalies."""
 import subprocess
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus

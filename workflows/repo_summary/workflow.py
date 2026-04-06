@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """repo-summary — plain-English summary of a git repo."""
 import re
 from pathlib import Path

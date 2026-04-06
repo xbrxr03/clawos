@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Generate pre-patched openclaw.json for offline Ollama use.
 Phase 9: ctx cap at 8192 for local models, kimi-k2.5 added, qwen3 removed.

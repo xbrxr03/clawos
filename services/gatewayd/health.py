@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """gatewayd health check."""
 from services.gatewayd.service import get_service
 def health() -> dict:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS built-in shell command generator
 # Replaces the external claw-do repo dependency.
 # Entry point: tools/shell/do/cli.py

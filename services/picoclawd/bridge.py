@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 HTTP proxy: gatewayd → PicoClaw API on :18800.
 Routes inbound messages from any channel to PicoClaw's HTTP API.

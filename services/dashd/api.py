@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 dashd - Dashboard API
 =====================
@@ -7,8 +8,10 @@ and a snapshot contract that matches the bundled single-file frontend.
 import asyncio
 import logging
 import os
+import re
 import secrets
 import time
+import urllib.request
 from collections import deque
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -79,6 +82,48 @@ except ImportError:
 
     def require_auth(*_args, **_kwargs):
         return None
+
+
+_WORKBENCH_SESSIONS: deque = deque(maxlen=50)
+
+
+def _workbench_fetch(url: str, timeout: int = 12) -> dict:
+    """Fetch a URL server-side and return extracted title, text, and links."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("Only http and https URLs are supported")
+
+    req = urllib.request.Request(url, headers={"User-Agent": "ClawOS-Workbench/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        raw = resp.read(512 * 1024)
+
+    try:
+        html = raw.decode("utf-8", errors="replace")
+    except Exception:
+        html = raw.decode("latin-1", errors="replace")
+
+    title_m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+    title = re.sub(r"\s+", " ", title_m.group(1)).strip() if title_m else parsed.netloc
+    title = title[:200]
+
+    links_raw = re.findall(r'href=["\']([^"\'#?][^"\']*)["\']', html)
+    links = list(dict.fromkeys(ln for ln in links_raw if ln.startswith("http")))[:20]
+
+    clean = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    clean = re.sub(r"<style[^>]*>.*?</style>", " ", clean, flags=re.DOTALL | re.IGNORECASE)
+    clean = re.sub(r"<[^>]+>", " ", clean)
+    clean = re.sub(r"&[a-z#0-9]+;", " ", clean)
+    clean = re.sub(r"[ \t]{2,}", " ", clean)
+    clean = re.sub(r"\n{3,}", "\n\n", clean).strip()
+
+    return {
+        "url": url,
+        "title": title,
+        "text": clean[:8000],
+        "links": links,
+        "word_count": len(clean.split()),
+        "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
 
 
 @dataclass(frozen=True)
@@ -1245,6 +1290,393 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 }
             )
             raise HTTPException(status_code=500, detail=str(exc))
+
+    @app.post("/api/workbench/fetch", dependencies=[Depends(require_auth)])
+    async def workbench_fetch(body: dict | None = None):
+        url = str((body or {}).get("url", "")).strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="url required")
+        try:
+            page = await asyncio.get_event_loop().run_in_executor(None, _workbench_fetch, url)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Fetch failed: {exc}")
+        return page
+
+    @app.post("/api/workbench/research", dependencies=[Depends(require_auth)])
+    async def workbench_research(body: dict | None = None):
+        payload = body or {}
+        query = str(payload.get("query", "")).strip()
+        url = str(payload.get("url", "")).strip()
+        workspace = str(payload.get("workspace", DEFAULT_WORKSPACE))
+        if not query and not url:
+            raise HTTPException(status_code=400, detail="query or url required")
+
+        page: dict | None = None
+        if url:
+            try:
+                page = await asyncio.get_event_loop().run_in_executor(None, _workbench_fetch, url)
+            except Exception:
+                page = None
+
+        context_parts = []
+        if query:
+            context_parts.append(f"Research task: {query}")
+        if url:
+            context_parts.append(f"Source URL: {url}")
+        if page:
+            context_parts.append(f"Page title: {page['title']}")
+            context_parts.append(f"Page content:\n{page['text'][:4000]}")
+        intent = "\n\n".join(context_parts)
+
+        session_id = secrets.token_urlsafe(8)
+        session: dict = {
+            "id": session_id,
+            "query": query or url,
+            "url": url,
+            "status": "submitted",
+            "page": page,
+            "task_id": None,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+
+        try:
+            from services.agentd.service import get_manager
+            task = await get_manager().submit(intent, workspace_id=workspace, channel="workbench")
+            session["task_id"] = task.task_id
+            session["status"] = "analyzing"
+        except Exception:
+            session["status"] = "error"
+
+        _WORKBENCH_SESSIONS.appendleft(session)
+        record_trace(
+            make_trace(
+                title=f"Workbench research: {(query or url)[:60]}",
+                category="workbench",
+                status="completed" if session["task_id"] else "warning",
+                tools=["workbench.research"],
+                metadata={"url": url, "has_page": page is not None},
+            )
+        )
+        return {"ok": bool(session["task_id"]), "session": session}
+
+    @app.get("/api/workbench/sessions", dependencies=[Depends(require_auth)])
+    async def workbench_sessions():
+        return list(_WORKBENCH_SESSIONS)
+
+    # ── Research engine ────────────────────────────────────────────────────────
+
+    @app.post("/api/research/start", dependencies=[Depends(require_auth)])
+    async def research_start(body: dict | None = None):
+        payload = body or {}
+        query = str(payload.get("query", "")).strip()
+        seed_urls = [str(u) for u in (payload.get("seed_urls") or []) if u]
+        provider_override = str(payload.get("provider", "")).strip() or None
+        api_key_override = str(payload.get("api_key", "")).strip() or None
+        workspace = str(payload.get("workspace", DEFAULT_WORKSPACE))
+        if not query and not seed_urls:
+            raise HTTPException(status_code=400, detail="query or seed_urls required")
+
+        from services.researchd.engine import get_engine as get_research_engine
+        eng = get_research_engine()
+        session = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: eng.start_session(query or seed_urls[0], seed_urls, provider_override, api_key_override)
+        )
+        session = await asyncio.get_event_loop().run_in_executor(None, eng.fetch_sources, session)
+
+        try:
+            from services.agentd.service import get_manager
+            intent = eng.build_agent_intent(session)
+            task = await get_manager().submit(intent, workspace_id=workspace, channel="research")
+            eng.mark_done(session, task_id=task.task_id)
+        except Exception as exc:
+            log.warning("Research agent submit failed: %s", exc)
+            eng.mark_error(session, str(exc))
+
+        record_trace(
+            make_trace(
+                title=f"Research: {(query or seed_urls[0])[:60]}",
+                category="research",
+                status="completed" if session.status == "done" else "warning",
+                tools=["researchd.start"],
+                metadata={
+                    "provider": session.provider,
+                    "sources": len(session.sources),
+                    "citations": len(session.citations),
+                },
+            )
+        )
+        return session.to_dict()
+
+    @app.get("/api/research/sessions", dependencies=[Depends(require_auth)])
+    async def research_sessions():
+        from services.researchd.engine import ResearchSession
+        return ResearchSession.list_all()
+
+    @app.get("/api/research/sessions/{session_id}", dependencies=[Depends(require_auth)])
+    async def research_session_detail(session_id: str):
+        from services.researchd.engine import ResearchSession
+        session = ResearchSession.load(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session.to_dict()
+
+    @app.post("/api/research/sessions/{session_id}/resume", dependencies=[Depends(require_auth)])
+    async def research_resume(session_id: str, body: dict | None = None):
+        workspace = str((body or {}).get("workspace", DEFAULT_WORKSPACE))
+        from services.researchd.engine import get_engine as get_research_engine
+        eng = get_research_engine()
+        session = eng.resume_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        session = await asyncio.get_event_loop().run_in_executor(None, eng.fetch_sources, session)
+        try:
+            from services.agentd.service import get_manager
+            intent = eng.build_agent_intent(session)
+            task = await get_manager().submit(intent, workspace_id=workspace, channel="research")
+            eng.mark_done(session, task_id=task.task_id)
+        except Exception as exc:
+            eng.mark_error(session, str(exc))
+        return session.to_dict()
+
+    @app.post("/api/research/sessions/{session_id}/pause", dependencies=[Depends(require_auth)])
+    async def research_pause(session_id: str):
+        from services.researchd.engine import get_engine as get_research_engine
+        ok = get_research_engine().pause_session(session_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {"ok": True}
+
+    @app.delete("/api/research/sessions/{session_id}", dependencies=[Depends(require_auth)])
+    async def research_delete(session_id: str):
+        from services.researchd.engine import get_engine as get_research_engine
+        ok = get_research_engine().delete_session(session_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {"ok": True}
+
+    # ── Pack Studio ───────────────────────────────────────────────────────────
+
+    @app.get("/api/studio/programs", dependencies=[Depends(require_auth)])
+    async def studio_list_programs():
+        from clawos_core.catalog import list_workflow_programs
+        return [p.to_dict() for p in list_workflow_programs()]
+
+    @app.post("/api/studio/programs", dependencies=[Depends(require_auth)])
+    async def studio_save_program(body: dict | None = None):
+        from clawos_core.catalog import save_workflow_program
+        payload = body or {}
+        if not payload.get("id") or not payload.get("name"):
+            raise HTTPException(status_code=400, detail="id and name required")
+        result = save_workflow_program(payload)
+        record_trace(
+            make_trace(
+                title=f"Studio: saved program {payload.get('name')}",
+                category="studio",
+                status="completed",
+                tools=["studio.save"],
+                metadata={"program_id": payload.get("id")},
+            )
+        )
+        return result
+
+    @app.delete("/api/studio/programs/{program_id}", dependencies=[Depends(require_auth)])
+    async def studio_delete_program(program_id: str):
+        from clawos_core.catalog import delete_workflow_program
+        ok = delete_workflow_program(program_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Program not found")
+        return {"ok": True}
+
+    @app.post("/api/studio/programs/{program_id}/deploy", dependencies=[Depends(require_auth)])
+    async def studio_deploy_program(program_id: str):
+        from clawos_core.catalog import get_workflow_program
+        program = get_workflow_program(program_id)
+        if not program:
+            raise HTTPException(status_code=404, detail="Program not found")
+        # Build intent from program nodes and submit to agentd
+        intent = f"Execute workflow program: {program.name}\n\n{program.summary or ''}"
+        if program.checkpoints:
+            intent += "\n\nSteps:\n" + "\n".join(f"  - {step}" for step in program.checkpoints)
+        try:
+            from services.agentd.service import get_manager
+            task = await get_manager().submit(intent, workspace_id=DEFAULT_WORKSPACE, channel="studio")
+            return {"ok": True, "task_id": task.task_id, "program": program.to_dict()}
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+
+    # ── A2A federation peer management ────────────────────────────────────────
+
+    @app.get("/api/a2a/peers", dependencies=[Depends(require_auth)])
+    async def a2a_list_peers():
+        from services.a2ad.peer_registry import get_registry
+        return get_registry().list_peers()
+
+    @app.post("/api/a2a/peers", dependencies=[Depends(require_auth)])
+    async def a2a_add_peer(body: dict | None = None):
+        payload = body or {}
+        url = str(payload.get("url", "")).strip()
+        name = str(payload.get("name", "")).strip()
+        trust_tier = str(payload.get("trust_tier", "unverified")).strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="url required")
+        from services.a2ad.peer_registry import get_registry
+        peer = get_registry().add_peer(url, name=name, trust_tier=trust_tier)
+        return peer.to_dict()
+
+    @app.delete("/api/a2a/peers/{peer_id}", dependencies=[Depends(require_auth)])
+    async def a2a_remove_peer(peer_id: str):
+        from services.a2ad.peer_registry import get_registry
+        ok = get_registry().remove_peer(peer_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Peer not found")
+        return {"ok": True}
+
+    @app.post("/api/a2a/peers/{peer_id}/trust", dependencies=[Depends(require_auth)])
+    async def a2a_set_trust(peer_id: str, body: dict | None = None):
+        trust_tier = str((body or {}).get("trust_tier", "trusted")).strip()
+        from services.a2ad.peer_registry import get_registry
+        peer = get_registry().set_trust(peer_id, trust_tier)
+        if not peer:
+            raise HTTPException(status_code=404, detail="Peer not found or invalid trust tier")
+        return peer.to_dict()
+
+    @app.post("/api/a2a/peers/{peer_id}/probe", dependencies=[Depends(require_auth)])
+    async def a2a_probe_peer(peer_id: str):
+        from services.a2ad.peer_registry import get_registry
+        try:
+            peer = await asyncio.get_event_loop().run_in_executor(
+                None, get_registry().probe_peer, peer_id
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        return peer.to_dict()
+
+    @app.get("/api/a2a/signing-key", dependencies=[Depends(require_auth)])
+    async def a2a_signing_key_info():
+        from services.a2ad.peer_registry import get_registry
+        return {"fingerprint": get_registry().get_signing_key_fingerprint()}
+
+    # ── MCP manager ───────────────────────────────────────────────────────────
+
+    @app.get("/api/mcp/servers", dependencies=[Depends(require_auth)])
+    async def mcp_list_servers():
+        from services.mcpd.service import get_service as get_mcp
+        return get_mcp().list_servers()
+
+    @app.get("/api/mcp/well-known", dependencies=[Depends(require_auth)])
+    async def mcp_well_known():
+        from services.mcpd.service import MCPService
+        return MCPService.WELL_KNOWN
+
+    @app.post("/api/mcp/servers", dependencies=[Depends(require_auth)])
+    async def mcp_add_server(body: dict | None = None):
+        payload = body or {}
+        name = str(payload.get("name", "")).strip()
+        transport = str(payload.get("transport", "stdio")).strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="name required")
+        if transport not in ("stdio", "http"):
+            raise HTTPException(status_code=400, detail="transport must be stdio or http")
+        command = payload.get("command") or []
+        endpoint = str(payload.get("endpoint", "")).strip()
+        env = dict(payload.get("env") or {})
+        if transport == "stdio" and not command:
+            raise HTTPException(status_code=400, detail="command required for stdio transport")
+        if transport == "http" and not endpoint:
+            raise HTTPException(status_code=400, detail="endpoint required for http transport")
+        from services.mcpd.service import get_service as get_mcp
+        cfg = get_mcp().add_server(name, transport, command=command, endpoint=endpoint, env=env)
+        return cfg.to_dict()
+
+    @app.delete("/api/mcp/servers/{server_id}", dependencies=[Depends(require_auth)])
+    async def mcp_remove_server(server_id: str):
+        from services.mcpd.service import get_service as get_mcp
+        ok = get_mcp().remove_server(server_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Server not found")
+        return {"ok": True}
+
+    @app.patch("/api/mcp/servers/{server_id}", dependencies=[Depends(require_auth)])
+    async def mcp_update_server(server_id: str, body: dict | None = None):
+        from services.mcpd.service import get_service as get_mcp
+        cfg = get_mcp().update_server(server_id, body or {})
+        if not cfg:
+            raise HTTPException(status_code=404, detail="Server not found")
+        return cfg.to_dict()
+
+    @app.post("/api/mcp/servers/{server_id}/connect", dependencies=[Depends(require_auth)])
+    async def mcp_connect_server(server_id: str):
+        from services.mcpd.service import get_service as get_mcp
+        try:
+            cfg = await get_mcp().connect(server_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        record_trace(
+            make_trace(
+                title=f"MCP connect: {cfg.name}",
+                category="mcp",
+                status="completed" if cfg.status == "connected" else "warning",
+                tools=["mcpd.connect"],
+                metadata={"server": cfg.name, "transport": cfg.transport, "tools": len(cfg.tools)},
+            )
+        )
+        return cfg.to_dict()
+
+    @app.get("/api/mcp/tools", dependencies=[Depends(require_auth)])
+    async def mcp_list_tools():
+        from services.mcpd.service import get_service as get_mcp
+        return get_mcp().list_all_tools()
+
+    @app.get("/api/mcp/resources", dependencies=[Depends(require_auth)])
+    async def mcp_list_resources():
+        from services.mcpd.service import get_service as get_mcp
+        return get_mcp().list_all_resources()
+
+    @app.post("/api/mcp/call", dependencies=[Depends(require_auth)])
+    async def mcp_call_tool(body: dict | None = None):
+        payload = body or {}
+        server_id = str(payload.get("server_id", "")).strip()
+        tool_name = str(payload.get("tool", "")).strip()
+        arguments = dict(payload.get("arguments") or {})
+        if not server_id or not tool_name:
+            raise HTTPException(status_code=400, detail="server_id and tool required")
+        from services.mcpd.service import get_service as get_mcp
+        try:
+            result = await get_mcp().call_tool(server_id, tool_name, arguments)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        record_trace(
+            make_trace(
+                title=f"MCP tool call: {tool_name}",
+                category="mcp",
+                status="completed",
+                tools=[f"mcp.{tool_name}"],
+                metadata={"server_id": server_id, "tool": tool_name},
+            )
+        )
+        return {"ok": True, "result": result}
+
+    @app.post("/api/mcp/resources/read", dependencies=[Depends(require_auth)])
+    async def mcp_read_resource(body: dict | None = None):
+        payload = body or {}
+        server_id = str(payload.get("server_id", "")).strip()
+        uri = str(payload.get("uri", "")).strip()
+        if not server_id or not uri:
+            raise HTTPException(status_code=400, detail="server_id and uri required")
+        from services.mcpd.service import get_service as get_mcp
+        try:
+            result = await get_mcp().read_resource(server_id, uri)
+        except (ValueError, RuntimeError) as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        return {"ok": True, "content": result}
 
     @app.websocket("/ws")
     async def ws_endpoint(websocket: WebSocket):

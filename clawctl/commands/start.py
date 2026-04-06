@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl start — start ClawOS services."""
 import subprocess
 import sys

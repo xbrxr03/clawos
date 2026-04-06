@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl status — show all service health, nicely."""
 import subprocess
 import urllib.request

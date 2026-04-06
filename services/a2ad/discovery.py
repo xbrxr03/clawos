@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 mDNS publish + peer discovery via avahi / zeroconf.
 Publishes _clawos._tcp.local and scans for other ClawOS nodes on LAN.

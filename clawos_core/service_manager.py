@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 User service-manager helpers for ClawOS.
 Supports systemd user services on Linux and launchd LaunchAgents on macOS.

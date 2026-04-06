@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Per-workspace token budgets.
 Reads from configs/defaults.yaml metricd.budget section.

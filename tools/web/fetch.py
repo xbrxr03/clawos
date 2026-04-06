@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """web.fetch — fetch URL content. Returns text, strips HTML. Max 100KB."""
 import re
 import urllib.request

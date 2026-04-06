@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 visual_agent.py — image generation via Pollinations.ai.
 

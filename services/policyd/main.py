@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """policyd entry point."""
 import asyncio, logging, sys
 logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s %(message)s")

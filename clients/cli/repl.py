@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Nexus — interactive REPL
 Demo-ready TUI with colours, typing indicator, clean layout.

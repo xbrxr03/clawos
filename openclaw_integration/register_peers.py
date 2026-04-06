@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Register Nexus and RAGd as A2A peers in the running OpenClaw gateway."""
 import json
 from pathlib import Path

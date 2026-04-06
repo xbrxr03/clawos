@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 job_store.py — all reads and writes to job.json files.
 

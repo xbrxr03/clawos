@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Screen 3 — Runtime choice: multi-select for Nexus / PicoClaw / OpenClaw.
 Shows detected hardware tier and pre-selects the recommended combination.
 Saves selections to state.runtimes as a list.

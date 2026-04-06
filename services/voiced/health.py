@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """voiced health check."""
 from services.voiced.service import get_service
 def health() -> dict:

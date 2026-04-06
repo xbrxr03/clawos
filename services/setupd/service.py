@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 setupd - reusable setup backend for ClawOS Setup.
 """

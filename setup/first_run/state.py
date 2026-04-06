@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """WizardState — persisted across all wizard screens."""
 import json
 from dataclasses import dataclass, field, asdict

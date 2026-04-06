@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Span exporter — writes TokenUsage spans to local JSONL.
 Optional OTLP remote export when configured.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS Key Registry — single source of truth for all API keys.
 Every key ClawOS knows about is defined here.

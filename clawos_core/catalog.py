@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Static product catalog and competitive-platform helpers for ClawOS.
 """
@@ -11,7 +12,9 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from clawos_core.constants import DEFAULT_MODEL, OTEL_JSONL, TRACES_JSONL
+from clawos_core.constants import CONFIG_DIR, DEFAULT_MODEL, OTEL_JSONL, TRACES_JSONL
+
+_STUDIO_DIR = CONFIG_DIR / "studio" / "programs"
 from clawos_core.models import (
     EvalSuite,
     ExtensionManifest,
@@ -373,7 +376,8 @@ def get_extension(extension_id: str) -> ExtensionManifest | None:
 
 
 def list_workflow_programs() -> list[WorkflowProgram]:
-    return [
+    user_programs = _load_user_programs()
+    builtin = [
         WorkflowProgram(
             id="program-daily-briefing",
             name="Daily Briefing Loop",
@@ -402,6 +406,49 @@ def list_workflow_programs() -> list[WorkflowProgram]:
             triggers=["manual", "scheduled-overnight"],
         ),
     ]
+    user_ids = {p.id for p in user_programs}
+    return user_programs + [p for p in builtin if p.id not in user_ids]
+
+
+def _load_user_programs() -> list[WorkflowProgram]:
+    if not _STUDIO_DIR.exists():
+        return []
+    programs = []
+    for path in sorted(_STUDIO_DIR.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            programs.append(WorkflowProgram(**{
+                k: v for k, v in data.items()
+                if k in WorkflowProgram.__dataclass_fields__
+            }))
+        except Exception:
+            continue
+    return programs
+
+
+def get_workflow_program(program_id: str) -> WorkflowProgram | None:
+    for p in list_workflow_programs():
+        if p.id == program_id:
+            return p
+    return None
+
+
+def save_workflow_program(data: dict) -> dict:
+    _STUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    program_id = str(data.get("id", "")).strip()
+    if not program_id:
+        raise ValueError("id required")
+    path = _STUDIO_DIR / f"{program_id}.json"
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return data
+
+
+def delete_workflow_program(program_id: str) -> bool:
+    path = _STUDIO_DIR / f"{program_id}.json"
+    if path.exists():
+        path.unlink()
+        return True
+    return False
 
 
 def list_eval_suites() -> list[EvalSuite]:

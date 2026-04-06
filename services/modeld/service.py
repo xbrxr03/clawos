@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """modeld — model routing + profile management."""
 import logging
 from clawos_core.constants import MODEL_PROFILES, DEFAULT_MODEL

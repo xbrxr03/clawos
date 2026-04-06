@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Screen — user_profile: ask what the user mainly uses this machine for."""
 
 _PROFILES = [

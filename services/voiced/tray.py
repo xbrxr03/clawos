@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 System tray indicator for voice state.
 States: sleeping → listening → thinking → speaking
