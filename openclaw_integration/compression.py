@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS token compression for OpenClaw + cloud model users.
 Installs and manages Headroom (context proxy) and RTK (CLI output compression).

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Phase 10 tests — Key Vault, Runtime Selector, OpenRouter config, Dashboard runtime status.
 All tests run without a live LLM, live API keys, or live OpenClaw instance.

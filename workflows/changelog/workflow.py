@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """changelog — human-readable changelog from git log between two tags."""
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus
 

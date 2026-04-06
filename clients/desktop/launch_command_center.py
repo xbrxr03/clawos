@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Launch the local ClawOS Command Center in the user's browser.
 

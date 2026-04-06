@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS Doctor — diagnose issues and suggest fixes.
 Checks dependencies, service-manager status, and core runtime files.

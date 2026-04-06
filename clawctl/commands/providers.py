@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl providers - inspect, test, and switch provider profiles."""
 from __future__ import annotations
 

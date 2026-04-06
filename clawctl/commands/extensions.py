@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl extensions - inspect and install trusted ClawOS extensions."""
 from __future__ import annotations
 

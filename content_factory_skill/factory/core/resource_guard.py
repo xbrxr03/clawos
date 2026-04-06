@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 resource_guard.py — enforces resource limits on the 8GB single-machine target.
 

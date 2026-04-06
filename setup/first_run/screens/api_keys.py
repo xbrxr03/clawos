@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Screen — API Keys.
 Runs after runtime_choice. Shows all keys from the registry filtered to the user's tier.
 Masks input. Runs place_all() with everything provided.

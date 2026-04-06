@@ -17,6 +17,11 @@ const ProvidersPage = lazy(() => import('./pages/Providers').then((mod) => ({ de
 const RegistryPage = lazy(() => import('./pages/Registry').then((mod) => ({ default: mod.RegistryPage })))
 const TracesPage = lazy(() => import('./pages/Traces').then((mod) => ({ default: mod.TracesPage })))
 const WorkflowsPage = lazy(() => import('./pages/Workflows').then((mod) => ({ default: mod.Workflows })))
+const WorkbenchPage = lazy(() => import('./pages/Workbench').then((mod) => ({ default: mod.WorkbenchPage })))
+const ResearchPage = lazy(() => import('./pages/Research').then((mod) => ({ default: mod.ResearchPage })))
+const MCPManagerPage = lazy(() => import('./pages/MCPManager').then((mod) => ({ default: mod.MCPManagerPage })))
+const FederationPage = lazy(() => import('./pages/Federation').then((mod) => ({ default: mod.FederationPage })))
+const StudioPage = lazy(() => import('./pages/Studio').then((mod) => ({ default: mod.StudioPage })))
 const SettingsPage = lazy(() => import('./pages/Settings').then((mod) => ({ default: mod.SettingsPage })))
 const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => ({ default: mod.SetupPage })))
 
@@ -81,6 +86,11 @@ function ShellRoutes({
         <Route path="/audit" element={<AuditPage events={events} />} />
         <Route path="/agents" element={<AgentsPage events={events} runtimes={runtimes} />} />
         <Route path="/command" element={<NexusCommandPage />} />
+        <Route path="/workbench" element={<WorkbenchPage />} />
+        <Route path="/research" element={<ResearchPage />} />
+        <Route path="/mcp" element={<MCPManagerPage />} />
+        <Route path="/federation" element={<FederationPage />} />
+        <Route path="/studio" element={<StudioPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </Suspense>

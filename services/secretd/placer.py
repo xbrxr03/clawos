@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Key placement engine.
 Given a dict of {key_id: value}, writes each key to all its registered locations.

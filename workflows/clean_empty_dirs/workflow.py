@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clean-empty-dirs - recursively find and optionally remove empty directories."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl logs — tail ClawOS logs."""
 import subprocess
 from pathlib import Path

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """find-todos - scan code for TODO/FIXME/HACK comments."""
 
 from __future__ import annotations

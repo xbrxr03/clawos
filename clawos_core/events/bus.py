@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS event bus — lightweight asyncio pub/sub.
 All services publish events here. Dashboard subscribes via WebSocket.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """agentd health check."""
 from services.agentd.service import get_manager
 def health() -> dict:

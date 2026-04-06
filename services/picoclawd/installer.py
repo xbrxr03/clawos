@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Download PicoClaw binary for this architecture from GitHub releases.
 Only runs on ARM hardware (Tier A detection).

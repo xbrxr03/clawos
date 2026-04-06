@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Pydantic models for config validation."""
 from typing import Optional
 try:

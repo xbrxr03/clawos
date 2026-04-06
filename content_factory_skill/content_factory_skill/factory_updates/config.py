@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 config.py — all paths and runtime constants for the factory.
 Every other module imports from here; nothing hardcodes paths directly.

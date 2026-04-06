@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 writer_agent.py — script and visual prompt generation via Ollama.
 

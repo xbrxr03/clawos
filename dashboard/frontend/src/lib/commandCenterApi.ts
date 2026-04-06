@@ -154,6 +154,56 @@ export type EvalSuite = {
   active?: boolean
 }
 
+export type Citation = {
+  url: string
+  title: string
+  excerpt: string
+  relevance: 'primary' | 'supporting' | 'tangential'
+}
+
+export type ResearchSource = {
+  url: string
+  title: string
+  snippet: string
+  text?: string
+  fetched: boolean
+  error?: string
+}
+
+export type ResearchSession = {
+  id: string
+  query: string
+  status: 'running' | 'paused' | 'done' | 'error'
+  provider: string
+  sources: ResearchSource[]
+  citations: Citation[]
+  summary?: string
+  task_id?: string
+  source_count?: number
+  citation_count?: number
+  created_at: string
+  updated_at: string
+}
+
+export type WorkbenchPage = {
+  url: string
+  title: string
+  text: string
+  links: string[]
+  word_count: number
+  fetched_at: string
+}
+
+export type WorkbenchSession = {
+  id: string
+  query: string
+  url?: string
+  status: 'submitted' | 'analyzing' | 'done' | 'error'
+  page?: WorkbenchPage
+  task_id?: string
+  created_at: string
+}
+
 export type OpenClawImportManifest = {
   source_path?: string
   config_path?: string
@@ -275,6 +325,90 @@ export const commandCenterApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ peer_url, intent, workspace }),
     }),
+  listStudioPrograms: () => fetchJson<unknown[]>('/api/studio/programs'),
+  saveStudioProgram: (program: Record<string, unknown>) =>
+    fetchJson<unknown>('/api/studio/programs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(program),
+    }),
+  deleteStudioProgram: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/studio/programs/${id}`, { method: 'DELETE' }),
+  deployStudioProgram: (id: string) =>
+    fetchJson<{ ok?: boolean; task_id?: string }>(`/api/studio/programs/${id}/deploy`, { method: 'POST' }),
+  listA2APeers: () => fetchJson<unknown[]>('/api/a2a/peers'),
+  addA2APeer: (url: string, name = '', trust_tier = 'unverified') =>
+    fetchJson<unknown>('/api/a2a/peers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, name, trust_tier }),
+    }),
+  removeA2APeer: (id: string) => fetchJson<{ ok?: boolean }>(`/api/a2a/peers/${id}`, { method: 'DELETE' }),
+  setA2ATrust: (id: string, trust_tier: string) =>
+    fetchJson<unknown>(`/api/a2a/peers/${id}/trust`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trust_tier }),
+    }),
+  probeA2APeer: (id: string) =>
+    fetchJson<unknown>(`/api/a2a/peers/${id}/probe`, { method: 'POST' }),
+  getA2ASigningKey: () => fetchJson<{ fingerprint?: string }>('/api/a2a/signing-key'),
+  listMCPServers: () => fetchJson<unknown[]>('/api/mcp/servers'),
+  listMCPWellKnown: () => fetchJson<unknown[]>('/api/mcp/well-known'),
+  addMCPServer: (params: { name: string; transport: string; command?: string[]; endpoint?: string; env?: Record<string, string> }) =>
+    fetchJson<unknown>('/api/mcp/servers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }),
+  removeMCPServer: (id: string) => fetchJson<{ ok?: boolean }>(`/api/mcp/servers/${id}`, { method: 'DELETE' }),
+  connectMCPServer: (id: string) =>
+    fetchJson<unknown>(`/api/mcp/servers/${id}/connect`, { method: 'POST' }),
+  listMCPTools: () => fetchJson<unknown[]>('/api/mcp/tools'),
+  listMCPResources: () => fetchJson<unknown[]>('/api/mcp/resources'),
+  callMCPTool: (server_id: string, tool: string, arguments_: Record<string, unknown> = {}) =>
+    fetchJson<{ ok?: boolean; result?: unknown }>('/api/mcp/call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server_id, tool, arguments: arguments_ }),
+    }),
+  readMCPResource: (server_id: string, uri: string) =>
+    fetchJson<{ ok?: boolean; content?: unknown }>('/api/mcp/resources/read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server_id, uri }),
+    }),
+  startResearch: (params: { query?: string; seed_urls?: string[]; provider?: string; api_key?: string; workspace?: string }) =>
+    fetchJson<ResearchSession>('/api/research/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }),
+  listResearchSessions: () => fetchJson<ResearchSession[]>('/api/research/sessions'),
+  getResearchSession: (id: string) => fetchJson<ResearchSession>(`/api/research/sessions/${id}`),
+  resumeResearchSession: (id: string, workspace = 'nexus_default') =>
+    fetchJson<ResearchSession>(`/api/research/sessions/${id}/resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace }),
+    }),
+  pauseResearchSession: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/research/sessions/${id}/pause`, { method: 'POST' }),
+  deleteResearchSession: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/research/sessions/${id}`, { method: 'DELETE' }),
+  workbenchFetch: (url: string) =>
+    fetchJson<WorkbenchPage>('/api/workbench/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    }),
+  workbenchResearch: (query: string, url = '', workspace = 'nexus_default') =>
+    fetchJson<{ ok?: boolean; session?: WorkbenchSession }>('/api/workbench/research', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, url, workspace }),
+    }),
+  listWorkbenchSessions: () => fetchJson<WorkbenchSession[]>('/api/workbench/sessions'),
   listWorkflows: (params: { category?: string; search?: string } = {}) => {
     const query = new URLSearchParams()
     if (params.category && params.category !== 'all') query.set('category', params.category)

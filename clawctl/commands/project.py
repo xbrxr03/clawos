@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl project — document ingestion and RAG pipeline."""
 from pathlib import Path
 

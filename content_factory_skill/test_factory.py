@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #!/usr/bin/env python3
 """test_factory.py — preflight tests. Usage: python3 test_factory.py [--quick] [--full]"""
 import argparse, json, os, subprocess, sys, tempfile

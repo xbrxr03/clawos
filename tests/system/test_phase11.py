@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Phase 11 tests — Beginner Workflows & Capability Discovery.
 All tests run without a live LLM or Ollama instance.

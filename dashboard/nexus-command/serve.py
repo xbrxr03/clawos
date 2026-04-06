@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Serve openclaw-office rebranded as Nexus Command."""
 import os
 import subprocess
