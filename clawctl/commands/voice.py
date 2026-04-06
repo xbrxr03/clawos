@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl voice — manage voice pipeline."""
 import shutil, subprocess
 from clawctl.ui.banner import success, error, info

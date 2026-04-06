@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl whatsapp — manage WhatsApp gateway."""
 from pathlib import Path
 from clawos_core.constants import CONFIG_DIR

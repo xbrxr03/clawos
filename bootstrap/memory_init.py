@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Initialise memory backends — FTS5 + ChromaDB (if available)."""
 import sqlite3
 from pathlib import Path

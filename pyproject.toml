@@ -7,7 +7,7 @@ name = "clawos"
 version = "0.1.0"
 description = "ClawOS - local-first AI agent OS"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.10"
 keywords = ["ai", "agent", "llm", "ollama", "local", "offline"]
 

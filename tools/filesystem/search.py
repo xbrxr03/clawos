@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """fs.search — grep-style search across workspace files."""
 import re
 from pathlib import Path

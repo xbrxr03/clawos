@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 openWakeWord integration — hey_jarvis.onnx as "Hey Nexus" trigger.
 Ships with the pre-trained hey_jarvis model (phonetically close enough).

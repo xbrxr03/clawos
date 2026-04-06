@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 monitor_agent.py — system telemetry collection + HTTP health endpoint.
 

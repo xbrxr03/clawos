@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Local policy adapter — thin wrapper around PolicyEngine.
 Used by toolbridge and agentd to check permissions.

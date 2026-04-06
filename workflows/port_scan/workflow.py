@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """port-scan — list all open ports on local machine."""
 import subprocess
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus

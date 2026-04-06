@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """organize-downloads — sort ~/Downloads by file type into subfolders."""
 import re
 from pathlib import Path

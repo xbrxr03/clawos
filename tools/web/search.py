@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """web.search — DuckDuckGo search. No API key. Returns top 5 results as JSON."""
 import json
 import urllib.request

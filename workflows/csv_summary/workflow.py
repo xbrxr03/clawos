@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """csv-summary — load CSV, generate stats."""
 from pathlib import Path
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus

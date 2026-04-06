@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Workflow loading and execution for built-in ClawOS workflows.
 

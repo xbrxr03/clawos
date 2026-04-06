@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """json-explorer — pretty-print and summarize structure of a JSON file."""
 from pathlib import Path
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus

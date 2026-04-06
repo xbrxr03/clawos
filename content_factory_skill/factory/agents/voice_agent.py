@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """voice_agent.py — Piper TTS narration. Reads script.txt, produces voice.wav."""
 import os
 import re

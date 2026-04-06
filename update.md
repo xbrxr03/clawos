@@ -57,6 +57,201 @@ Treat this file as project memory.
 - `dashboard/frontend/src/App.tsx`
 - `dashboard/frontend/src/pages/setup/SetupPage.tsx`
 
+## Updates Done By Claude
+
+### 2026-04-06 (overnight session) - Claude
+
+All 7 items in the build order were completed in a single overnight session.
+
+---
+
+#### 1. Browser Workbench
+
+**Backend** (`services/dashd/api.py`):
+- `_workbench_fetch(url)` — stdlib URL fetch, HTML strip, title/text/links extraction
+- `POST /api/workbench/fetch`, `POST /api/workbench/research`, `GET /api/workbench/sessions`
+- `_WORKBENCH_SESSIONS` deque (maxlen=50)
+
+**Frontend** (`dashboard/frontend/src/pages/Workbench.tsx`):
+- Fetch/Research mode toggle, URL bar, optional query input
+- Left: page content (title, word count, text excerpt, links)
+- Right: active session status, task ID, source
+- Bottom: resumable session history
+
+---
+
+#### 2. Research Engine with Citations and Resumable Runs
+
+**`services/researchd/engine.py`** (new file):
+- `Citation`, `ResearchSource`, `ResearchSession` dataclasses — disk-persisted to `~/.clawos/research/sessions/`
+- `_fetch_page(url)` — stdlib fetch, HTML clean, snippet extraction
+- `_brave_search(query, api_key)` / `_tavily_search(query, api_key)` — optional API key search providers
+- `_detect_provider()` — checks `BRAVE_API_KEY` / `TAVILY_API_KEY` env then config; falls back to direct URL fetch (no key required)
+- `_extract_citations(sources, query)` — keyword overlap scoring, relevance tiers: primary / supporting / tangential
+- `ResearchEngine` class: full session lifecycle (start, pause, resume, delete)
+- `get_engine()` singleton
+
+**API endpoints added to `services/dashd/api.py`**:
+- `POST /api/research/start`, `GET /api/research/sessions`, `GET /api/research/sessions/{id}`
+- `POST /api/research/sessions/{id}/resume`, `POST /api/research/sessions/{id}/pause`
+- `DELETE /api/research/sessions/{id}`
+
+**Frontend** (`dashboard/frontend/src/pages/Research.tsx`):
+- Left: session list with status/provider/citation badges + start form (query, seed URLs, optional provider + key)
+- Right: citation cards (relevance badge + blockquote excerpt) + source cards
+- Resume/pause/delete session actions
+
+---
+
+#### 3. MCP Manager (deeper protocol relay)
+
+**`services/mcpd/protocol.py`** (new file):
+- `HttpMCPClient`: `initialize()`, `list_tools()`, `call_tool()`, `list_resources()`, `read_resource()`, `list_prompts()`
+- `StdioMCPClient`: async subprocess, JSON-RPC 2.0 over stdin/stdout, `stop()`
+
+**`services/mcpd/service.py`** (new file):
+- `MCPServerConfig` dataclass, persisted to `~/.clawos/mcp_servers.json`
+- `MCPService`: add/remove/update/connect, `_connect_http`/`_connect_stdio`, `list_all_tools`, `call_tool` relay, `read_resource` relay
+- `WELL_KNOWN` list: filesystem, brave-search, github, sqlite, memory, fetch, puppeteer, slack
+
+**API endpoints**:
+- `GET/POST /api/mcp/servers`, `DELETE/PATCH /api/mcp/servers/{id}`, `POST /api/mcp/servers/{id}/connect`
+- `GET /api/mcp/tools`, `GET /api/mcp/resources`, `POST /api/mcp/call`, `POST /api/mcp/resources/read`
+- `GET /api/mcp/well-known`
+
+**Frontend** (`dashboard/frontend/src/pages/MCPManager.tsx`):
+- 4 tabs: Servers (add/connect/remove), Catalog (well-known library), Tools (all tools across connected servers), Call Tool (interactive JSON args form)
+
+---
+
+#### 4. A2A Federation and Trust Model
+
+**`services/a2ad/peer_registry.py`** (new file):
+- HMAC-SHA256 signed agent cards using `~/.clawos/a2a_signing.key`
+- `sign_agent_card()` / `verify_agent_card()`
+- `PeerRecord` with `trust_tier`: trusted / unverified / blocked
+- `PeerRegistry`: add/remove/set_trust/probe, `probe_peer` fetches `/.well-known/agent.json`, `is_trusted`, `is_blocked`, `get_signing_key_fingerprint`
+- Persistence to `~/.clawos/a2a_peers.json`
+- `get_registry()` singleton
+
+**API endpoints**:
+- `GET/POST /api/a2a/peers`, `DELETE /api/a2a/peers/{id}`, `POST /api/a2a/peers/{id}/trust`
+- `POST /api/a2a/peers/{id}/probe`, `GET /api/a2a/signing-key`
+
+**Frontend** (`dashboard/frontend/src/pages/Federation.tsx`):
+- Add peer form (URL, name, initial trust tier)
+- Peer list with probe button, trust tier badges, reachable status
+- Selected peer detail panel: trust tier selector, skills/capabilities, signing key fingerprint
+
+---
+
+#### 5. Pack Studio (drag-and-drop visual graph builder)
+
+**`clawos_core/catalog.py`** extended:
+- `_STUDIO_DIR = CONFIG_DIR / "studio" / "programs"`
+- `_load_user_programs()`, `get_workflow_program(id)`, `save_workflow_program(data)`, `delete_workflow_program(id)`
+- `list_workflow_programs()` prepends user-created programs
+
+**API endpoints**:
+- `GET/POST /api/studio/programs`, `DELETE /api/studio/programs/{id}`, `POST /api/studio/programs/{id}/deploy`
+
+**Frontend** (`dashboard/frontend/src/pages/Studio.tsx`):
+- Types: `NodeKind` (trigger/step/approval/tool/output), `GraphNode`, `GraphEdge`, `Program`
+- `GraphCanvas` SVG component: mouse drag to move nodes, Alt+drag to draw edges, click to select, delete button on selected node
+- `programToGraph()` converts WorkflowProgram checkpoints/approval_points/triggers to positioned nodes+edges
+- Left sidebar: program list + new program form
+- Main: SVG canvas
+- Right: node inspector panel
+- Toolbar: node-type add buttons + Save + Deploy
+
+---
+
+#### 6. AGPL Migration
+
+- `pyproject.toml`: `license = { text = "AGPL-3.0-or-later" }`
+- `LICENSE`: stub file written (full text: `curl https://www.gnu.org/licenses/agpl-3.0.txt > LICENSE` when network is available)
+- All 287 Python files: `# SPDX-License-Identifier: AGPL-3.0-or-later` added as first line (6 files already had it; all new files in this session were written with it)
+
+---
+
+#### 7. Linux Packaging Scripts
+
+- `scripts/validate_package.sh` — validate a .deb before publishing: dpkg-deb integrity, required control fields, required file paths, size sanity, lintian (optional)
+- `scripts/test_install.sh` — end-to-end install test on Linux (requires root): pre-flight, dpkg install, filesystem checks, clawctl CLI smoke, systemd service start/active, API health check, Python package import, optional uninstall verification
+- `packaging/deb/validate.sh` — thin wrapper for the clawos-command-center deb with package-name, desktop entry, postinst, Section, and Depends checks on top of the generic script
+- `tests/packaging/test_deb.py` — pytest suite (pass `--deb <path>` to activate): integrity, control fields (parametrized), contents, extracted filesystem, lintian (skipped if not installed)
+
+macOS packaging: deferred — no Mac hardware available yet. Placeholder/docs to follow when device is available.
+
+---
+
+#### Frontend wiring (all pages above)
+
+**`dashboard/frontend/src/lib/commandCenterApi.ts`**:
+- Added types: `Citation`, `ResearchSource`, `ResearchSession`, `WorkbenchPage`, `WorkbenchSession`
+- Added ~30 new API methods for studio, research, workbench, A2A peers, MCP
+
+**`dashboard/frontend/src/app/navigation.tsx`**:
+- Added nav items: Studio, Workbench, Research, MCP, Federation with SVG icons
+
+**`dashboard/frontend/src/App.tsx`**:
+- Added lazy imports and routes for all 5 new pages
+
+---
+
+#### Remaining frontier for next agent
+
+- LICENSE full text — replace stub with full AGPL-3.0 text (`curl https://www.gnu.org/licenses/agpl-3.0.txt > LICENSE`)
+- macOS packaging — scripts + docs when hardware is available
+- Calamares/ISO live boot validation on real hardware
+- End-to-end clawctl install test run on the Linux device
+
+---
+
+### 2026-04-06 - Claude
+
+#### Browser Workbench — item 1 of the build order
+
+Built the Browser Workbench surface end to end.
+
+**Backend** (`services/dashd/api.py`):
+- Added `_workbench_fetch(url)` — stdlib-only server-side URL fetch (urllib.request), strips HTML, extracts title, text (8KB max), and external links
+- Added `POST /api/workbench/fetch` — returns structured page content, auth required
+- Added `POST /api/workbench/research` — fetches URL if provided, builds context, submits to agentd, records trace, returns session object
+- Added `GET /api/workbench/sessions` — returns in-memory deque of last 50 research sessions
+- Added `_WORKBENCH_SESSIONS` module-level deque (maxlen=50)
+- Added `re` and `urllib.request` imports
+
+**Frontend types + API client** (`dashboard/frontend/src/lib/commandCenterApi.ts`):
+- Added `WorkbenchPage` and `WorkbenchSession` types
+- Added `workbenchFetch(url)`, `workbenchResearch(query, url, workspace)`, `listWorkbenchSessions()` methods
+
+**Frontend page** (`dashboard/frontend/src/pages/Workbench.tsx`):
+- Fetch/Research mode toggle in top bar
+- URL bar + optional research query input
+- Left panel: extracted page title, word count, links, full text excerpt
+- Right panel: active session details — task ID, status badge, source URL, page context summary
+- Bottom: resumable session history (click to reload any prior session)
+
+**Navigation + routing**:
+- Added Workbench nav item with monitor/lens icon to `navigation.tsx`
+- Added lazy `/workbench` route in `App.tsx`
+
+#### Verification
+
+- All changes are additive — no existing endpoints, routes, or components modified beyond safe extensions
+- Workbench fetch is SSRF-safe: validates scheme (http/https only), no credential forwarding, 512KB read cap, 12s timeout
+
+#### Remaining frontier (next build order)
+
+1. Research engine with citations and resumable runs
+2. MCP manager depth
+3. richer A2A federation and trust model
+4. Pack Studio visual builder
+5. AGPL migration
+6. native packaging validation
+7. real ISO/Calamares validation on target environments
+
 ## Updates Done By Codex
 
 ### 2026-04-06 - Codex

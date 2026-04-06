@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Config loader — loads defaults.yaml then merges profile overrides.
 Result is a flat dict accessible as ClawOSConfig.

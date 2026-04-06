@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 import plistlib
 
 from clawos_core import desktop_integration as di

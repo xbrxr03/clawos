@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 import sys
 """Screen 4 — Workspace setup."""
 from clawos_core.constants import CLAWOS_DIR

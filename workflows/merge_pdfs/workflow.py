@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """merge-pdfs - merge multiple PDFs into one file."""
 
 from __future__ import annotations

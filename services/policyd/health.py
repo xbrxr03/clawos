@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """policyd health check."""
 from services.policyd.service import get_engine
 def health() -> dict:

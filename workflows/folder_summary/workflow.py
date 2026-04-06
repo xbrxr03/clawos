@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """folder-summary — generate markdown summary of folder contents."""
 from pathlib import Path
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus

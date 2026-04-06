@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS agent prompts.
 SYSTEM_PROMPT is static — no dynamic fields (enables prompt cache hits).

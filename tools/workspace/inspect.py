@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 memory.read / memory.write — read and write workspace memory layers.
 workspace.inspect — inspect workspace contents.

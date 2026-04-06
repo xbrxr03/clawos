@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Ollama client — chat, pull, list, health."""
 import asyncio
 import logging

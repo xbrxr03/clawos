@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS shared data models.
 All services import from here — single source of truth for types.

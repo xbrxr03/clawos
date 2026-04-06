@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Initialise a workspace — create dirs, seed SOUL/AGENTS/PINNED/HEARTBEAT.
 Called once at bootstrap and optionally from wizard.

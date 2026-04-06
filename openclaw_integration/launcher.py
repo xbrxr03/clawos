@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Start / stop / status OpenClaw gateway.
 Replaces ad-hoc shell calls with a proper managed launcher.

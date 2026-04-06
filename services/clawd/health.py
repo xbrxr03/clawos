@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawd health check."""
 from services.clawd.service import get_daemon
 def health() -> dict:

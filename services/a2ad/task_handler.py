@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Routes inbound A2A tasks to agentd."""
 import asyncio
 import logging

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 SQLite knowledge graph adapter — public API for graph layer.
 Wraps the graph functions in memd/service.py for clean imports.

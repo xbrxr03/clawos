@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """dashd health check."""
 import urllib.request
 def health() -> dict:

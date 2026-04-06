@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 import sys
 """Screen 1 — Welcome."""
 from clawos_core.constants import VERSION_FULL

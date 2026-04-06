@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Session router — maps WhatsApp JIDs to ClawOS workspaces.
 Each contact gets their own isolated workspace by default.

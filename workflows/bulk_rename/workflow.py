@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """bulk-rename — rename files via natural language pattern."""
 from pathlib import Path
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus

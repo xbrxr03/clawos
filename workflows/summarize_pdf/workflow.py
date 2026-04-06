@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """summarize-pdf — summarize any PDF in 3-5 bullet points using local LLM."""
 import re
 from pathlib import Path
