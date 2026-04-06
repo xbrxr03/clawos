@@ -98,6 +98,53 @@ async function stubCommandCenterData(page: Page) {
       body: JSON.stringify({}),
     })
   })
+
+  await page.route('**/api/packs', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'daily-briefing-os',
+          name: 'Daily Briefing OS',
+          primary: true,
+          secondary: false,
+          description: 'Morning and evening briefings.',
+        },
+      ]),
+    })
+  })
+
+  await page.route('**/api/providers', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'local-ollama',
+          name: 'Local Ollama',
+          selected: true,
+          kind: 'ollama',
+          status: 'online',
+        },
+      ]),
+    })
+  })
+
+  await page.route('**/api/traces', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'trace-1',
+          title: 'Initial trace',
+          category: 'setup',
+          status: 'completed',
+        },
+      ]),
+    })
+  })
 }
 
 async function stubSetupData(page: Page, payload: SetupStatePayload) {
@@ -122,6 +169,52 @@ async function stubSetupData(page: Page, payload: SetupStatePayload) {
           launch_on_login_supported: true,
         },
       }),
+    })
+  })
+
+  await page.route('**/api/packs', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'daily-briefing-os',
+          name: 'Daily Briefing OS',
+          primary: true,
+          secondary: false,
+          wave: 'wave-1',
+        },
+        {
+          id: 'coding-autopilot',
+          name: 'Coding Autopilot',
+          primary: false,
+          secondary: true,
+          wave: 'wave-1',
+        },
+      ]),
+    })
+  })
+
+  await page.route('**/api/providers', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'local-ollama',
+          name: 'Local Ollama',
+          selected: true,
+          kind: 'ollama',
+          status: 'online',
+        },
+        {
+          id: 'openai-compatible',
+          name: 'OpenAI-Compatible',
+          selected: false,
+          kind: 'openai-compatible',
+          status: 'configured',
+        },
+      ]),
     })
   })
 }

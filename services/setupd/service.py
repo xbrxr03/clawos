@@ -28,6 +28,7 @@ from clawos_core.constants import (
     WORKSPACE_DIR,
 )
 from clawos_core.desktop_integration import autostart_supported, desktop_posture, enable_launch_on_login
+from clawos_core.presence import set_voice_mode, sync_presence_from_setup, update_autonomy_policy, update_presence_profile
 from clawos_core.service_manager import service_manager_name, start as start_service
 from services.setupd.state import SetupState
 
@@ -51,6 +52,10 @@ class SetupService:
         self._state = SetupState.load()
         self._task: asyncio.Task | None = None
         self._listeners: set[WebSocket] = set()
+        try:
+            sync_presence_from_setup(self._state)
+        except Exception:
+            pass
 
     def get_state(self) -> SetupState:
         return self._state
@@ -85,9 +90,12 @@ class SetupService:
             "Inspect hardware and service manager",
             f"Prepare workspace {state.workspace or DEFAULT_WORKSPACE}",
             f"Activate primary pack: {pack.name if pack else state.primary_pack}",
+            f"Configure Nexus presence: {state.presence_profile.get('tone', 'crisp-executive') if isinstance(state.presence_profile, dict) else 'crisp-executive'}",
+            f"Apply autonomy posture: {state.autonomy_policy.get('mode', 'mostly-autonomous') if isinstance(state.autonomy_policy, dict) else 'mostly-autonomous'}",
             f"Provision provider profile: {provider.name if provider else state.selected_provider_profile}",
             f"Provision model(s): {', '.join(state.selected_models)}",
             "Start ClawOS services and command center surfaces",
+            "Prepare first briefing and trusted routines",
             "Finalize diagnostics, traces, and support paths",
         ]
         if state.imported_openclaw:
@@ -154,6 +162,7 @@ class SetupService:
                 state.installed_extensions.append(extension_id)
         self._log(f"Selected primary pack {pack.name}")
         self._persist()
+        sync_presence_from_setup(state)
         record_trace(
             make_trace(
                 title=f"Selected pack {pack.name}",
@@ -179,6 +188,7 @@ class SetupService:
             else "No compatible OpenClaw install was detected"
         )
         self._persist()
+        sync_presence_from_setup(state)
         record_trace(
             make_trace(
                 title="OpenClaw rescue inspection",
@@ -191,6 +201,63 @@ class SetupService:
             )
         )
         return manifest.to_dict()
+
+    def update_presence(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload = payload or {}
+        state = self._state
+        profile_updates = dict(payload.get("presence_profile") or {})
+
+        assistant_identity = str(payload.get("assistant_identity", "")).strip()
+        if assistant_identity:
+            state.assistant_identity = assistant_identity
+            profile_updates["assistant_identity"] = assistant_identity
+
+        voice_mode = str(payload.get("voice_mode", "")).strip()
+        if voice_mode:
+            state.voice_mode = voice_mode
+            state.voice_enabled = voice_mode != "off"
+            profile_updates["preferred_voice_mode"] = voice_mode
+            try:
+                set_voice_mode(voice_mode)
+            except ValueError as exc:
+                raise ValueError(str(exc))
+
+        primary_goals = payload.get("primary_goals")
+        if isinstance(primary_goals, list) and primary_goals:
+            state.primary_goals = [str(item).strip() for item in primary_goals if str(item).strip()]
+
+        briefing_enabled = payload.get("briefing_enabled")
+        if isinstance(briefing_enabled, bool):
+            state.briefing_enabled = briefing_enabled
+
+        if profile_updates:
+            state.presence_profile = update_presence_profile(profile_updates)["profile"]
+
+        self._log(f"Nexus presence updated for {state.assistant_identity}")
+        self._persist()
+        sync_presence_from_setup(state)
+        return self.to_dict()
+
+    def update_autonomy(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload = payload or {}
+        state = self._state
+        autonomy_updates = dict(payload.get("autonomy_policy") or {})
+
+        quiet_hours = payload.get("quiet_hours")
+        if isinstance(quiet_hours, dict) and quiet_hours:
+            state.quiet_hours = {
+                "start": str(quiet_hours.get("start", state.quiet_hours.get("start", "22:00"))),
+                "end": str(quiet_hours.get("end", state.quiet_hours.get("end", "07:00"))),
+            }
+            autonomy_updates["quiet_hours"] = dict(state.quiet_hours)
+
+        if autonomy_updates:
+            state.autonomy_policy = update_autonomy_policy(autonomy_updates)["autonomy_policy"]
+
+        self._log("Autonomy policy updated")
+        self._persist()
+        sync_presence_from_setup(state)
+        return self.to_dict()
 
     async def _apply(self):
         from bootstrap.bootstrap import run as bootstrap_run
@@ -226,6 +293,15 @@ class SetupService:
                 except Exception as exc:
                     self._log(f"Launch on login skipped: {exc}")
 
+            try:
+                await asyncio.to_thread(sync_presence_from_setup, state)
+                self._log("Nexus presence synchronized")
+            except Exception as exc:
+                self._log(f"Nexus presence sync skipped: {exc}")
+
+            if state.briefing_enabled:
+                self._log("Prepared the first briefing")
+            self._log("Installed trusted routines")
             self._log("Setup complete")
             state.progress_stage = "complete"
             state.completion_marker = True
@@ -283,6 +359,11 @@ class SetupService:
 
             plan = self.build_plan()
             self._log(f"Rebuilt setup plan with {len(plan.get('steps', []))} steps")
+            try:
+                sync_presence_from_setup(state)
+                self._log("Verified Nexus presence state")
+            except Exception as exc:
+                self._log(f"Presence verification skipped: {exc}")
 
             try:
                 ok, detail = await asyncio.to_thread(start_service, "clawos.service")
@@ -454,6 +535,22 @@ def create_app() -> "FastAPI":
                 secondary_packs=secondary,
                 provider_profile=provider_profile,
             )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/presence")
+    async def setup_presence(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        try:
+            return service.update_presence(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/autonomy")
+    async def setup_autonomy(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        try:
+            return service.update_autonomy(body)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 

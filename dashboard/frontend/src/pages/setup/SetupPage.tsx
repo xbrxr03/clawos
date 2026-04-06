@@ -9,6 +9,64 @@ import {
   type UseCasePack,
 } from '../../lib/commandCenterApi'
 
+const TONE_PRESETS = [
+  {
+    id: 'crisp-executive',
+    label: 'Crisp executive',
+    body: 'Short, elegant, high-competence answers with minimal filler.',
+  },
+  {
+    id: 'warm-concierge',
+    label: 'Warm concierge',
+    body: 'More human and reassuring, but still premium and efficient.',
+  },
+  {
+    id: 'technical-operator',
+    label: 'Technical operator',
+    body: 'System-oriented, explicit, and more literal in tone.',
+  },
+]
+
+const VOICE_MODES = [
+  { id: 'off', label: 'Off', body: 'Quiet visual interaction only.' },
+  { id: 'push_to_talk', label: 'Push-to-talk', body: 'Best default for precise control.' },
+  { id: 'wake_word', label: 'Wake word', body: 'Ambient readiness with explicit trigger.' },
+  { id: 'continuous', label: 'Continuous', body: 'Open follow-up window for active sessions.' },
+]
+
+const AUTONOMY_MODES = [
+  {
+    id: 'mostly-autonomous',
+    label: 'Mostly autonomous',
+    body: 'Act inside trusted lanes and interrupt only when something meaningful needs you.',
+  },
+  {
+    id: 'trusted-routines',
+    label: 'Trusted routines',
+    body: 'Run approved routines automatically, but stay conservative elsewhere.',
+  },
+  {
+    id: 'approval-first',
+    label: 'Approval first',
+    body: 'Recommend and prepare, then wait for you before acting.',
+  },
+]
+
+const GOAL_OPTIONS = [
+  'daily briefing',
+  'meeting prep',
+  'inbox triage',
+  'travel readiness',
+  'research memos',
+  'reminders',
+]
+
+const QUIET_HOUR_PRESETS = [
+  { id: 'standard', label: '22:00 to 07:00', start: '22:00', end: '07:00' },
+  { id: 'late', label: '00:00 to 08:00', start: '00:00', end: '08:00' },
+  { id: 'always-on', label: 'No quiet hours', start: '00:00', end: '00:00' },
+]
+
 export function SetupPage() {
   const [state, setState] = useState<SetupState | null>(null)
   const [plan, setPlan] = useState<SetupPlan | null>(null)
@@ -36,10 +94,7 @@ export function SetupPage() {
 
   const loadCatalog = async () => {
     try {
-      const [packData, providerData] = await Promise.all([
-        commandCenterApi.listPacks(),
-        commandCenterApi.listProviders(),
-      ])
+      const [packData, providerData] = await Promise.all([commandCenterApi.listPacks(), commandCenterApi.listProviders()])
       setPacks(Array.isArray(packData) ? packData : [])
       setProviders(Array.isArray(providerData) ? providerData : [])
     } catch {}
@@ -64,7 +119,7 @@ export function SetupPage() {
         if (message.type === 'setup_state') {
           setState(message.data)
           if (message.data?.plan_steps?.length) {
-            setPlan((current) => current || { steps: message.data.plan_steps })
+            setPlan((current: SetupPlan | null) => current || { steps: message.data.plan_steps })
           }
         }
       } catch {}
@@ -108,6 +163,32 @@ export function SetupPage() {
       await loadCatalog()
     } catch (err: any) {
       setError(err.message || 'Failed to inspect setup posture')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const savePresence = async (body: Record<string, unknown>) => {
+    setBusy(true)
+    setError('')
+    try {
+      const next = await commandCenterApi.updateSetupPresence(body)
+      setState(next)
+    } catch (err: any) {
+      setError(err.message || 'Failed to update Nexus presence')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const saveAutonomy = async (body: Record<string, unknown>) => {
+    setBusy(true)
+    setError('')
+    try {
+      const next = await commandCenterApi.updateSetupAutonomy(body)
+      setState(next)
+    } catch (err: any) {
+      setError(err.message || 'Failed to update autonomy policy')
     } finally {
       setBusy(false)
     }
@@ -169,12 +250,19 @@ export function SetupPage() {
     }
   }
 
+  const toggleGoal = async (goal: string) => {
+    const current = new Set(state?.primary_goals || [])
+    if (current.has(goal)) current.delete(goal)
+    else current.add(goal)
+    await savePresence({ primary_goals: Array.from(current) })
+  }
+
   const effectivePlan = plan?.steps?.length
     ? plan
     : state?.plan_steps?.length
       ? {
           steps: state.plan_steps,
-          summary: `Apply ${state.recommended_profile || 'balanced'} profile on ${state.platform || 'this machine'}`,
+          summary: `Bring Nexus online for ${state.primary_pack || 'daily-briefing-os'} on ${state.platform || 'this machine'}`,
         }
       : null
 
@@ -186,6 +274,11 @@ export function SetupPage() {
         : state?.progress_stage === 'applying'
           ? 'blue'
           : 'gray'
+
+  const tone = state?.presence_profile?.tone || 'crisp-executive'
+  const autonomyMode = state?.autonomy_policy?.mode || 'mostly-autonomous'
+  const quietHours = state?.quiet_hours || state?.autonomy_policy?.quiet_hours || { start: '22:00', end: '07:00' }
+  const voiceMode = state?.voice_mode || 'push_to_talk'
 
   return (
     <div
@@ -201,9 +294,9 @@ export function SetupPage() {
     >
       <div
         style={{
-          width: 'min(1040px, 100%)',
+          width: 'min(1180px, 100%)',
           display: 'grid',
-          gridTemplateColumns: '1.1fr 0.9fr',
+          gridTemplateColumns: '1.15fr 0.85fr',
           gap: 20,
           padding: 20,
           borderRadius: 28,
@@ -216,15 +309,15 @@ export function SetupPage() {
         <div className="glass" style={{ padding: 28 }}>
           <div className="section-label">ClawOS Setup</div>
           <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.05em', lineHeight: 1.08 }}>
-            Bring this machine into the ClawOS command center.
+            Bring Nexus online for this machine.
           </div>
-          <div style={{ marginTop: 12, fontSize: 15, color: 'var(--text-3)', maxWidth: 540 }}>
-            Calm device onboarding for local models, workspace memory, policy posture, and optional OpenClaw services.
+          <div style={{ marginTop: 12, fontSize: 15, color: 'var(--text-3)', maxWidth: 580 }}>
+            Device onboarding for a calm, conversational operator that prepares, acts, and only interrupts when something meaningful changes.
           </div>
 
           <div style={{ marginTop: 28, display: 'grid', gap: 16 }}>
             <div className="glass" style={{ padding: 18 }}>
-              <div className="section-label">Hardware</div>
+              <div className="section-label">Machine posture</div>
               <div style={{ fontSize: 16, fontWeight: 600 }}>{hardwareSummary}</div>
               <div style={{ marginTop: 8, color: 'var(--text-3)' }}>
                 Recommended profile: <span className="mono">{state?.recommended_profile || 'balanced'}</span>
@@ -232,22 +325,115 @@ export function SetupPage() {
             </div>
 
             <div className="glass" style={{ padding: 18 }}>
-              <div className="section-label">Selected defaults</div>
-              <div style={{ display: 'grid', gap: 10 }}>
-                <Row label="Workspace" value={state?.workspace || 'nexus_default'} />
-                <Row label="Primary pack" value={state?.primary_pack || 'daily-briefing-os'} />
-                <Row label="Provider" value={state?.selected_provider_profile || 'local-ollama'} />
-                <Row label="Voice" value={state?.voice_enabled ? 'Enabled' : 'Disabled'} />
-                <Row label="OpenClaw" value={state?.enable_openclaw ? 'Install' : 'Skip'} />
-                <Row label="Launch on login" value={state?.launch_on_login === false ? 'Disabled' : 'Enabled'} />
-                <Row label="Policy" value={state?.policy_mode || 'recommended'} />
-                <Row label="Models" value={(state?.selected_models || []).join(', ') || 'qwen2.5:7b'} />
-                <Row label="Extensions" value={(state?.installed_extensions || []).slice(0, 3).join(', ') || 'none yet'} />
+              <div className="section-label">Nexus identity</div>
+              <div style={{ fontSize: 18, fontWeight: 600 }}>Nexus</div>
+              <div style={{ marginTop: 8, color: 'var(--text-3)', fontSize: 13 }}>
+                ClawOS is the platform. Nexus is the assistant persona users speak to, delegate to, and read from.
               </div>
             </div>
 
             <div className="glass" style={{ padding: 18 }}>
-              <div className="section-label">Choose your primary pack</div>
+              <div className="section-label">Speech style</div>
+              <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                {TONE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    className={`btn${tone === preset.id ? ' primary' : ''}`}
+                    onClick={() => savePresence({ presence_profile: { tone: preset.id }, assistant_identity: 'Nexus' })}
+                    disabled={busy}
+                    style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+                  >
+                    <span>{preset.label}</span>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      {preset.body}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass" style={{ padding: 18 }}>
+              <div className="section-label">Voice mode</div>
+              <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                {VOICE_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    className={`btn${voiceMode === mode.id ? ' primary' : ''}`}
+                    onClick={() => savePresence({ voice_mode: mode.id, presence_profile: { preferred_voice_mode: mode.id } })}
+                    disabled={busy}
+                    style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+                  >
+                    <span>{mode.label}</span>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      {mode.body}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass" style={{ padding: 18 }}>
+              <div className="section-label">Autonomy comfort</div>
+              <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                {AUTONOMY_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    className={`btn${autonomyMode === mode.id ? ' primary' : ''}`}
+                    onClick={() => saveAutonomy({ autonomy_policy: { mode: mode.id } })}
+                    disabled={busy}
+                    style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+                  >
+                    <span>{mode.label}</span>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      {mode.body}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass" style={{ padding: 18 }}>
+              <div className="section-label">Primary goals</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+                {GOAL_OPTIONS.map((goal) => {
+                  const selected = (state?.primary_goals || []).includes(goal)
+                  return (
+                    <button
+                      key={goal}
+                      className={`btn${selected ? ' primary' : ''}`}
+                      onClick={() => toggleGoal(goal)}
+                      disabled={busy}
+                    >
+                      {goal}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="glass" style={{ padding: 18 }}>
+              <div className="section-label">Quiet hours</div>
+              <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                {QUIET_HOUR_PRESETS.map((preset) => {
+                  const selected = quietHours?.start === preset.start && quietHours?.end === preset.end
+                  return (
+                    <button
+                      key={preset.id}
+                      className={`btn${selected ? ' primary' : ''}`}
+                      onClick={() => saveAutonomy({ quiet_hours: { start: preset.start, end: preset.end } })}
+                      disabled={busy}
+                      style={{ justifyContent: 'space-between', display: 'flex' }}
+                    >
+                      <span>{preset.label}</span>
+                      <span className="mono" style={{ fontSize: 11 }}>{preset.start} - {preset.end}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="glass" style={{ padding: 18 }}>
+              <div className="section-label">Primary pack</div>
               <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
                 {packs.slice(0, 4).map((pack) => (
                   <button
@@ -281,28 +467,30 @@ export function SetupPage() {
                 ))}
               </div>
             </div>
-
-            <div className="glass" style={{ padding: 18 }}>
-              <div className="section-label">Machine posture</div>
-              <div style={{ display: 'grid', gap: 10 }}>
-                <Row label="Platform" value={diagnostics?.platform || state?.platform || 'local'} />
-                <Row label="Service manager" value={diagnostics?.service_manager || state?.service_manager || 'auto'} />
-                <Row label="Install channel" value={state?.install_channel || 'desktop'} />
-                <Row label="Architecture" value={state?.architecture || 'unknown'} />
-                <Row
-                  label="Launch on login"
-                  value={diagnostics?.desktop?.launch_on_login_supported ? 'Available after install' : 'Not supported'}
-                />
-              </div>
-            </div>
           </div>
         </div>
 
         <div className="glass" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="section-label">Execution</div>
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Setup plan</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Bring Nexus online</div>
           <div style={{ color: 'var(--text-3)' }}>
-            {effectivePlan?.summary || 'Inspect, plan, and apply the ClawOS runtime to this machine.'}
+            {effectivePlan?.summary || 'Inspect the machine, shape Nexus presence, then bring the command center online.'}
+          </div>
+
+          <div className="glass" style={{ padding: 14 }}>
+            <div className="section-label">Selected defaults</div>
+            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+              <Row label="Assistant" value={state?.assistant_identity || 'Nexus'} />
+              <Row label="Tone" value={tone} />
+              <Row label="Voice mode" value={voiceMode} />
+              <Row label="Autonomy" value={autonomyMode} />
+              <Row label="Pack" value={state?.primary_pack || 'daily-briefing-os'} />
+              <Row label="Provider" value={state?.selected_provider_profile || 'local-ollama'} />
+              <Row label="Goals" value={(state?.primary_goals || []).join(', ') || 'daily briefing'} />
+              <Row label="Quiet hours" value={`${quietHours?.start || '22:00'} - ${quietHours?.end || '07:00'}`} />
+              <Row label="Briefing" value={state?.briefing_enabled === false ? 'Disabled' : 'Enabled'} />
+              <Row label="Launch on login" value={state?.launch_on_login === false ? 'Disabled' : 'Enabled'} />
+            </div>
           </div>
 
           {effectivePlan?.steps?.length ? (
@@ -368,7 +556,7 @@ export function SetupPage() {
               Inspect Machine
             </button>
             <button className="btn" onClick={() => request('plan')} disabled={busy}>
-              Inspect & Plan
+              Build Launch Plan
             </button>
             <button className="btn" onClick={importOpenClaw} disabled={busy}>
               Import OpenClaw
@@ -381,6 +569,13 @@ export function SetupPage() {
             </button>
             <button className="btn" onClick={() => request('repair')} disabled={busy}>
               Repair Runtime
+            </button>
+            <button
+              className="btn"
+              onClick={() => savePresence({ briefing_enabled: !(state?.briefing_enabled !== false) })}
+              disabled={busy}
+            >
+              {state?.briefing_enabled === false ? 'Enable first briefing' : 'Disable first briefing'}
             </button>
             <button className="btn" onClick={createBundle} disabled={busy}>
               Create Support Bundle
@@ -412,12 +607,20 @@ export function SetupPage() {
             </div>
           )}
 
+          <div className="glass" style={{ padding: 14 }}>
+            <div className="section-label">Machine profile</div>
+            <div style={{ display: 'grid', gap: 8, marginTop: 6, color: 'var(--text-2)' }}>
+              <div>Platform: <span className="mono">{diagnostics?.platform || state?.platform || 'local'}</span></div>
+              <div>Service manager: <span className="mono">{diagnostics?.service_manager || state?.service_manager || 'auto'}</span></div>
+              <div>Install channel: <span className="mono">{state?.install_channel || 'desktop'}</span></div>
+              <div>Architecture: <span className="mono">{state?.architecture || 'unknown'}</span></div>
+            </div>
+          </div>
+
           {bundlePath && (
             <div className="glass" style={{ padding: 14 }}>
               <div className="section-label">Support bundle</div>
-              <div className="mono" style={{ fontSize: 12 }}>
-                {bundlePath}
-              </div>
+              <div className="mono" style={{ fontSize: 12 }}>{bundlePath}</div>
             </div>
           )}
 
@@ -432,7 +635,7 @@ export function SetupPage() {
 
           {state?.completion_marker && (
             <a className="btn primary" href="/" style={{ textDecoration: 'none' }}>
-              Open Command Center
+              Open Nexus
             </a>
           )}
         </div>

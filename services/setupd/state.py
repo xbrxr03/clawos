@@ -13,6 +13,7 @@ from bootstrap.hardware_probe import probe
 from bootstrap.profile_selector import recommended_model, select_with_bundle
 from clawos_core.constants import DEFAULT_WORKSPACE, SETUP_STATE_JSON
 from clawos_core.platform import platform_key
+from clawos_core.presence import default_autonomy_policy, default_presence_profile
 from clawos_core.service_manager import service_manager_name
 
 
@@ -31,6 +32,13 @@ class SetupState:
     secondary_packs: list[str] = field(default_factory=lambda: ["coding-autopilot"])
     installed_extensions: list[str] = field(default_factory=lambda: ["mcp-manager"])
     workspace: str = DEFAULT_WORKSPACE
+    assistant_identity: str = "Nexus"
+    presence_profile: dict[str, Any] = field(default_factory=lambda: default_presence_profile().to_dict())
+    autonomy_policy: dict[str, Any] = field(default_factory=lambda: default_autonomy_policy().to_dict())
+    quiet_hours: dict[str, str] = field(default_factory=lambda: {"start": "22:00", "end": "07:00"})
+    primary_goals: list[str] = field(default_factory=lambda: ["daily briefing", "meeting prep", "inbox triage"])
+    voice_mode: str = "push_to_talk"
+    briefing_enabled: bool = True
     voice_enabled: bool = True
     enable_openclaw: bool = False
     launch_on_login: bool = True
@@ -46,7 +54,10 @@ class SetupState:
     def save(self, path: Path | None = None):
         path = path or SETUP_STATE_JSON
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(asdict(self), indent=2), encoding="utf-8")
+        try:
+            path.write_text(json.dumps(asdict(self), indent=2), encoding="utf-8")
+        except OSError:
+            pass
 
     @classmethod
     def load(cls, path: Path | None = None) -> "SetupState":
@@ -82,6 +93,13 @@ class SetupState:
             primary_pack="daily-briefing-os",
             secondary_packs=["coding-autopilot"] if hw.ram_gb >= 16 else [],
             installed_extensions=["mcp-manager"] if hw.ram_gb >= 16 else [],
+            assistant_identity="Nexus",
+            presence_profile=default_presence_profile().to_dict(),
+            autonomy_policy=default_autonomy_policy().to_dict(),
+            quiet_hours={"start": "22:00", "end": "07:00"},
+            primary_goals=["daily briefing", "meeting prep", "inbox triage"],
+            voice_mode="push_to_talk" if hw.has_mic and hw.ram_gb >= 8 else "off",
+            briefing_enabled=True,
             voice_enabled=hw.has_mic and hw.ram_gb >= 8,
             enable_openclaw="openclaw" in bundle["runtimes"],
         )
@@ -97,6 +115,13 @@ class SetupState:
             state.selected_runtimes = list(legacy.runtimes or state.selected_runtimes)
             state.selected_models = [legacy.model] if legacy.model else state.selected_models
             state.workspace = legacy.workspace_id or state.workspace
+            state.assistant_identity = "Nexus"
+            state.presence_profile = default_presence_profile().to_dict()
+            state.autonomy_policy = default_autonomy_policy().to_dict()
+            state.quiet_hours = {"start": "22:00", "end": "07:00"}
+            state.primary_goals = ["daily briefing", "meeting prep", "inbox triage"]
+            state.voice_mode = "push_to_talk" if legacy.voice_enabled else "off"
+            state.briefing_enabled = True
             state.voice_enabled = legacy.voice_enabled
             state.enable_openclaw = legacy.runtime in {"openclaw", "both"} or legacy.whatsapp_enabled
             state.selected_provider_profile = "local-ollama"

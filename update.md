@@ -61,6 +61,111 @@ Treat this file as project memory.
 
 ### 2026-04-06 - Codex
 
+#### Nexus presence implementation
+
+- Implemented the Nexus presence layer so ClawOS now presents itself as the platform and `Nexus` as the assistant identity.
+- Added new first-class shared models and state handling for:
+  - `PresenceProfile`
+  - `AutonomyPolicy`
+  - `AttentionEvent`
+  - `ActionProposal`
+  - `Briefing`
+  - `Mission`
+  - `VoiceSession`
+- Added `clawos_core/presence.py` to manage:
+  - persisted presence/autonomy state
+  - voice mode/session state
+  - default seeded missions
+  - today briefing generation
+  - attention/signal generation
+  - setup-to-presence synchronization
+
+#### Setup, API, UI, and CLI integration
+
+- Extended `services/setupd/state.py` with Nexus-oriented setup fields:
+  - `assistant_identity`
+  - `presence_profile`
+  - `autonomy_policy`
+  - `quiet_hours`
+  - `primary_goals`
+  - `voice_mode`
+  - `briefing_enabled`
+- Extended `services/setupd/service.py` so setup can configure:
+  - Nexus presence
+  - autonomy posture
+  - voice mode
+  - first briefing preparation
+  - trusted routine installation
+- Added new dashboard/setup API surfaces in `services/dashd/api.py` and `services/setupd/service.py`:
+  - `/api/presence`
+  - `/api/attention`
+  - `/api/briefings/today`
+  - `/api/missions`
+  - `/api/voice/session`
+  - `/api/voice/mode`
+  - `/api/setup/presence`
+  - `/api/setup/autonomy`
+- Rebuilt the React home surface to be Nexus-first instead of metrics-first:
+  - Today
+  - Conversation
+  - Active Missions
+  - Pending Decisions
+  - Signals
+  - System Posture
+- Rebuilt the setup page so it now configures:
+  - assistant style
+  - voice mode
+  - autonomy comfort
+  - primary personal-ops goals
+  - quiet hours
+  - first briefing behavior
+- Added CLI surfaces for the Nexus layer:
+  - `briefing`
+  - `mission list`
+  - `mission start`
+  - `presence show`
+  - `voice mode`
+- Added a `clawos` script alias in `pyproject.toml` that points to the existing CLI entrypoint so the product-facing command now matches the product name while preserving `clawctl`.
+
+#### Safety and supportability
+
+- Support bundles now include presence state but redact:
+  - last spoken utterance
+  - last spoken response
+  - sensitive mission content
+- Presence and setup persistence were made fail-soft where local filesystem permissions are unreliable in this environment.
+
+#### Verification completed
+
+- `python -m pytest -p no:cacheprovider --basetemp test-basetemp tests/system/test_nexus_presence.py tests/system/test_setupd.py tests/system/test_competitive_platform.py` -> passed
+- `python -m py_compile` on the touched Python files -> passed
+- `npm run typecheck` in `dashboard/frontend` -> passed
+- `npm run build` in `dashboard/frontend` -> passed
+- CLI smoke checks passed:
+  - `python clawctl/main.py briefing`
+  - `python clawctl/main.py presence show`
+  - `python clawctl/main.py voice mode`
+  - `python clawctl/main.py mission list`
+
+#### Immediate pickup point for Claude
+
+- Continue from the Nexus foundation already wired through:
+  - `clawos_core/presence.py`
+  - `services/setupd/state.py`
+  - `services/setupd/service.py`
+  - `services/dashd/api.py`
+  - `dashboard/frontend/src/pages/Overview.tsx`
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx`
+  - `dashboard/frontend/src/lib/commandCenterApi.ts`
+- Best next build order from here:
+  1. real cross-platform voice runtime abstraction
+  2. richer personal-ops routines and proactive briefings
+  3. conversation state / barge-in / follow-up window runtime behavior
+  4. deeper approvals and mission inspector UX
+  5. browser workbench and research engine integration
+
+### 2026-04-06 - Codex
+
 #### Major product/platform work completed in this session
 
 - Audited the repo and turned it into a clearer architecture + stabilization direction.

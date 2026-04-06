@@ -38,6 +38,18 @@ from clawos_core.constants import (
     WORKSPACE_DIR,
 )
 from clawos_core.events.bus import EV_SERVICE_DOWN, EV_SERVICE_UP, get_bus
+from clawos_core.presence import (
+    build_attention_events,
+    build_today_briefing,
+    get_presence_payload,
+    get_voice_session,
+    list_missions,
+    set_voice_mode,
+    start_mission,
+    sync_presence_from_setup,
+    update_autonomy_policy,
+    update_presence_profile,
+)
 
 log = logging.getLogger("dashd")
 
@@ -506,13 +518,22 @@ def _eval_payloads() -> list[dict]:
     return payloads
 
 
+def _approval_payloads() -> list[dict]:
+    try:
+        from services.policyd.service import get_engine
+
+        return list(get_engine().get_pending_approvals() or [])
+    except Exception:
+        return []
+
+
 def _build_snapshot(app: "FastAPI") -> dict:
     return {
         "services": _collect_service_health(),
         "events": list(app.state.event_history),
         "models": _collect_models(),
         "tasks": [],
-        "approvals": [],
+        "approvals": _approval_payloads(),
     }
 
 
@@ -836,6 +857,122 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         )
         return {"ok": True, "provider": profile.to_dict(), "state": state.__dict__}
 
+    @app.get("/api/presence", dependencies=[Depends(require_auth_or_setup_access)])
+    async def presence():
+        return get_presence_payload()
+
+    @app.post("/api/presence", dependencies=[Depends(require_auth_or_setup_access)])
+    async def update_presence(body: dict | None = None):
+        payload = body or {}
+        state = _setup_state()
+        if state:
+            assistant_identity = str(payload.get("assistant_identity", "")).strip()
+            if assistant_identity:
+                state.assistant_identity = assistant_identity
+            if isinstance(payload.get("presence_profile"), dict):
+                state.presence_profile.update(payload["presence_profile"])
+            voice_mode = str(payload.get("voice_mode", "")).strip()
+            if voice_mode:
+                state.voice_mode = voice_mode
+                state.voice_enabled = voice_mode != "off"
+            primary_goals = payload.get("primary_goals")
+            if isinstance(primary_goals, list) and primary_goals:
+                state.primary_goals = [str(item).strip() for item in primary_goals if str(item).strip()]
+            briefing_enabled = payload.get("briefing_enabled")
+            if isinstance(briefing_enabled, bool):
+                state.briefing_enabled = briefing_enabled
+            state.save()
+            sync_presence_from_setup(state)
+
+        profile_payload = dict(payload.get("presence_profile") or {})
+        if payload.get("assistant_identity"):
+            profile_payload["assistant_identity"] = payload["assistant_identity"]
+        if payload.get("voice_mode"):
+            profile_payload["preferred_voice_mode"] = payload["voice_mode"]
+            try:
+                set_voice_mode(str(payload["voice_mode"]))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+        response = update_presence_profile(profile_payload) if profile_payload else get_presence_payload()
+        record_trace(
+            make_trace(
+                title="Updated Nexus presence",
+                category="presence",
+                status="completed",
+                provider=getattr(state, "selected_provider_profile", ""),
+                pack_id=getattr(state, "primary_pack", ""),
+                tools=["dashd.presence.update"],
+            )
+        )
+        return response
+
+    @app.get("/api/attention", dependencies=[Depends(require_auth)])
+    async def attention():
+        return build_attention_events(
+            services=_collect_service_health(),
+            approvals=_approval_payloads(),
+            missions=list_missions(),
+        )
+
+    @app.get("/api/briefings/today", dependencies=[Depends(require_auth)])
+    async def today_briefing():
+        return build_today_briefing(
+            setup_state=_setup_state(),
+            services=_collect_service_health(),
+            approvals=_approval_payloads(),
+            missions=list_missions(),
+        )
+
+    @app.get("/api/missions", dependencies=[Depends(require_auth)])
+    async def missions():
+        return list_missions()
+
+    @app.post("/api/missions", dependencies=[Depends(require_auth)])
+    async def missions_start(body: dict | None = None):
+        payload = body or {}
+        title = str(payload.get("title", "")).strip()
+        summary = str(payload.get("summary", "")).strip()
+        trust_lane = str(payload.get("trust_lane", "trusted-automatic")).strip() or "trusted-automatic"
+        if not title:
+            raise HTTPException(status_code=400, detail="title required")
+        mission = start_mission(title, summary=summary, trust_lane=trust_lane)
+        state = _setup_state()
+        record_trace(
+            make_trace(
+                title=f"Mission started: {title}",
+                category="missions",
+                status="completed",
+                provider=getattr(state, "selected_provider_profile", ""),
+                pack_id=getattr(state, "primary_pack", ""),
+                tools=["dashd.missions.start"],
+                metadata={"trust_lane": trust_lane},
+            )
+        )
+        return {"ok": True, "mission": mission}
+
+    @app.get("/api/voice/session", dependencies=[Depends(require_auth)])
+    async def voice_session():
+        return get_voice_session()
+
+    @app.post("/api/voice/mode", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_mode(body: dict | None = None):
+        mode = str((body or {}).get("mode", "")).strip()
+        if not mode:
+            raise HTTPException(status_code=400, detail="mode required")
+        try:
+            session = set_voice_mode(mode)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        state = _setup_state()
+        if state:
+            state.voice_mode = mode
+            state.voice_enabled = mode != "off"
+            state.save()
+            sync_presence_from_setup(state)
+
+        return session
+
     @app.get("/api/extensions", dependencies=[Depends(require_auth_or_setup_access)])
     async def extensions():
         return _extension_payloads()
@@ -930,6 +1067,24 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         provider_profile = str(payload.get("provider_profile", "")).strip()
         try:
             return get_service().select_pack(pack_id, secondary_packs=secondary, provider_profile=provider_profile)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/presence", dependencies=[Depends(require_setup_access)])
+    async def setup_presence(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().update_presence(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/autonomy", dependencies=[Depends(require_setup_access)])
+    async def setup_autonomy(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().update_autonomy(body)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 

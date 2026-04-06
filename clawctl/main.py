@@ -189,6 +189,11 @@ else:
     def voice_test():
         from clawctl.commands.voice import run_test; run_test()
 
+    @voice.command("mode")
+    @click.argument("mode", required=False)
+    def voice_mode(mode):
+        from clawctl.commands.voice import run_mode; run_mode(mode or "")
+
     # ── whatsapp ──────────────────────────────────────────────────────────────
     @main.group()
     def whatsapp():
@@ -316,6 +321,35 @@ else:
     def benchmark():
         """Show pack eval readiness and trace availability."""
         from clawctl.commands.benchmark import run; run()
+
+    @main.command()
+    def briefing():
+        """Generate the current Nexus briefing."""
+        from clawctl.commands.briefing import run_now; run_now()
+
+    @main.group()
+    def mission():
+        """Inspect or start Nexus missions."""
+        pass
+
+    @mission.command("list")
+    def mission_list():
+        from clawctl.commands.mission import run_list; run_list()
+
+    @mission.command("start")
+    @click.argument("title")
+    @click.option("--summary", default="", help="Optional mission summary")
+    def mission_start(title, summary):
+        from clawctl.commands.mission import run_start; run_start(title, summary)
+
+    @main.group()
+    def presence():
+        """Inspect Nexus presence and autonomy."""
+        pass
+
+    @presence.command("show")
+    def presence_show():
+        from clawctl.commands.presence import run_show; run_show()
 
     # ── wizard + chat ─────────────────────────────────────────────────────────
     @main.command()

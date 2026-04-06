@@ -12,6 +12,13 @@ export type SetupState = {
   secondary_packs?: string[]
   installed_extensions?: string[]
   workspace?: string
+  assistant_identity?: string
+  presence_profile?: PresenceProfile
+  autonomy_policy?: AutonomyPolicy
+  quiet_hours?: Record<string, string>
+  primary_goals?: string[]
+  voice_mode?: string
+  briefing_enabled?: boolean
   voice_enabled?: boolean
   enable_openclaw?: boolean
   launch_on_login?: boolean
@@ -154,6 +161,74 @@ export type EvalSuite = {
   active?: boolean
 }
 
+export type PresenceProfile = {
+  assistant_identity?: string
+  tone?: string
+  verbosity?: string
+  interruption_threshold?: string
+  notification_style?: string
+  follow_up_behavior?: string
+  presence_level?: string
+  preferred_voice_mode?: string
+}
+
+export type AutonomyPolicy = {
+  mode?: string
+  automatic_lanes?: string[]
+  trusted_lanes?: string[]
+  approval_required?: string[]
+  quiet_hours?: Record<string, string>
+  escalation_rule?: string
+}
+
+export type AttentionEvent = {
+  id?: string
+  title?: string
+  summary?: string
+  urgency?: string
+  surface?: string
+  category?: string
+  timestamp?: string
+  acknowledged?: boolean
+}
+
+export type Briefing = {
+  id?: string
+  title?: string
+  headline?: string
+  summary?: string
+  items?: Array<{ title?: string; body?: string; priority?: string }>
+  generated_at?: string
+}
+
+export type Mission = {
+  id?: string
+  title?: string
+  summary?: string
+  status?: string
+  checkpoint?: string
+  blocked?: boolean
+  trust_lane?: string
+  next_action?: string
+  updated_at?: string
+}
+
+export type VoiceSession = {
+  mode?: string
+  state?: string
+  follow_up_open?: boolean
+  device_label?: string
+  last_utterance?: string
+  last_response?: string
+  updated_at?: string
+}
+
+export type PresencePayload = {
+  profile?: PresenceProfile
+  autonomy_policy?: AutonomyPolicy
+  voice_session?: VoiceSession
+}
+
 export type OpenClawImportManifest = {
   source_path?: string
   config_path?: string
@@ -239,6 +314,41 @@ export const commandCenterApi = {
     fetchJson<{ ok?: boolean; status?: string }>('/api/setup/cancel', { method: 'POST', headers: setupHeaders() }),
   createSupportBundle: () =>
     fetchJson<{ path?: string }>('/api/support/bundle', { method: 'POST', headers: setupHeaders() }),
+  getPresence: () => fetchJson<PresencePayload>('/api/presence', { headers: maybeSetupHeaders() }),
+  updatePresence: (body: Record<string, unknown>) =>
+    fetchJson<PresencePayload>('/api/presence', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+    }),
+  listAttention: () => fetchJson<AttentionEvent[]>('/api/attention'),
+  getTodayBriefing: () => fetchJson<Briefing>('/api/briefings/today'),
+  listMissions: () => fetchJson<Mission[]>('/api/missions'),
+  startMission: (title: string, summary = '', trust_lane = 'trusted-automatic') =>
+    fetchJson<{ ok?: boolean; mission?: Mission }>('/api/missions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, summary, trust_lane }),
+    }),
+  getVoiceSession: () => fetchJson<VoiceSession>('/api/voice/session'),
+  setVoiceMode: (mode: string) =>
+    fetchJson<VoiceSession>('/api/voice/mode', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ mode }),
+    }),
+  updateSetupPresence: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/presence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
+  updateSetupAutonomy: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/autonomy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
   listPacks: () => fetchJson<UseCasePack[]>('/api/packs', { headers: maybeSetupHeaders() }),
   installPack: (pack_id: string, primary = false, provider_profile = '') =>
     fetchJson<{ ok?: boolean; pack?: UseCasePack; state?: SetupState }>('/api/packs/install', {
@@ -288,4 +398,11 @@ export const commandCenterApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
+  sendConversationMessage: (message: string, workspace = 'nexus_default') =>
+    fetchJson<{ task_id?: string; status?: string }>('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, workspace }),
+    }),
+  listApprovals: () => fetchJson<any[]>('/api/approvals'),
 }
