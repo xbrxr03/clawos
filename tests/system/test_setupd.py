@@ -17,10 +17,21 @@ from fastapi.testclient import TestClient
 SETUP_HEADERS = {"X-ClawOS-Setup": "1"}
 
 
-def test_setup_state_roundtrip(tmp_path):
+def test_setup_state_roundtrip(monkeypatch):
     from services.setupd.state import SetupState
 
-    path = tmp_path / "setup_state.json"
+    storage: dict[str, str] = {}
+    path = Path("virtual_setup_state.json")
+
+    monkeypatch.setattr(Path, "mkdir", lambda self, parents=False, exist_ok=False: None)
+    monkeypatch.setattr(
+        Path,
+        "write_text",
+        lambda self, text, encoding="utf-8": storage.__setitem__(str(self), text) or len(text),
+    )
+    monkeypatch.setattr(Path, "read_text", lambda self, encoding="utf-8": storage[str(self)])
+    monkeypatch.setattr(Path, "exists", lambda self: str(self) in storage)
+
     state = SetupState(
         install_channel="desktop",
         platform="linux",
@@ -55,10 +66,13 @@ def test_setupd_plan_apply_repair_and_diagnostics(monkeypatch):
     )
 
     monkeypatch.setattr(setup_service.SetupState, "load", classmethod(lambda cls: seed_state))
+    monkeypatch.setattr(setup_service.SetupState, "save", lambda self, path=None: None)
     monkeypatch.setattr("bootstrap.bootstrap.run", lambda **_: {"ok": True})
     monkeypatch.setattr(setup_service, "start_service", lambda _name: (True, "started"))
     monkeypatch.setattr(setup_service, "autostart_supported", lambda: True)
     monkeypatch.setattr(setup_service, "enable_launch_on_login", lambda: Path("/tmp/clawos-command-center.desktop"))
+    monkeypatch.setattr(setup_service, "record_trace", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(setup_service, "sync_presence_from_setup", lambda *_args, **_kwargs: None)
 
     setup_service._SERVICE = None
     app = setup_service.create_app()

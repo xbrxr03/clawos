@@ -16,31 +16,44 @@ from fastapi.testclient import TestClient
 SETUP_HEADERS = {"X-ClawOS-Setup": "1"}
 
 
-def test_catalog_detects_openclaw_manifest(tmp_path, monkeypatch):
+def test_catalog_detects_openclaw_manifest(monkeypatch):
     from clawos_core import catalog
 
-    openclaw_dir = tmp_path / ".openclaw"
-    skills_dir = openclaw_dir / "skills" / "custom-briefing"
-    skills_dir.mkdir(parents=True)
-    (openclaw_dir / "openclaw.json").write_text(
-        """
-        {
-          "channels": {"whatsapp": {}, "discord": {}},
-          "models": {"providers": {"ollama": {}, "openrouter": {}}},
-          "skills": {"web-browser": {}, "calendar": {}}
-        }
-        """,
-        encoding="utf-8",
-    )
+    openclaw_dir = Path.home() / ".openclaw"
+
+    class FakeSkillDir:
+        name = "custom-briefing"
+
+        def is_dir(self):
+            return True
 
     class Result:
         stdout = "openclaw 1.2.3"
         stderr = ""
 
     monkeypatch.setattr(catalog, "_openclaw_dir", lambda path_hint="": openclaw_dir)
+    monkeypatch.setattr(
+        catalog,
+        "_read_json",
+        lambda path: {
+            "channels": {"whatsapp": {}, "discord": {}},
+            "models": {"providers": {"ollama": {}, "openrouter": {}}},
+            "skills": {"web-browser": {}, "calendar": {}},
+        },
+    )
     monkeypatch.setattr(catalog.shutil, "which", lambda name: "openclaw" if name == "openclaw" else None)
     monkeypatch.setattr(catalog.subprocess, "run", lambda *args, **kwargs: Result())
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(
+        Path,
+        "exists",
+        lambda self: str(self).endswith("openclaw.json") or str(self).endswith("skills"),
+    )
+    monkeypatch.setattr(
+        Path,
+        "iterdir",
+        lambda self: [FakeSkillDir()] if str(self).endswith("skills") else [],
+    )
 
     manifest = catalog.detect_openclaw_install()
 
@@ -68,6 +81,7 @@ def test_setupd_supports_pack_selection_and_openclaw_import(monkeypatch):
     monkeypatch.setattr(setup_service.SetupState, "load", classmethod(lambda cls: seed_state))
     monkeypatch.setattr(setup_service.SetupState, "save", lambda self, path=None: None)
     monkeypatch.setattr(setup_service, "record_trace", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(setup_service, "sync_presence_from_setup", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         setup_service,
         "detect_openclaw_install",

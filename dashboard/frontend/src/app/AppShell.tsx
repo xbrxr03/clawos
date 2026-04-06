@@ -63,7 +63,7 @@ export function AppShell({
             </div>
             <div>
               <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em' }}>ClawOS</div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>OpenClaw Command Center</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Nexus Command Center</div>
             </div>
           </div>
         </div>
@@ -107,7 +107,7 @@ export function AppShell({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className={`dot ${connected ? 'green pulse' : 'red'}`} />
               <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                {connected ? 'Live connection' : 'Reconnecting'}
+                {connected ? 'Nexus connected' : 'Reconnecting'}
               </span>
             </div>
             <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)' }}>
@@ -154,7 +154,7 @@ export function AppShell({
           >
             <div>
               <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.03em' }}>{title}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Calm, local-first operations for ClawOS</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Calm, conversational operations with Nexus</div>
             </div>
             <div
               style={{
@@ -172,7 +172,7 @@ export function AppShell({
                 <circle cx="7.25" cy="7.25" r="4.75" stroke="currentColor" strokeWidth="1.2" />
                 <path d="m10.75 10.75 2.75 2.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Search tasks, approvals, workspaces</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Ask Nexus, search missions, approvals</span>
             </div>
           </header>
 

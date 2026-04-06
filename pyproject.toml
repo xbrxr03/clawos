@@ -37,6 +37,7 @@ full = [
 
 [project.scripts]
 clawctl = "clawctl.main:main"
+clawos = "clawctl.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

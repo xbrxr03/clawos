@@ -12,6 +12,13 @@ export type SetupState = {
   secondary_packs?: string[]
   installed_extensions?: string[]
   workspace?: string
+  assistant_identity?: string
+  presence_profile?: PresenceProfile
+  autonomy_policy?: AutonomyPolicy
+  quiet_hours?: Record<string, string>
+  primary_goals?: string[]
+  voice_mode?: string
+  briefing_enabled?: boolean
   voice_enabled?: boolean
   enable_openclaw?: boolean
   launch_on_login?: boolean
@@ -204,6 +211,136 @@ export type WorkbenchSession = {
   created_at: string
 }
 
+export type TrustTier = 'trusted' | 'unverified' | 'blocked'
+
+export type PresenceProfile = {
+  assistant_identity?: string
+  tone?: string
+  verbosity?: string
+  interruption_threshold?: string
+  notification_style?: string
+  follow_up_behavior?: string
+  presence_level?: string
+  preferred_voice_mode?: string
+}
+
+export type AutonomyPolicy = {
+  mode?: string
+  automatic_lanes?: string[]
+  trusted_lanes?: string[]
+  approval_required?: string[]
+  quiet_hours?: Record<string, string>
+  escalation_rule?: string
+}
+
+export type AttentionEvent = {
+  id?: string
+  title?: string
+  summary?: string
+  urgency?: string
+  surface?: string
+  category?: string
+  timestamp?: string
+  acknowledged?: boolean
+}
+
+export type Briefing = {
+  id?: string
+  title?: string
+  headline?: string
+  summary?: string
+  items?: Array<{ title?: string; body?: string; priority?: string }>
+  generated_at?: string
+}
+
+export type Mission = {
+  id?: string
+  title?: string
+  summary?: string
+  status?: string
+  checkpoint?: string
+  blocked?: boolean
+  trust_lane?: string
+  next_action?: string
+  updated_at?: string
+}
+
+export type VoiceSession = {
+  mode?: string
+  state?: string
+  follow_up_open?: boolean
+  device_label?: string
+  last_utterance?: string
+  last_response?: string
+  updated_at?: string
+}
+
+export type PresencePayload = {
+  profile?: PresenceProfile
+  autonomy_policy?: AutonomyPolicy
+  voice_session?: VoiceSession
+}
+
+export type Peer = {
+  id: string
+  url: string
+  name: string
+  trust_tier: TrustTier
+  description?: string
+  version?: string
+  capabilities?: string[]
+  skills?: string[]
+  last_seen?: string
+  last_error?: string
+  reachable?: boolean
+  added_at: string
+}
+
+export type MCPTool = {
+  name: string
+  description: string
+  server_id?: string
+  server_name?: string
+  inputSchema?: Record<string, unknown>
+  input_schema?: Record<string, unknown>
+}
+
+export type MCPResource = {
+  uri: string
+  name: string
+  description?: string
+  server_id?: string
+  server_name?: string
+  mimeType?: string
+}
+
+export type MCPServer = {
+  id: string
+  name: string
+  transport: 'stdio' | 'http'
+  command?: string[]
+  endpoint?: string
+  env?: Record<string, string>
+  enabled: boolean
+  status: 'disconnected' | 'connected' | 'error'
+  error?: string
+  tools: MCPTool[]
+  resources: MCPResource[]
+  prompts: unknown[]
+  connected_at?: string
+  added_at: string
+}
+
+export type WellKnown = {
+  id: string
+  name: string
+  description: string
+  transport: 'stdio' | 'http'
+  command_template: string[]
+  env_required?: string[]
+  category: string
+}
+
 export type OpenClawImportManifest = {
   source_path?: string
   config_path?: string
@@ -289,6 +426,41 @@ export const commandCenterApi = {
     fetchJson<{ ok?: boolean; status?: string }>('/api/setup/cancel', { method: 'POST', headers: setupHeaders() }),
   createSupportBundle: () =>
     fetchJson<{ path?: string }>('/api/support/bundle', { method: 'POST', headers: setupHeaders() }),
+  getPresence: () => fetchJson<PresencePayload>('/api/presence', { headers: maybeSetupHeaders() }),
+  updatePresence: (body: Record<string, unknown>) =>
+    fetchJson<PresencePayload>('/api/presence', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+    }),
+  listAttention: () => fetchJson<AttentionEvent[]>('/api/attention'),
+  getTodayBriefing: () => fetchJson<Briefing>('/api/briefings/today'),
+  listMissions: () => fetchJson<Mission[]>('/api/missions'),
+  startMission: (title: string, summary = '', trust_lane = 'trusted-automatic') =>
+    fetchJson<{ ok?: boolean; mission?: Mission }>('/api/missions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, summary, trust_lane }),
+    }),
+  getVoiceSession: () => fetchJson<VoiceSession>('/api/voice/session'),
+  setVoiceMode: (mode: string) =>
+    fetchJson<VoiceSession>('/api/voice/mode', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ mode }),
+    }),
+  updateSetupPresence: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/presence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
+  updateSetupAutonomy: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/autonomy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
   listPacks: () => fetchJson<UseCasePack[]>('/api/packs', { headers: maybeSetupHeaders() }),
   installPack: (pack_id: string, primary = false, provider_profile = '') =>
     fetchJson<{ ok?: boolean; pack?: UseCasePack; state?: SetupState }>('/api/packs/install', {
@@ -336,36 +508,38 @@ export const commandCenterApi = {
     fetchJson<{ ok?: boolean }>(`/api/studio/programs/${id}`, { method: 'DELETE' }),
   deployStudioProgram: (id: string) =>
     fetchJson<{ ok?: boolean; task_id?: string }>(`/api/studio/programs/${id}/deploy`, { method: 'POST' }),
-  listA2APeers: () => fetchJson<unknown[]>('/api/a2a/peers'),
+  listA2APeers: () => fetchJson<Peer[]>('/api/a2a/peers'),
   addA2APeer: (url: string, name = '', trust_tier = 'unverified') =>
-    fetchJson<unknown>('/api/a2a/peers', {
+    fetchJson<Peer>('/api/a2a/peers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, name, trust_tier }),
     }),
-  removeA2APeer: (id: string) => fetchJson<{ ok?: boolean }>(`/api/a2a/peers/${id}`, { method: 'DELETE' }),
+  removeA2APeer: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/a2a/peers/${id}`, { method: 'DELETE' }),
   setA2ATrust: (id: string, trust_tier: string) =>
-    fetchJson<unknown>(`/api/a2a/peers/${id}/trust`, {
+    fetchJson<Peer>(`/api/a2a/peers/${id}/trust`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ trust_tier }),
     }),
   probeA2APeer: (id: string) =>
-    fetchJson<unknown>(`/api/a2a/peers/${id}/probe`, { method: 'POST' }),
+    fetchJson<Peer>(`/api/a2a/peers/${id}/probe`, { method: 'POST' }),
   getA2ASigningKey: () => fetchJson<{ fingerprint?: string }>('/api/a2a/signing-key'),
-  listMCPServers: () => fetchJson<unknown[]>('/api/mcp/servers'),
-  listMCPWellKnown: () => fetchJson<unknown[]>('/api/mcp/well-known'),
+  listMCPServers: () => fetchJson<MCPServer[]>('/api/mcp/servers'),
+  listMCPWellKnown: () => fetchJson<WellKnown[]>('/api/mcp/well-known'),
   addMCPServer: (params: { name: string; transport: string; command?: string[]; endpoint?: string; env?: Record<string, string> }) =>
-    fetchJson<unknown>('/api/mcp/servers', {
+    fetchJson<MCPServer>('/api/mcp/servers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
     }),
-  removeMCPServer: (id: string) => fetchJson<{ ok?: boolean }>(`/api/mcp/servers/${id}`, { method: 'DELETE' }),
+  removeMCPServer: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/mcp/servers/${id}`, { method: 'DELETE' }),
   connectMCPServer: (id: string) =>
-    fetchJson<unknown>(`/api/mcp/servers/${id}/connect`, { method: 'POST' }),
-  listMCPTools: () => fetchJson<unknown[]>('/api/mcp/tools'),
-  listMCPResources: () => fetchJson<unknown[]>('/api/mcp/resources'),
+    fetchJson<MCPServer>(`/api/mcp/servers/${id}/connect`, { method: 'POST' }),
+  listMCPTools: () => fetchJson<MCPTool[]>('/api/mcp/tools'),
+  listMCPResources: () => fetchJson<MCPResource[]>('/api/mcp/resources'),
   callMCPTool: (server_id: string, tool: string, arguments_: Record<string, unknown> = {}) =>
     fetchJson<{ ok?: boolean; result?: unknown }>('/api/mcp/call', {
       method: 'POST',
@@ -422,4 +596,11 @@ export const commandCenterApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
+  sendConversationMessage: (message: string, workspace = 'nexus_default') =>
+    fetchJson<{ task_id?: string; status?: string }>('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, workspace }),
+    }),
+  listApprovals: () => fetchJson<any[]>('/api/approvals'),
 }

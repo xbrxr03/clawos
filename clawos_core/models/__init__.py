@@ -199,6 +199,109 @@ class A2ATask:
 
 
 @dataclass
+class PresenceProfile:
+    assistant_identity: str = "Nexus"
+    tone: str = "crisp-executive"
+    verbosity: str = "concise"
+    interruption_threshold: str = "meaningful"
+    notification_style: str = "calm-ambient"
+    follow_up_behavior: str = "follow-up-window"
+    presence_level: str = "conversational"
+    preferred_voice_mode: str = "push_to_talk"
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class AutonomyPolicy:
+    mode: str = "mostly-autonomous"
+    automatic_lanes: List[str] = field(default_factory=lambda: ["briefings", "summaries", "organization"])
+    trusted_lanes: List[str] = field(default_factory=lambda: ["calendar-prep", "routine-admin", "travel-readiness"])
+    approval_required: List[str] = field(
+        default_factory=lambda: ["messages", "purchases", "bookings", "destructive", "security", "external-sensitive"]
+    )
+    quiet_hours: Dict[str, str] = field(default_factory=lambda: {"start": "22:00", "end": "07:00"})
+    escalation_rule: str = "approve-when-risky"
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class AttentionEvent:
+    id: str = field(default_factory=task_id)
+    title: str = ""
+    summary: str = ""
+    urgency: str = "low"
+    surface: str = "log"
+    category: str = "signals"
+    timestamp: str = field(default_factory=now_iso)
+    acknowledged: bool = False
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class ActionProposal:
+    id: str = field(default_factory=task_id)
+    title: str = ""
+    summary: str = ""
+    rationale: str = ""
+    confidence: float = 0.0
+    risk: str = "low"
+    requires_approval: bool = False
+    undo_supported: bool = True
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class Briefing:
+    id: str = field(default_factory=task_id)
+    title: str = "Today's briefing"
+    headline: str = ""
+    summary: str = ""
+    items: List[Dict[str, Any]] = field(default_factory=list)
+    generated_at: str = field(default_factory=now_iso)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class Mission:
+    id: str = field(default_factory=task_id)
+    title: str = ""
+    summary: str = ""
+    status: str = "active"
+    checkpoint: str = ""
+    blocked: bool = False
+    trust_lane: str = "automatic"
+    next_action: str = ""
+    updated_at: str = field(default_factory=now_iso)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class VoiceSession:
+    mode: str = "push_to_talk"
+    state: str = "idle"
+    follow_up_open: bool = False
+    device_label: str = "Default device"
+    last_utterance: str = ""
+    last_response: str = ""
+    updated_at: str = field(default_factory=now_iso)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
 class UseCasePack:
     id:                      str
     name:                    str
