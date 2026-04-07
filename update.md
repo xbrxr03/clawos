@@ -59,6 +59,56 @@ Treat this file as project memory.
 
 ## Updates Done By Codex
 
+### 2026-04-07 - Codex
+
+#### Documentation/status audit completed
+
+- Reviewed the tracked first-party Markdown docs in the main repo to determine current documented status and project direction.
+- Confirmed the docs now largely converge on this canonical product shape:
+  - `dashboard/frontend` as the canonical frontend
+  - `services/dashd` as the canonical dashboard API/web surface
+  - `services/setupd` as the guided setup control plane
+  - `desktop/command-center` as the Tauri desktop shell
+- Confirmed the repo contains the main documented surfaces and validation scripts referenced by the newest docs:
+  - `services/setupd`
+  - `services/dashd`
+  - `dashboard/frontend`
+  - `desktop/command-center`
+  - `packaging/deb/build_deb.sh`
+  - `scripts/verify_repo.py`
+  - `scripts/security_audit.py`
+
+#### Current documentation picture
+
+- The newest docs position ClawOS as more than a one-command OpenClaw installer:
+  - local-first command center
+  - pack-first onboarding
+  - provider control plane
+  - extension registry
+  - local traces/evals
+  - OpenClaw rescue/import path
+- `README.md` still leads with installer/OpenClaw-first messaging, while newer docs describe a broader platform/control-plane story.
+- `PROJECT_TRUTH.md` reads like an older architecture contract and does not fully reflect the newer `setupd` + canonical frontend/backend + competitive-platform direction.
+- `dashboard/backend/` is explicitly documented as legacy, but it still exists in-tree and remains a cleanup target.
+- `content_factory_skill/` docs are duplicated in two paths and should be treated as sidecar material, not core runtime truth.
+- Several Markdown files display mojibake in this Windows terminal session (`â€”`, `âœ…`, etc.), so there is likely an encoding/display cleanup worth doing.
+
+#### Verification performed in this pass
+
+- Reviewed tracked first-party `.md` files via `git ls-files "*.md"`.
+- Read the core status/product/architecture docs and ADRs.
+- Checked that the main canonical paths named by the docs exist in the repo.
+- Did not rerun tests in this pass; the latest documented green state remains the `2026-04-06` Codex entry below.
+
+#### Recommended next steps
+
+1. Align top-level messaging across `README.md`, `PROJECT_TRUTH.md`, and `docs/ARCHITECTURE_CURRENT.md` so the repo tells one consistent story.
+2. Decide whether `PROJECT_TRUTH.md` remains an active contract document or is replaced by the newer architecture/setup/platform docs.
+3. Archive or remove the legacy dashboard stack after confirming nothing first-party still depends on it.
+4. Deduplicate `content_factory_skill` documentation and clearly label it as optional sidecar functionality.
+5. Fix Markdown encoding/display issues so docs render cleanly across Windows and Linux terminals.
+6. Add a short release-state note clarifying what is production-ready today versus still roadmap or scaffold work (`.deb`, macOS host install, ISO/Calamares, desktop shell).
+
 ### 2026-04-06 - Codex
 
 #### Major product/platform work completed in this session
