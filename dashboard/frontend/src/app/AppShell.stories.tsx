@@ -29,6 +29,15 @@ export const Default: StoryObj<typeof AppShell> = {
     theme: 'dark',
     onToggleTheme: () => undefined,
     inspector: <InspectorRail approvals={[{ id: 'a1' }]} services={{ dashd: { status: 'up', latency_ms: 2 } }} events={[]} />,
-    children: <div style={{ padding: 24 }}>Command Center content canvas</div>,
+    children: (
+      <div style={{ padding: 20, minHeight: 480, display: 'grid', gap: 12 }}>
+        <div style={{ padding: 16, borderRadius: 10, border: '0.5px solid var(--border)', background: 'var(--surface-1)' }}>
+          Primary content canvas
+        </div>
+        <div style={{ padding: 16, borderRadius: 10, border: '0.5px solid var(--border)', background: 'var(--surface-1)' }}>
+          Secondary grouped content
+        </div>
+      </div>
+    ),
   },
 }

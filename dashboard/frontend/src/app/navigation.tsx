@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react'
 
 export type AppNavItem = {
+  section: string
   label: string
   to: string
   description: string
@@ -9,22 +10,22 @@ export type AppNavItem = {
 }
 
 export const appNav: AppNavItem[] = [
-  { to: '/', label: 'Overview', description: 'Signal-rich snapshot of ClawOS, your approvals, and today.', icon: <IconHome /> },
-  { to: '/tasks', label: 'Tasks', description: 'Live queue for delegated work, missions, and execution history.', icon: <IconTasks /> },
-  { to: '/approvals', label: 'Approvals', description: 'Human review for high-trust actions and sensitive tool calls.', icon: <IconShield /> },
-  { to: '/packs', label: 'Packs', description: 'Curated ClawOS outcomes with defaults, dashboards, and eval posture.', icon: <IconLayers /> },
-  { to: '/workflows', label: 'Workflows', description: 'Local-first automations with direct execution and live output.', icon: <IconWorkflow /> },
-  { to: '/providers', label: 'Providers', description: 'Local Ollama first, with cloud posture and testing when needed.', icon: <IconNodes /> },
-  { to: '/registry', label: 'Registry', description: 'Trust-aware extension catalog and local A2A identity surface.', icon: <IconGrid /> },
-  { to: '/traces', label: 'Traces', description: 'Release confidence, eval suites, and execution timeline history.', icon: <IconPulse /> },
-  { to: '/models', label: 'Models', description: 'Ollama runtime inventory and model posture for this machine.', icon: <IconCpu /> },
-  { to: '/studio', label: 'Pack Studio', description: 'Visual workflow composition for packs, approvals, and deployment.', icon: <IconStudio /> },
-  { to: '/workbench', label: 'Workbench', description: 'Fetch pages, inspect source material, and hand context to Nexus.', icon: <IconWorkbench /> },
-  { to: '/research', label: 'Research', description: 'Citation-backed multi-source research sessions with resumable runs.', icon: <IconResearch /> },
-  { to: '/mcp', label: 'MCP', description: 'Install, connect, and inspect model-context protocol servers and tools.', icon: <IconMCP /> },
-  { to: '/federation', label: 'Federation', description: 'Peer trust, agent-card identity, and multi-node ClawOS posture.', icon: <IconFederation /> },
-  { to: '/memory', label: 'Memory/Audit', description: 'Workspace memory layers, audit surfaces, and runtime history.', icon: <IconDatabase /> },
-  { to: '/settings', label: 'Settings', description: 'Desktop posture, support tooling, startup behavior, and recovery.', icon: <IconSettings /> },
+  { section: 'Overview', to: '/', label: 'Overview', description: 'Signal-rich snapshot of services, approvals, conversation, and today.', icon: <IconHome /> },
+  { section: 'Operate', to: '/tasks', label: 'Tasks', description: 'Live queue for delegated work, missions, and execution history.', icon: <IconTasks /> },
+  { section: 'Operate', to: '/approvals', label: 'Approvals', description: 'Human review for sensitive tool calls and irreversible actions.', icon: <IconShield /> },
+  { section: 'Operate', to: '/workflows', label: 'Workflows', description: 'Run local-first automations with live progress and output.', icon: <IconWorkflow /> },
+  { section: 'Operate', to: '/studio', label: 'Pack Studio', description: 'Compose and prepare pack flows, approvals, and deployment posture.', icon: <IconStudio /> },
+  { section: 'Knowledge', to: '/workbench', label: 'Workbench', description: 'Fetch pages, inspect source material, and hand context to Nexus.', icon: <IconWorkbench /> },
+  { section: 'Knowledge', to: '/research', label: 'Research', description: 'Citation-backed research sessions with resumable runs.', icon: <IconResearch /> },
+  { section: 'Knowledge', to: '/memory', label: 'Memory/Audit', description: 'Workspace memory layers, audit surfaces, and runtime history.', icon: <IconDatabase /> },
+  { section: 'Platform', to: '/packs', label: 'Packs', description: 'Curated ClawOS outcomes with defaults, dashboards, and eval posture.', icon: <IconLayers /> },
+  { section: 'Platform', to: '/providers', label: 'Providers', description: 'Local Ollama first, with cloud posture and testing when needed.', icon: <IconNodes /> },
+  { section: 'Platform', to: '/models', label: 'Models', description: 'Ollama runtime inventory and model posture for this machine.', icon: <IconCpu /> },
+  { section: 'Platform', to: '/registry', label: 'Registry', description: 'Trust-aware extension catalog and local A2A identity surface.', icon: <IconGrid /> },
+  { section: 'Platform', to: '/mcp', label: 'MCP', description: 'Install, connect, and inspect model-context protocol servers and tools.', icon: <IconMCP /> },
+  { section: 'Platform', to: '/federation', label: 'Federation', description: 'Peer trust, agent-card identity, and multi-node ClawOS posture.', icon: <IconFederation /> },
+  { section: 'System', to: '/traces', label: 'Traces', description: 'Release confidence, eval suites, and execution timeline history.', icon: <IconPulse /> },
+  { section: 'System', to: '/settings', label: 'Settings', description: 'Desktop posture, support tooling, startup behavior, and recovery.', icon: <IconSettings /> },
 ]
 
 function IconHome() {

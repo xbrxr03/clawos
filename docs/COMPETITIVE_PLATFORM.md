@@ -23,6 +23,11 @@ This document tracks the concrete primitives and surfaces that support that posi
   - registry
   - traces
   - workflows
+  - workbench
+  - research
+  - MCP manager
+  - federation
+  - studio
   - approvals
   - models
   - diagnostics
@@ -147,8 +152,37 @@ Command Center:
 - `POST /api/extensions/install`
 - `GET /api/traces`
 - `GET /api/evals`
+- `POST /api/workbench/fetch`
+- `POST /api/workbench/research`
+- `GET /api/workbench/sessions`
+- `POST /api/research/start`
+- `GET /api/research/sessions`
+- `GET /api/research/sessions/{id}`
+- `POST /api/research/sessions/{id}/resume`
+- `POST /api/research/sessions/{id}/pause`
+- `DELETE /api/research/sessions/{id}`
+- `GET /api/mcp/servers`
+- `POST /api/mcp/servers`
+- `PATCH /api/mcp/servers/{id}`
+- `DELETE /api/mcp/servers/{id}`
+- `POST /api/mcp/servers/{id}/connect`
+- `GET /api/mcp/well-known`
+- `GET /api/mcp/tools`
+- `GET /api/mcp/resources`
+- `POST /api/mcp/call`
+- `POST /api/mcp/resources/read`
+- `GET /api/studio/programs`
+- `POST /api/studio/programs`
+- `DELETE /api/studio/programs/{id}`
+- `POST /api/studio/programs/{id}/deploy`
 - `GET /api/a2a/agent-card`
 - `POST /api/a2a/tasks`
+- `GET /api/a2a/peers`
+- `POST /api/a2a/peers`
+- `DELETE /api/a2a/peers/{id}`
+- `POST /api/a2a/peers/{id}/trust`
+- `POST /api/a2a/peers/{id}/probe`
+- `GET /api/a2a/signing-key`
 
 ## Current CLI Surface
 
@@ -164,12 +198,13 @@ Command Center:
 
 ## What Comes Next
 
-The next layers that complete the competitive moat are:
+These surfaces are already wired into the repo; the next platform-depth work is making them
+production-grade after the v0.1 release:
 
-- Browser Workbench
-- local research engine with citations and resumable runs
-- MCP manager
-- richer A2A federation and peer trust
+- Wave 1 packs completed end to end
+- Browser Workbench for broader remote/mobile use
+- stronger research depth and report quality
+- richer MCP lifecycle management
+- richer A2A federation and trust posture
 - OTEL-native trace export
-- Pack Studio visual builder
 - stronger signed extension packaging and rollback support

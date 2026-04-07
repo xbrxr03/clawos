@@ -1,7 +1,7 @@
 ﻿# ClawOS Roadmap â€” To The Finish Line
 
 > Canonical roadmap. Supersedes `docs/STABILIZATION_ROADMAP.md`.
-> Updated: 2026-04-06 by Codex.
+> Updated: 2026-04-07 by Codex.
 > Nothing from the Codex PRs is omitted â€” each item is sequenced correctly.
 
 ---
@@ -15,7 +15,7 @@ Polish before features. Infrastructure before experience. Experience before plat
 
 ## Current State (2026-04-06)
 
-- Phases 1â€“11 merged. `python -m pytest tests -q` now passes with `155 passed, 25 skipped`. Security audit green.
+- Phases 1-11 merged. `python -m pytest tests -q` now passes with `166 passed, 25 skipped`. Security audit green.
 - 29 workflow modules across 6 categories.
 - 19 services: agentd, policyd, memd, toolbridge, modeld, dashd, voiced, gatewayd, a2ad,
   capabilityd, metricd, picoclawd, ragd, scheduler, secretd, setupd, skilld, clawd + helpers.
@@ -29,16 +29,13 @@ Polish before features. Infrastructure before experience. Experience before plat
 - OpenClaw rescue path implemented.
 - Stabilization is materially cleaner now: the legacy dashboard stack is gone, auth is tightened,
   the top-10 workflows are deterministic, and the first-party contracts are cleaner.
-- Milestone 2 is underway: the premium shell/design-system pass is live, the setup wizard has
-  been rebuilt into the 8-step first-run flow with real model-pull progress, and the dashboard
-  polish pass now covers Overview, Workflows, Packs, Providers, Registry, Traces, and Settings.
-- Milestone 2D is now end-to-end enough for the premium path: PipeWire-first 44.1 kHz capture,
-  Piper playback checks, wake-word readiness confirmation, dashboard push-to-talk, and live voice-session
-  broadcasts are all wired through the shell and setup wizard.
-- Milestone 2E is now in place for the WhatsApp bridge: inbound JIDs route into stable workspaces,
-  approval-by-reply and automatic voice-note transcription are wired, reconnect remains automatic,
-  and dashboard settings now expose the phone-bridge connection posture.
-- Remaining debt is mostly release-facing: `.deb` validation still needs a built artifact, and ISO / real-hardware validation remains.
+- Milestone 2 is complete: the premium shell/design-system pass, setup wizard rebuild,
+  dashboard polish, voice path, WhatsApp bridge, hero workflows, and AGPL migration are all in place.
+- Additional command-center surfaces are already shipped in-tree: Workbench, Research,
+  MCP Manager, Federation, and Studio.
+- Remaining debt is mostly release-facing: install validation on supported targets,
+  `.deb` validation on a Linux builder, ISO / real-hardware validation, release assets,
+  and a final docs accuracy pass.
 
 ---
 
@@ -305,16 +302,7 @@ These apply to every session, every milestone:
 ## Build Order Summary
 
 ```
-NOW      Milestone 2: Premium Experience
-         â””â”€â”€ Design system enforcement foundation landed
-         â””â”€â”€ First-run wizard foundation landed
-         â””â”€â”€ Dashboard polish in progress
-         â””â”€â”€ Voice pipeline end-to-end
-         â””â”€â”€ WhatsApp bridge reliable
-         â””â”€â”€ Hero workflows demo-quality
-         â””â”€â”€ AGPL migration
-
-NEXT     Milestone 3: Ship v0.1
+NOW      Milestone 3: Ship v0.1
          â””â”€â”€ ISO validated on real hardware
          â””â”€â”€ install.sh validated (Ubuntu + macOS)
          â””â”€â”€ README â€” the product pitch
@@ -322,7 +310,7 @@ NEXT     Milestone 3: Ship v0.1
          â””â”€â”€ Docs accuracy pass
          â””â”€â”€ v0.1.0 release tag
 
-THEN     Milestone 4: Platform Depth
+NEXT     Milestone 4: Platform Depth
          â””â”€â”€ Wave 1 Packs production-grade
          â””â”€â”€ Browser Workbench
          â””â”€â”€ Research Engine
@@ -331,7 +319,7 @@ THEN     Milestone 4: Platform Depth
          â””â”€â”€ Pack Studio
          â””â”€â”€ Extension ecosystem hardening
 
-LATER    Milestone 5: True Distro
+THEN     Milestone 5: True Distro
          â””â”€â”€ Calamares installer
          â””â”€â”€ Custom branded ISO
          â””â”€â”€ Auto-update system

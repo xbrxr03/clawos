@@ -1,6 +1,6 @@
 ﻿# ClawOS
 
-> OpenClaw on your own hardware. One command. No API keys. No monthly bill.
+> ClawOS is what you get when Apple builds JARVIS for everyone: a local-first AI operating environment that runs on your hardware, works offline, and costs nothing.
 >
 > [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3%2B-1f6feb.svg)](LICENSE)
 
@@ -8,13 +8,23 @@
 curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 ```
 
-In ~4 minutes you have the full OpenClaw ecosystem running locally - offline, private, and free.
+In ~4 minutes you have the ClawOS command center and the OpenClaw ecosystem running locally - offline, private, and free.
+
+Current release status:
+
+- `0.1.0` is the active release target.
+- Linux host installs are the most battle-tested path today.
+- macOS 14+ on Apple Silicon is supported through the Homebrew + `launchd` path.
+- `.deb` packaging exists in-repo.
+- The ISO path exists in-repo but still needs final Linux-host and real-hardware validation before it is treated as release-ready.
+
+For the product north star and quality bar, see [docs/PRODUCT_VISION.md](docs/PRODUCT_VISION.md). For the release plan, see [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
 ## What ClawOS is (and isn't)
 
-ClawOS is currently a **one-command installer** that turns Ubuntu/Debian and macOS 14+ machines into a working local AI command center. OpenClaw remains the primary migration wedge, but ClawOS is becoming a pack-first AI operating layer with provider profiles, trusted extensions, local traces, and guided setup. Linux is still the most battle-tested path; macOS support now uses Homebrew plus `launchd` and is documented in [docs/MACOS.md](docs/MACOS.md). Production deployment notes live in [docs/PRODUCTION.md](docs/PRODUCTION.md), the repo verification path lives in [docs/VERIFICATION.md](docs/VERIFICATION.md), and the competitive-platform roadmap now lives in [docs/COMPETITIVE_PLATFORM.md](docs/COMPETITIVE_PLATFORM.md).
+ClawOS is a **local-first AI command center and install surface** for Ubuntu/Debian and macOS 14+ machines. OpenClaw remains the primary migration wedge, but ClawOS now also includes pack-first setup, provider profiles, trusted extensions, local traces, and guided setup. Linux is still the most battle-tested path; macOS support now uses Homebrew plus `launchd` and is documented in [docs/MACOS.md](docs/MACOS.md). Production deployment notes live in [docs/PRODUCTION.md](docs/PRODUCTION.md), the repo verification path lives in [docs/VERIFICATION.md](docs/VERIFICATION.md), and the competitive-platform roadmap now lives in [docs/COMPETITIVE_PLATFORM.md](docs/COMPETITIVE_PLATFORM.md).
 
 A dedicated security-audit path now lives in [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
 

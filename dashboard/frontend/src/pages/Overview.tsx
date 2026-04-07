@@ -54,7 +54,7 @@ export function Overview({
     {
       id: 'nexus-welcome',
       role: 'assistant',
-      content: 'Nexus is online. I am tracking your day, your approvals, and anything that needs a decision.',
+      content: 'Nexus is online and watching the trusted lanes for you.',
       meta: 'Ready',
     },
   ])
@@ -103,10 +103,21 @@ export function Overview({
   const assistantName = presence?.profile?.assistant_identity || 'Nexus'
   const voiceMode = voiceSession?.mode || presence?.voice_session?.mode || 'push_to_talk'
   const voiceState = voiceSession?.state || presence?.voice_session?.state || 'idle'
-  const tone = presence?.profile?.tone || 'crisp-executive'
+  const tone = presence?.profile?.tone || 'calm'
 
   const timeline = useMemo(() => events.slice(0, 6), [events])
   const serviceCoverage = serviceEntries.length ? Math.round((healthyServices / serviceEntries.length) * 100) : 0
+  const runtimeHighlights = Object.entries(runtimes || {})
+    .slice(0, 5)
+    .map(([name, item]) => ({
+      name,
+      status: item?.running ? 'running' : item?.installed ? 'installed' : 'missing',
+      model: item?.model || 'unassigned',
+    }))
+  const topSignals = signals.slice(0, 4)
+  const topMissions = missions.slice(0, 4)
+  const serviceHealthRows = serviceEntries.slice(0, 4)
+
   const activityMix = useMemo(() => {
     const counts = { workflow: 0, service: 0, audit: 0, other: 0 }
     events.slice(0, 24).forEach((event) => {
@@ -117,13 +128,12 @@ export function Overview({
     })
     return counts
   }, [events])
-  const runtimeHighlights = Object.entries(runtimes || {})
-    .slice(0, 4)
-    .map(([name, item]) => ({
-      name,
-      status: item?.running ? 'running' : item?.installed ? 'installed' : 'missing',
-      model: item?.model || 'unassigned',
-    }))
+
+  const approvalMix = {
+    high: liveApprovals.filter((item) => item.risk === 'high').length,
+    medium: liveApprovals.filter((item) => !item.risk || item.risk === 'medium').length,
+    low: liveApprovals.filter((item) => item.risk === 'low').length,
+  }
 
   const submitConversation = async (event: FormEvent) => {
     event.preventDefault()
@@ -138,7 +148,7 @@ export function Overview({
       {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: 'Understood. I queued the work and will surface only the parts that need you.',
+        content: 'Understood. I queued the work and will only surface the parts that need you.',
         meta: 'Queued',
       },
     ])
@@ -197,33 +207,19 @@ export function Overview({
       const response = await commandCenterApi.startMission(title, summary)
       if (response.mission) {
         setMissions((current) => [response.mission as Mission, ...current].slice(0, 6))
-        setSignals((current) => [
-          {
-            id: `mission-${Date.now()}`,
-            title: 'Mission started',
-            summary: `${title} is now active in Nexus.`,
-            urgency: 'low',
-            surface: 'visual',
-            category: 'mission',
-          },
-          ...current,
-        ].slice(0, 4))
       }
     } catch {
       setConversationStatus('Nexus could not start that mission right now.')
     }
   }
 
-  const topSignals = signals.slice(0, 4)
-  const topMissions = missions.slice(0, 4)
-
   return (
-    <div className="fade-up" style={{ padding: '0 0 40px' }}>
-      <div style={{ padding: '28px 24px 0', display: 'grid', gap: 16 }}>
+    <div className="fade-up" style={{ padding: '0 0 48px' }}>
+      <div style={{ padding: '24px 20px 16px' }}>
         <PageHeader
           eyebrow="Overview"
-          title="Your command center is live."
-          description="Real-time posture across services, missions, approvals, and conversation lanes. This is the fastest read on what Nexus is doing for you right now."
+          title="Command center at a glance."
+          description="A compact read on services, approvals, live activity, missions, and conversation so you can keep moving without hunting for status."
           meta={
             <>
               <Badge color={serviceCoverage >= 80 ? 'green' : serviceCoverage >= 50 ? 'orange' : 'red'}>
@@ -238,161 +234,142 @@ export function Overview({
           actions={
             <>
               <button className="btn primary" onClick={() => navigate('/workflows')}>Open workflows</button>
-              <button className="btn" onClick={() => navigate('/settings')}>Refine presence</button>
+              <button className="btn" onClick={() => navigate('/settings')}>Open settings</button>
             </>
           }
         />
-
-        <Card
-          style={{
-            padding: 24,
-            display: 'grid',
-            gridTemplateColumns: '1.1fr 0.9fr',
-            gap: 18,
-            alignItems: 'stretch',
-            background:
-              'radial-gradient(circle at top left, rgba(77,143,247,0.18), transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-          }}
-        >
-          <div style={{ display: 'grid', gap: 14 }}>
-            <div className="section-label">Nexus</div>
-            <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.06em', lineHeight: 1.03, maxWidth: 640 }}>
-              {assistantName} is ready to run your day, not just answer questions.
-            </div>
-            <div style={{ color: 'var(--text-3)', fontSize: 14, maxWidth: 580 }}>
-              A calm, conversational operator that prepares, acts inside trusted lanes, and surfaces only what matters. The command center is now your desktop home for today, missions, decisions, and signals.
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <MetricPanel label="Voice mode" value={voiceMode.replace('_', ' ')} tone="blue" />
-            <MetricPanel label="Voice state" value={voiceState} tone={voiceState === 'idle' ? 'gray' : 'green'} />
-            <MetricPanel label="Pending decisions" value={liveApprovals.length} tone={liveApprovals.length ? 'orange' : 'green'} />
-            <MetricPanel label="Active missions" value={topMissions.length} tone={topMissions.length ? 'blue' : 'gray'} />
-          </div>
-        </Card>
       </div>
 
-      <SectionLabel>At A Glance</SectionLabel>
-      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Card style={{ padding: 20, display: 'grid', gap: 16 }}>
-          <PanelHeader
-            eyebrow="Pulse"
-            title="Service and task health"
-            description="Real usage signals instead of placeholder stats."
-            aside={<Badge color={serviceCoverage >= 80 ? 'green' : serviceCoverage >= 50 ? 'orange' : 'red'}>{serviceCoverage}% ready</Badge>}
-          />
-          <BarRow label="Healthy services" value={healthyServices} total={serviceEntries.length || 1} tone="green" />
-          <BarRow label="Active tasks" value={taskCounts.active} total={Math.max(taskCounts.active + taskCounts.queued + taskCounts.completed + taskCounts.failed, 1)} tone="blue" />
-          <BarRow label="Queued tasks" value={taskCounts.queued} total={Math.max(taskCounts.active + taskCounts.queued + taskCounts.completed + taskCounts.failed, 1)} tone="orange" />
-          <BarRow label="Running models" value={runningModels} total={Math.max((models.models || []).length, 1)} tone="purple" />
-        </Card>
-
-        <Card style={{ padding: 20, display: 'grid', gap: 16 }}>
-          <PanelHeader
-            eyebrow="Flow"
-            title="Recent activity mix"
-            description="What the command center has been handling in the latest event window."
-            aside={<Badge color="blue">{events.length} events</Badge>}
-          />
-          <BarRow label="Workflow activity" value={activityMix.workflow} total={Math.max(events.length, 1)} tone="blue" />
-          <BarRow label="Service health" value={activityMix.service} total={Math.max(events.length, 1)} tone="green" />
-          <BarRow label="Audit signals" value={activityMix.audit} total={Math.max(events.length, 1)} tone="orange" />
-          <BarRow label="Other events" value={activityMix.other} total={Math.max(events.length, 1)} tone="gray" />
-        </Card>
+      <div style={{ padding: '0 20px 16px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+        <OverviewStat label="Healthy Services" value={`${healthyServices}/${serviceEntries.length || 0}`} meta="local runtime posture" tone="green" progress={serviceCoverage} />
+        <OverviewStat label="Active Tasks" value={taskCounts.active} meta={`${taskCounts.queued} queued`} tone="blue" progress={Math.min(100, (taskCounts.active + taskCounts.queued) * 12 || 8)} />
+        <OverviewStat label="Pending Decisions" value={liveApprovals.length} meta={liveApprovals.length ? 'review lane active' : 'clear'} tone={liveApprovals.length ? 'orange' : 'green'} progress={liveApprovals.length ? Math.min(100, liveApprovals.length * 20) : 10} />
+        <OverviewStat label="Running Models" value={runningModels} meta={voiceMode.replace(/_/g, ' ')} tone="purple" progress={Math.min(100, runningModels * 24 || 8)} />
       </div>
 
-      <div style={{ padding: '12px 24px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Card style={{ padding: 20, display: 'grid', gap: 14 }}>
+      <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 12 }}>
+        <Card style={{ padding: 18, display: 'grid', gap: 12 }}>
           <PanelHeader
-            eyebrow="Runtimes"
-            title="Model posture"
-            description="Which execution lanes are warm and what model each lane is carrying."
+            eyebrow="Running Lanes"
+            title={`${assistantName} and the active runtimes`}
+            description="Compact runtime rows with current posture, model assignment, and service health."
+            aside={<Badge color={voiceState === 'idle' ? 'gray' : 'blue'}>{voiceState}</Badge>}
           />
-          {runtimeHighlights.length === 0 ? (
-            <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No runtime adapters have reported posture yet.</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {runtimeHighlights.map((runtime) => (
-                <div key={runtime.name} style={{ padding: 14, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>{runtime.name}</div>
+          <div className="grouped-list">
+            {runtimeHighlights.length === 0 ? (
+              <div className="row"><span style={{ color: 'var(--text-3)' }}>No runtime adapters have reported posture yet.</span></div>
+            ) : (
+              runtimeHighlights.map((runtime) => (
+                <div key={runtime.name} className="row">
+                  <span className={`dot ${runtime.status === 'running' ? 'green' : runtime.status === 'installed' ? 'orange' : 'gray'}`} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{runtime.name}</span>
+                      <Badge color={runtime.status === 'running' ? 'green' : runtime.status === 'installed' ? 'orange' : 'gray'}>
+                        {runtime.status}
+                      </Badge>
+                    </div>
                     <div className="mono" style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{runtime.model}</div>
                   </div>
-                  <Badge color={runtime.status === 'running' ? 'green' : runtime.status === 'installed' ? 'blue' : 'gray'}>
-                    {runtime.status}
-                  </Badge>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card style={{ padding: 20, display: 'grid', gap: 14 }}>
-          <PanelHeader
-            eyebrow="Decisions"
-            title="Approval pressure"
-            description="Which review lane is most likely to interrupt your flow."
-          />
-          <BarRow label="High risk" value={liveApprovals.filter((item) => item.risk === 'high').length} total={Math.max(liveApprovals.length, 1)} tone="red" />
-          <BarRow label="Medium risk" value={liveApprovals.filter((item) => !item.risk || item.risk === 'medium').length} total={Math.max(liveApprovals.length, 1)} tone="orange" />
-          <BarRow label="Low risk" value={liveApprovals.filter((item) => item.risk === 'low').length} total={Math.max(liveApprovals.length, 1)} tone="blue" />
-          <div style={{ color: 'var(--text-3)', fontSize: 12 }}>
-            {liveApprovals.length === 0
-              ? 'No approval queue right now, so Nexus can stay in trusted lanes.'
-              : 'Approval-sensitive work is visible here before it becomes a blocker.'}
-          </div>
-        </Card>
-      </div>
-
-      <SectionLabel>Today</SectionLabel>
-      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 12 }}>
-        <Card style={{ padding: 20, display: 'grid', gap: 14 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em' }}>{briefing?.headline || 'Today is under control.'}</div>
-            <div style={{ marginTop: 8, color: 'var(--text-3)', fontSize: 14 }}>
-              {briefing?.summary || 'Nexus is preparing a briefing and watching for any changes that matter.'}
-            </div>
-          </div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {(briefing?.items || []).map((item, index) => (
-              <div key={`${item.title}-${index}`} style={{ padding: 14, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{item.title}</div>
-                  <Badge color={item.priority === 'high' ? 'red' : item.priority === 'medium' ? 'orange' : 'blue'}>
-                    {item.priority || 'low'}
-                  </Badge>
+              ))
+            )}
+            {serviceHealthRows.map(([name, item]) => (
+              <div key={name} className="row">
+                <span className={`dot ${(item?.status === 'up' || item?.status === 'running') ? 'green' : item?.status === 'degraded' ? 'orange' : 'red'}`} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600 }}>{name}</div>
+                  <div style={{ marginTop: 4, color: 'var(--text-3)', fontSize: 11 }}>
+                    {item?.status || 'unknown'}{item?.latency_ms ? ` - ${item.latency_ms}ms` : ''}
+                  </div>
                 </div>
-                <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-3)', lineHeight: 1.5 }}>{item.body}</div>
               </div>
             ))}
           </div>
         </Card>
 
-        <Card style={{ padding: 20, display: 'grid', gap: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>Signals</div>
-              <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 4 }}>
-                Nexus only interrupts for things worth your attention.
-              </div>
-            </div>
-            <Badge color="blue">{topSignals.length}</Badge>
+        <Card style={{ padding: 18, display: 'grid', gap: 12 }}>
+          <PanelHeader
+            eyebrow="Recent Logs"
+            title="Latest command center activity"
+            description="The most recent runtime events in a compact console-style strip."
+            aside={<Badge color="gray">{timeline.length}</Badge>}
+          />
+          <div className="log-terminal" style={{ minHeight: 250 }}>
+            {timeline.length === 0 ? (
+              <div style={{ color: 'var(--text-3)' }}>Waiting for fresh runtime activity.</div>
+            ) : (
+              timeline.map((event, index) => (
+                <div key={`${event.type || 'event'}-${index}`} style={{ display: 'grid', gridTemplateColumns: '72px 84px 1fr', gap: 10, padding: '3px 0', alignItems: 'start' }}>
+                  <Ts value={event.data?.timestamp || event.timestamp || Date.now()} />
+                  <span style={{ color: toneForEvent(event), textTransform: 'uppercase', fontSize: 10 }}>{event.type || 'event'}</span>
+                  <span style={{ color: 'var(--text-2)' }}>{eventSummary(event)}</span>
+                </div>
+              ))
+            )}
           </div>
+        </Card>
+      </div>
 
-          <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ padding: '12px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+        <MetricMeter label="Workflow Activity" value={activityMix.workflow} total={Math.max(events.length, 1)} tone="blue" />
+        <MetricMeter label="Audit Signals" value={activityMix.audit} total={Math.max(events.length, 1)} tone="orange" />
+        <MetricMeter label="Low-Friction Approvals" value={approvalMix.low} total={Math.max(liveApprovals.length, 1)} tone="green" />
+      </div>
+
+      <SectionLabel>Today</SectionLabel>
+      <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 12 }}>
+        <Card style={{ padding: 18, display: 'grid', gap: 14 }}>
+          <PanelHeader
+            eyebrow="Briefing"
+            title={briefing?.headline || 'Today is under control.'}
+            description={briefing?.summary || 'Nexus is preparing the next briefing and watching for changes that matter.'}
+          />
+          <div className="grouped-list">
+            {(briefing?.items || []).length === 0 ? (
+              <div className="row"><span style={{ color: 'var(--text-3)' }}>No briefing items have landed yet.</span></div>
+            ) : (
+              (briefing?.items || []).map((item, index) => (
+                <div key={`${item.title}-${index}`} className="row" style={{ alignItems: 'flex-start' }}>
+                  <span className={`dot ${item.priority === 'high' ? 'red' : item.priority === 'medium' ? 'orange' : 'blue'}`} style={{ marginTop: 6 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                      <div style={{ fontWeight: 600 }}>{item.title}</div>
+                      <Badge color={item.priority === 'high' ? 'red' : item.priority === 'medium' ? 'orange' : 'blue'}>
+                        {item.priority || 'low'}
+                      </Badge>
+                    </div>
+                    <div style={{ marginTop: 6, color: 'var(--text-2)', lineHeight: 1.55 }}>{item.body}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+
+        <Card style={{ padding: 18, display: 'grid', gap: 14 }}>
+          <PanelHeader
+            eyebrow="Signals"
+            title="Only the interruptions that matter"
+            description="The attention lane stays compact until something deserves your eyes or voice."
+            aside={<Badge color="blue">{topSignals.length}</Badge>}
+          />
+          <div className="grouped-list">
             {topSignals.length === 0 ? (
-              <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Nothing urgent. Nexus is quietly on watch.</div>
+              <div className="row"><span style={{ color: 'var(--text-3)' }}>Nothing urgent. Nexus is quietly on watch.</span></div>
             ) : (
               topSignals.map((signal) => (
-                <div key={signal.id} style={{ padding: 14, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{signal.title}</div>
-                    <Badge color={signal.urgency === 'high' ? 'red' : signal.urgency === 'medium' ? 'orange' : 'blue'}>
-                      {signal.surface === 'spoken-visual' ? 'spoken + visual' : signal.surface || 'log'}
-                    </Badge>
+                <div key={signal.id} className="row" style={{ alignItems: 'flex-start' }}>
+                  <span className={`dot ${signal.urgency === 'high' ? 'red' : signal.urgency === 'medium' ? 'orange' : 'blue'}`} style={{ marginTop: 6 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                      <div style={{ fontWeight: 600 }}>{signal.title}</div>
+                      <Badge color={signal.urgency === 'high' ? 'red' : signal.urgency === 'medium' ? 'orange' : 'gray'}>
+                        {signal.surface === 'spoken-visual' ? 'spoken + visual' : signal.surface || 'visual'}
+                      </Badge>
+                    </div>
+                    <div style={{ marginTop: 6, color: 'var(--text-2)', lineHeight: 1.55 }}>{signal.summary}</div>
                   </div>
-                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>{signal.summary}</div>
                 </div>
               ))
             )}
@@ -401,49 +378,38 @@ export function Overview({
       </div>
 
       <SectionLabel>Conversation</SectionLabel>
-      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-        <Card style={{ padding: 20, display: 'grid', gap: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>Talk to {assistantName}</div>
-              <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 4 }}>
-                Tone: {tone}. Voice mode: {voiceMode.replace('_', ' ')}. Follow-up windows stay short by default.
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Badge color={voiceState === 'idle' ? 'gray' : 'green'}>{voiceState}</Badge>
-              <button className="btn" type="button" onClick={pushToTalk} disabled={voiceBusy || voiceMode === 'off'}>
-                {voiceBusy ? 'Listening...' : voiceMode === 'off' ? 'Voice off' : 'Push to talk'}
-              </button>
-            </div>
-          </div>
+      <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 12 }}>
+        <Card style={{ padding: 18, display: 'grid', gap: 14 }}>
+          <PanelHeader
+            eyebrow="Talk To Nexus"
+            title={`Voice and text with ${assistantName}`}
+            description={`Tone: ${tone}. Voice mode: ${voiceMode.replace(/_/g, ' ')}.`}
+            aside={<Badge color={voiceState === 'idle' ? 'gray' : 'green'}>{voiceState}</Badge>}
+          />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-            <SmallMetric label="Input device" value={voiceSession?.device_label || 'Default input'} />
-            <SmallMetric label="Last utterance" value={voiceSession?.last_utterance || 'Waiting for voice input'} />
-            <SmallMetric label="Last response" value={voiceSession?.last_response || 'No spoken reply yet'} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+            <MiniInfo label="Input device" value={voiceSession?.device_label || 'Default input'} />
+            <MiniInfo label="Last utterance" value={voiceSession?.last_utterance || 'Waiting for voice input'} />
+            <MiniInfo label="Last response" value={voiceSession?.last_response || 'No spoken reply yet'} />
           </div>
 
           <div style={{ display: 'grid', gap: 10 }}>
             {conversation.slice(-4).map((message) => (
               <div
                 key={message.id}
+                className={`conversation-bubble${message.role === 'user' ? ' user' : ''}`}
                 style={{
-                  padding: 14,
-                  borderRadius: 16,
-                  background: message.role === 'assistant' ? 'var(--surface-2)' : 'rgba(77,143,247,0.12)',
-                  border: '1px solid var(--border)',
-                  marginLeft: message.role === 'assistant' ? 0 : 56,
-                  marginRight: message.role === 'assistant' ? 56 : 0,
+                  marginLeft: message.role === 'assistant' ? 0 : 52,
+                  marginRight: message.role === 'assistant' ? 52 : 0,
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
                     {message.role === 'assistant' ? assistantName : 'You'}
                   </div>
-                  {message.meta && <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>{message.meta}</span>}
+                  {message.meta ? <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>{message.meta}</span> : null}
                 </div>
-                <div style={{ fontSize: 14, lineHeight: 1.6 }}>{message.content}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.6 }}>{message.content}</div>
               </div>
             ))}
           </div>
@@ -454,14 +420,6 @@ export function Overview({
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Ask Nexus to prepare, act, or brief you"
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                borderRadius: 14,
-                border: '1px solid var(--border)',
-                background: 'var(--surface-2)',
-                color: 'var(--text)',
-              }}
             />
             <button className="btn primary" type="submit" disabled={working || !draft.trim()}>
               {working ? 'Acting' : 'Send'}
@@ -469,142 +427,92 @@ export function Overview({
           </form>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-            {conversationStatus ? <div style={{ color: 'var(--text-3)', fontSize: 12 }}>{conversationStatus}</div> : <div />}
+            {conversationStatus ? <div style={{ color: 'var(--text-2)', fontSize: 12 }}>{conversationStatus}</div> : <div />}
             <div style={{ color: 'var(--text-3)', fontSize: 12 }}>
               <Ts value={voiceSession?.updated_at} /> {voiceMode === 'off' ? 'Voice is disabled right now.' : 'Ctrl+Shift+Space also starts push-to-talk.'}
             </div>
           </div>
         </Card>
-      </div>
 
-      <SectionLabel>Active Missions</SectionLabel>
-      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Card style={{ padding: 20, display: 'grid', gap: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>Mission queue</div>
-              <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 4 }}>
-                Long-running objectives with checkpoints, summaries, and escalation.
-              </div>
-            </div>
-            <Badge color="blue">{topMissions.length}</Badge>
-          </div>
-
-          <div style={{ display: 'grid', gap: 10 }}>
-            {topMissions.length === 0 ? (
-              <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No active missions yet.</div>
-            ) : (
-              topMissions.map((mission) => (
-                <div key={mission.id} style={{ padding: 14, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{mission.title}</div>
-                    <Badge color={mission.blocked ? 'red' : mission.status === 'active' ? 'blue' : 'gray'}>
-                      {mission.blocked ? 'blocked' : mission.status || 'idle'}
-                    </Badge>
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>{mission.summary}</div>
-                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <span className="mono" style={{ fontSize: 11 }}>{mission.checkpoint || 'monitoring'}</span>
-                    <span className="mono" style={{ fontSize: 11 }}>{mission.trust_lane || 'automatic'}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        <Card style={{ padding: 20, display: 'grid', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>Quick starts</div>
-            <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 4 }}>
-              Launch a trusted mission without digging through workflows.
-            </div>
-          </div>
+        <Card style={{ padding: 18, display: 'grid', gap: 12 }}>
+          <PanelHeader
+            eyebrow="Quick Actions"
+            title="Start trusted work quickly"
+            description="Mission shortcuts stay close to the conversation lane."
+          />
+          <button className="btn" onClick={pushToTalk} disabled={voiceBusy || voiceMode === 'off'}>
+            {voiceBusy ? 'Listening...' : voiceMode === 'off' ? 'Voice off' : 'Push to talk'}
+          </button>
           <button className="btn" onClick={() => startMission('Refresh today briefing', 'Rebuild the briefing after schedule or inbox changes.')}>
             Refresh today briefing
           </button>
           <button className="btn" onClick={() => startMission('Pre-meeting packet', 'Prepare a concise packet for the next important meeting.')}>
-            Pre-meeting packet
+            Prepare meeting packet
           </button>
           <button className="btn" onClick={() => startMission('Inbox triage loop', 'Review drafts, reminders, and follow-ups without sending risky content.')}>
-            Inbox triage loop
+            Start inbox triage
           </button>
-          <button className="btn" onClick={() => navigate('/packs')}>Open packs</button>
+          <button className="btn primary" onClick={() => navigate('/packs')}>Open packs</button>
         </Card>
       </div>
 
-      <SectionLabel>Pending Decisions</SectionLabel>
-      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Card style={{ padding: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>Approvals</div>
-              <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 4 }}>
-                Sensitive or irreversible actions still pause for your review.
-              </div>
-            </div>
-            <Badge color={liveApprovals.length ? 'orange' : 'green'}>{liveApprovals.length ? 'Pending' : 'Clear'}</Badge>
+      <SectionLabel>Mission And Review</SectionLabel>
+      <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Card style={{ padding: 18, display: 'grid', gap: 12 }}>
+          <PanelHeader
+            eyebrow="Mission Queue"
+            title="Long-running objectives"
+            description="Active work with checkpoints, summaries, and the current trust lane."
+            aside={<Badge color="blue">{topMissions.length}</Badge>}
+          />
+          <div className="grouped-list">
+            {topMissions.length === 0 ? (
+              <div className="row"><span style={{ color: 'var(--text-3)' }}>No active missions yet.</span></div>
+            ) : (
+              topMissions.map((mission) => (
+                <div key={mission.id} className="row" style={{ alignItems: 'flex-start' }}>
+                  <span className={`dot ${mission.blocked ? 'red' : mission.status === 'active' ? 'blue' : 'gray'}`} style={{ marginTop: 6 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                      <div style={{ fontWeight: 600 }}>{mission.title}</div>
+                      <Badge color={mission.blocked ? 'red' : mission.status === 'active' ? 'blue' : 'gray'}>
+                        {mission.blocked ? 'blocked' : mission.status || 'idle'}
+                      </Badge>
+                    </div>
+                    <div style={{ marginTop: 6, color: 'var(--text-2)', lineHeight: 1.55 }}>{mission.summary}</div>
+                    <div style={{ marginTop: 8, display: 'flex', gap: 12, color: 'var(--text-3)', fontSize: 11 }}>
+                      <span className="mono">{mission.checkpoint || 'monitoring'}</span>
+                      <span className="mono">{mission.trust_lane || 'automatic'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
+        </Card>
 
-          <div style={{ display: 'grid', gap: 10 }}>
+        <Card style={{ padding: 18, display: 'grid', gap: 12 }}>
+          <PanelHeader
+            eyebrow="Pending Decisions"
+            title="Approval pressure"
+            description="The review lane stays visible, but compact."
+            aside={<Badge color={liveApprovals.length ? 'orange' : 'green'}>{liveApprovals.length ? 'Pending' : 'Clear'}</Badge>}
+          />
+          <div className="grouped-list">
             {liveApprovals.length === 0 ? (
-              <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No decisions are waiting right now.</div>
+              <div className="row"><span style={{ color: 'var(--text-3)' }}>No decisions are waiting right now.</span></div>
             ) : (
               liveApprovals.slice(0, 4).map((approval, index) => (
-                <div key={approval.id || index} style={{ padding: 14, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{approval.tool || 'Sensitive action'}</div>
-                    <Badge color={approval.risk === 'high' ? 'red' : approval.risk === 'low' ? 'blue' : 'orange'}>
-                      {approval.risk || 'medium'}
-                    </Badge>
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-3)' }}>{approval.target || 'Awaiting decision'}</div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        <Card style={{ padding: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>System posture</div>
-              <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 4 }}>
-                Still visible, but secondary to what Nexus is doing for you.
-              </div>
-            </div>
-            <Badge color={healthyServices === serviceEntries.length ? 'green' : 'orange'}>
-              {healthyServices}/{serviceEntries.length || 0}
-            </Badge>
-          </div>
-
-          <div style={{ display: 'grid', gap: 10 }}>
-            <SmallMetric label="Healthy services" value={`${healthyServices}/${serviceEntries.length || 0}`} />
-            <SmallMetric label="Running models" value={runningModels} />
-            <SmallMetric label="Active tasks" value={taskCounts.active} />
-            <SmallMetric label="Queued tasks" value={taskCounts.queued} />
-          </div>
-        </Card>
-      </div>
-
-      <SectionLabel>Activity</SectionLabel>
-      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-        <Card style={{ padding: 20 }}>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {timeline.length === 0 ? (
-              <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Waiting for fresh runtime activity.</div>
-            ) : (
-              timeline.map((event, index) => (
-                <div key={`${event.type || 'event'}-${index}`} style={{ padding: 14, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <StatusDot status={event.type === 'workflow_error' ? 'failed' : 'active'} />
-                      <span className="mono" style={{ fontSize: 11, color: 'var(--text-2)' }}>{event.type || 'event'}</span>
+                <div key={approval.id || index} className="row" style={{ alignItems: 'flex-start' }}>
+                  <span className={`dot ${approval.risk === 'high' ? 'red' : approval.risk === 'low' ? 'blue' : 'orange'}`} style={{ marginTop: 6 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                      <div style={{ fontWeight: 600 }}>{approval.tool || 'Sensitive action'}</div>
+                      <Badge color={approval.risk === 'high' ? 'red' : approval.risk === 'low' ? 'blue' : 'orange'}>
+                        {approval.risk || 'medium'}
+                      </Badge>
                     </div>
-                    <Ts value={event.data?.timestamp || event.timestamp || Date.now()} />
-                  </div>
-                  <div style={{ marginTop: 8, color: 'var(--text-3)', fontSize: 12, lineHeight: 1.5 }}>
-                    {eventSummary(event)}
+                    <div style={{ marginTop: 6, color: 'var(--text-2)' }}>{approval.target || 'Awaiting decision'}</div>
                   </div>
                 </div>
               ))
@@ -616,34 +524,32 @@ export function Overview({
   )
 }
 
-function MetricPanel({ label, value, tone }: { label: string; value: string | number; tone: 'blue' | 'green' | 'orange' | 'gray' }) {
-  const color =
-    tone === 'green' ? 'var(--green)' : tone === 'orange' ? 'var(--orange)' : tone === 'blue' ? 'var(--blue)' : 'var(--text)'
+function OverviewStat({
+  label,
+  value,
+  meta,
+  tone,
+  progress,
+}: {
+  label: string
+  value: string | number
+  meta: string
+  tone: 'blue' | 'green' | 'orange' | 'purple'
+  progress: number
+}) {
   return (
-    <div
-      style={{
-        borderRadius: 18,
-        padding: 16,
-        border: '1px solid var(--border)',
-        background: 'rgba(255,255,255,0.05)',
-      }}
-    >
-      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em', textTransform: 'capitalize' }}>{value}</div>
-      <div style={{ marginTop: 6, fontSize: 12, color }}>{label}</div>
-    </div>
+    <Card style={{ padding: 16, display: 'grid', gap: 10 }}>
+      <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-3)' }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.04em' }}>{value}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{meta}</div>
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${Math.max(10, Math.min(100, progress))}%`, background: toneColor(tone) }} />
+      </div>
+    </Card>
   )
 }
 
-function SmallMetric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div style={{ borderRadius: 12, padding: 12, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text)' }}>{value}</div>
-      <div style={{ marginTop: 4, color: 'var(--text-3)', fontSize: 12 }}>{label}</div>
-    </div>
-  )
-}
-
-function BarRow({
+function MetricMeter({
   label,
   value,
   total,
@@ -652,29 +558,44 @@ function BarRow({
   label: string
   value: number
   total: number
-  tone: 'blue' | 'green' | 'orange' | 'red' | 'gray' | 'purple'
+  tone: 'blue' | 'green' | 'orange'
 }) {
-  const color = {
-    blue: 'var(--blue)',
-    green: 'var(--green)',
-    orange: 'var(--orange)',
-    red: 'var(--red)',
-    gray: 'var(--text-3)',
-    purple: 'var(--purple)',
-  }[tone]
   const width = Math.max(8, Math.round((Math.max(value, 0) / Math.max(total, 1)) * 100))
-
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13 }}>
-        <span style={{ color: 'var(--text-2)' }}>{label}</span>
-        <span className="mono" style={{ color }}>{value}/{total}</span>
+    <Card style={{ padding: 16, display: 'grid', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{label}</div>
+        <div className="mono" style={{ fontSize: 11, color: toneColor(tone) }}>{value}/{total}</div>
       </div>
-      <div style={{ height: 9, borderRadius: 999, background: 'var(--surface-2)', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ width: `${width}%`, height: '100%', borderRadius: 999, background: color }} />
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${width}%`, background: toneColor(tone) }} />
       </div>
+    </Card>
+  )
+}
+
+function MiniInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="glass" style={{ padding: 12 }}>
+      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-3)' }}>{label}</div>
+      <div style={{ marginTop: 8, color: 'var(--text)', lineHeight: 1.5 }}>{value}</div>
     </div>
   )
+}
+
+function toneColor(tone: 'blue' | 'green' | 'orange' | 'purple') {
+  if (tone === 'green') return 'var(--green)'
+  if (tone === 'orange') return 'var(--orange)'
+  if (tone === 'purple') return 'var(--purple)'
+  return 'var(--blue)'
+}
+
+function toneForEvent(event: EventRecord) {
+  if (event.type === 'workflow_error') return 'var(--red)'
+  if (event.type === 'workflow_progress') return 'var(--blue)'
+  if (event.type === 'audit_event') return 'var(--orange)'
+  if (event.type === 'service_health') return 'var(--green)'
+  return 'var(--text-3)'
 }
 
 function eventSummary(event: EventRecord) {

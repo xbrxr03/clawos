@@ -3,6 +3,7 @@ import { type PropsWithChildren, type ReactNode, useEffect, useMemo, useState } 
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { appNav } from './navigation'
 import { Badge, ShortcutKey } from '../components/ui.jsx'
+import { desktopBridge } from '../desktop/bridge'
 import { commandCenterApi } from '../lib/commandCenterApi'
 
 type AppShellProps = PropsWithChildren<{
@@ -33,19 +34,39 @@ export function AppShell({
   const [commandQuery, setCommandQuery] = useState('')
   const [voiceBusy, setVoiceBusy] = useState(false)
   const [voiceMessage, setVoiceMessage] = useState('')
-  const serviceList = Object.values(services || {})
+  const [desktopShell, setDesktopShell] = useState(false)
+  const serviceEntries = Object.entries(services || {})
+  const serviceList = serviceEntries.map(([, value]) => value)
   const upCount = serviceList.filter((item: any) => item.status === 'up' || item.status === 'running').length
   const activeItem = appNav.find((item) => item.to === location.pathname) ?? appNav[0]
   const voiceMode = String(voiceSession?.mode || 'off').replace(/_/g, ' ')
   const voiceState = String(voiceSession?.state || 'idle')
-  const voiceDot = voiceState === 'listening' ? 'green pulse' : voiceState === 'speaking' ? 'blue pulse' : voiceState === 'thinking' ? 'orange pulse' : 'gray'
+  const voiceDot =
+    voiceState === 'listening'
+      ? 'green pulse'
+      : voiceState === 'speaking'
+        ? 'blue pulse'
+        : voiceState === 'thinking'
+          ? 'orange pulse'
+          : 'gray'
   const voiceEnabled = voiceSession?.mode !== 'off'
+  const navSections = useMemo(() => {
+    const grouped = new Map<string, typeof appNav>()
+    appNav.forEach((item) => {
+      const current = grouped.get(item.section) || []
+      current.push(item)
+      grouped.set(item.section, current)
+    })
+    return Array.from(grouped.entries())
+  }, [])
+
+  const servicePreview = useMemo(() => serviceEntries.slice(0, 3), [serviceEntries])
 
   const commandResults = useMemo(() => {
     const query = commandQuery.trim().toLowerCase()
     if (!query) return appNav
     return appNav.filter((item) => {
-      const haystack = `${item.label} ${item.description} ${item.to}`.toLowerCase()
+      const haystack = `${item.label} ${item.description} ${item.to} ${item.section}`.toLowerCase()
       return haystack.includes(query)
     })
   }, [commandQuery])
@@ -69,6 +90,10 @@ export function AppShell({
       setVoiceBusy(false)
     }
   }
+
+  useEffect(() => {
+    desktopBridge.isDesktopShell().then(setDesktopShell).catch(() => setDesktopShell(false))
+  }, [])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -117,22 +142,21 @@ export function AppShell({
       <div className="shell-root">
         <aside className="shell-sidebar">
           <div className="shell-brand">
-            <div className="shell-brand-mark">
+            <div className="shell-brand-mark" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2.1 13.25 5v5.97L8 13.9 2.75 10.97V5L8 2.1Z" stroke="white" strokeWidth="1.2" strokeLinejoin="round" />
-                <circle cx="8" cy="8" r="2.1" fill="white" />
+                <path d="M8 2.1 13.25 5v5.97L8 13.9 2.75 10.97V5L8 2.1Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round" />
+                <circle cx="8" cy="8" r="2.05" fill="currentColor" />
               </svg>
             </div>
             <div className="shell-brand-copy">
               <div className="shell-brand-title">ClawOS</div>
-              <div className="shell-brand-subtitle">Nexus Command Center</div>
+              <div className="shell-brand-subtitle">v1.0 command center</div>
             </div>
           </div>
 
           <button type="button" className="command-launch" onClick={() => setCommandOpen(true)}>
             <span className="command-launch-copy">
-              <span className="command-launch-title">Ask Nexus or jump to a surface</span>
-              <span className="command-launch-subtitle">{activeItem.description}</span>
+              <span className="command-launch-title">Search or jump to a surface</span>
             </span>
             <span className="command-launch-keys">
               <ShortcutKey>Ctrl</ShortcutKey>
@@ -141,22 +165,25 @@ export function AppShell({
           </button>
 
           <div className="shell-nav">
-            {appNav.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                className={({ isActive }) => `shell-nav-link${isActive ? ' active' : ''}`}
-              >
-                <span className="shell-nav-icon">{item.icon}</span>
-                <span className="shell-nav-copy">
-                  <span className="shell-nav-title">{item.label}</span>
-                  <span className="shell-nav-description">{item.description}</span>
-                </span>
-                {item.label === 'Approvals' && approvals.length > 0 ? (
-                  <Badge color="red">{approvals.length}</Badge>
-                ) : null}
-              </NavLink>
+            {navSections.map(([section, items]) => (
+              <div key={section} className="shell-nav-group">
+                <div className="shell-nav-group-title">{section}</div>
+                {items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    className={({ isActive }) => `shell-nav-link${isActive ? ' active' : ''}`}
+                  >
+                    <span className="shell-nav-icon">{item.icon}</span>
+                    <span className="shell-nav-copy">
+                      <span className="shell-nav-title">{item.label}</span>
+                      <span className="shell-nav-description">{item.description}</span>
+                    </span>
+                    {item.label === 'Approvals' && approvals.length > 0 ? <Badge color="red">{approvals.length}</Badge> : null}
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </div>
 
@@ -167,48 +194,40 @@ export function AppShell({
                   <span className={`dot ${connected ? 'green pulse' : 'red'}`} />
                   <span>{connected ? 'Nexus connected' : 'Reconnecting to Nexus'}</span>
                 </div>
-                <Badge color={connected ? 'green' : 'red'}>{connected ? 'live' : 'syncing'}</Badge>
+                <Badge color={connected ? 'green' : 'red'}>{connected ? 'live' : 'offline'}</Badge>
               </div>
+              {servicePreview.map(([name, item]) => {
+                const status = item?.status === 'up' || item?.status === 'running' ? 'green' : item?.status === 'degraded' ? 'orange' : 'red'
+                return (
+                  <div key={name} className="shell-health-row">
+                    <div className="shell-health-copy">
+                      <span className={`dot ${status}`} />
+                      <span style={{ textTransform: 'capitalize' }}>{name}</span>
+                    </div>
+                    <span className="ts">{item?.latency_ms ? `${item.latency_ms}ms` : 'idle'}</span>
+                  </div>
+                )
+              })}
               <div className="shell-health-stats">
-                <span>{upCount}/{serviceList.length || 0} services healthy</span>
-                <span>{events.length} recent events</span>
+                <span>{upCount}/{serviceList.length || 0} healthy</span>
+                <span>{events.length} events</span>
               </div>
             </div>
           </div>
         </aside>
 
-        <section className="shell-window">
-          <div className="shell-window-topbar">
-            <div className="shell-window-controls">
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="shell-window-breadcrumbs">
-              <span>Command Center</span>
-              <span>/</span>
-              <span>{activeItem.label}</span>
-            </div>
-            <div className="shell-window-actions">
-              <div className="shell-status-chip">
-                <span className={`dot ${connected ? 'green pulse' : 'red'}`} />
-                <span>{connected ? 'Connected' : 'Offline'}</span>
+        <section className={`shell-window${desktopShell ? ' desktop' : ''}`}>
+          {desktopShell ? (
+            <div className="shell-window-topbar">
+              <div className="shell-window-controls" aria-hidden="true">
+                <span />
+                <span />
+                <span />
               </div>
-              <div className="shell-status-chip">
-                <span className={`dot ${voiceDot}`} />
-                <span>{voiceState}</span>
-              </div>
-              <button type="button" className="btn sm" onClick={() => void runPushToTalk()} disabled={voiceBusy || !voiceEnabled}>
-                {voiceBusy ? 'Listening...' : voiceEnabled ? 'Talk now' : 'Voice off'}
-              </button>
-              <button type="button" className="btn sm" onClick={onToggleTheme}>
-                {theme === 'dark' ? 'Light' : 'Dark'}
-              </button>
-              <button type="button" className="btn sm" onClick={() => setCommandOpen(true)}>
-                Shortcuts
-              </button>
+              <div className="shell-window-title">ClawOS Command Center / {activeItem.label}</div>
+              <div className="shell-window-action-spacer" />
             </div>
-          </div>
+          ) : null}
 
           <div className="shell-window-body">
             <div className="shell-main">
@@ -219,13 +238,27 @@ export function AppShell({
                   <div className="shell-header-description">{activeItem.description}</div>
                 </div>
                 <div className="shell-header-meta">
+                  <div className="shell-status-chip">
+                    <span className={`dot ${connected ? 'green pulse' : 'red'}`} />
+                    <span>{connected ? 'Connected' : 'Offline'}</span>
+                  </div>
+                  <div className="shell-status-chip">
+                    <span className={`dot ${voiceDot}`} />
+                    <span>{voiceState}</span>
+                  </div>
                   <Badge color="blue">{serviceList.length || 0} services</Badge>
                   <Badge color={approvals.length ? 'orange' : 'green'}>
                     {approvals.length ? `${approvals.length} approvals` : 'No blockers'}
                   </Badge>
-                  <Badge color={voiceSession?.mode === 'off' ? 'gray' : voiceState === 'listening' || voiceState === 'speaking' ? 'blue' : 'green'}>
-                    Voice {voiceMode}
-                  </Badge>
+                  <button type="button" className="btn sm" onClick={() => void runPushToTalk()} disabled={voiceBusy || !voiceEnabled}>
+                    {voiceBusy ? 'Listening...' : voiceEnabled ? 'Talk now' : 'Voice off'}
+                  </button>
+                  <button type="button" className="btn sm" onClick={onToggleTheme}>
+                    {theme === 'dark' ? 'Light' : 'Dark'}
+                  </button>
+                  <button type="button" className="btn sm" onClick={() => setCommandOpen(true)}>
+                    Shortcuts
+                  </button>
                   {voiceMessage ? <span className="mono" style={{ color: 'var(--text-3)', fontSize: 11 }}>{voiceMessage}</span> : null}
                   <div className="shell-shortcut-hint">
                     <ShortcutKey>?</ShortcutKey>
@@ -278,14 +311,14 @@ export function AppShell({
                   <span className="command-result-icon">{item.icon}</span>
                   <span className="command-result-copy">
                     <span className="command-result-title">{item.label}</span>
-                    <span className="command-result-description">{item.description}</span>
+                    <span className="command-result-description">{item.section} / {item.description}</span>
                   </span>
                 </button>
               ))}
               {commandResults.length === 0 ? (
                 <div className="command-empty">
                   <div className="empty-title">No results yet</div>
-                  <div className="empty-body">Try a route name like "workflows", "registry", or "research".</div>
+                  <div className="empty-body">Try a route name like "workflows", "research", or "settings".</div>
                 </div>
               ) : null}
             </div>
