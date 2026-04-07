@@ -60,6 +60,49 @@ Feels like it was made by people who care about every second of the experience.
 
 ## Updates Done By Claude
 
+### 2026-04-07 - Claude (doc audit + status sync)
+
+#### Full doc audit completed
+
+Read all 24 markdown files. No code changes — this is a status sync entry.
+
+**Current state confirmed:**
+- Phases 1–11 fully complete and merged. 155 tests passing, 25 skipped.
+- Dashboard: 8 pages live (Overview, Workflows, Packs, Providers, Registry, Traces, Settings, Setup) + 5 new pages added overnight (Workbench, Research, MCPManager, Federation, Studio)
+- Voice pipeline: end-to-end (Whisper 44.1kHz, Piper TTS, wake-word, push-to-talk)
+- WhatsApp bridge: stable (approval-by-reply, voice notes, auto-reconnect)
+- 29 workflows across 6 categories, hero workflows (organize-downloads, summarize-pdf) demo-ready
+- AGPL migration: complete — full LICENSE text, SPDX headers on all files, CI compliance test
+- Security: 6 of 7 enterprise requirements met
+
+**Active milestone: Milestone 3 — Ship v0.1**
+
+Remaining gaps before v0.1.0 tag:
+
+| Task | Owner | Notes |
+|------|-------|-------|
+| ISO validation on Tier A (8GB) + Tier B (16GB) | Manual | Real hardware required |
+| install.sh end-to-end on Ubuntu 22.04/24.04 + macOS 14+ | Manual | Linux device available; Mac deferred |
+| README rewrite | Claude/Codex | Product pitch, not tech manual |
+| Social assets: 5 demo GIFs | Manual | Dashboard screenshot, wizard screenshot, organize-downloads GIF, summarize-pdf GIF, voice GIF |
+| Docs accuracy pass | Claude/Codex | Remove TODOs, placeholder text, dead links |
+| macOS .dmg + Homebrew formula | Deferred | No Mac hardware yet |
+| Calamares/live-boot validation | Manual | Real hardware required |
+
+**HN launch plan:**
+- Title: "Show HN: ClawOS – bootable ISO that runs OpenClaw + Ollama offline, no API keys"
+- Timing: Tuesday/Wednesday 9am ET
+- Cross-post: r/selfhosted, r/homelab, r/LocalLLaMA
+- Story angle: safe offline alternative given CVE-2026-25253
+
+**Next steps for next agent:**
+1. README rewrite — replace technical manual with product pitch (see docs/PRODUCT_VISION.md for tone)
+2. Docs accuracy pass — grep for TODO/FIXME/placeholder across docs/, remove stale content
+3. Vite production build check — verify `npm run build` in dashboard/frontend succeeds cleanly
+4. packaging/launch/hn_post.md — review and finalize copy before posting
+
+---
+
 ### 2026-04-06 (overnight session) - Claude
 
 All 7 items in the build order were completed in a single overnight session.
