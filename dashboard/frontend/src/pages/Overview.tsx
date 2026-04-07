@@ -141,24 +141,44 @@ export function Overview({
     if (!message || working) return
 
     setWorking(true)
-    setConversationStatus('Nexus is acting on that now.')
+    setConversationStatus('Nexus is thinking...')
+    const assistantMsgId = `assistant-${Date.now()}`
     setConversation((current) => [
       ...current,
       { id: `user-${Date.now()}`, role: 'user', content: message },
-      {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: 'Understood. I queued the work and will only surface the parts that need you.',
-        meta: 'Queued',
-      },
+      { id: assistantMsgId, role: 'assistant', content: '...', meta: 'Thinking' },
     ])
     setDraft('')
 
     try {
       const response = await commandCenterApi.sendConversationMessage(message)
-      setConversationStatus(response.task_id ? `Task ${response.task_id} queued.` : 'Request queued.')
+      const taskId = response.task_id
+      if (!taskId) throw new Error('No task ID returned')
+
+      let result = ''
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 500))
+        const task = await commandCenterApi.getTask(taskId)
+        if (task.status === 'completed') { result = task.result || '(no response)'; break }
+        if (task.status === 'failed') { result = task.error || 'Task failed.'; break }
+      }
+      if (!result) result = 'Nexus did not respond in time.'
+
+      setConversation((current) =>
+        current.map((msg) =>
+          msg.id === assistantMsgId ? { ...msg, content: result, meta: undefined } : msg,
+        ),
+      )
+      setConversationStatus('')
     } catch (error: any) {
-      setConversationStatus(error.message || 'Nexus could not queue that request.')
+      setConversation((current) =>
+        current.map((msg) =>
+          msg.id === assistantMsgId
+            ? { ...msg, content: error.message || 'Something went wrong.', meta: 'Error' }
+            : msg,
+        ),
+      )
+      setConversationStatus(error.message || 'Nexus could not process that request.')
     } finally {
       setWorking(false)
     }
