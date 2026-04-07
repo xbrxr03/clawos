@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 OTel span builder — GenAI semantic conventions 2026.
 Builds span dicts matching the OpenTelemetry GenAI semantic conventions.

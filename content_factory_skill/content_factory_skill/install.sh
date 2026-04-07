@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # content-factory skill installer
 # Usage: bash install.sh
 # Installs the content-factory OpenClaw skill and all dependencies.

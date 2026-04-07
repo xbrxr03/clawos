@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS Session 1 Test Suite
 ============================
@@ -30,15 +31,15 @@ def read_text(path: Path) -> str:
 def ok(name):
     global passed
     passed += 1
-    print(f"  ✓  {name}")
+    print(f"  OK  {name}")
 
 def fail(name, reason=""):
     global failed
     failed += 1
-    print(f"  ✗  {name}" + (f" — {reason}" if reason else ""))
+    print(f"  XX  {name}" + (f" - {reason}" if reason else ""))
 
 def section(title):
-    print(f"\n  ── {title}")
+    print(f"\n  -- {title}")
 
 def run(coro):
     return asyncio.run(coro)
@@ -526,10 +527,9 @@ except Exception as ex:
     fail("dashd create_app", str(ex))
 
 try:
-    from services.dashd.api import DASHBOARD_HTML, DASHBOARD_STATIC_INDEX
-    html = DASHBOARD_STATIC_INDEX if DASHBOARD_STATIC_INDEX.exists() else DASHBOARD_HTML
-    assert html.exists()
-    content = read_text(html)
+    from services.dashd.api import DASHBOARD_STATIC_INDEX
+    assert DASHBOARD_STATIC_INDEX.exists()
+    content = read_text(DASHBOARD_STATIC_INDEX)
     app_content = read_text(ROOT / "dashboard" / "frontend" / "src" / "App.tsx")
     assert "ClawOS" in content
     assert "/setup" in app_content
@@ -569,16 +569,16 @@ if E2E:
     except Exception as ex:
         fail("e2e agent round trip", str(ex))
 else:
-    print("\n  (skip e2e — run with --e2e for live Ollama tests)")
+    print("\n  (skip e2e - run with --e2e for live Ollama tests)")
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 total = passed + failed
-print(f"\n  {'─'*46}")
+print(f"\n  {'-'*46}")
 print(f"  {passed}/{total} passed", end="")
 if failed:
-    print(f"  |  {failed} FAILED  ←")
+    print(f"  |  {failed} FAILED")
 else:
-    print("  ✓  all passed")
+    print("  OK  all passed")
 print()
 
 if __name__ == "__main__":

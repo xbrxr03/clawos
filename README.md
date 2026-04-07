@@ -1,6 +1,8 @@
 ﻿# ClawOS
 
 > OpenClaw on your own hardware. One command. No API keys. No monthly bill.
+>
+> [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3%2B-1f6feb.svg)](LICENSE)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
@@ -280,8 +282,9 @@ macOS support in ClawOS now means the Homebrew + `launchd` path described in [do
 
 ## License
 
-MIT. ClawOS is not affiliated with OpenClaw or Anthropic.
-OpenClaw is MIT licensed. Ollama is MIT licensed.
+ClawOS is licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later). See [LICENSE](LICENSE) for the full text.
+
+ClawOS is not affiliated with OpenClaw or Anthropic. OpenClaw and Ollama remain MIT-licensed upstream projects.
 
 ---
 

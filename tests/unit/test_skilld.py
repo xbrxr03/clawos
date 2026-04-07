@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 tests/unit/test_skilld.py — Skill loader unit tests
 Run: python -m pytest tests/unit/test_skilld.py -v

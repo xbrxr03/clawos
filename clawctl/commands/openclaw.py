@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl openclaw — manage the optional OpenClaw runtime."""
 import shutil
 import subprocess

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS launchd installer for macOS user agents.
 # Installs LaunchAgents for ClawOS and Ollama, and optionally OpenClaw gateway.
 

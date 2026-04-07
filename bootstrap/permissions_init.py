@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Write initial permissions/policy config for a workspace."""
 import json
 from pathlib import Path

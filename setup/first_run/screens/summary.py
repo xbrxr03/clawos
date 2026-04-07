@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Screen 9 — Summary and launch.
 Fixes:
   - Saves active workspace to clawos.yaml so repl picks it up on next start

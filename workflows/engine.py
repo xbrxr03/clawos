@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Workflow loading and execution for built-in ClawOS workflows.
 
@@ -9,6 +10,7 @@ Each workflow lives at workflows/<name>/workflow.py and must expose:
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import importlib
 import sys
 import warnings
@@ -28,6 +30,14 @@ _PLATFORM_ALIASES = {
     "macos": "darwin",
     "osx": "darwin",
 }
+_CURRENT_WORKFLOW_ID: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "current_workflow_id",
+    default="",
+)
+_CURRENT_WORKFLOW_NAME: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "current_workflow_name",
+    default="",
+)
 
 
 class WorkflowStatus(str, Enum):
@@ -56,6 +66,45 @@ class WorkflowResult:
     output: str
     metadata: dict = field(default_factory=dict)
     error: Optional[str] = None
+
+
+async def emit_workflow_progress(
+    message: str,
+    *,
+    phase: str | None = None,
+    progress: int | None = None,
+    workflow_id: str | None = None,
+    name: str | None = None,
+    output: str | None = None,
+    extra: dict | None = None,
+) -> None:
+    resolved_id = workflow_id or _CURRENT_WORKFLOW_ID.get()
+    if not resolved_id:
+        return
+
+    payload: dict[str, object] = {
+        "id": resolved_id,
+        "status": "running",
+        "message": str(message or "").strip(),
+    }
+    resolved_name = name or _CURRENT_WORKFLOW_NAME.get()
+    if resolved_name:
+        payload["name"] = resolved_name
+    if phase:
+        payload["phase"] = phase
+    if progress is not None:
+        payload["progress"] = max(0, min(100, int(progress)))
+    if output:
+        payload["output"] = output[:500]
+    if extra:
+        payload.update(extra)
+
+    try:
+        from clawos_core.events.bus import get_bus
+
+        await get_bus().publish("workflow_progress", payload)
+    except Exception:
+        return
 
 
 class WorkflowEngine:
@@ -124,48 +173,72 @@ class WorkflowEngine:
                 ),
             )
 
-        if meta.destructive:
-            allowed = await self._gate_policyd(workflow_id, workspace_id)
-            if not allowed:
-                return WorkflowResult(
-                    status=WorkflowStatus.SKIPPED,
+        workflow_token = _CURRENT_WORKFLOW_ID.set(workflow_id)
+        name_token = _CURRENT_WORKFLOW_NAME.set(meta.name)
+        try:
+            await emit_workflow_progress(
+                "Preparing workflow runtime",
+                workflow_id=workflow_id,
+                name=meta.name,
+                phase="prepare",
+                progress=5,
+            )
+
+            if meta.destructive:
+                allowed = await self._gate_policyd(workflow_id, workspace_id)
+                if not allowed:
+                    return WorkflowResult(
+                        status=WorkflowStatus.SKIPPED,
+                        output="",
+                        error="Denied by policy",
+                    )
+
+            agent = None
+            if meta.needs_agent:
+                await emit_workflow_progress(
+                    "Connecting workflow agent",
+                    phase="prepare",
+                    progress=12,
+                )
+                agent = await self._get_agent(workspace_id)
+
+            await emit_workflow_progress(
+                "Workflow execution started",
+                phase="run",
+                progress=18,
+            )
+
+            try:
+                result = await asyncio.wait_for(mod.run(args, agent), timeout=meta.timeout_s)
+            except asyncio.TimeoutError:
+                result = WorkflowResult(
+                    status=WorkflowStatus.FAILED,
                     output="",
-                    error="Denied by policy",
+                    error=f"Timed out after {meta.timeout_s}s",
+                )
+            except Exception as exc:
+                result = WorkflowResult(
+                    status=WorkflowStatus.FAILED,
+                    output="",
+                    error=str(exc),
                 )
 
-        agent = None
-        if meta.needs_agent:
-            agent = await self._get_agent(workspace_id)
-
-        await self._emit("workflow_progress", {
-            "id": workflow_id,
-            "status": "running",
-            "name": meta.name,
-        })
-
-        try:
-            result = await asyncio.wait_for(mod.run(args, agent), timeout=meta.timeout_s)
-        except asyncio.TimeoutError:
-            result = WorkflowResult(
-                status=WorkflowStatus.FAILED,
-                output="",
-                error=f"Timed out after {meta.timeout_s}s",
-            )
-        except Exception as exc:
-            result = WorkflowResult(
-                status=WorkflowStatus.FAILED,
-                output="",
-                error=str(exc),
-            )
-
-        event_type = "workflow_progress" if result.status == WorkflowStatus.OK else "workflow_error"
-        await self._emit(event_type, {
-            "id": workflow_id,
-            "status": result.status.value,
-            "output": result.output[:500] if result.output else "",
-            "error": result.error,
-        })
-        return result
+            payload = {
+                "id": workflow_id,
+                "status": result.status.value,
+                "name": meta.name,
+                "output": result.output[:500] if result.output else "",
+                "error": result.error,
+                "progress": 100,
+                "phase": "complete",
+                "message": result.error or "Workflow finished",
+            }
+            event_type = "workflow_progress" if result.status != WorkflowStatus.FAILED else "workflow_error"
+            await self._emit(event_type, payload)
+            return result
+        finally:
+            _CURRENT_WORKFLOW_ID.reset(workflow_token)
+            _CURRENT_WORKFLOW_NAME.reset(name_token)
 
     async def _gate_policyd(self, workflow_id: str, workspace_id: str) -> bool:
         try:

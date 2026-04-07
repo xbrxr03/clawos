@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS toolbridge — Tool Execution
 ====================================
@@ -24,9 +25,7 @@ SHELL_ALLOWLIST = [
     r'^python3?\s', r'^pip\s', r'^git\s',
 ]
 
-TOOL_ALIASES = {
-    "shell.run": "shell.restricted",
-}
+TOOL_ALIASES = {}
 
 ALL_TOOL_DESCRIPTIONS = {
     "fs.read":          "Read a file. Input: path relative to workspace.",
@@ -36,7 +35,7 @@ ALL_TOOL_DESCRIPTIONS = {
     "fs.search":        "Search files by content. Input: query string.",
     "web.search":       "Search the web. Input: search query.",
     "web.fetch":        "Fetch a URL. Input: full URL.",
-    "shell.restricted": "Run allowlisted shell command. Alias: shell.run. Input: command string.",
+    "shell.restricted": "Run allowlisted shell command. Input: command string.",
     "memory.read":      "Search memory. Input: query string.",
     "memory.write":     "Save to memory. Input: text to remember.",
     "memory.delete":    "Delete a memory. Input: memory_id.",
@@ -68,9 +67,10 @@ class ToolBridge:
         lines = [
             "## Available Tools",
             'Use JSON: {"action": "<tool>", "action_input": "<target>"}',
-            'For writes: {"action": "fs.write", "action_input": "file.txt", "content": "..."}',
             "",
         ]
+        if "fs.write" in available:
+            lines.insert(2, 'For writes: {"action": "fs.write", "action_input": "file.txt", "content": "..."}')
         for tool, desc in available.items():
             lines.append(f"- **{tool}**: {desc}")
         return "\n".join(lines)

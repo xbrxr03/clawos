@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # start_visual.sh — start ComfyUI and the visual agent
 # Run this AFTER writing, voice, and assembling are complete
 # so ComfyUI gets maximum available RAM

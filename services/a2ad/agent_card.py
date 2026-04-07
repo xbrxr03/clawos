@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Builds the A2A Agent Card JSON from workspace config and SOUL.md."""
 from clawos_core.models import AgentCard, AgentSkill
 from clawos_core.constants import PORT_A2AD, DEFAULT_WORKSPACE

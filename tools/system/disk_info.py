@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """system.info — return disk usage, RAM free, CPU load, GPU VRAM as JSON."""
 import json
 

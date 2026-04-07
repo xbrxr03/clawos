@@ -35,7 +35,7 @@ This is the macOS equivalent of the Linux `systemd` path. The repo should not ad
 - `setup/first_run/gtk_wizard.py` is still Linux-oriented and should not be treated as the macOS first-run path.
 - PicoClaw is skipped on macOS because the published release binaries are Linux-only.
 - OpenClaw gateway support is available, but the Linux path is still more battle-tested than the macOS path.
-- The legacy dashboard backend under `dashboard/backend/` is not the canonical stack.
+- The archived dashboard backend under `archive/legacy/dashboard-backend/` is not part of the supported macOS runtime path.
 
 ## Verification
 

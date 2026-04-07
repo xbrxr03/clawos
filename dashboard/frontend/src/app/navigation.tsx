@@ -1,23 +1,30 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import type { ReactNode } from 'react'
 
 export type AppNavItem = {
   label: string
   to: string
+  description: string
   icon: ReactNode
 }
 
 export const appNav: AppNavItem[] = [
-  { to: '/', label: 'Home', icon: <IconHome /> },
-  { to: '/tasks', label: 'Tasks', icon: <IconTasks /> },
-  { to: '/approvals', label: 'Approvals', icon: <IconShield /> },
-  { to: '/packs', label: 'Packs', icon: <IconLayers /> },
-  { to: '/workflows', label: 'Workflows', icon: <IconWorkflow /> },
-  { to: '/providers', label: 'Providers', icon: <IconNodes /> },
-  { to: '/registry', label: 'Registry', icon: <IconGrid /> },
-  { to: '/traces', label: 'Traces', icon: <IconPulse /> },
-  { to: '/models', label: 'Models', icon: <IconCpu /> },
-  { to: '/memory', label: 'Memory/Audit', icon: <IconDatabase /> },
-  { to: '/settings', label: 'Settings', icon: <IconSettings /> },
+  { to: '/', label: 'Overview', description: 'Signal-rich snapshot of ClawOS, your approvals, and today.', icon: <IconHome /> },
+  { to: '/tasks', label: 'Tasks', description: 'Live queue for delegated work, missions, and execution history.', icon: <IconTasks /> },
+  { to: '/approvals', label: 'Approvals', description: 'Human review for high-trust actions and sensitive tool calls.', icon: <IconShield /> },
+  { to: '/packs', label: 'Packs', description: 'Curated ClawOS outcomes with defaults, dashboards, and eval posture.', icon: <IconLayers /> },
+  { to: '/workflows', label: 'Workflows', description: 'Local-first automations with direct execution and live output.', icon: <IconWorkflow /> },
+  { to: '/providers', label: 'Providers', description: 'Local Ollama first, with cloud posture and testing when needed.', icon: <IconNodes /> },
+  { to: '/registry', label: 'Registry', description: 'Trust-aware extension catalog and local A2A identity surface.', icon: <IconGrid /> },
+  { to: '/traces', label: 'Traces', description: 'Release confidence, eval suites, and execution timeline history.', icon: <IconPulse /> },
+  { to: '/models', label: 'Models', description: 'Ollama runtime inventory and model posture for this machine.', icon: <IconCpu /> },
+  { to: '/studio', label: 'Pack Studio', description: 'Visual workflow composition for packs, approvals, and deployment.', icon: <IconStudio /> },
+  { to: '/workbench', label: 'Workbench', description: 'Fetch pages, inspect source material, and hand context to Nexus.', icon: <IconWorkbench /> },
+  { to: '/research', label: 'Research', description: 'Citation-backed multi-source research sessions with resumable runs.', icon: <IconResearch /> },
+  { to: '/mcp', label: 'MCP', description: 'Install, connect, and inspect model-context protocol servers and tools.', icon: <IconMCP /> },
+  { to: '/federation', label: 'Federation', description: 'Peer trust, agent-card identity, and multi-node ClawOS posture.', icon: <IconFederation /> },
+  { to: '/memory', label: 'Memory/Audit', description: 'Workspace memory layers, audit surfaces, and runtime history.', icon: <IconDatabase /> },
+  { to: '/settings', label: 'Settings', description: 'Desktop posture, support tooling, startup behavior, and recovery.', icon: <IconSettings /> },
 ]
 
 function IconHome() {
@@ -58,6 +65,26 @@ function IconCpu() {
 
 function IconDatabase() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="4.75" ry="2" stroke="currentColor" strokeWidth="1.2"/><path d="M3.25 4v4c0 1.1 2.12 2 4.75 2s4.75-.9 4.75-2V4M3.25 8v4c0 1.1 2.12 2 4.75 2s4.75-.9 4.75-2V8" stroke="currentColor" strokeWidth="1.2"/></svg>
+}
+
+function IconStudio() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.2"/><path d="M11.5 9v5M9 11.5h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+
+function IconFederation() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.25" stroke="currentColor" strokeWidth="1.2"/><path d="M8 2.75C8 2.75 6 5.5 6 8s2 5.25 2 5.25M8 2.75C8 2.75 10 5.5 10 8s-2 5.25-2 5.25M2.75 8h10.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+}
+
+function IconMCP() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.75" y="5.75" width="3.5" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="10.75" y="5.75" width="3.5" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="6.25" y="1.75" width="3.5" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="6.25" y="10.75" width="3.5" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M5.25 7.5h5.5M8 5.25V3.5M8 12.75v-2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+}
+
+function IconResearch() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.25" stroke="currentColor" strokeWidth="1.2"/><path d="m10.25 10.25 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M5.5 7h3M7 5.5v3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+}
+
+function IconWorkbench() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.75" y="2.75" width="12.5" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5.5 13.25h5M8 11.25v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="7" r="1.75" stroke="currentColor" strokeWidth="1.1"/><path d="M4.5 7h1.75M10.25 7H12" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
 }
 
 function IconSettings() {

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS Core Constants
 =====================
@@ -43,6 +44,7 @@ CLAWOS_CONFIG    = CONFIG_DIR / "clawos.yaml"
 OTEL_JSONL       = LOGS_DIR / "otel.jsonl"
 TRACES_JSONL     = LOGS_DIR / "traces.jsonl"
 SETUP_STATE_JSON = CONFIG_DIR / "setup_state.json"
+PRESENCE_STATE_JSON = CONFIG_DIR / "presence_state.json"
 SUPPORT_DIR      = CLAWOS_DIR / "support"
 
 # Voice models

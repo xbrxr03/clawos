@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 setupd - reusable setup backend for ClawOS Setup.
 """
@@ -28,6 +29,7 @@ from clawos_core.constants import (
     WORKSPACE_DIR,
 )
 from clawos_core.desktop_integration import autostart_supported, desktop_posture, enable_launch_on_login
+from clawos_core.presence import set_voice_mode, sync_presence_from_setup, update_autonomy_policy, update_presence_profile
 from clawos_core.service_manager import service_manager_name, start as start_service
 from services.setupd.state import SetupState
 
@@ -50,7 +52,12 @@ class SetupService:
     def __init__(self):
         self._state = SetupState.load()
         self._task: asyncio.Task | None = None
+        self._model_task: asyncio.Task | None = None
         self._listeners: set[WebSocket] = set()
+        try:
+            sync_presence_from_setup(self._state)
+        except Exception:
+            pass
 
     def get_state(self) -> SetupState:
         return self._state
@@ -85,11 +92,18 @@ class SetupService:
             "Inspect hardware and service manager",
             f"Prepare workspace {state.workspace or DEFAULT_WORKSPACE}",
             f"Activate primary pack: {pack.name if pack else state.primary_pack}",
+            f"Configure Nexus presence: {state.presence_profile.get('tone', 'crisp-executive') if isinstance(state.presence_profile, dict) else 'crisp-executive'}",
+            f"Apply autonomy posture: {state.autonomy_policy.get('mode', 'mostly-autonomous') if isinstance(state.autonomy_policy, dict) else 'mostly-autonomous'}",
             f"Provision provider profile: {provider.name if provider else state.selected_provider_profile}",
             f"Provision model(s): {', '.join(state.selected_models)}",
             "Start ClawOS services and command center surfaces",
+            "Prepare first briefing and trusted routines",
             "Finalize diagnostics, traces, and support paths",
         ]
+        if state.voice_enabled:
+            state.plan_steps.insert(7, f"Configure voice mode: {state.voice_mode}")
+        if state.whatsapp_enabled:
+            state.plan_steps.insert(8, "Prepare WhatsApp bridge and phone pairing path")
         if state.imported_openclaw:
             state.plan_steps.insert(3, "Import safe OpenClaw config and preserve compatible workflows")
         if state.installed_extensions:
@@ -154,6 +168,7 @@ class SetupService:
                 state.installed_extensions.append(extension_id)
         self._log(f"Selected primary pack {pack.name}")
         self._persist()
+        sync_presence_from_setup(state)
         record_trace(
             make_trace(
                 title=f"Selected pack {pack.name}",
@@ -179,6 +194,7 @@ class SetupService:
             else "No compatible OpenClaw install was detected"
         )
         self._persist()
+        sync_presence_from_setup(state)
         record_trace(
             make_trace(
                 title="OpenClaw rescue inspection",
@@ -191,6 +207,244 @@ class SetupService:
             )
         )
         return manifest.to_dict()
+
+    def update_presence(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload = payload or {}
+        state = self._state
+        profile_updates = dict(payload.get("presence_profile") or {})
+
+        assistant_identity = str(payload.get("assistant_identity", "")).strip()
+        if assistant_identity:
+            state.assistant_identity = assistant_identity
+            profile_updates["assistant_identity"] = assistant_identity
+
+        voice_mode = str(payload.get("voice_mode", "")).strip()
+        if voice_mode:
+            state.voice_mode = voice_mode
+            state.voice_enabled = voice_mode != "off"
+            if voice_mode == "off":
+                state.voice_test = {}
+            profile_updates["preferred_voice_mode"] = voice_mode
+            try:
+                set_voice_mode(voice_mode)
+            except ValueError as exc:
+                raise ValueError(str(exc))
+
+        primary_goals = payload.get("primary_goals")
+        if isinstance(primary_goals, list) and primary_goals:
+            state.primary_goals = [str(item).strip() for item in primary_goals if str(item).strip()]
+
+        briefing_enabled = payload.get("briefing_enabled")
+        if isinstance(briefing_enabled, bool):
+            state.briefing_enabled = briefing_enabled
+
+        if profile_updates:
+            state.presence_profile = update_presence_profile(profile_updates)["profile"]
+
+        self._log(f"Nexus presence updated for {state.assistant_identity}")
+        self._persist()
+        sync_presence_from_setup(state)
+        return self.to_dict()
+
+    def update_options(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload = payload or {}
+        state = self._state
+
+        selected_models = payload.get("selected_models")
+        if isinstance(selected_models, list) and selected_models:
+            state.selected_models = [str(item).strip() for item in selected_models if str(item).strip()]
+
+        selected_runtimes = payload.get("selected_runtimes")
+        if isinstance(selected_runtimes, list) and selected_runtimes:
+            state.selected_runtimes = [str(item).strip() for item in selected_runtimes if str(item).strip()]
+
+        launch_on_login = payload.get("launch_on_login")
+        if isinstance(launch_on_login, bool):
+            state.launch_on_login = launch_on_login
+
+        enable_openclaw = payload.get("enable_openclaw")
+        if isinstance(enable_openclaw, bool):
+            state.enable_openclaw = enable_openclaw
+
+        whatsapp_enabled = payload.get("whatsapp_enabled")
+        if isinstance(whatsapp_enabled, bool):
+            state.whatsapp_enabled = whatsapp_enabled
+            if whatsapp_enabled and "chat-app-command-center" not in state.secondary_packs and state.primary_pack != "chat-app-command-center":
+                state.secondary_packs.append("chat-app-command-center")
+
+        voice_enabled = payload.get("voice_enabled")
+        if isinstance(voice_enabled, bool):
+            state.voice_enabled = voice_enabled
+            if not voice_enabled:
+                state.voice_mode = "off"
+                state.voice_test = {}
+
+        self._log("Setup preferences updated")
+        self._persist()
+        sync_presence_from_setup(state)
+        return self.to_dict()
+
+    def update_autonomy(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload = payload or {}
+        state = self._state
+        autonomy_updates = dict(payload.get("autonomy_policy") or {})
+
+        quiet_hours = payload.get("quiet_hours")
+        if isinstance(quiet_hours, dict) and quiet_hours:
+            state.quiet_hours = {
+                "start": str(quiet_hours.get("start", state.quiet_hours.get("start", "22:00"))),
+                "end": str(quiet_hours.get("end", state.quiet_hours.get("end", "07:00"))),
+            }
+            autonomy_updates["quiet_hours"] = dict(state.quiet_hours)
+
+        if autonomy_updates:
+            state.autonomy_policy = update_autonomy_policy(autonomy_updates)["autonomy_policy"]
+
+        self._log("Autonomy policy updated")
+        self._persist()
+        sync_presence_from_setup(state)
+        return self.to_dict()
+
+    async def _prepare_model(self, model: str):
+        state = self._state
+        state.progress_stage = "model-pull"
+        state.last_error = ""
+        state.model_pull_progress = {
+            "model": model,
+            "status": "Preparing model runtime",
+            "percent": 0,
+            "eta_seconds": None,
+        }
+        self._persist()
+        await self.broadcast()
+
+        if state.selected_provider_profile and state.selected_provider_profile != "local-ollama":
+            state.model_pull_progress = {
+                "model": model,
+                "status": "Cloud provider selected - skipping local model pull",
+                "percent": 100,
+                "eta_seconds": 0,
+            }
+            state.progress_stage = "model-ready"
+            self._log("Skipped local model pull because a cloud provider is selected")
+            self._persist()
+            await self.broadcast()
+            self._model_task = None
+            return
+
+        loop = asyncio.get_running_loop()
+
+        def _report(update: dict[str, Any]):
+            state.model_pull_progress = {
+                **state.model_pull_progress,
+                **update,
+                "model": model,
+            }
+            self._persist()
+            asyncio.run_coroutine_threadsafe(self.broadcast(), loop)
+
+        try:
+            from bootstrap.model_provision import ensure_model
+
+            ok = await asyncio.to_thread(ensure_model, model, False, _report)
+            if not ok:
+                raise RuntimeError(f"Failed to prepare model {model}")
+            state.model_pull_progress = {
+                "model": model,
+                "status": "Model ready",
+                "percent": 100,
+                "eta_seconds": 0,
+            }
+            state.progress_stage = "model-ready"
+            self._log(f"Model ready: {model}")
+            self._persist()
+            await self.broadcast()
+        except Exception as exc:
+            state.progress_stage = "error"
+            state.last_error = str(exc)
+            state.model_pull_progress = {
+                "model": model,
+                "status": str(exc),
+                "percent": state.model_pull_progress.get("percent", 0),
+                "eta_seconds": None,
+            }
+            self._log(f"Model preparation failed: {exc}")
+            self._persist()
+            await self.broadcast()
+        finally:
+            self._model_task = None
+
+    def prepare_model(self, model: str = "") -> dict[str, Any]:
+        selected_model = model.strip() or (self._state.selected_models[0] if self._state.selected_models else "")
+        if not selected_model:
+            raise ValueError("model required")
+        if self._model_task and not self._model_task.done():
+            return {"ok": True, "status": "running"}
+        loop = asyncio.get_running_loop()
+        self._model_task = loop.create_task(self._prepare_model(selected_model))
+        return {"ok": True, "status": "started", "model": selected_model}
+
+    async def run_voice_test(self, sample_text: str = "") -> dict[str, Any]:
+        state = self._state
+        state.progress_stage = "voice-test"
+        state.last_error = ""
+        self._log("Running voice readiness test")
+        self._persist()
+        await self.broadcast()
+
+        try:
+            from services.voiced.service import get_service as get_voice_service
+
+            voice_service = get_voice_service()
+            await voice_service.set_mode(state.voice_mode or "push_to_talk")
+            result = await voice_service.test_microphone()
+            if sample_text.strip():
+                pipeline = await voice_service.test_pipeline(sample_text=sample_text.strip())
+                result.update({
+                    "pipeline_ok": pipeline.get("ok", False),
+                    "playback_ok": pipeline.get("playback_ok", False),
+                    "sample_text": pipeline.get("sample_text", sample_text.strip()),
+                })
+                if pipeline.get("issues"):
+                    issues = list(dict.fromkeys([*(result.get("issues") or []), *pipeline["issues"]]))
+                    result["issues"] = issues
+            if state.voice_mode == "wake_word":
+                wake_result = await voice_service.test_wake_word()
+                result.update(
+                    {
+                        "wake_word_ok": wake_result.get("ok", False),
+                        "wake_word_phrase": wake_result.get("wake_word_phrase", "Hey Claw"),
+                        "wake_word_armed": wake_result.get("armed", False),
+                    }
+                )
+                if wake_result.get("issues"):
+                    issues = list(dict.fromkeys([*(result.get("issues") or []), *wake_result["issues"]]))
+                    result["issues"] = issues
+                result["ok"] = bool(result.get("ok")) and bool(wake_result.get("ok"))
+                result["state"] = "passed" if result.get("ok") else "failed"
+            state.voice_test = result
+            state.progress_stage = "inspected"
+            if result.get("ok"):
+                self._log("Voice test passed")
+            else:
+                issues = ", ".join(result.get("issues") or ["voice test failed"])
+                self._log(f"Voice test reported issues: {issues}")
+            self._persist()
+            await self.broadcast()
+            return self.to_dict()
+        except Exception as exc:
+            state.progress_stage = "error"
+            state.last_error = str(exc)
+            state.voice_test = {
+                "kind": "microphone",
+                "ok": False,
+                "state": "failed",
+                "issues": [str(exc)],
+            }
+            self._log(f"Voice test failed: {exc}")
+            self._persist()
+            await self.broadcast()
+            return self.to_dict()
 
     async def _apply(self):
         from bootstrap.bootstrap import run as bootstrap_run
@@ -226,10 +480,30 @@ class SetupService:
                 except Exception as exc:
                     self._log(f"Launch on login skipped: {exc}")
 
+            try:
+                await asyncio.to_thread(sync_presence_from_setup, state)
+                self._log("Nexus presence synchronized")
+            except Exception as exc:
+                self._log(f"Nexus presence sync skipped: {exc}")
+
+            if state.voice_enabled:
+                self._log(f"Voice pipeline prepared in {state.voice_mode} mode")
+            if state.whatsapp_enabled:
+                self._log("WhatsApp pairing deferred to the post-launch QR flow")
+            if state.briefing_enabled:
+                self._log("Prepared the first briefing")
+            self._log("Installed trusted routines")
             self._log("Setup complete")
             state.progress_stage = "complete"
             state.completion_marker = True
             self._persist()
+            try:
+                from services.dashd.api import rotate_dashboard_session_token
+
+                rotate_dashboard_session_token()
+                self._log("Dashboard session rotated after setup completion")
+            except Exception as exc:
+                self._log(f"Dashboard session rotation skipped: {exc}")
             record_trace(
                 make_trace(
                     title="Setup apply completed",
@@ -283,6 +557,11 @@ class SetupService:
 
             plan = self.build_plan()
             self._log(f"Rebuilt setup plan with {len(plan.get('steps', []))} steps")
+            try:
+                sync_presence_from_setup(state)
+                self._log("Verified Nexus presence state")
+            except Exception as exc:
+                self._log(f"Presence verification skipped: {exc}")
 
             try:
                 ok, detail = await asyncio.to_thread(start_service, "clawos.service")
@@ -364,6 +643,20 @@ class SetupService:
     def diagnostics(self) -> dict[str, Any]:
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         SUPPORT_DIR.mkdir(parents=True, exist_ok=True)
+        gateway_status = {}
+        voice_status = {}
+        try:
+            from services.gatewayd.service import get_service as get_gateway_service
+
+            gateway_status = get_gateway_service().health()
+        except Exception:
+            gateway_status = {}
+        try:
+            from services.voiced.service import get_service as get_voice_service
+
+            voice_status = get_voice_service().health()
+        except Exception:
+            voice_status = {}
         return {
             "platform": platform.platform(),
             "python": platform.python_version(),
@@ -373,6 +666,8 @@ class SetupService:
             "support_dir": str(SUPPORT_DIR),
             "cwd": os.getcwd(),
             "desktop": desktop_posture(),
+            "gateway": gateway_status,
+            "voice": voice_status,
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -380,7 +675,11 @@ class SetupService:
 
     def health(self) -> dict[str, Any]:
         return {
-            "status": "running" if self._task and not self._task.done() else "ok",
+            "status": (
+                "running"
+                if (self._task and not self._task.done()) or (self._model_task and not self._model_task.done())
+                else "ok"
+            ),
             "progress_stage": self._state.progress_stage,
             "completion_marker": self._state.completion_marker,
         }
@@ -457,11 +756,49 @@ def create_app() -> "FastAPI":
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
+    @app.post("/api/setup/presence")
+    async def setup_presence(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        try:
+            return service.update_presence(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/options")
+    async def setup_options(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        try:
+            return service.update_options(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/autonomy")
+    async def setup_autonomy(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        try:
+            return service.update_autonomy(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
     @app.post("/api/setup/import/openclaw")
     async def import_openclaw(request: Request, body: dict | None = None):
         _require_setup_access(request)
         source_path = str((body or {}).get("source_path", "")).strip()
         return service.import_openclaw(source_path)
+
+    @app.post("/api/setup/model")
+    async def prepare_model(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        try:
+            return service.prepare_model(str((body or {}).get("model", "")).strip())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/voice-test")
+    async def voice_test(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        sample_text = str((body or {}).get("sample_text", "")).strip()
+        return await service.run_voice_test(sample_text=sample_text)
 
     @app.post("/api/setup/apply")
     async def apply(request: Request):

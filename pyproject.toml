@@ -7,9 +7,14 @@ name = "clawos"
 version = "0.1.0"
 description = "ClawOS - local-first AI agent OS"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.10"
 keywords = ["ai", "agent", "llm", "ollama", "local", "offline"]
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
 
 dependencies = [
     "pyyaml>=6.0",
@@ -37,6 +42,7 @@ full = [
 
 [project.scripts]
 clawctl = "clawctl.main:main"
+clawos = "clawctl.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -52,6 +58,9 @@ include = [
     "clients*",
     "openclaw_integration*",
 ]
+
+[tool.setuptools]
+license-files = ["LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 export type SetupState = {
   install_channel?: string
   platform?: string
@@ -12,11 +13,41 @@ export type SetupState = {
   secondary_packs?: string[]
   installed_extensions?: string[]
   workspace?: string
+  assistant_identity?: string
+  presence_profile?: PresenceProfile
+  autonomy_policy?: AutonomyPolicy
+  quiet_hours?: Record<string, string>
+  primary_goals?: string[]
+  voice_mode?: string
+  briefing_enabled?: boolean
   voice_enabled?: boolean
+  whatsapp_enabled?: boolean
   enable_openclaw?: boolean
   launch_on_login?: boolean
   policy_mode?: string
   progress_stage?: string
+  model_pull_progress?: {
+    model?: string
+    status?: string
+    percent?: number
+    eta_seconds?: number | null
+  }
+  voice_test?: {
+    kind?: string
+    ok?: boolean
+    state?: string
+    device_label?: string
+    sample_rate_hz?: number
+    microphone_backend?: string
+    transcript?: string
+    playback_ok?: boolean
+    pipeline_ok?: boolean
+    sample_text?: string
+    wake_word_ok?: boolean
+    wake_word_phrase?: string
+    wake_word_armed?: boolean
+    issues?: string[]
+  }
   logs?: string[]
   completion_marker?: boolean
   last_error?: string
@@ -38,6 +69,17 @@ export type SetupDiagnostics = {
   support_dir?: string
   cwd?: string
   desktop?: DesktopPosture
+  gateway?: {
+    status?: string
+    whatsapp?: string
+    channels?: string[]
+    linked_phone?: string
+    last_message_at?: string
+    last_disconnect_reason?: string
+    routes_count?: number
+    approval_queue?: number
+  }
+  voice?: VoiceHealth
 }
 
 export type DashboardHealth = {
@@ -46,6 +88,23 @@ export type DashboardHealth = {
   host?: string
   port?: number
   local_only?: boolean
+}
+
+export type GatewayHealth = {
+  status?: string
+  whatsapp?: string
+  channels?: string[]
+  linked_phone?: string
+  ready?: boolean
+  last_ready_at?: string
+  last_disconnect_reason?: string
+  last_message_at?: string
+  last_sender?: string
+  last_workspace?: string
+  last_preview?: string
+  routes_count?: number
+  approval_queue?: number
+  restart_count?: number
 }
 
 export type DesktopPosture = {
@@ -70,12 +129,14 @@ export type WorkflowRecord = {
   destructive?: boolean
   needs_agent?: boolean
   requires?: string[]
+  timeout_s?: number
 }
 
 export type WorkflowRunResult = {
   status?: string
   output?: string
   error?: string
+  metadata?: Record<string, any>
 }
 
 export type UseCasePack = {
@@ -154,6 +215,225 @@ export type EvalSuite = {
   active?: boolean
 }
 
+export type Citation = {
+  url: string
+  title: string
+  excerpt: string
+  relevance: 'primary' | 'supporting' | 'tangential'
+}
+
+export type ResearchSource = {
+  url: string
+  title: string
+  snippet: string
+  text?: string
+  fetched: boolean
+  error?: string
+}
+
+export type ResearchSession = {
+  id: string
+  query: string
+  status: 'running' | 'paused' | 'done' | 'error'
+  provider: string
+  sources: ResearchSource[]
+  citations: Citation[]
+  summary?: string
+  task_id?: string
+  source_count?: number
+  citation_count?: number
+  created_at: string
+  updated_at: string
+}
+
+export type WorkbenchPage = {
+  url: string
+  title: string
+  text: string
+  links: string[]
+  word_count: number
+  fetched_at: string
+}
+
+export type WorkbenchSession = {
+  id: string
+  query: string
+  url?: string
+  status: 'submitted' | 'analyzing' | 'done' | 'error'
+  page?: WorkbenchPage
+  task_id?: string
+  created_at: string
+}
+
+export type TrustTier = 'trusted' | 'unverified' | 'blocked'
+
+export type PresenceProfile = {
+  assistant_identity?: string
+  tone?: string
+  verbosity?: string
+  interruption_threshold?: string
+  notification_style?: string
+  follow_up_behavior?: string
+  presence_level?: string
+  preferred_voice_mode?: string
+}
+
+export type AutonomyPolicy = {
+  mode?: string
+  automatic_lanes?: string[]
+  trusted_lanes?: string[]
+  approval_required?: string[]
+  quiet_hours?: Record<string, string>
+  escalation_rule?: string
+}
+
+export type AttentionEvent = {
+  id?: string
+  title?: string
+  summary?: string
+  urgency?: string
+  surface?: string
+  category?: string
+  timestamp?: string
+  acknowledged?: boolean
+}
+
+export type Briefing = {
+  id?: string
+  title?: string
+  headline?: string
+  summary?: string
+  items?: Array<{ title?: string; body?: string; priority?: string }>
+  generated_at?: string
+}
+
+export type Mission = {
+  id?: string
+  title?: string
+  summary?: string
+  status?: string
+  checkpoint?: string
+  blocked?: boolean
+  trust_lane?: string
+  next_action?: string
+  updated_at?: string
+}
+
+export type VoiceSession = {
+  mode?: string
+  state?: string
+  follow_up_open?: boolean
+  device_label?: string
+  last_utterance?: string
+  last_response?: string
+  last_trigger?: string
+  updated_at?: string
+}
+
+export type VoiceHealth = {
+  status?: string
+  enabled?: boolean
+  mode?: string
+  state?: string
+  running?: boolean
+  stt_ok?: boolean
+  tts_ok?: boolean
+  wake_word_ok?: boolean
+  microphone_ok?: boolean
+  microphone_backend?: string
+  playback_backend?: string
+  device_label?: string
+  sample_rate_hz?: number
+  follow_up_open?: boolean
+}
+
+export type VoiceTestResult = {
+  kind?: string
+  ok?: boolean
+  state?: string
+  mode?: string
+  device_label?: string
+  sample_rate_hz?: number
+  microphone_backend?: string
+  transcript?: string
+  playback_ok?: boolean
+  pipeline_ok?: boolean
+  sample_text?: string
+  response?: string
+  error?: string
+  armed?: boolean
+  wake_word_ok?: boolean
+  wake_word_phrase?: string
+  wake_word_armed?: boolean
+  issues?: string[]
+}
+
+export type PresencePayload = {
+  profile?: PresenceProfile
+  autonomy_policy?: AutonomyPolicy
+  voice_session?: VoiceSession
+}
+
+export type Peer = {
+  id: string
+  url: string
+  name: string
+  trust_tier: TrustTier
+  description?: string
+  version?: string
+  capabilities?: string[]
+  skills?: string[]
+  last_seen?: string
+  last_error?: string
+  reachable?: boolean
+  added_at: string
+}
+
+export type MCPTool = {
+  name: string
+  description: string
+  server_id?: string
+  server_name?: string
+  inputSchema?: Record<string, unknown>
+  input_schema?: Record<string, unknown>
+}
+
+export type MCPResource = {
+  uri: string
+  name: string
+  description?: string
+  server_id?: string
+  server_name?: string
+  mimeType?: string
+}
+
+export type MCPServer = {
+  id: string
+  name: string
+  transport: 'stdio' | 'http'
+  command?: string[]
+  endpoint?: string
+  env?: Record<string, string>
+  enabled: boolean
+  status: 'disconnected' | 'connected' | 'error'
+  error?: string
+  tools: MCPTool[]
+  resources: MCPResource[]
+  prompts: unknown[]
+  connected_at?: string
+  added_at: string
+}
+
+export type WellKnown = {
+  id: string
+  name: string
+  description: string
+  transport: 'stdio' | 'http'
+  command_template: string[]
+  env_required?: string[]
+  category: string
+}
+
 export type OpenClawImportManifest = {
   source_path?: string
   config_path?: string
@@ -203,6 +483,14 @@ function maybeSetupHeaders(extra?: HeadersInit): HeadersInit | undefined {
 export const commandCenterApi = {
   getHealth: () => fetchJson<DashboardHealth>('/api/health'),
   getDesktopPosture: () => fetchJson<DesktopPosture>('/api/desktop/posture'),
+  getGatewayHealth: () => fetchJson<GatewayHealth>('/api/gateway/health', { headers: maybeSetupHeaders() }),
+  getGatewayRoutes: () => fetchJson<Record<string, string>>('/api/gateway/routes'),
+  setGatewayRoute: (jid: string, workspace_id: string) =>
+    fetchJson<{ ok?: boolean; routes?: Record<string, string> }>('/api/gateway/routes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jid, workspace_id }),
+    }),
   setLaunchOnLogin: (enabled: boolean, command?: string) =>
     fetchJson<DesktopPosture>('/api/desktop/launch-on-login', {
       method: 'POST',
@@ -239,6 +527,71 @@ export const commandCenterApi = {
     fetchJson<{ ok?: boolean; status?: string }>('/api/setup/cancel', { method: 'POST', headers: setupHeaders() }),
   createSupportBundle: () =>
     fetchJson<{ path?: string }>('/api/support/bundle', { method: 'POST', headers: setupHeaders() }),
+  getPresence: () => fetchJson<PresencePayload>('/api/presence', { headers: maybeSetupHeaders() }),
+  updatePresence: (body: Record<string, unknown>) =>
+    fetchJson<PresencePayload>('/api/presence', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+    }),
+  listAttention: () => fetchJson<AttentionEvent[]>('/api/attention'),
+  getTodayBriefing: () => fetchJson<Briefing>('/api/briefings/today'),
+  listMissions: () => fetchJson<Mission[]>('/api/missions'),
+  startMission: (title: string, summary = '', trust_lane = 'trusted-automatic') =>
+    fetchJson<{ ok?: boolean; mission?: Mission }>('/api/missions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, summary, trust_lane }),
+    }),
+  getVoiceSession: () => fetchJson<VoiceSession>('/api/voice/session'),
+  getVoiceHealth: () => fetchJson<VoiceHealth>('/api/voice/health', { headers: maybeSetupHeaders() }),
+  testVoice: (kind: 'microphone' | 'pipeline' | 'wake_word' = 'pipeline', sample_text = 'Voice pipeline ready.') =>
+    fetchJson<VoiceTestResult>('/api/voice/test', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ kind, sample_text }),
+    }),
+  pushToTalk: () =>
+    fetchJson<VoiceTestResult>('/api/voice/push-to-talk', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+    }),
+  setVoiceMode: (mode: string) =>
+    fetchJson<VoiceSession>('/api/voice/mode', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ mode }),
+    }),
+  updateSetupPresence: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/presence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
+  updateSetupOptions: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
+  updateSetupAutonomy: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/autonomy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
+  prepareSetupModel: (model = '') =>
+    fetchJson<{ ok?: boolean; status?: string; model?: string }>('/api/setup/model', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify({ model }),
+    }),
+  runSetupVoiceTest: (sample_text = '') =>
+    fetchJson<SetupState>('/api/setup/voice-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify({ sample_text }),
+    }),
   listPacks: () => fetchJson<UseCasePack[]>('/api/packs', { headers: maybeSetupHeaders() }),
   installPack: (pack_id: string, primary = false, provider_profile = '') =>
     fetchJson<{ ok?: boolean; pack?: UseCasePack; state?: SetupState }>('/api/packs/install', {
@@ -275,6 +628,92 @@ export const commandCenterApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ peer_url, intent, workspace }),
     }),
+  listStudioPrograms: () => fetchJson<unknown[]>('/api/studio/programs'),
+  saveStudioProgram: (program: Record<string, unknown>) =>
+    fetchJson<unknown>('/api/studio/programs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(program),
+    }),
+  deleteStudioProgram: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/studio/programs/${id}`, { method: 'DELETE' }),
+  deployStudioProgram: (id: string) =>
+    fetchJson<{ ok?: boolean; task_id?: string }>(`/api/studio/programs/${id}/deploy`, { method: 'POST' }),
+  listA2APeers: () => fetchJson<Peer[]>('/api/a2a/peers'),
+  addA2APeer: (url: string, name = '', trust_tier = 'unverified') =>
+    fetchJson<Peer>('/api/a2a/peers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, name, trust_tier }),
+    }),
+  removeA2APeer: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/a2a/peers/${id}`, { method: 'DELETE' }),
+  setA2ATrust: (id: string, trust_tier: string) =>
+    fetchJson<Peer>(`/api/a2a/peers/${id}/trust`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trust_tier }),
+    }),
+  probeA2APeer: (id: string) =>
+    fetchJson<Peer>(`/api/a2a/peers/${id}/probe`, { method: 'POST' }),
+  getA2ASigningKey: () => fetchJson<{ fingerprint?: string }>('/api/a2a/signing-key'),
+  listMCPServers: () => fetchJson<MCPServer[]>('/api/mcp/servers'),
+  listMCPWellKnown: () => fetchJson<WellKnown[]>('/api/mcp/well-known'),
+  addMCPServer: (params: { name: string; transport: string; command?: string[]; endpoint?: string; env?: Record<string, string> }) =>
+    fetchJson<MCPServer>('/api/mcp/servers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }),
+  removeMCPServer: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/mcp/servers/${id}`, { method: 'DELETE' }),
+  connectMCPServer: (id: string) =>
+    fetchJson<MCPServer>(`/api/mcp/servers/${id}/connect`, { method: 'POST' }),
+  listMCPTools: () => fetchJson<MCPTool[]>('/api/mcp/tools'),
+  listMCPResources: () => fetchJson<MCPResource[]>('/api/mcp/resources'),
+  callMCPTool: (server_id: string, tool: string, arguments_: Record<string, unknown> = {}) =>
+    fetchJson<{ ok?: boolean; result?: unknown }>('/api/mcp/call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server_id, tool, arguments: arguments_ }),
+    }),
+  readMCPResource: (server_id: string, uri: string) =>
+    fetchJson<{ ok?: boolean; content?: unknown }>('/api/mcp/resources/read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server_id, uri }),
+    }),
+  startResearch: (params: { query?: string; seed_urls?: string[]; provider?: string; api_key?: string; workspace?: string }) =>
+    fetchJson<ResearchSession>('/api/research/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }),
+  listResearchSessions: () => fetchJson<ResearchSession[]>('/api/research/sessions'),
+  getResearchSession: (id: string) => fetchJson<ResearchSession>(`/api/research/sessions/${id}`),
+  resumeResearchSession: (id: string, workspace = 'nexus_default') =>
+    fetchJson<ResearchSession>(`/api/research/sessions/${id}/resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace }),
+    }),
+  pauseResearchSession: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/research/sessions/${id}/pause`, { method: 'POST' }),
+  deleteResearchSession: (id: string) =>
+    fetchJson<{ ok?: boolean }>(`/api/research/sessions/${id}`, { method: 'DELETE' }),
+  workbenchFetch: (url: string) =>
+    fetchJson<WorkbenchPage>('/api/workbench/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    }),
+  workbenchResearch: (query: string, url = '', workspace = 'nexus_default') =>
+    fetchJson<{ ok?: boolean; session?: WorkbenchSession }>('/api/workbench/research', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, url, workspace }),
+    }),
+  listWorkbenchSessions: () => fetchJson<WorkbenchSession[]>('/api/workbench/sessions'),
   listWorkflows: (params: { category?: string; search?: string } = {}) => {
     const query = new URLSearchParams()
     if (params.category && params.category !== 'all') query.set('category', params.category)
@@ -288,4 +727,11 @@ export const commandCenterApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
+  sendConversationMessage: (message: string, workspace = 'nexus_default') =>
+    fetchJson<{ task_id?: string; status?: string }>('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, workspace }),
+    }),
+  listApprovals: () => fetchJson<any[]>('/api/approvals'),
 }

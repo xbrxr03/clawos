@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """batch-summarize — summarize all PDFs in a folder."""
 from pathlib import Path
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus

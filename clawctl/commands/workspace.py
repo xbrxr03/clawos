@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl workspace — manage workspaces."""
 from clawos_core.constants import WORKSPACE_DIR, MEMORY_DIR
 from clawctl.ui.banner import success, error, info, table

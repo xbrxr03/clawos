@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl rescue - migration helpers for existing OpenClaw users."""
 from __future__ import annotations
 

@@ -1,5 +1,6 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Card, Empty, SectionLabel } from '../components/ui.jsx'
+import { Badge, Card, Empty, PageHeader, PanelHeader, SectionLabel, Skeleton, SkeletonText } from '../components/ui.jsx'
 import { commandCenterApi, type ExtensionManifest } from '../lib/commandCenterApi'
 
 const TRUST_COLORS: Record<string, string> = {
@@ -15,15 +16,21 @@ export function RegistryPage() {
   const [peers, setPeers] = useState<Array<Record<string, any>>>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    const [extensionData, a2a] = await Promise.all([
-      commandCenterApi.listExtensions(),
-      commandCenterApi.getAgentCard(),
-    ])
-    setExtensions(Array.isArray(extensionData) ? extensionData : [])
-    setAgentCard((a2a.card as Record<string, any>) || null)
-    setPeers(Array.isArray(a2a.peers) ? (a2a.peers as Array<Record<string, any>>) : [])
+    setLoading(true)
+    try {
+      const [extensionData, a2a] = await Promise.all([
+        commandCenterApi.listExtensions(),
+        commandCenterApi.getAgentCard(),
+      ])
+      setExtensions(Array.isArray(extensionData) ? extensionData : [])
+      setAgentCard((a2a.card as Record<string, any>) || null)
+      setPeers(Array.isArray(a2a.peers) ? (a2a.peers as Array<Record<string, any>>) : [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -40,6 +47,15 @@ export function RegistryPage() {
   const selected = useMemo(
     () => extensions.find((extension) => extension.id === selectedId) || null,
     [extensions, selectedId],
+  )
+  const stats = useMemo(
+    () => ({
+      total: extensions.length,
+      installed: extensions.filter((extension) => extension.installed).length,
+      verified: extensions.filter((extension) => extension.trust_tier === 'Verified').length,
+      recommended: extensions.filter((extension) => extension.recommended_for_primary).length,
+    }),
+    [extensions],
   )
 
   const installExtension = async (extension: ExtensionManifest) => {
@@ -59,15 +75,38 @@ export function RegistryPage() {
   return (
     <div className="fade-up" style={{ padding: '0 0 48px' }}>
       <div style={{ padding: '32px 24px 18px' }}>
-        <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.05em' }}>Registry</div>
-        <div style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 6, maxWidth: 720 }}>
-          Verified extensions, pack-aligned recommendations, and the local A2A identity for this ClawOS node.
-        </div>
+        <PageHeader
+          eyebrow="Registry"
+          title="Trust-first extension installs and local federation identity."
+          description="Inspect trust tiers, permissions, and pack alignment before anything is installed, then compare that posture against the node's local A2A identity."
+          meta={
+            <>
+              <Badge color="blue">{stats.total} extensions</Badge>
+              <Badge color="green">{stats.verified} verified</Badge>
+              <Badge color="gray">{stats.installed} installed</Badge>
+            </>
+          }
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, padding: '0 20px 16px' }}>
+        <MetricCard label="Catalog" value={stats.total} tone="blue" />
+        <MetricCard label="Installed" value={stats.installed} tone="green" />
+        <MetricCard label="Verified" value={stats.verified} tone="orange" />
+        <MetricCard label="Recommended" value={stats.recommended} tone="purple" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 14, padding: '0 20px' }}>
         <div style={{ display: 'grid', gap: 10 }}>
-          {extensions.length === 0 ? (
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} style={{ padding: 18 }}>
+                <Skeleton width="32%" height={14} />
+                <div style={{ height: 12 }} />
+                <SkeletonText lines={3} />
+              </Card>
+            ))
+          ) : extensions.length === 0 ? (
             <Card><Empty>No extensions are available yet.</Empty></Card>
           ) : (
             extensions.map((extension) => (
@@ -91,6 +130,14 @@ export function RegistryPage() {
                       {extension.recommended_for_primary ? <Badge color="blue">recommended</Badge> : null}
                     </div>
                     <div style={{ marginTop: 8, color: 'var(--text-2)', lineHeight: 1.55 }}>{extension.description}</div>
+                    <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {(extension.permissions || []).slice(0, 3).map((permission) => (
+                        <Badge key={permission} color="gray">{permission}</Badge>
+                      ))}
+                      {extension.permissions && extension.permissions.length > 3 ? (
+                        <Badge color="gray">+{extension.permissions.length - 3} more</Badge>
+                      ) : null}
+                    </div>
                   </div>
 
                   <button className="btn primary" disabled={busy !== null || !!extension.installed} onClick={(event) => { event.stopPropagation(); installExtension(extension) }}>
@@ -106,10 +153,19 @@ export function RegistryPage() {
           <Card style={{ padding: 20 }}>
             {selected ? (
               <div style={{ display: 'grid', gap: 16 }}>
-                <div>
-                  <div className="section-label">Selected extension</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em' }}>{selected.name}</div>
-                </div>
+                <PanelHeader
+                  eyebrow="Selected extension"
+                  title={selected.name}
+                  description={selected.description}
+                  aside={
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <Badge color={TRUST_COLORS[selected.trust_tier || 'Community'] || 'gray'}>
+                        {selected.trust_tier || 'Community'}
+                      </Badge>
+                      {selected.installed ? <Badge color="green">installed</Badge> : null}
+                    </div>
+                  }
+                />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <Detail label="Category" value={selected.category} />
                   <Detail label="Network" value={selected.network_access || 'local-only'} />
@@ -184,5 +240,23 @@ function Detail({ label, value }: { label: string; value: string }) {
       <div className="section-label">{label}</div>
       <div className="mono" style={{ marginTop: 6 }}>{value}</div>
     </div>
+  )
+}
+
+function MetricCard({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'green' | 'orange' | 'purple' }) {
+  const toneValue = {
+    blue: 'var(--blue)',
+    green: 'var(--green)',
+    orange: 'var(--orange)',
+    purple: 'var(--purple)',
+  }[tone]
+
+  return (
+    <Card style={{ padding: 18 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
+      <div style={{ marginTop: 8, fontSize: 30, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.05em', color: toneValue }}>
+        {value}
+      </div>
+    </Card>
   )
 }

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Dashboard production-hardening tests.
 """
@@ -26,8 +27,13 @@ def test_dashboard_settings_force_loopback_without_auth():
     assert settings.auth_required is False
 
 
-def test_dashboard_requires_login_and_sends_snapshot():
+def test_dashboard_requires_login_and_sends_snapshot(monkeypatch):
     from services.dashd.api import create_app
+
+    class IncompleteSetupState:
+        completion_marker = False
+
+    monkeypatch.setattr("services.dashd.api._setup_state", lambda: IncompleteSetupState())
 
     app = create_app({
         "host": "127.0.0.1",
@@ -48,6 +54,7 @@ def test_dashboard_requires_login_and_sends_snapshot():
 
         login = client.post("/api/login", json={"token": "dash-token"})
         assert login.status_code == 200
+        assert client.cookies.get("dash_session") != "dash-token"
 
         session = client.get("/api/session")
         assert session.json() == {"auth_required": True, "authenticated": True}
@@ -66,6 +73,110 @@ def test_dashboard_requires_login_and_sends_snapshot():
 
         assert message["type"] == "setup_state"
         assert "progress_stage" in message["data"]
+
+
+def test_dashboard_websocket_forwards_workflow_events(monkeypatch):
+    from services.dashd.api import create_app
+    from workflows.engine import WorkflowResult, WorkflowStatus
+
+    class FakeEngine:
+        def load_registry(self):
+            return None
+
+        async def run(self, workflow_id, args, workspace_id="nexus_default"):
+            from clawos_core.events.bus import get_bus
+
+            await get_bus().publish(
+                "workflow_progress",
+                {
+                    "id": workflow_id,
+                    "status": "running",
+                    "phase": "scan",
+                    "progress": 28,
+                    "message": "Scanning the folder",
+                },
+            )
+            await get_bus().publish(
+                "workflow_progress",
+                {
+                    "id": workflow_id,
+                    "status": "ok",
+                    "phase": "complete",
+                    "progress": 100,
+                    "message": "Workflow finished",
+                    "output": "done",
+                },
+            )
+            return WorkflowResult(status=WorkflowStatus.OK, output="done", metadata={"files_moved": 2})
+
+    monkeypatch.setattr("workflows.engine.get_engine", lambda: FakeEngine())
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    def _receive_workflow_event(websocket):
+        for _ in range(6):
+            message = websocket.receive_json()
+            if message["type"] == "workflow_progress":
+                return message
+        raise AssertionError("workflow_progress event not received")
+
+    with TestClient(app) as client:
+        login = client.post("/api/login", json={"token": "dash-token"})
+        assert login.status_code == 200
+
+        with client.websocket_connect("/ws") as websocket:
+            snapshot = websocket.receive_json()
+            assert snapshot["type"] == "snapshot"
+
+            response = client.post("/api/workflows/organize-downloads/run", json={"args": {"dry_run": True}})
+            assert response.status_code == 200
+
+            first = _receive_workflow_event(websocket)
+            second = _receive_workflow_event(websocket)
+
+        assert first["data"]["phase"] == "scan"
+        assert first["data"]["message"] == "Scanning the folder"
+        assert second["data"]["status"] == "ok"
+        assert second["data"]["output"] == "done"
+
+
+def test_setup_header_is_rejected_after_setup_completion(monkeypatch):
+    from services.dashd.api import create_app
+
+    class CompleteSetupState:
+        completion_marker = True
+
+    monkeypatch.setattr("services.dashd.api._setup_state", lambda: CompleteSetupState())
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    with TestClient(app) as client:
+        assert client.get("/api/setup/state", headers={"X-ClawOS-Setup": "1"}).status_code == 401
+
+
+def test_dashboard_session_rotation_changes_cookie_secret(monkeypatch, workspace_tmp_dir):
+    from services.dashd.api import _load_dashboard_session_token, rotate_dashboard_session_token
+
+    session_file = workspace_tmp_dir / "dashboard.session"
+    monkeypatch.setattr("services.dashd.api._dashboard_session_token_file", lambda: session_file)
+
+    first = _load_dashboard_session_token(True)
+    rotated = rotate_dashboard_session_token()
+    second = _load_dashboard_session_token(True)
+
+    assert first
+    assert rotated == second
+    assert first != second
 
 
 def test_setup_requires_auth_when_dashboard_is_not_loopback():

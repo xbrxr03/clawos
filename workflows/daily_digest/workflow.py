@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """daily-digest — summarize RSS/HN/local news into a daily briefing."""
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus
 

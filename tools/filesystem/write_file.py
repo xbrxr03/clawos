@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """fs.write — write or append to a file within the workspace."""
 from pathlib import Path
 

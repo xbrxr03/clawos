@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS hardware probe.
 Detects RAM, GPU, CPU cores, audio devices, disk space.

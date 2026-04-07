@@ -35,22 +35,22 @@ input/channel -> agentd -> AgentRuntime -> policyd -> toolbridge -> local system
 
 - `services/modeld/service.py`: model inventory, health, profile selection, and VRAM helpers.
 - `services/gatewayd/service.py`: WhatsApp bridge and peer delegation entry points.
-- `services/a2ad/service.py`: agent card, peer discovery, and A2A API.
+- `services/a2ad/service.py`: agent card, peer discovery, and trusted-peer A2A API.
 - `workflows/`: a mix of agent-backed prompts and direct Python helpers with platform metadata.
 - `openclaw_integration/`: installer and configuration bridge for the OpenClaw ecosystem.
 
 ## Non-Canonical Or Legacy Surfaces
 
-- `dashboard/backend/` is a legacy dashboard backend. `services/dashd/api.py` should be treated as the canonical dashboard service.
-- `clients/dashboard/index.html` is the dashboard frontend currently served by `dashd`.
+- `archive/legacy/dashboard-backend/` preserves the retired dashboard backend for reference only.
+- `clients/dashboard/index.html` is a retired single-file dashboard snapshot and is not served by `dashd`.
 - `modeld` is not the hot-path inference gateway today. `AgentRuntime` calls Ollama directly.
 - Many `services/*/main.py` files are process wrappers around in-process modules, not independent network services with strong contracts.
 
 ## Contract Rules
 
-- Submit tasks to `agentd` via `/submit`. `/tasks` exists as a legacy compatibility route.
-- Use `intent` for new task payloads. `task` is accepted for backwards compatibility.
-- `shell.restricted` is the canonical shell tool. `shell.run` is accepted as a compatibility alias.
+- Submit tasks to `agentd` via `/submit`.
+- Use `intent` for task payloads across first-party callers.
+- `shell.restricted` is the canonical shell tool everywhere.
 - Destructive workflows must go through `policyd` approval.
 - `DEFAULT_WORKSPACE` from `clawos_core/constants.py` is the canonical default workspace value.
 
@@ -66,7 +66,6 @@ input/channel -> agentd -> AgentRuntime -> policyd -> toolbridge -> local system
 
 ## Immediate Cleanups Still Needed
 
-- Pick one dashboard stack and delete or archive the other.
 - Route inference through one clearly documented gateway, or explicitly document that `AgentRuntime` talks to Ollama directly.
-- Tighten auth on dashboard and A2A endpoints.
-- Replace prompt-only workflows with deterministic helpers for the highest-value jobs.
+- Keep dashboard setup-bypass limited to pre-completion, loopback-only setup flows.
+- Keep trusted-peer allow-listing enforced for remote A2A task ingress.

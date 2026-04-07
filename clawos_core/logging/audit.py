@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Merkle-chained audit journal.
 Every entry hashes the previous — tamper-evident chain.

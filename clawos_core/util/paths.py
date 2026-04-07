@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Path helpers — always use these, never construct paths manually.
 All functions import from constants at call time so tests can patch CLAWOS_DIR.
 """

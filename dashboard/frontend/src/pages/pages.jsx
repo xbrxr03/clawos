@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 ﻿import { useState, useEffect } from 'react'
 import { Card, Row, StatusDot, Badge, SectionLabel, Ts, Btn, Empty } from '../components/ui.jsx'
 import { api } from '../lib/api.js'

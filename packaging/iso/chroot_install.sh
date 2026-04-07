@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Run inside Cubic Ubuntu chroot to build ClawOS ISO
 # Usage: bash chroot_install.sh [desktop|server]
 set -euo pipefail

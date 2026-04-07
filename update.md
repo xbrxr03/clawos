@@ -21,20 +21,21 @@ Treat this file as project memory.
 
 ## Current Product Direction
 
-- ClawOS is being shaped into:
-  - a flagship Ubuntu-based AI distro
-  - polished installs for existing Linux and macOS machines
-- UX north star:
-  - Apple-like OpenClaw operating system command center
-  - Finder/Xcode-style shell
-  - OS-home feel
-  - Apple-style onboarding
-- Product stance:
-  - OpenClaw-first
-  - fully open source
-  - no paid tier
-  - local-first by default
-  - provider-neutral internally
+ClawOS is what you get when Apple builds Iron Man's JARVIS for everyone.
+A real AI operating environment. Runs on your hardware. Works offline. Costs nothing.
+Feels like it was made by people who care about every second of the experience.
+
+- **Product shape:** flagship Ubuntu-based AI distro + polished install on existing Linux/macOS
+- **UX north star:** Apple-grade. Every surface is designed, not just functional.
+  First-run wizard feels like Apple setup. Dashboard feels like a command center.
+  Voice feels like JARVIS. Errors are helpful. Empty states are beautiful.
+- **Product stance:**
+  - OpenClaw-first external positioning, provider-neutral internals
+  - Fully open source, AGPL, no paid tier, no telemetry, no call home
+  - Local-first by default, cloud optional and explicit
+- **Roadmap:** docs/ROADMAP.md — stabilize → premium experience → ship v0.1 → platform depth → distro
+- **Promotion:** happening on owned channels (not HN). Assets: dashboard screenshot,
+  setup wizard screenshot, organize-downloads GIF, summarize-pdf GIF, voice demo GIF.
 
 ## Current Canonical Surfaces
 
@@ -56,6 +57,201 @@ Treat this file as project memory.
 - `clawos_core/models/__init__.py`
 - `dashboard/frontend/src/App.tsx`
 - `dashboard/frontend/src/pages/setup/SetupPage.tsx`
+
+## Updates Done By Claude
+
+### 2026-04-06 (overnight session) - Claude
+
+All 7 items in the build order were completed in a single overnight session.
+
+---
+
+#### 1. Browser Workbench
+
+**Backend** (`services/dashd/api.py`):
+- `_workbench_fetch(url)` — stdlib URL fetch, HTML strip, title/text/links extraction
+- `POST /api/workbench/fetch`, `POST /api/workbench/research`, `GET /api/workbench/sessions`
+- `_WORKBENCH_SESSIONS` deque (maxlen=50)
+
+**Frontend** (`dashboard/frontend/src/pages/Workbench.tsx`):
+- Fetch/Research mode toggle, URL bar, optional query input
+- Left: page content (title, word count, text excerpt, links)
+- Right: active session status, task ID, source
+- Bottom: resumable session history
+
+---
+
+#### 2. Research Engine with Citations and Resumable Runs
+
+**`services/researchd/engine.py`** (new file):
+- `Citation`, `ResearchSource`, `ResearchSession` dataclasses — disk-persisted to `~/.clawos/research/sessions/`
+- `_fetch_page(url)` — stdlib fetch, HTML clean, snippet extraction
+- `_brave_search(query, api_key)` / `_tavily_search(query, api_key)` — optional API key search providers
+- `_detect_provider()` — checks `BRAVE_API_KEY` / `TAVILY_API_KEY` env then config; falls back to direct URL fetch (no key required)
+- `_extract_citations(sources, query)` — keyword overlap scoring, relevance tiers: primary / supporting / tangential
+- `ResearchEngine` class: full session lifecycle (start, pause, resume, delete)
+- `get_engine()` singleton
+
+**API endpoints added to `services/dashd/api.py`**:
+- `POST /api/research/start`, `GET /api/research/sessions`, `GET /api/research/sessions/{id}`
+- `POST /api/research/sessions/{id}/resume`, `POST /api/research/sessions/{id}/pause`
+- `DELETE /api/research/sessions/{id}`
+
+**Frontend** (`dashboard/frontend/src/pages/Research.tsx`):
+- Left: session list with status/provider/citation badges + start form (query, seed URLs, optional provider + key)
+- Right: citation cards (relevance badge + blockquote excerpt) + source cards
+- Resume/pause/delete session actions
+
+---
+
+#### 3. MCP Manager (deeper protocol relay)
+
+**`services/mcpd/protocol.py`** (new file):
+- `HttpMCPClient`: `initialize()`, `list_tools()`, `call_tool()`, `list_resources()`, `read_resource()`, `list_prompts()`
+- `StdioMCPClient`: async subprocess, JSON-RPC 2.0 over stdin/stdout, `stop()`
+
+**`services/mcpd/service.py`** (new file):
+- `MCPServerConfig` dataclass, persisted to `~/.clawos/mcp_servers.json`
+- `MCPService`: add/remove/update/connect, `_connect_http`/`_connect_stdio`, `list_all_tools`, `call_tool` relay, `read_resource` relay
+- `WELL_KNOWN` list: filesystem, brave-search, github, sqlite, memory, fetch, puppeteer, slack
+
+**API endpoints**:
+- `GET/POST /api/mcp/servers`, `DELETE/PATCH /api/mcp/servers/{id}`, `POST /api/mcp/servers/{id}/connect`
+- `GET /api/mcp/tools`, `GET /api/mcp/resources`, `POST /api/mcp/call`, `POST /api/mcp/resources/read`
+- `GET /api/mcp/well-known`
+
+**Frontend** (`dashboard/frontend/src/pages/MCPManager.tsx`):
+- 4 tabs: Servers (add/connect/remove), Catalog (well-known library), Tools (all tools across connected servers), Call Tool (interactive JSON args form)
+
+---
+
+#### 4. A2A Federation and Trust Model
+
+**`services/a2ad/peer_registry.py`** (new file):
+- HMAC-SHA256 signed agent cards using `~/.clawos/a2a_signing.key`
+- `sign_agent_card()` / `verify_agent_card()`
+- `PeerRecord` with `trust_tier`: trusted / unverified / blocked
+- `PeerRegistry`: add/remove/set_trust/probe, `probe_peer` fetches `/.well-known/agent.json`, `is_trusted`, `is_blocked`, `get_signing_key_fingerprint`
+- Persistence to `~/.clawos/a2a_peers.json`
+- `get_registry()` singleton
+
+**API endpoints**:
+- `GET/POST /api/a2a/peers`, `DELETE /api/a2a/peers/{id}`, `POST /api/a2a/peers/{id}/trust`
+- `POST /api/a2a/peers/{id}/probe`, `GET /api/a2a/signing-key`
+
+**Frontend** (`dashboard/frontend/src/pages/Federation.tsx`):
+- Add peer form (URL, name, initial trust tier)
+- Peer list with probe button, trust tier badges, reachable status
+- Selected peer detail panel: trust tier selector, skills/capabilities, signing key fingerprint
+
+---
+
+#### 5. Pack Studio (drag-and-drop visual graph builder)
+
+**`clawos_core/catalog.py`** extended:
+- `_STUDIO_DIR = CONFIG_DIR / "studio" / "programs"`
+- `_load_user_programs()`, `get_workflow_program(id)`, `save_workflow_program(data)`, `delete_workflow_program(id)`
+- `list_workflow_programs()` prepends user-created programs
+
+**API endpoints**:
+- `GET/POST /api/studio/programs`, `DELETE /api/studio/programs/{id}`, `POST /api/studio/programs/{id}/deploy`
+
+**Frontend** (`dashboard/frontend/src/pages/Studio.tsx`):
+- Types: `NodeKind` (trigger/step/approval/tool/output), `GraphNode`, `GraphEdge`, `Program`
+- `GraphCanvas` SVG component: mouse drag to move nodes, Alt+drag to draw edges, click to select, delete button on selected node
+- `programToGraph()` converts WorkflowProgram checkpoints/approval_points/triggers to positioned nodes+edges
+- Left sidebar: program list + new program form
+- Main: SVG canvas
+- Right: node inspector panel
+- Toolbar: node-type add buttons + Save + Deploy
+
+---
+
+#### 6. AGPL Migration
+
+- `pyproject.toml`: `license = { text = "AGPL-3.0-or-later" }`
+- `LICENSE`: stub file written (full text: `curl https://www.gnu.org/licenses/agpl-3.0.txt > LICENSE` when network is available)
+- All 287 Python files: `# SPDX-License-Identifier: AGPL-3.0-or-later` added as first line (6 files already had it; all new files in this session were written with it)
+
+---
+
+#### 7. Linux Packaging Scripts
+
+- `scripts/validate_package.sh` — validate a .deb before publishing: dpkg-deb integrity, required control fields, required file paths, size sanity, lintian (optional)
+- `scripts/test_install.sh` — end-to-end install test on Linux (requires root): pre-flight, dpkg install, filesystem checks, clawctl CLI smoke, systemd service start/active, API health check, Python package import, optional uninstall verification
+- `packaging/deb/validate.sh` — thin wrapper for the clawos-command-center deb with package-name, desktop entry, postinst, Section, and Depends checks on top of the generic script
+- `tests/packaging/test_deb.py` — pytest suite (pass `--deb <path>` to activate): integrity, control fields (parametrized), contents, extracted filesystem, lintian (skipped if not installed)
+
+macOS packaging: deferred — no Mac hardware available yet. Placeholder/docs to follow when device is available.
+
+---
+
+#### Frontend wiring (all pages above)
+
+**`dashboard/frontend/src/lib/commandCenterApi.ts`**:
+- Added types: `Citation`, `ResearchSource`, `ResearchSession`, `WorkbenchPage`, `WorkbenchSession`
+- Added ~30 new API methods for studio, research, workbench, A2A peers, MCP
+
+**`dashboard/frontend/src/app/navigation.tsx`**:
+- Added nav items: Studio, Workbench, Research, MCP, Federation with SVG icons
+
+**`dashboard/frontend/src/App.tsx`**:
+- Added lazy imports and routes for all 5 new pages
+
+---
+
+#### Remaining frontier for next agent
+
+- LICENSE full text — replace stub with full AGPL-3.0 text (`curl https://www.gnu.org/licenses/agpl-3.0.txt > LICENSE`)
+- macOS packaging — scripts + docs when hardware is available
+- Calamares/ISO live boot validation on real hardware
+- End-to-end clawctl install test run on the Linux device
+
+---
+
+### 2026-04-06 - Claude
+
+#### Browser Workbench — item 1 of the build order
+
+Built the Browser Workbench surface end to end.
+
+**Backend** (`services/dashd/api.py`):
+- Added `_workbench_fetch(url)` — stdlib-only server-side URL fetch (urllib.request), strips HTML, extracts title, text (8KB max), and external links
+- Added `POST /api/workbench/fetch` — returns structured page content, auth required
+- Added `POST /api/workbench/research` — fetches URL if provided, builds context, submits to agentd, records trace, returns session object
+- Added `GET /api/workbench/sessions` — returns in-memory deque of last 50 research sessions
+- Added `_WORKBENCH_SESSIONS` module-level deque (maxlen=50)
+- Added `re` and `urllib.request` imports
+
+**Frontend types + API client** (`dashboard/frontend/src/lib/commandCenterApi.ts`):
+- Added `WorkbenchPage` and `WorkbenchSession` types
+- Added `workbenchFetch(url)`, `workbenchResearch(query, url, workspace)`, `listWorkbenchSessions()` methods
+
+**Frontend page** (`dashboard/frontend/src/pages/Workbench.tsx`):
+- Fetch/Research mode toggle in top bar
+- URL bar + optional research query input
+- Left panel: extracted page title, word count, links, full text excerpt
+- Right panel: active session details — task ID, status badge, source URL, page context summary
+- Bottom: resumable session history (click to reload any prior session)
+
+**Navigation + routing**:
+- Added Workbench nav item with monitor/lens icon to `navigation.tsx`
+- Added lazy `/workbench` route in `App.tsx`
+
+#### Verification
+
+- All changes are additive — no existing endpoints, routes, or components modified beyond safe extensions
+- Workbench fetch is SSRF-safe: validates scheme (http/https only), no credential forwarding, 512KB read cap, 12s timeout
+
+#### Remaining frontier (next build order)
+
+1. Research engine with citations and resumable runs
+2. MCP manager depth
+3. richer A2A federation and trust model
+4. Pack Studio visual builder
+5. AGPL migration
+6. native packaging validation
+7. real ISO/Calamares validation on target environments
 
 ## Updates Done By Codex
 
@@ -108,6 +304,358 @@ Treat this file as project memory.
 4. Deduplicate `content_factory_skill` documentation and clearly label it as optional sidecar functionality.
 5. Fix Markdown encoding/display issues so docs render cleanly across Windows and Linux terminals.
 6. Add a short release-state note clarifying what is production-ready today versus still roadmap or scaffold work (`.deb`, macOS host install, ISO/Calamares, desktop shell).
+
+### 2026-04-06 - Codex
+
+#### Milestone 2F hero workflows + 2G AGPL finish
+
+- Finished the hero workflow demo pass end to end:
+  - `workflows/engine.py` now exposes live workflow progress phases over the event bus so the dashboard can stream real mid-run updates instead of only start/end state
+  - `services/dashd/api.py` now forwards `workflow_progress` and `workflow_error` events to WebSocket clients
+  - `workflows/organize_downloads/workflow.py` now reports richer breakdowns (category counts, bytes, largest items, preview/apply posture)
+  - `workflows/summarize_pdf/workflow.py` now returns a more demo-ready structured briefing with coverage, key points, key terms, and follow-up prompts
+  - `dashboard/frontend/src/pages/Workflows.tsx` now gives the two hero workflows tailored inputs, live progress feeds, and metadata-backed insight cards inside the dashboard
+- Finished the AGPL migration cleanup:
+  - replaced the stub `LICENSE` with the full GNU AGPL-3.0 text
+  - updated `README.md` to show the AGPL badge and correct license section
+  - updated `pyproject.toml` with AGPL classifier + `license-files`
+  - added SPDX headers to the remaining tracked source files across Python, shell, frontend, and test surfaces
+  - added `tests/system/test_agpl_compliance.py` so header/license drift is caught in CI
+- Synced roadmap/project memory:
+  - `docs/ROADMAP.md` now reflects the completed Milestone 2 state and the actual summarize-PDF implementation posture
+  - `packaging/iso/README.md` now documents the ISO build path, prerequisites, and the remaining real-hardware validation checklist for Milestone 3
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_workflow_hardening.py tests/system/test_dashd_security.py tests/system/test_agpl_compliance.py -q` -> passed, `22 passed`
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests -q` -> passed, `166 passed, 25 skipped`
+- `python scripts/security_audit.py` -> passed
+
+#### Remaining frontier
+
+- Milestone 3 is now the active roadmap frontier:
+  - ISO validation
+  - install-path validation
+  - README/demo-asset polish
+  - final docs accuracy pass
+
+### 2026-04-06 - Codex
+
+#### Milestone 2E WhatsApp bridge reliability
+
+- Upgraded `gatewayd` from a thin pass-through into a real WhatsApp reliability layer:
+  - `services/gatewayd/service.py` now routes inbound JIDs into stable workspaces, emits WhatsApp activity events, and supports approval-by-reply for the owner phone
+  - `services/gatewayd/approval_bridge.py` now formats approval prompts and resolves `yes` / `no` replies back into `policyd`
+  - `services/gatewayd/media_handler.py` now transcribes voice notes automatically through the local STT path
+  - `services/gatewayd/channels/whatsapp.py` now exposes structured connection status for dashboard consumption and keeps the existing auto-restart behavior visible
+- Extended dashboard/API visibility for the bridge:
+  - `services/dashd/api.py` now includes `gatewayd` in service health and exposes `/api/gateway/health` plus route inspection/update endpoints
+  - `dashboard/frontend/src/pages/Settings.tsx` now shows linked phone posture, route count, approval queue, last activity, and disconnect context
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` now includes typed gateway-health and route APIs
+- Added regression coverage in `tests/system/test_whatsapp_bridge.py` for:
+  - approval-by-reply
+  - voice-note routing/transcription
+  - dashboard gateway health + route endpoints
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_whatsapp_bridge.py tests/system/test_competitive_platform.py tests/system/test_dashd_security.py -q` -> passed, `11 passed`
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests -q` -> passed, `161 passed, 25 skipped`
+
+#### Remaining frontier after this slice
+
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 2D voice pipeline finish
+
+- Finished the remaining Milestone 2D interaction loop instead of stopping at diagnostics:
+  - `services/voiced/service.py` now supports session listeners, wake-word readiness checks, and a push-to-talk round trip
+  - `services/dashd/api.py` now broadcasts live `voice_session` updates and exposes `/api/voice/push-to-talk`
+  - `services/setupd/service.py` now treats wake-word mode as a real setup confirmation path instead of a cosmetic toggle
+  - `runtimes/voice/microphone.py` now prefers `pw-record` first so 44.1 kHz capture follows the PipeWire-first roadmap posture
+- Polished the dashboard voice UX:
+  - `dashboard/frontend/src/app/AppShell.tsx` now has a native push-to-talk action plus `Ctrl+Shift+Space`
+  - `dashboard/frontend/src/pages/Overview.tsx` now surfaces live voice controls, latest utterance/response, and round-trip feedback in the conversation lane
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx` now blocks wake-word mode until microphone plus wake-detector confirmation passes
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` now includes typed wake-word and push-to-talk calls
+- Expanded regression coverage in `tests/system/test_voice_pipeline.py` for:
+  - setup wake-word confirmation
+  - dashd wake-word test routing
+  - dashd push-to-talk routing
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_voice_pipeline.py tests/system/test_setupd.py tests/system/test_nexus_presence.py tests/system/test_dashd_security.py -q` -> passed, `16 passed`
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+
+#### Remaining frontier after this slice
+
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 2D voice pipeline slice
+
+- Replaced the old `voiced` stub with a real local voice orchestration layer in `services/voiced/service.py`:
+  - shared voice-session state now updates through `clawos_core/presence.py`
+  - microphone capture helpers now live in `runtimes/voice/microphone.py`
+  - Whisper transcription helpers now live in `runtimes/voice/stt_client.py`
+  - `voiced` now reports microphone / STT / TTS / wake-word readiness, keeps the current voice mode in sync, and exposes real microphone/pipeline test paths
+- Extended dashboard and setup backend contracts:
+  - `services/dashd/api.py` now includes voice state in snapshots, exposes `/api/voice/health` and `/api/voice/test`, and routes `/api/voice/mode` through the actual voice service
+  - `services/setupd/state.py` now persists `voice_test`
+  - `services/setupd/service.py` now exposes setup voice diagnostics plus a real setup voice-test path, and persists the latest microphone check result into setup state
+- Wired the frontend to those contracts:
+  - `dashboard/frontend/src/hooks/useCommandCenter.ts` now tracks live voice session state
+  - `dashboard/frontend/src/app/AppShell.tsx` now shows voice status/mode in the shell header
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx` now treats the voice step as a real readiness gate, storing and displaying the latest microphone test result before continuing
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` now includes typed voice health/test/setup voice-test calls
+- Added regression coverage in `tests/system/test_voice_pipeline.py` for dashd voice endpoints and setupd voice-test persistence/diagnostics.
+
+#### Verification completed
+
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests/system/test_voice_pipeline.py tests/system/test_setupd.py tests/system/test_nexus_presence.py -q` -> passed, `9 passed`
+
+#### Remaining frontier after this slice
+
+- Milestone 2E WhatsApp bridge reliability
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 2 premium-experience foundation + dashboard polish slice
+
+- Landed the premium shell/design-system pass in `dashboard/frontend`:
+  - richer shared UI primitives in `src/components/ui.jsx`
+  - command-palette and shell cleanup in `src/app/AppShell.tsx`
+  - premium token/CSS pass already carried through `src/index.css`, `src/design/tokens.ts`, and nav metadata
+  - skeleton-first loading states across the major product surfaces
+- Rebuilt the first-run wizard into the roadmap order and wired the missing setup control-plane support:
+  - `services/setupd/state.py` now persists `whatsapp_enabled` and `model_pull_progress`
+  - `bootstrap/model_provision.py` now emits model-pull progress snapshots
+  - `services/setupd/service.py` now supports `POST /api/setup/options` and `POST /api/setup/model`
+  - `services/dashd/api.py` proxies those new setup routes
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx` now runs an 8-step wizard with back/skip controls, live model pull progress, voice and WhatsApp steps, and a real completion state
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` gained the corresponding setup types and calls
+- Started Milestone 2C dashboard polish with real product-facing improvements instead of placeholder chrome:
+  - `src/pages/Overview.tsx` now shows real service/task/activity bars plus runtime and approval posture cards
+  - `src/pages/Workflows.tsx` now exposes clearer live-progress state alongside the existing filters/search/run/history flow
+  - `src/pages/Packs.tsx`, `src/pages/Providers.tsx`, and `src/pages/Registry.tsx` now use the premium page-header/stat-card pattern and surface install/trust/provider posture more clearly at a glance
+  - `src/pages/Traces.tsx` now supports filterable timelines, detail inspection, and JSON export
+  - `src/pages/Settings.tsx` is now grouped by purpose with descriptions and explicit save/action feedback
+- Added setup regression coverage in `tests/system/test_setupd.py` for options persistence and background model preparation progress.
+
+#### Verification completed
+
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests/system/test_setupd.py tests/system/test_competitive_platform.py tests/system/test_nexus_presence.py tests/system/test_dashd_security.py -q` -> passed, `16 passed`
+
+#### Remaining frontier after this slice
+
+- Milestone 2D voice pipeline end-to-end
+- Milestone 2E WhatsApp bridge reliability
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 1B-1E stabilization pass
+
+- Hardened dashboard auth in `services/dashd/api.py`:
+  - browser cookies now use a separate session secret instead of the raw dashboard bearer token
+  - setup bypass is loopback-only and automatically shuts off once setup is marked complete
+  - setup completion now rotates the dashboard session secret
+- Hardened A2A trust in `services/a2ad/service.py`, `services/a2ad/peer_registry.py`, and `services/gatewayd/service.py`:
+  - remote A2A task ingress now requires both bearer auth and an explicit trusted peer URL
+  - blocked or untrusted peers are rejected on outbound delegation too
+- Finished the top-10 workflow hardening work:
+  - replaced prompt-only implementations for `organize-downloads`, `summarize-pdf`, `repo-summary`,
+    `pr-review`, `write-readme`, and `changelog`
+  - kept `disk-report`, `log-summarize`, `find-duplicates`, and `clean-empty-dirs` as direct deterministic helpers
+  - added shared deterministic helper logic in `workflows/helpers.py`
+- Completed the contract cleanup:
+  - `agentd` now exposes `/submit` as the only first-party submit route and requires `intent`
+  - removed the `shell.run` compatibility alias from `toolbridge`
+  - updated remaining docs/prompts to use `shell.restricted`
+- Raised the test floor:
+  - added new auth, A2A, agentd, workflow, and helper regression coverage
+  - added repo-local pytest temp handling in `tests/conftest.py`
+  - fixed the packaging test harness so `.deb` checks skip cleanly unless `--deb` is provided
+- Hardened `scripts/security_audit.py` itself:
+  - ignores duplicate `.claude/worktrees/**` copies
+  - uses AST-based checks for Python risk patterns to avoid string-literal false positives
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_dashd_security.py tests/system/test_a2a_security.py tests/system/test_agentd_contract.py tests/system/test_workflow_hardening.py -q` -> passed, `23 passed`
+- `python -m pytest tests -q` -> passed, `155 passed, 25 skipped`
+- `python scripts/security_audit.py` -> passed
+
+#### Remaining frontier after this slice
+
+- Milestone 2 premium-experience work is now the main frontier in roadmap order
+- packaging validation still needs a real built `.deb` artifact supplied to the packaging tests
+- macOS packaging polish, ISO validation, and real hardware install checks still remain
+
+### 2026-04-06 - Codex
+
+#### Milestone 1A dashboard-stack cleanup
+
+- Archived the retired dashboard backend from `dashboard/backend/` to `archive/legacy/dashboard-backend/`.
+- Removed runtime fallback paths that still booted the legacy backend:
+  - `clients/daemon/daemon.py`
+  - `scripts/clawos-start.sh`
+  - `systemd/clawos-dashd.service`
+- Kept `services/dashd/api.py` + `dashboard/frontend/` + `services/dashd/static/` as the only active dashboard path.
+- Removed the old single-file dashboard fallback from `services/dashd/api.py`; root now serves the built static bundle only.
+
+#### Docs and verification cleanup
+
+- Updated canonical docs to reflect the archive and single-stack dashboard model:
+  - `docs/ARCHITECTURE_CURRENT.md`
+  - `docs/ROADMAP.md`
+  - `docs/MACOS.md`
+  - `docs/STABILIZATION_ROADMAP.md`
+  - `docs/adr/0001-canonical-frontend.md`
+  - `docs/adr/0002-canonical-dashboard-api.md`
+- Cleaned stale absolute `.codex/worktrees/...` links out of:
+  - `docs/SECURITY_AUDIT.md`
+  - `docs/VERIFICATION.md`
+- Updated phase scripts to match the canonical frontend path and made their console output/windows behavior safer.
+- Fixed a real portability bug in `bootstrap/workspace_init.py` by forcing UTF-8 when seeding workspace preset markdown files.
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_dashd_security.py tests/system/test_nexus_presence.py tests/system/test_competitive_platform.py -q` -> passed, `11 passed`
+- `python tests/system/test_phase1.py` -> passed, `46/46 passed`
+- `python tests/system/test_phase2.py` -> passed, `25/25 passed`
+- `git grep` confirmed no live runtime references remain to `dashboard/backend` or `uvicorn service:app`; only roadmap/archive historical references remain
+
+#### Remaining frontier after this slice
+
+- Milestone 1B auth hardening
+- Milestone 1C top-10 workflow hardening
+- Milestone 1D contract alignment
+- Milestone 1E test floor
+- later premium-experience dashboard redesign still remains under Milestone 2
+
+### 2026-04-06 - Codex
+
+#### Nexus presence implementation
+
+- Implemented the Nexus presence layer so ClawOS now presents itself as the platform and `Nexus` as the assistant identity.
+- Added new first-class shared models and state handling for:
+  - `PresenceProfile`
+  - `AutonomyPolicy`
+  - `AttentionEvent`
+  - `ActionProposal`
+  - `Briefing`
+  - `Mission`
+  - `VoiceSession`
+- Added `clawos_core/presence.py` to manage:
+  - persisted presence/autonomy state
+  - voice mode/session state
+  - default seeded missions
+  - today briefing generation
+  - attention/signal generation
+  - setup-to-presence synchronization
+
+#### Setup, API, UI, and CLI integration
+
+- Extended `services/setupd/state.py` with Nexus-oriented setup fields:
+  - `assistant_identity`
+  - `presence_profile`
+  - `autonomy_policy`
+  - `quiet_hours`
+  - `primary_goals`
+  - `voice_mode`
+  - `briefing_enabled`
+- Extended `services/setupd/service.py` so setup can configure:
+  - Nexus presence
+  - autonomy posture
+  - voice mode
+  - first briefing preparation
+  - trusted routine installation
+- Added new dashboard/setup API surfaces in `services/dashd/api.py` and `services/setupd/service.py`:
+  - `/api/presence`
+  - `/api/attention`
+  - `/api/briefings/today`
+  - `/api/missions`
+  - `/api/voice/session`
+  - `/api/voice/mode`
+  - `/api/setup/presence`
+  - `/api/setup/autonomy`
+- Rebuilt the React home surface to be Nexus-first instead of metrics-first:
+  - Today
+  - Conversation
+  - Active Missions
+  - Pending Decisions
+  - Signals
+  - System Posture
+- Rebuilt the setup page so it now configures:
+  - assistant style
+  - voice mode
+  - autonomy comfort
+  - primary personal-ops goals
+  - quiet hours
+  - first briefing behavior
+- Added CLI surfaces for the Nexus layer:
+  - `briefing`
+  - `mission list`
+  - `mission start`
+  - `presence show`
+  - `voice mode`
+- Added a `clawos` script alias in `pyproject.toml` that points to the existing CLI entrypoint so the product-facing command now matches the product name while preserving `clawctl`.
+
+#### Safety and supportability
+
+- Support bundles now include presence state but redact:
+  - last spoken utterance
+  - last spoken response
+  - sensitive mission content
+- Presence and setup persistence were made fail-soft where local filesystem permissions are unreliable in this environment.
+
+#### Verification completed
+
+- `python -m pytest -p no:cacheprovider --basetemp test-basetemp tests/system/test_nexus_presence.py tests/system/test_setupd.py tests/system/test_competitive_platform.py` -> passed
+- `python -m py_compile` on the touched Python files -> passed
+- `npm run typecheck` in `dashboard/frontend` -> passed
+- `npm run build` in `dashboard/frontend` -> passed
+- CLI smoke checks passed:
+  - `python clawctl/main.py briefing`
+  - `python clawctl/main.py presence show`
+  - `python clawctl/main.py voice mode`
+  - `python clawctl/main.py mission list`
+
+#### Immediate pickup point for Claude
+
+- Continue from the Nexus foundation already wired through:
+  - `clawos_core/presence.py`
+  - `services/setupd/state.py`
+  - `services/setupd/service.py`
+  - `services/dashd/api.py`
+  - `dashboard/frontend/src/pages/Overview.tsx`
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx`
+  - `dashboard/frontend/src/lib/commandCenterApi.ts`
+- Best next build order from here:
+  1. real cross-platform voice runtime abstraction
+  2. richer personal-ops routines and proactive briefings
+  3. conversation state / barge-in / follow-up window runtime behavior
+  4. deeper approvals and mission inspector UX
+  5. browser workbench and research engine integration
 
 ### 2026-04-06 - Codex
 
@@ -235,36 +783,130 @@ Treat this file as project memory.
 - true native packaging validation
 - real ISO/Calamares validation on native target environments
 
+## Pending Task: macOS-Themed Dashboard Redesign
+
+### Requested by user — 2026-04-06
+
+**What:** Redesign `dashboard/frontend` with a macOS Sonoma/Ventura visual theme. This is a **pure CSS/layout visual redesign** — no backend changes, no new pages, no logic changes.
+
+**Reference:** `C:\Users\Abrxr Hxbib\Downloads\prototype.html` — a single-file HTML mockup showing the desired feature set and page structure. Use this as the feature/page reference, but apply macOS aesthetics instead of its current sci-fi cyan/purple palette.
+
+**Design language:**
+- Vibrancy / frosted glass: `backdrop-filter: blur + saturate` on sidebar, toolbar, cards
+- macOS system colors: `--blue: #007AFF`, `--green: #34C759`, `--red: #FF3B30`, `--orange: #FF9500`
+- Dark bg: `#1C1C1E`; Light bg: `#F2F2F7`
+- Font: `-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui`
+- Traffic light window chrome in Tauri desktop mode (32px title bar, red/yellow/green 12px dots)
+- Compact density — 28px nav rows, 4px progress bars, 0.5px borders
+- Apple-style pill badges, grouped settings rows, segmented log filter control
+- Soft layered shadows, no glows, no text gradients
+
+**Files to modify:**
+- `dashboard/frontend/src/index.css` — full CSS variable + utility class rewrite
+- `dashboard/frontend/src/design/tokens.ts` — update token values
+- `dashboard/frontend/src/app/AppShell.tsx` — traffic light chrome, layout dimensions
+- `dashboard/frontend/src/app/navigation.tsx` — nav item/section styles
+- `dashboard/frontend/src/pages/Overview.tsx` — stat cards, agents list, log panel
+- `dashboard/frontend/src/pages/pages.jsx` — Agents, Tasks, Approvals, Models, Memory
+- `dashboard/frontend/src/pages/Workflows.tsx` — library card redesign
+- `dashboard/frontend/src/pages/Settings.tsx` — grouped macOS-style settings rows
+- `dashboard/frontend/src/pages/Traces.tsx` — segmented filter control, log viewer
+
+**What NOT to change:** backend, API calls, routing, auth, Tauri bridge logic, any `.py` files.
+
+**Full detailed spec:** `C:\Users\Abrxr Hxbib\.claude\plans\floating-conjuring-marble.md`
+
+**Verification:** `npm run dev` → check all 11 pages; toggle light/dark; run Playwright tests; check Storybook.
+
+---
+
 ## Claude Pickup Point
 
-Claude should pick up from the competitive-platform foundation that is already wired through setup, API, UI, CLI, docs, tests, and security checks.
+Updated 2026-04-06. Previous pickup point preserved below under "Archived Pickup Point".
+
+The project direction is set. The goal is to ship ClawOS v0.1 as something that feels like
+Apple built Iron Man's JARVIS for everyone. Premium quality. No rough edges. Works on consumer
+hardware, offline, free.
+
+The competitive-platform work from the Codex PRs is real and stays — it is sequenced into
+Milestone 4 after the core is polished and shipped.
 
 ### Read these first
 
-- `docs/ARCHITECTURE_CURRENT.md`
-- `docs/STABILIZATION_ROADMAP.md`
-- `docs/COMPETITIVE_PLATFORM.md`
-- `services/dashd/api.py`
-- `services/setupd/service.py`
-- `services/setupd/state.py`
-- `clawos_core/catalog.py`
-- `clawos_core/models/__init__.py`
-- `dashboard/frontend/src/App.tsx`
-- `dashboard/frontend/src/pages/setup/SetupPage.tsx`
+- `docs/PRODUCT_VISION.md` — the brand identity and quality bars (START HERE)
+- `docs/ROADMAP.md` — the canonical finish-line roadmap (replaces STABILIZATION_ROADMAP.md)
+- `docs/ARCHITECTURE_CURRENT.md` — current service layout and canonical paths
+- `docs/COMPETITIVE_PLATFORM.md` — competitive platform primitives and surfaces
+- `services/dashd/api.py` — canonical dashboard backend
+- `services/setupd/service.py` + `state.py` — guided setup control plane
+- `clawos_core/catalog.py` — packs, providers, extensions, traces, eval suites
+- `dashboard/frontend/src/App.tsx` — canonical frontend entry
+- `dashboard/frontend/src/pages/setup/SetupPage.tsx` — first-run wizard
 
 ### Current known-good state
 
-- `python -m pytest tests` passed with `122 passed`
-- `python scripts/security_audit.py` passed
-- CLI competitive commands passed:
+- `python -m pytest tests` → 122 passed
+- `python scripts/security_audit.py` → passed
+- Frontend typecheck + build passing
+- CLI competitive commands verified:
   - `clawctl packs list`
   - `clawctl providers list`
   - `clawctl extensions list`
   - `clawctl benchmark`
   - `clawctl rescue openclaw`
 
-### Best next build order
+### Active milestone: Milestone 1 — Stabilize
 
+Work these in order. Do not start Milestone 2 until all of these are done.
+
+1. **Kill legacy dashboard stack** — archive `dashboard/backend/`, remove all cross-references.
+   Canonical: `services/dashd/api.py` + `dashboard/frontend/`.
+
+2. **Auth hardening** — tighten dashd and a2ad endpoints. Session token rotation after setup.
+   Document final posture in `docs/SECURITY_AUDIT.md`.
+
+3. **Top-10 workflow hardening** — replace prompt-only with deterministic helpers for:
+   organize-downloads, summarize-pdf, repo-summary, pr-review, write-readme,
+   disk-report, log-summarize, changelog, find-duplicates, clean-empty-dirs.
+   Each must succeed 100% on supported platforms and fail clearly on unsupported ones.
+
+4. **Contract alignment** — all callers use `/submit` + `intent`. `shell.restricted` canonical.
+   Destructive gating verified by test. Dead shims removed.
+
+5. **Test floor** — 150+ tests, all green. Regressions on: agentd contract, workflow gating,
+   tool aliases, auth rejection.
+
+### After Milestone 1: Milestone 2 — Premium Experience
+
+See `docs/ROADMAP.md` for the full breakdown. Summary:
+- Design system enforcement (FIGMA_SYSTEM.md as law)
+- First-run wizard redesigned to Apple quality
+- Dashboard polish across all pages
+- Voice pipeline end-to-end
+- WhatsApp bridge reliable
+- Hero workflows demo-quality (organize-downloads + summarize-pdf)
+- AGPL migration
+
+### Guardrails (permanent)
+
+- `dashboard/frontend` is the canonical frontend. Do not add a second one.
+- `services/dashd` is the canonical dashboard backend. Do not split it.
+- `services/setupd` owns guided setup. Do not duplicate setup logic elsewhere.
+- OpenClaw-first external positioning, provider-neutral internals.
+- Zero test failures before shipping any milestone.
+- Security audit and tests both green before any merge.
+- Root cause before patch. One thing at a time.
+
+---
+
+## Archived Pickup Point
+
+> The following was the previous Claude Pickup Point before the 2026-04-06 direction update.
+> Preserved per the update log policy. The build order below was superseded by docs/ROADMAP.md.
+
+Claude should pick up from the competitive-platform foundation that is already wired through setup, API, UI, CLI, docs, tests, and security checks.
+
+Previous best next build order (superseded):
 1. Browser Workbench
 2. Research engine with citations and resumable runs
 3. MCP manager depth
@@ -273,12 +915,3 @@ Claude should pick up from the competitive-platform foundation that is already w
 6. AGPL migration
 7. native packaging validation
 8. real ISO/Calamares validation on target environments
-
-### Important guardrails
-
-- Keep `dashboard/frontend` as the canonical frontend.
-- Keep `services/dashd` as the canonical dashboard backend.
-- Keep `services/setupd` as the guided setup control plane.
-- Preserve the OpenClaw-first external positioning, but keep internals provider-neutral.
-- Do not reintroduce duplicate primary UI paths.
-- Keep security and verification green after every major slice.

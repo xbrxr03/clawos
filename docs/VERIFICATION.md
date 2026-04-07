@@ -42,6 +42,7 @@ python scripts/verify_repo.py --python-bin python3.11 --npm-bin npm
 ## Notes
 
 - The verifier will run `npm ci` automatically if `dashboard/frontend/node_modules` is missing.
+- Packaging `.deb` tests are part of `pytest tests`, but they skip unless you provide `--deb /path/to/package.deb`.
 - Direct phase scripts are executed with `PYTHONUTF8=1` to keep output stable across platforms.
 - CI also runs the main frontend and Python suites, but this script is the fastest way to reproduce the full local validation path before shipping.
-- The dedicated security audit is documented in [docs/SECURITY_AUDIT.md](/C:/Users/Abrxr%20Hxbib/.codex/worktrees/2291/clawos_github/docs/SECURITY_AUDIT.md).
+- The dedicated security audit is documented in `docs/SECURITY_AUDIT.md`.

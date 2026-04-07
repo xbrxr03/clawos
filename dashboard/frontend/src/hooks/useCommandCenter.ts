@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 type ServiceState = Record<string, { status?: string; latency_ms?: number }>
@@ -17,6 +18,7 @@ export function useCommandCenter() {
   const [models, setModels] = useState<any>({ models: [], default: 'qwen2.5:7b' })
   const [pullProgress, setPullProgress] = useState<Record<string, any>>({})
   const [runtimes, setRuntimes] = useState<Record<string, any>>({})
+  const [voiceSession, setVoiceSession] = useState<Record<string, any>>({ mode: 'off', state: 'idle' })
 
   const pushEvent = useCallback((event: any) => {
     setEvents((prev) => [event, ...prev].slice(0, 200))
@@ -77,6 +79,7 @@ export function useCommandCenter() {
           setServices(message.data.services ?? {})
           setTasks(normalizeTasks(message.data.tasks))
           setModels(message.data.models ?? { models: [], default: 'qwen2.5:7b' })
+          setVoiceSession(message.data.voice ?? { mode: 'off', state: 'idle' })
           break
         case 'service_health':
           setServices(message.data ?? {})
@@ -101,6 +104,9 @@ export function useCommandCenter() {
           break
         case 'model_pull_progress':
           setPullProgress((prev) => ({ ...prev, [message.model]: message.data }))
+          break
+        case 'voice_session':
+          setVoiceSession(message.data ?? { mode: 'off', state: 'idle' })
           break
       }
     }
@@ -139,6 +145,18 @@ export function useCommandCenter() {
     return () => window.clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    const fetchVoiceSession = async () => {
+      try {
+        const response = await fetch('/api/voice/session')
+        setVoiceSession(await response.json())
+      } catch {}
+    }
+    fetchVoiceSession()
+    const id = window.setInterval(fetchVoiceSession, 5000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const taskStats = useMemo(
     () => ({
       active: tasks.active.length,
@@ -149,5 +167,5 @@ export function useCommandCenter() {
     [tasks]
   )
 
-  return { connected, events, approvals, services, tasks, models, pullProgress, runtimes, taskStats }
+  return { connected, events, approvals, services, tasks, models, pullProgress, runtimes, voiceSession, taskStats }
 }

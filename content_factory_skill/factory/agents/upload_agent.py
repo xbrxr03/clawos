@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """upload_agent.py — YouTube upload (opt-in). Skips if credentials not configured."""
 import json
 import os

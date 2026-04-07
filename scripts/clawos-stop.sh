@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS ordered teardown — called by clawos.service ExecStop
 # Stops services in reverse boot order so nothing dies mid-task.
 

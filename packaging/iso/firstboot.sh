@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS first-boot compatibility handoff.
 # The branded setup experience now lives in the browser-based /setup route.
 set -euo pipefail

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS OpenClaw installer.
 Supports Linux and macOS for Node.js and OpenClaw bootstrap.

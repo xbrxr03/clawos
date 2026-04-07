@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Nexus prompt injection scanner.
 Detects attempts to hijack agent behaviour via crafted inputs.

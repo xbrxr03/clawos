@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS a2ad - Agent-to-Agent Protocol Server
 ============================================
@@ -12,11 +13,13 @@ import secrets
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, AsyncIterator, Optional
+from urllib.parse import urlparse
 
 from clawos_core.config.loader import get as get_config
 from clawos_core.constants import A2A_BEARER_TOKEN_ENV, DEFAULT_WORKSPACE, PORT_A2AD
 
 log = logging.getLogger("a2ad")
+PEER_URL_HEADER = "x-clawos-peer-url"
 
 _zeroconf = None
 
@@ -103,6 +106,47 @@ def _is_request_authorized(request: Request, auth_token: str) -> bool:
     )
 
 
+def _normalize_peer_url(url: str) -> str:
+    return str(url or "").strip().rstrip("/")
+
+
+def _request_is_loopback(request: Request) -> bool:
+    try:
+        return _is_loopback_host(request.client.host if request.client else "")
+    except Exception:
+        return False
+
+
+def _request_peer_url(request: Request) -> str:
+    return _normalize_peer_url(request.headers.get(PEER_URL_HEADER, ""))
+
+
+def _require_trusted_peer(request: Request):
+    settings_obj: A2ASettings = request.app.state.settings
+    if _request_is_loopback(request) and not settings_obj.auth_token:
+        return
+
+    peer_url = _request_peer_url(request)
+    if not peer_url:
+        raise HTTPException(status_code=403, detail="Trusted peer header required")
+
+    try:
+        parsed = urlparse(peer_url)
+    except Exception as exc:
+        raise HTTPException(status_code=403, detail=f"Invalid peer URL: {exc}")
+
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(status_code=403, detail="Invalid peer URL")
+
+    from services.a2ad.peer_registry import get_registry
+
+    registry = get_registry()
+    if registry.is_blocked(peer_url):
+        raise HTTPException(status_code=403, detail="Peer is blocked")
+    if not registry.is_trusted_url(peer_url):
+        raise HTTPException(status_code=403, detail="Peer is not allow-listed")
+
+
 def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     if not FASTAPI_OK:
         raise RuntimeError("fastapi not installed")
@@ -158,6 +202,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     @app.post("/a2a/tasks/send")
     async def receive_task(body: dict, request: Request):
         _require_auth(request)
+        _require_trusted_peer(request)
 
         msg_parts = body.get("message", {}).get("parts", [])
         intent = " ".join(
@@ -186,6 +231,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     @app.get("/a2a/tasks/{task_id}/subscribe")
     async def subscribe_task(task_id: str, request: Request):
         _require_auth(request)
+        _require_trusted_peer(request)
 
         async def _gen() -> AsyncIterator[str]:
             try:
@@ -215,6 +261,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     @app.get("/a2a/peers")
     async def list_peers(request: Request):
         _require_auth(request)
+        _require_trusted_peer(request)
         return JSONResponse({"peers": get_peers()})
 
     @app.get("/health")

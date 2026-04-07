@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """fs.list — list directory contents within workspace."""
 import json
 from pathlib import Path

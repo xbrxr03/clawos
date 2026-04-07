@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #!/usr/bin/env python3
 """Query ClawOS RAGd service from OpenClaw skill."""
 import json

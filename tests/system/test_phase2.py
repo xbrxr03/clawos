@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 ClawOS Session 2 Test Suite
 ============================
@@ -22,16 +23,16 @@ passed = failed = 0
 
 def ok(name):
     global passed; passed += 1
-    print(f"  ✓  {name}")
+    print(f"  OK  {name}")
 
 
 def fail(name, reason=""):
     global failed; failed += 1
-    print(f"  ✗  {name}" + (f" — {reason}" if reason else ""))
+    print(f"  XX  {name}" + (f" - {reason}" if reason else ""))
 
 
 def section(title):
-    print(f"\n  ── {title}")
+    print(f"\n  -- {title}")
 
 
 # ── 1. Hardware probe ─────────────────────────────────────────────────────────
@@ -262,10 +263,10 @@ section("7. clawctl commands")
 
 try:
     from clawctl.ui.banner import status_icon, success, error, info, table
-    assert status_icon("active")   == "✓"
-    assert status_icon("failed")   == "✗"
-    assert status_icon("inactive") == "○"
-    ok("clawctl banner — status_icon(), helpers")
+    assert status_icon("active")   == "[ok]"
+    assert status_icon("failed")   == "[!!]"
+    assert status_icon("inactive") == "[--]"
+    ok("clawctl banner - status_icon(), helpers")
 except Exception as e:
     fail("clawctl banner", str(e))
 
@@ -363,7 +364,7 @@ try:
         "scripts/dev_boot.sh",
         "scripts/seed_workspace.sh",
         "packaging/install/install.sh",
-        "clients/dashboard/index.html",
+        "dashboard/frontend/src/App.tsx",
     ]
     for f in required_files:
         assert (ROOT / f).exists(), f"missing: {f}"
@@ -411,17 +412,17 @@ if E2E:
     except Exception as e:
         fail("bootstrap e2e", str(e))
 else:
-    print("\n  (skip e2e — run with --e2e for live Ollama tests)")
+    print("\n  (skip e2e - run with --e2e for live Ollama tests)")
 
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 total = passed + failed
-print(f"\n  {'─'*46}")
+print(f"\n  {'-'*46}")
 print(f"  {passed}/{total} passed", end="")
 if failed:
-    print(f"  |  {failed} FAILED  ←")
+    print(f"  |  {failed} FAILED")
 else:
-    print("  ✓  all passed")
+    print("  OK  all passed")
 print()
 if __name__ == "__main__":
     sys.exit(0 if failed == 0 else 1)

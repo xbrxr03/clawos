@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 echo "Stopping all factory agents and ComfyUI..."
 pkill -f foreman_agent.py   2>/dev/null
 pkill -f monitor_agent.py   2>/dev/null

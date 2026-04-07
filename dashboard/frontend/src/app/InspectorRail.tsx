@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 type InspectorRailProps = {
   approvals: any[]
   services: Record<string, any>

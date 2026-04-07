@@ -16,7 +16,7 @@ It owns:
 
 ## Consequences
 
-- No new product UX lands in `clients/dashboard/index.html`.
-- No new product UX lands in `dashboard/backend`.
+- No runtime should serve `clients/dashboard/index.html`.
+- No new product UX lands in `archive/legacy/dashboard-backend/`.
 - React + TypeScript is the long-term app layer.
 - Storybook and Playwright are attached to this frontend only.

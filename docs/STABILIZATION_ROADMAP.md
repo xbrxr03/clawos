@@ -1,5 +1,7 @@
 # ClawOS Stabilization Roadmap
 
+> Superseded by `docs/ROADMAP.md`. Kept for historical context.
+
 ## Goal
 
 Make the existing local-agent stack predictable and supportable before adding new surfaces. This roadmap is intentionally narrow: align contracts, reduce duplicate entry points, harden the top workflows, and document the platform boundary clearly.
@@ -17,7 +19,7 @@ Definition of done: all first-party callers use one documented contract, and old
 ## Phase 2: Canonical Process Model
 
 - Treat `clients/daemon/daemon.py` plus `services/dashd/api.py` as the canonical boot path.
-- Decide whether `dashboard/backend/` stays or is removed.
+- Keep the archived legacy dashboard backend under `archive/legacy/dashboard-backend/` out of the runtime path.
 - Document which modules are true services and which are in-process helpers.
 - Add one health endpoint per externally consumed service and wire them into status reporting.
 

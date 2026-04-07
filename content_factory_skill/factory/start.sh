@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # start.sh — start all factory agents in parallel
 FACTORY_DIR="${FACTORY_ROOT:-$HOME/factory}"
 ENV_FILE="$FACTORY_DIR/.env"

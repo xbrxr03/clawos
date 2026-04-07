@@ -1,14 +1,17 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 dashd - Dashboard API
 =====================
 REST + WebSocket dashboard with cookie-backed auth, safe bind defaults,
-and a snapshot contract that matches the bundled single-file frontend.
+and a snapshot contract that matches the bundled React frontend assets.
 """
 import asyncio
 import logging
 import os
+import re
 import secrets
 import time
+import urllib.request
 from collections import deque
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -38,13 +41,24 @@ from clawos_core.constants import (
     WORKSPACE_DIR,
 )
 from clawos_core.events.bus import EV_SERVICE_DOWN, EV_SERVICE_UP, get_bus
+from clawos_core.presence import (
+    build_attention_events,
+    build_today_briefing,
+    get_presence_payload,
+    get_voice_session,
+    list_missions,
+    set_voice_mode,
+    start_mission,
+    sync_presence_from_setup,
+    update_autonomy_policy,
+    update_presence_profile,
+)
 
 log = logging.getLogger("dashd")
 
 DEFAULT_COOKIE_NAME = "clawos_dashboard"
 SETUP_ACCESS_HEADER = "x-clawos-setup"
 SETUP_ACCESS_VALUE = "1"
-DASHBOARD_HTML = Path(__file__).parent.parent.parent / "clients" / "dashboard" / "index.html"
 DASHBOARD_STATIC_DIR = Path(__file__).parent / "static"
 DASHBOARD_STATIC_INDEX = DASHBOARD_STATIC_DIR / "index.html"
 
@@ -67,6 +81,49 @@ except ImportError:
 
     def require_auth(*_args, **_kwargs):
         return None
+
+
+_WORKBENCH_SESSIONS: deque = deque(maxlen=50)
+_VOLATILE_SECRETS: dict[str, str] = {}
+
+
+def _workbench_fetch(url: str, timeout: int = 12) -> dict:
+    """Fetch a URL server-side and return extracted title, text, and links."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("Only http and https URLs are supported")
+
+    req = urllib.request.Request(url, headers={"User-Agent": "ClawOS-Workbench/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        raw = resp.read(512 * 1024)
+
+    try:
+        html = raw.decode("utf-8", errors="replace")
+    except Exception:
+        html = raw.decode("latin-1", errors="replace")
+
+    title_m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+    title = re.sub(r"\s+", " ", title_m.group(1)).strip() if title_m else parsed.netloc
+    title = title[:200]
+
+    links_raw = re.findall(r'href=["\']([^"\'#?][^"\']*)["\']', html)
+    links = list(dict.fromkeys(ln for ln in links_raw if ln.startswith("http")))[:20]
+
+    clean = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    clean = re.sub(r"<style[^>]*>.*?</style>", " ", clean, flags=re.DOTALL | re.IGNORECASE)
+    clean = re.sub(r"<[^>]+>", " ", clean)
+    clean = re.sub(r"&[a-z#0-9]+;", " ", clean)
+    clean = re.sub(r"[ \t]{2,}", " ", clean)
+    clean = re.sub(r"\n{3,}", "\n\n", clean).strip()
+
+    return {
+        "url": url,
+        "title": title,
+        "text": clean[:8000],
+        "links": links,
+        "word_count": len(clean.split()),
+        "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
 
 
 @dataclass(frozen=True)
@@ -137,22 +194,63 @@ def _dashboard_token_file() -> Path:
     return CONFIG_DIR / "dashboard.token"
 
 
+def _dashboard_session_token_file() -> Path:
+    return CONFIG_DIR / "dashboard.session"
+
+
+def _load_or_create_secret(path: Path) -> str:
+    cache_key = str(path)
+    if cache_key in _VOLATILE_SECRETS and not path.exists():
+        return _VOLATILE_SECRETS[cache_key]
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            secret = secrets.token_urlsafe(32)
+            path.write_text(secret, encoding="utf-8")
+            try:
+                path.chmod(0o600)
+            except OSError:
+                pass
+            _VOLATILE_SECRETS[cache_key] = secret
+            return secret
+        secret = path.read_text(encoding="utf-8").strip()
+        _VOLATILE_SECRETS[cache_key] = secret
+        return secret
+    except OSError:
+        secret = _VOLATILE_SECRETS.get(cache_key) or secrets.token_urlsafe(32)
+        _VOLATILE_SECRETS[cache_key] = secret
+        return secret
+
+
 def _load_dashboard_token(auth_required: bool) -> str:
     env_token = os.environ.get("CLAWOS_DASHBOARD_TOKEN", "").strip()
     if env_token:
         return env_token
     if not auth_required:
         return ""
+    return _load_or_create_secret(_dashboard_token_file())
 
-    token_file = _dashboard_token_file()
-    token_file.parent.mkdir(parents=True, exist_ok=True)
-    if not token_file.exists():
-        token_file.write_text(secrets.token_urlsafe(32), encoding="utf-8")
+
+def _load_dashboard_session_token(auth_required: bool) -> str:
+    if not auth_required:
+        return ""
+    return _load_or_create_secret(_dashboard_session_token_file())
+
+
+def rotate_dashboard_session_token() -> str:
+    token = secrets.token_urlsafe(32)
+    path = _dashboard_session_token_file()
+    _VOLATILE_SECRETS[str(path)] = token
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(token, encoding="utf-8")
         try:
-            token_file.chmod(0o600)
+            path.chmod(0o600)
         except OSError:
             pass
-    return token_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        pass
+    return token
 
 
 def load_dashboard_settings(overrides: Optional[dict[str, Any]] = None) -> DashboardSettings:
@@ -200,8 +298,11 @@ def _is_request_authorized(request: Request, authorization: str = "") -> bool:
     settings: DashboardSettings = request.app.state.settings
     if not settings.auth_required:
         return True
-    token = _extract_bearer_token(authorization) or request.cookies.get(settings.cookie_name, "")
-    return _token_matches(token, settings.token)
+    bearer_token = _extract_bearer_token(authorization)
+    if _token_matches(bearer_token, settings.token):
+        return True
+    cookie_token = request.cookies.get(settings.cookie_name, "")
+    return _token_matches(cookie_token, _load_dashboard_session_token(settings.auth_required))
 
 
 def require_auth(request: Request, authorization: str = Header(default="")):
@@ -218,7 +319,7 @@ def require_setup_access(request: Request, authorization: str = Header(default="
     settings: DashboardSettings = request.app.state.settings
     if _is_request_authorized(request, authorization=authorization):
         return
-    if _is_loopback_host(settings.host) and _has_setup_access(request):
+    if _setup_bypass_allowed(settings, request):
         return
     raise HTTPException(
         status_code=401,
@@ -231,7 +332,7 @@ def require_auth_or_setup_access(request: Request, authorization: str = Header(d
     settings: DashboardSettings = request.app.state.settings
     if _is_request_authorized(request, authorization=authorization):
         return
-    if _is_loopback_host(settings.host) and _has_setup_access(request):
+    if _setup_bypass_allowed(settings, request):
         return
     raise HTTPException(
         status_code=401,
@@ -284,6 +385,12 @@ def _collect_service_health() -> dict[str, dict]:
     except Exception:
         pass
     try:
+        from services.gatewayd.health import health as gatewayd_health
+
+        checks["gatewayd"] = gatewayd_health
+    except Exception:
+        pass
+    try:
         from services.memd.health import health as memd_health
 
         checks["memd"] = memd_health
@@ -305,6 +412,12 @@ def _collect_service_health() -> dict[str, dict]:
         from services.setupd.health import health as setupd_health
 
         checks["setupd"] = setupd_health
+    except Exception:
+        pass
+    try:
+        from services.voiced.health import health as voiced_health
+
+        checks["voiced"] = voiced_health
     except Exception:
         pass
 
@@ -443,6 +556,27 @@ def _setup_state():
         return None
 
 
+def _voice_service():
+    from services.voiced.service import get_service
+
+    return get_service()
+
+
+def _gateway_service():
+    from services.gatewayd.service import get_service
+
+    return get_service()
+
+
+def _setup_bypass_allowed(settings: DashboardSettings, request: Request) -> bool:
+    if not _is_loopback_host(settings.host):
+        return False
+    state = _setup_state()
+    if getattr(state, "completion_marker", False):
+        return False
+    return _has_setup_access(request)
+
+
 def _pack_payloads() -> list[dict]:
     state = _setup_state()
     primary = getattr(state, "primary_pack", "")
@@ -506,13 +640,23 @@ def _eval_payloads() -> list[dict]:
     return payloads
 
 
+def _approval_payloads() -> list[dict]:
+    try:
+        from services.policyd.service import get_engine
+
+        return list(get_engine().get_pending_approvals() or [])
+    except Exception:
+        return []
+
+
 def _build_snapshot(app: "FastAPI") -> dict:
     return {
         "services": _collect_service_health(),
         "events": list(app.state.event_history),
         "models": _collect_models(),
         "tasks": [],
-        "approvals": [],
+        "approvals": _approval_payloads(),
+        "voice": get_voice_session(),
     }
 
 
@@ -528,18 +672,28 @@ def _websocket_authorized(websocket: WebSocket) -> bool:
     settings: DashboardSettings = websocket.app.state.settings
     if not settings.auth_required:
         return True
-    token = (
-        websocket.query_params.get("token", "")
-        or _extract_bearer_token(websocket.headers.get("authorization", ""))
-        or websocket.cookies.get(settings.cookie_name, "")
+    query_token = websocket.query_params.get("token", "")
+    bearer_token = _extract_bearer_token(websocket.headers.get("authorization", ""))
+    cookie_token = websocket.cookies.get(settings.cookie_name, "")
+    return any(
+        [
+            _token_matches(query_token, settings.token),
+            _token_matches(bearer_token, settings.token),
+            _token_matches(cookie_token, _load_dashboard_session_token(settings.auth_required)),
+        ]
     )
-    return _token_matches(token, settings.token)
 
 
 def _setup_websocket_authorized(websocket: WebSocket) -> bool:
     settings: DashboardSettings = websocket.app.state.settings
     setup_signal = websocket.query_params.get("setup", "").strip() == SETUP_ACCESS_VALUE
-    if _is_loopback_host(settings.host) and setup_signal and _origin_is_trusted(websocket.headers.get("origin", "")):
+    state = _setup_state()
+    if (
+        not getattr(state, "completion_marker", False)
+        and _is_loopback_host(settings.host)
+        and setup_signal
+        and _origin_is_trusted(websocket.headers.get("origin", ""))
+    ):
         return True
     return _websocket_authorized(websocket)
 
@@ -556,6 +710,17 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         normalized = _normalize_event(event)
         event_history.appendleft(normalized)
         await mgr.broadcast({"type": "audit_event", "data": normalized})
+        if event.get("type") in {"workflow_progress", "workflow_error"}:
+            await mgr.broadcast(
+                {
+                    "type": event.get("type"),
+                    "data": {
+                        key: value
+                        for key, value in event.items()
+                        if key not in {"type", "timestamp"}
+                    },
+                }
+            )
         if event.get("type") in {EV_SERVICE_UP, EV_SERVICE_DOWN}:
             await mgr.broadcast({"type": "service_health", "data": _collect_service_health()})
 
@@ -565,14 +730,25 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except RuntimeError:
             return
 
+    async def _fan_out_voice_session(session: dict[str, Any]):
+        await mgr.broadcast({"type": "voice_session", "data": session})
+
     @asynccontextmanager
     async def lifespan(app_obj: "FastAPI"):
         bus.subscribe(app_obj.state.bus_handler)
+        app_obj.state.voice_listener = _fan_out_voice_session
+        voice_service = _voice_service()
+        add_listener = getattr(voice_service, "add_session_listener", None)
+        if callable(add_listener):
+            add_listener(app_obj.state.voice_listener)
         app_obj.state.health_task = asyncio.create_task(_service_health_loop(app_obj))
         try:
             yield
         finally:
             bus.unsubscribe(app_obj.state.bus_handler)
+            remove_listener = getattr(voice_service, "remove_session_listener", None)
+            if callable(remove_listener):
+                remove_listener(app_obj.state.voice_listener)
             task = app_obj.state.health_task
             if task:
                 task.cancel()
@@ -594,14 +770,16 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     app.state.event_history = event_history
     app.state.health_task = None
     app.state.bus_handler = _on_bus_event
+    app.state.voice_listener = None
 
     @app.get("/", response_class=HTMLResponse)
     async def root():
         if DASHBOARD_STATIC_INDEX.exists():
             return FileResponse(str(DASHBOARD_STATIC_INDEX))
-        if DASHBOARD_HTML.exists():
-            return HTMLResponse(DASHBOARD_HTML.read_text(encoding="utf-8", errors="ignore"))
-        return HTMLResponse("<h1>ClawOS Dashboard</h1><p>Frontend not found.</p>")
+        return HTMLResponse(
+            "<h1>ClawOS Dashboard</h1><p>Built frontend not found in services/dashd/static.</p>",
+            status_code=503,
+        )
 
     @app.get("/api/health")
     async def health():
@@ -641,7 +819,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         response = JSONResponse({"ok": True, "auth_required": True})
         response.set_cookie(
             settings_obj.cookie_name,
-            token,
+            _load_dashboard_session_token(settings_obj.auth_required),
             httponly=True,
             secure=request.url.scheme == "https",
             samesite="strict",
@@ -688,7 +866,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except Exception:
             from services.agentd.service import get_manager
 
-            intent = str((body or {}).get("intent") or (body or {}).get("task") or "").strip()
+            intent = str((body or {}).get("intent", "")).strip()
             workspace = str((body or {}).get("workspace") or DEFAULT_WORKSPACE)
             channel = str((body or {}).get("channel") or "dashboard")
             if not intent:
@@ -836,6 +1014,170 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         )
         return {"ok": True, "provider": profile.to_dict(), "state": state.__dict__}
 
+    @app.get("/api/presence", dependencies=[Depends(require_auth_or_setup_access)])
+    async def presence():
+        return get_presence_payload()
+
+    @app.post("/api/presence", dependencies=[Depends(require_auth_or_setup_access)])
+    async def update_presence(body: dict | None = None):
+        payload = body or {}
+        state = _setup_state()
+        if state:
+            assistant_identity = str(payload.get("assistant_identity", "")).strip()
+            if assistant_identity:
+                state.assistant_identity = assistant_identity
+            if isinstance(payload.get("presence_profile"), dict):
+                state.presence_profile.update(payload["presence_profile"])
+            voice_mode = str(payload.get("voice_mode", "")).strip()
+            if voice_mode:
+                state.voice_mode = voice_mode
+                state.voice_enabled = voice_mode != "off"
+            primary_goals = payload.get("primary_goals")
+            if isinstance(primary_goals, list) and primary_goals:
+                state.primary_goals = [str(item).strip() for item in primary_goals if str(item).strip()]
+            briefing_enabled = payload.get("briefing_enabled")
+            if isinstance(briefing_enabled, bool):
+                state.briefing_enabled = briefing_enabled
+            state.save()
+            sync_presence_from_setup(state)
+
+        profile_payload = dict(payload.get("presence_profile") or {})
+        if payload.get("assistant_identity"):
+            profile_payload["assistant_identity"] = payload["assistant_identity"]
+        if payload.get("voice_mode"):
+            profile_payload["preferred_voice_mode"] = payload["voice_mode"]
+            try:
+                set_voice_mode(str(payload["voice_mode"]))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+        response = update_presence_profile(profile_payload) if profile_payload else get_presence_payload()
+        record_trace(
+            make_trace(
+                title="Updated Nexus presence",
+                category="presence",
+                status="completed",
+                provider=getattr(state, "selected_provider_profile", ""),
+                pack_id=getattr(state, "primary_pack", ""),
+                tools=["dashd.presence.update"],
+            )
+        )
+        return response
+
+    @app.get("/api/attention", dependencies=[Depends(require_auth)])
+    async def attention():
+        return build_attention_events(
+            services=_collect_service_health(),
+            approvals=_approval_payloads(),
+            missions=list_missions(),
+        )
+
+    @app.get("/api/briefings/today", dependencies=[Depends(require_auth)])
+    async def today_briefing():
+        return build_today_briefing(
+            setup_state=_setup_state(),
+            services=_collect_service_health(),
+            approvals=_approval_payloads(),
+            missions=list_missions(),
+        )
+
+    @app.get("/api/missions", dependencies=[Depends(require_auth)])
+    async def missions():
+        return list_missions()
+
+    @app.post("/api/missions", dependencies=[Depends(require_auth)])
+    async def missions_start(body: dict | None = None):
+        payload = body or {}
+        title = str(payload.get("title", "")).strip()
+        summary = str(payload.get("summary", "")).strip()
+        trust_lane = str(payload.get("trust_lane", "trusted-automatic")).strip() or "trusted-automatic"
+        if not title:
+            raise HTTPException(status_code=400, detail="title required")
+        mission = start_mission(title, summary=summary, trust_lane=trust_lane)
+        state = _setup_state()
+        record_trace(
+            make_trace(
+                title=f"Mission started: {title}",
+                category="missions",
+                status="completed",
+                provider=getattr(state, "selected_provider_profile", ""),
+                pack_id=getattr(state, "primary_pack", ""),
+                tools=["dashd.missions.start"],
+                metadata={"trust_lane": trust_lane},
+            )
+        )
+        return {"ok": True, "mission": mission}
+
+    @app.get("/api/voice/session", dependencies=[Depends(require_auth)])
+    async def voice_session():
+        return _voice_service().session()
+
+    @app.get("/api/voice/health", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_health():
+        return _voice_service().health()
+
+    @app.post("/api/voice/test", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_test(body: dict | None = None):
+        payload = body or {}
+        kind = str(payload.get("kind", "pipeline")).strip() or "pipeline"
+        sample_text = str(payload.get("sample_text", "Voice pipeline ready.")).strip() or "Voice pipeline ready."
+        service = _voice_service()
+        if kind == "microphone":
+            result = await service.test_microphone()
+        elif kind == "wake_word":
+            result = await service.test_wake_word()
+        else:
+            result = await service.test_pipeline(sample_text=sample_text)
+        await app.state.connections.broadcast({"type": "voice_session", "data": service.session()})
+        return result
+
+    @app.post("/api/voice/push-to-talk", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_push_to_talk():
+        service = _voice_service()
+        result = await service.push_to_talk()
+        await app.state.connections.broadcast({"type": "voice_session", "data": service.session()})
+        return result
+
+    @app.post("/api/voice/mode", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_mode(body: dict | None = None):
+        mode = str((body or {}).get("mode", "")).strip()
+        if not mode:
+            raise HTTPException(status_code=400, detail="mode required")
+        try:
+            session = await _voice_service().set_mode(mode)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        state = _setup_state()
+        if state:
+            state.voice_mode = mode
+            state.voice_enabled = mode != "off"
+            state.save()
+            sync_presence_from_setup(state)
+
+        await app.state.connections.broadcast({"type": "voice_session", "data": session})
+        return session
+
+    @app.get("/api/gateway/health", dependencies=[Depends(require_auth_or_setup_access)])
+    async def gateway_health():
+        return _gateway_service().health()
+
+    @app.get("/api/gateway/routes", dependencies=[Depends(require_auth)])
+    async def gateway_routes():
+        return _gateway_service().routes()
+
+    @app.post("/api/gateway/routes", dependencies=[Depends(require_auth)])
+    async def gateway_set_route(body: dict | None = None):
+        payload = body or {}
+        jid = str(payload.get("jid", "")).strip()
+        workspace_id = str(payload.get("workspace_id", "")).strip()
+        if not jid or not workspace_id:
+            raise HTTPException(status_code=400, detail="jid and workspace_id required")
+        try:
+            routes = _gateway_service().set_route(jid, workspace_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return {"ok": True, "routes": routes}
+
     @app.get("/api/extensions", dependencies=[Depends(require_auth_or_setup_access)])
     async def extensions():
         return _extension_payloads()
@@ -933,6 +1275,33 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
+    @app.post("/api/setup/presence", dependencies=[Depends(require_setup_access)])
+    async def setup_presence(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().update_presence(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/options", dependencies=[Depends(require_setup_access)])
+    async def setup_options(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().update_options(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/autonomy", dependencies=[Depends(require_setup_access)])
+    async def setup_autonomy(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().update_autonomy(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
     @app.post("/api/setup/import/openclaw", dependencies=[Depends(require_setup_access)])
     async def setup_import_openclaw(body: dict | None = None):
         from services.setupd.service import get_service
@@ -945,6 +1314,22 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         from services.setupd.service import get_service
 
         return get_service().build_plan()
+
+    @app.post("/api/setup/model", dependencies=[Depends(require_setup_access)])
+    async def setup_model(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().prepare_model(str((body or {}).get("model", "")).strip())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/voice-test", dependencies=[Depends(require_setup_access)])
+    async def setup_voice_test(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        sample_text = str((body or {}).get("sample_text", "")).strip()
+        return await get_service().run_voice_test(sample_text=sample_text)
 
     @app.post("/api/setup/apply", dependencies=[Depends(require_setup_access)])
     async def setup_apply():
@@ -1057,23 +1442,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
             eng = get_engine()
             eng.load_registry()
-            await mgr.broadcast(
-                {
-                    "type": "workflow_progress",
-                    "data": {"id": workflow_id, "status": "running"},
-                }
-            )
             result = await eng.run(workflow_id, workflow_args, workspace_id=workspace_id)
-            await mgr.broadcast(
-                {
-                    "type": "workflow_progress",
-                    "data": {
-                        "id": workflow_id,
-                        "status": result.status.value,
-                        "output": result.output[:500] if result.output else "",
-                    },
-                }
-            )
             return {
                 "status": result.status.value,
                 "output": result.output,
@@ -1090,6 +1459,393 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 }
             )
             raise HTTPException(status_code=500, detail=str(exc))
+
+    @app.post("/api/workbench/fetch", dependencies=[Depends(require_auth)])
+    async def workbench_fetch(body: dict | None = None):
+        url = str((body or {}).get("url", "")).strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="url required")
+        try:
+            page = await asyncio.get_event_loop().run_in_executor(None, _workbench_fetch, url)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Fetch failed: {exc}")
+        return page
+
+    @app.post("/api/workbench/research", dependencies=[Depends(require_auth)])
+    async def workbench_research(body: dict | None = None):
+        payload = body or {}
+        query = str(payload.get("query", "")).strip()
+        url = str(payload.get("url", "")).strip()
+        workspace = str(payload.get("workspace", DEFAULT_WORKSPACE))
+        if not query and not url:
+            raise HTTPException(status_code=400, detail="query or url required")
+
+        page: dict | None = None
+        if url:
+            try:
+                page = await asyncio.get_event_loop().run_in_executor(None, _workbench_fetch, url)
+            except Exception:
+                page = None
+
+        context_parts = []
+        if query:
+            context_parts.append(f"Research task: {query}")
+        if url:
+            context_parts.append(f"Source URL: {url}")
+        if page:
+            context_parts.append(f"Page title: {page['title']}")
+            context_parts.append(f"Page content:\n{page['text'][:4000]}")
+        intent = "\n\n".join(context_parts)
+
+        session_id = secrets.token_urlsafe(8)
+        session: dict = {
+            "id": session_id,
+            "query": query or url,
+            "url": url,
+            "status": "submitted",
+            "page": page,
+            "task_id": None,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+
+        try:
+            from services.agentd.service import get_manager
+            task = await get_manager().submit(intent, workspace_id=workspace, channel="workbench")
+            session["task_id"] = task.task_id
+            session["status"] = "analyzing"
+        except Exception:
+            session["status"] = "error"
+
+        _WORKBENCH_SESSIONS.appendleft(session)
+        record_trace(
+            make_trace(
+                title=f"Workbench research: {(query or url)[:60]}",
+                category="workbench",
+                status="completed" if session["task_id"] else "warning",
+                tools=["workbench.research"],
+                metadata={"url": url, "has_page": page is not None},
+            )
+        )
+        return {"ok": bool(session["task_id"]), "session": session}
+
+    @app.get("/api/workbench/sessions", dependencies=[Depends(require_auth)])
+    async def workbench_sessions():
+        return list(_WORKBENCH_SESSIONS)
+
+    # ── Research engine ────────────────────────────────────────────────────────
+
+    @app.post("/api/research/start", dependencies=[Depends(require_auth)])
+    async def research_start(body: dict | None = None):
+        payload = body or {}
+        query = str(payload.get("query", "")).strip()
+        seed_urls = [str(u) for u in (payload.get("seed_urls") or []) if u]
+        provider_override = str(payload.get("provider", "")).strip() or None
+        api_key_override = str(payload.get("api_key", "")).strip() or None
+        workspace = str(payload.get("workspace", DEFAULT_WORKSPACE))
+        if not query and not seed_urls:
+            raise HTTPException(status_code=400, detail="query or seed_urls required")
+
+        from services.researchd.engine import get_engine as get_research_engine
+        eng = get_research_engine()
+        session = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: eng.start_session(query or seed_urls[0], seed_urls, provider_override, api_key_override)
+        )
+        session = await asyncio.get_event_loop().run_in_executor(None, eng.fetch_sources, session)
+
+        try:
+            from services.agentd.service import get_manager
+            intent = eng.build_agent_intent(session)
+            task = await get_manager().submit(intent, workspace_id=workspace, channel="research")
+            eng.mark_done(session, task_id=task.task_id)
+        except Exception as exc:
+            log.warning("Research agent submit failed: %s", exc)
+            eng.mark_error(session, str(exc))
+
+        record_trace(
+            make_trace(
+                title=f"Research: {(query or seed_urls[0])[:60]}",
+                category="research",
+                status="completed" if session.status == "done" else "warning",
+                tools=["researchd.start"],
+                metadata={
+                    "provider": session.provider,
+                    "sources": len(session.sources),
+                    "citations": len(session.citations),
+                },
+            )
+        )
+        return session.to_dict()
+
+    @app.get("/api/research/sessions", dependencies=[Depends(require_auth)])
+    async def research_sessions():
+        from services.researchd.engine import ResearchSession
+        return ResearchSession.list_all()
+
+    @app.get("/api/research/sessions/{session_id}", dependencies=[Depends(require_auth)])
+    async def research_session_detail(session_id: str):
+        from services.researchd.engine import ResearchSession
+        session = ResearchSession.load(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session.to_dict()
+
+    @app.post("/api/research/sessions/{session_id}/resume", dependencies=[Depends(require_auth)])
+    async def research_resume(session_id: str, body: dict | None = None):
+        workspace = str((body or {}).get("workspace", DEFAULT_WORKSPACE))
+        from services.researchd.engine import get_engine as get_research_engine
+        eng = get_research_engine()
+        session = eng.resume_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        session = await asyncio.get_event_loop().run_in_executor(None, eng.fetch_sources, session)
+        try:
+            from services.agentd.service import get_manager
+            intent = eng.build_agent_intent(session)
+            task = await get_manager().submit(intent, workspace_id=workspace, channel="research")
+            eng.mark_done(session, task_id=task.task_id)
+        except Exception as exc:
+            eng.mark_error(session, str(exc))
+        return session.to_dict()
+
+    @app.post("/api/research/sessions/{session_id}/pause", dependencies=[Depends(require_auth)])
+    async def research_pause(session_id: str):
+        from services.researchd.engine import get_engine as get_research_engine
+        ok = get_research_engine().pause_session(session_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {"ok": True}
+
+    @app.delete("/api/research/sessions/{session_id}", dependencies=[Depends(require_auth)])
+    async def research_delete(session_id: str):
+        from services.researchd.engine import get_engine as get_research_engine
+        ok = get_research_engine().delete_session(session_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {"ok": True}
+
+    # ── Pack Studio ───────────────────────────────────────────────────────────
+
+    @app.get("/api/studio/programs", dependencies=[Depends(require_auth)])
+    async def studio_list_programs():
+        from clawos_core.catalog import list_workflow_programs
+        return [p.to_dict() for p in list_workflow_programs()]
+
+    @app.post("/api/studio/programs", dependencies=[Depends(require_auth)])
+    async def studio_save_program(body: dict | None = None):
+        from clawos_core.catalog import save_workflow_program
+        payload = body or {}
+        if not payload.get("id") or not payload.get("name"):
+            raise HTTPException(status_code=400, detail="id and name required")
+        result = save_workflow_program(payload)
+        record_trace(
+            make_trace(
+                title=f"Studio: saved program {payload.get('name')}",
+                category="studio",
+                status="completed",
+                tools=["studio.save"],
+                metadata={"program_id": payload.get("id")},
+            )
+        )
+        return result
+
+    @app.delete("/api/studio/programs/{program_id}", dependencies=[Depends(require_auth)])
+    async def studio_delete_program(program_id: str):
+        from clawos_core.catalog import delete_workflow_program
+        ok = delete_workflow_program(program_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Program not found")
+        return {"ok": True}
+
+    @app.post("/api/studio/programs/{program_id}/deploy", dependencies=[Depends(require_auth)])
+    async def studio_deploy_program(program_id: str):
+        from clawos_core.catalog import get_workflow_program
+        program = get_workflow_program(program_id)
+        if not program:
+            raise HTTPException(status_code=404, detail="Program not found")
+        # Build intent from program nodes and submit to agentd
+        intent = f"Execute workflow program: {program.name}\n\n{program.summary or ''}"
+        if program.checkpoints:
+            intent += "\n\nSteps:\n" + "\n".join(f"  - {step}" for step in program.checkpoints)
+        try:
+            from services.agentd.service import get_manager
+            task = await get_manager().submit(intent, workspace_id=DEFAULT_WORKSPACE, channel="studio")
+            return {"ok": True, "task_id": task.task_id, "program": program.to_dict()}
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+
+    # ── A2A federation peer management ────────────────────────────────────────
+
+    @app.get("/api/a2a/peers", dependencies=[Depends(require_auth)])
+    async def a2a_list_peers():
+        from services.a2ad.peer_registry import get_registry
+        return get_registry().list_peers()
+
+    @app.post("/api/a2a/peers", dependencies=[Depends(require_auth)])
+    async def a2a_add_peer(body: dict | None = None):
+        payload = body or {}
+        url = str(payload.get("url", "")).strip()
+        name = str(payload.get("name", "")).strip()
+        trust_tier = str(payload.get("trust_tier", "unverified")).strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="url required")
+        from services.a2ad.peer_registry import get_registry
+        peer = get_registry().add_peer(url, name=name, trust_tier=trust_tier)
+        return peer.to_dict()
+
+    @app.delete("/api/a2a/peers/{peer_id}", dependencies=[Depends(require_auth)])
+    async def a2a_remove_peer(peer_id: str):
+        from services.a2ad.peer_registry import get_registry
+        ok = get_registry().remove_peer(peer_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Peer not found")
+        return {"ok": True}
+
+    @app.post("/api/a2a/peers/{peer_id}/trust", dependencies=[Depends(require_auth)])
+    async def a2a_set_trust(peer_id: str, body: dict | None = None):
+        trust_tier = str((body or {}).get("trust_tier", "trusted")).strip()
+        from services.a2ad.peer_registry import get_registry
+        peer = get_registry().set_trust(peer_id, trust_tier)
+        if not peer:
+            raise HTTPException(status_code=404, detail="Peer not found or invalid trust tier")
+        return peer.to_dict()
+
+    @app.post("/api/a2a/peers/{peer_id}/probe", dependencies=[Depends(require_auth)])
+    async def a2a_probe_peer(peer_id: str):
+        from services.a2ad.peer_registry import get_registry
+        try:
+            peer = await asyncio.get_event_loop().run_in_executor(
+                None, get_registry().probe_peer, peer_id
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        return peer.to_dict()
+
+    @app.get("/api/a2a/signing-key", dependencies=[Depends(require_auth)])
+    async def a2a_signing_key_info():
+        from services.a2ad.peer_registry import get_registry
+        return {"fingerprint": get_registry().get_signing_key_fingerprint()}
+
+    # ── MCP manager ───────────────────────────────────────────────────────────
+
+    @app.get("/api/mcp/servers", dependencies=[Depends(require_auth)])
+    async def mcp_list_servers():
+        from services.mcpd.service import get_service as get_mcp
+        return get_mcp().list_servers()
+
+    @app.get("/api/mcp/well-known", dependencies=[Depends(require_auth)])
+    async def mcp_well_known():
+        from services.mcpd.service import MCPService
+        return MCPService.WELL_KNOWN
+
+    @app.post("/api/mcp/servers", dependencies=[Depends(require_auth)])
+    async def mcp_add_server(body: dict | None = None):
+        payload = body or {}
+        name = str(payload.get("name", "")).strip()
+        transport = str(payload.get("transport", "stdio")).strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="name required")
+        if transport not in ("stdio", "http"):
+            raise HTTPException(status_code=400, detail="transport must be stdio or http")
+        command = payload.get("command") or []
+        endpoint = str(payload.get("endpoint", "")).strip()
+        env = dict(payload.get("env") or {})
+        if transport == "stdio" and not command:
+            raise HTTPException(status_code=400, detail="command required for stdio transport")
+        if transport == "http" and not endpoint:
+            raise HTTPException(status_code=400, detail="endpoint required for http transport")
+        from services.mcpd.service import get_service as get_mcp
+        cfg = get_mcp().add_server(name, transport, command=command, endpoint=endpoint, env=env)
+        return cfg.to_dict()
+
+    @app.delete("/api/mcp/servers/{server_id}", dependencies=[Depends(require_auth)])
+    async def mcp_remove_server(server_id: str):
+        from services.mcpd.service import get_service as get_mcp
+        ok = get_mcp().remove_server(server_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Server not found")
+        return {"ok": True}
+
+    @app.patch("/api/mcp/servers/{server_id}", dependencies=[Depends(require_auth)])
+    async def mcp_update_server(server_id: str, body: dict | None = None):
+        from services.mcpd.service import get_service as get_mcp
+        cfg = get_mcp().update_server(server_id, body or {})
+        if not cfg:
+            raise HTTPException(status_code=404, detail="Server not found")
+        return cfg.to_dict()
+
+    @app.post("/api/mcp/servers/{server_id}/connect", dependencies=[Depends(require_auth)])
+    async def mcp_connect_server(server_id: str):
+        from services.mcpd.service import get_service as get_mcp
+        try:
+            cfg = await get_mcp().connect(server_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        record_trace(
+            make_trace(
+                title=f"MCP connect: {cfg.name}",
+                category="mcp",
+                status="completed" if cfg.status == "connected" else "warning",
+                tools=["mcpd.connect"],
+                metadata={"server": cfg.name, "transport": cfg.transport, "tools": len(cfg.tools)},
+            )
+        )
+        return cfg.to_dict()
+
+    @app.get("/api/mcp/tools", dependencies=[Depends(require_auth)])
+    async def mcp_list_tools():
+        from services.mcpd.service import get_service as get_mcp
+        return get_mcp().list_all_tools()
+
+    @app.get("/api/mcp/resources", dependencies=[Depends(require_auth)])
+    async def mcp_list_resources():
+        from services.mcpd.service import get_service as get_mcp
+        return get_mcp().list_all_resources()
+
+    @app.post("/api/mcp/call", dependencies=[Depends(require_auth)])
+    async def mcp_call_tool(body: dict | None = None):
+        payload = body or {}
+        server_id = str(payload.get("server_id", "")).strip()
+        tool_name = str(payload.get("tool", "")).strip()
+        arguments = dict(payload.get("arguments") or {})
+        if not server_id or not tool_name:
+            raise HTTPException(status_code=400, detail="server_id and tool required")
+        from services.mcpd.service import get_service as get_mcp
+        try:
+            result = await get_mcp().call_tool(server_id, tool_name, arguments)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        record_trace(
+            make_trace(
+                title=f"MCP tool call: {tool_name}",
+                category="mcp",
+                status="completed",
+                tools=[f"mcp.{tool_name}"],
+                metadata={"server_id": server_id, "tool": tool_name},
+            )
+        )
+        return {"ok": True, "result": result}
+
+    @app.post("/api/mcp/resources/read", dependencies=[Depends(require_auth)])
+    async def mcp_read_resource(body: dict | None = None):
+        payload = body or {}
+        server_id = str(payload.get("server_id", "")).strip()
+        uri = str(payload.get("uri", "")).strip()
+        if not server_id or not uri:
+            raise HTTPException(status_code=400, detail="server_id and uri required")
+        from services.mcpd.service import get_service as get_mcp
+        try:
+            result = await get_mcp().read_resource(server_id, uri)
+        except (ValueError, RuntimeError) as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        return {"ok": True, "content": result}
 
     @app.websocket("/ws")
     async def ws_endpoint(websocket: WebSocket):

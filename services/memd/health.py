@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """memd health check."""
 from services.memd.service import MemoryService
 def health() -> dict:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """a2ad health check."""
 from clawos_core.constants import PORT_A2AD
 

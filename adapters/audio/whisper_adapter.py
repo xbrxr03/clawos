@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 faster-whisper drop-in adapter for voiced service.
 4x faster than openai-whisper on CPU, same accuracy.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl a2a — A2A peer management and task delegation."""
 from clawctl.ui.banner import success, error, info, table
 

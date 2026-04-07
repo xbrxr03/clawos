@@ -1,5 +1,6 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Card, Empty, SectionLabel } from '../components/ui.jsx'
+import { Badge, Card, Empty, PageHeader, PanelHeader, SectionLabel, Skeleton, SkeletonText } from '../components/ui.jsx'
 import { commandCenterApi, type UseCasePack } from '../lib/commandCenterApi'
 
 const WAVE_COLORS: Record<string, string> = {
@@ -13,10 +14,16 @@ export function PacksPage() {
   const [selectedId, setSelectedId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    const data = await commandCenterApi.listPacks()
-    setPacks(Array.isArray(data) ? data : [])
+    setLoading(true)
+    try {
+      const data = await commandCenterApi.listPacks()
+      setPacks(Array.isArray(data) ? data : [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -33,6 +40,15 @@ export function PacksPage() {
   const selected = useMemo(
     () => packs.find((pack) => pack.id === selectedId) || null,
     [packs, selectedId],
+  )
+  const stats = useMemo(
+    () => ({
+      total: packs.length,
+      primary: packs.filter((pack) => pack.primary).length,
+      installed: packs.filter((pack) => pack.primary || pack.secondary).length,
+      recommendedExtensions: packs.reduce((max, pack) => Math.max(max, pack.extension_recommendations?.length || 0), 0),
+    }),
+    [packs],
   )
 
   const installPack = async (pack: UseCasePack, primary = false) => {
@@ -52,15 +68,38 @@ export function PacksPage() {
   return (
     <div className="fade-up" style={{ padding: '0 0 48px' }}>
       <div style={{ padding: '32px 24px 18px' }}>
-        <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.05em' }}>Packs</div>
-        <div style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 6, maxWidth: 720 }}>
-          First-party ClawOS outcomes with setup defaults, workflows, recommended extensions, and eval suites.
-        </div>
+        <PageHeader
+          eyebrow="Packs"
+          title="Outcome-focused packs with install posture and setup defaults."
+          description="Inspect the primary pack, compare workflow bundles, and switch the product posture without leaving the dashboard."
+          meta={
+            <>
+              <Badge color="blue">{stats.total} packs</Badge>
+              <Badge color={stats.primary ? 'green' : 'gray'}>{stats.primary ? 'Primary selected' : 'No primary yet'}</Badge>
+              <Badge color="gray">{stats.installed} installed</Badge>
+            </>
+          }
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, padding: '0 20px 16px' }}>
+        <MetricCard label="Available" value={stats.total} tone="blue" />
+        <MetricCard label="Installed" value={stats.installed} tone="green" />
+        <MetricCard label="Primary" value={stats.primary} tone="orange" />
+        <MetricCard label="Best ext. set" value={stats.recommendedExtensions} tone="purple" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 14, padding: '0 20px' }}>
         <div style={{ display: 'grid', gap: 10 }}>
-          {packs.length === 0 ? (
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} style={{ padding: 18 }}>
+                <Skeleton width="26%" height={14} />
+                <div style={{ height: 12 }} />
+                <SkeletonText lines={3} />
+              </Card>
+            ))
+          ) : packs.length === 0 ? (
             <Card><Empty>No packs are available yet.</Empty></Card>
           ) : (
             packs.map((pack) => (
@@ -82,6 +121,11 @@ export function PacksPage() {
                       {pack.secondary ? <Badge color="blue">installed</Badge> : null}
                     </div>
                     <div style={{ marginTop: 8, color: 'var(--text-2)', lineHeight: 1.55 }}>{pack.description}</div>
+                    <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <Badge color="gray">{(pack.default_workflows || []).length} workflows</Badge>
+                      <Badge color="gray">{(pack.extension_recommendations || []).length} recommended extensions</Badge>
+                      <Badge color="gray">{(pack.provider_recommendations || []).length} provider fits</Badge>
+                    </div>
                   </div>
 
                   <div style={{ display: 'grid', gap: 8, flexShrink: 0 }}>
@@ -103,11 +147,18 @@ export function PacksPage() {
         <Card style={{ padding: 20 }}>
           {selected ? (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div>
-                <div className="section-label">Selected pack</div>
-                <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em' }}>{selected.name}</div>
-                <div style={{ marginTop: 8, color: 'var(--text-3)', lineHeight: 1.55 }}>{selected.setup_summary || selected.description}</div>
-              </div>
+              <PanelHeader
+                eyebrow="Selected pack"
+                title={selected.name}
+                description={selected.setup_summary || selected.description}
+                aside={
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <Badge color={WAVE_COLORS[selected.wave || 'wave-2'] || 'blue'}>{selected.wave || 'wave-1'}</Badge>
+                    {selected.primary ? <Badge color="green">primary</Badge> : null}
+                    {selected.secondary ? <Badge color="blue">installed</Badge> : null}
+                  </div>
+                }
+              />
 
               <div>
                 <SectionLabel>Dashboards</SectionLabel>
@@ -159,5 +210,23 @@ export function PacksPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function MetricCard({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'green' | 'orange' | 'purple' }) {
+  const toneValue = {
+    blue: 'var(--blue)',
+    green: 'var(--green)',
+    orange: 'var(--orange)',
+    purple: 'var(--purple)',
+  }[tone]
+
+  return (
+    <Card style={{ padding: 18 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
+      <div style={{ marginTop: 8, fontSize: 30, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.05em', color: toneValue }}>
+        {value}
+      </div>
+    </Card>
   )
 }
