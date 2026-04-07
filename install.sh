@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS one-command installer
 # curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 
@@ -213,8 +214,10 @@ install_node() {
     run_with_spinner "Installing Node.js with Homebrew" "$BREW_BIN" install node \
       || die "Node.js install failed"
   else
-    run_with_spinner "Installing Node.js LTS" \
-      bash -lc 'sudo apt-get update -qq && sudo apt-get install -y -qq nodejs npm' \
+    # Remove any old system nodejs (Ubuntu 24.04 ships v18, openclaw needs v22+)
+    sudo apt-get remove -y nodejs npm 2>/dev/null || true
+    run_with_spinner "Installing Node.js 22 via NodeSource" \
+      bash -lc 'curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs' \
       || die "Node.js install failed"
   fi
 
@@ -307,7 +310,7 @@ build_command_center() {
     bash -lc "cd \"$INSTALL_DIR/dashboard/frontend\" && npm run build"; then
     ok "Command Center frontend built"
   else
-    warn "Frontend build failed - legacy dashboard fallback remains available"
+    warn "Frontend build failed - dashd will use the bundled static assets if they are already present"
   fi
 }
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS Phase 4 — systemd unit installer
 # Copies unit files to ~/.config/systemd/user/ and enables clawos.service
 #
@@ -69,7 +70,8 @@ install_units() {
 
     for unit in "${ALL_UNITS[@]}"; do
         if [ -f "$UNIT_SRC/$unit" ]; then
-            cp "$UNIT_SRC/$unit" "$UNIT_DST/$unit"
+            # Substitute /home/user placeholder with the actual home directory
+            sed "s|/home/user|${HOME}|g" "$UNIT_SRC/$unit" > "$UNIT_DST/$unit"
             ok "Installed $unit"
         else
             warn "Missing $UNIT_SRC/$unit — skipping"
