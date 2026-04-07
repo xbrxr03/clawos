@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 WhatsApp bridge reliability tests for gatewayd and dashd.
 """
