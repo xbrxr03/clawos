@@ -263,11 +263,11 @@ export function Workflows() {
 
   return (
     <div className="fade-up" style={{ padding: '0 0 48px' }}>
-      <div style={{ padding: '32px 24px 18px' }}>
+      <div style={{ padding: '24px 20px 16px' }}>
         <PageHeader
           eyebrow="Workflow Library"
-          title="Run the highest-value automations without leaving the dashboard."
-          description="Search, filter, launch, and review deterministic workflows with live progress, hero inputs, and a local run history."
+          title="Local automations, compact and runnable."
+          description="Search, filter, launch, and review deterministic workflows with a denser macOS-style library and a live execution rail."
           meta={
             <>
               <Badge color="blue">{stats.total} available</Badge>
@@ -285,7 +285,7 @@ export function Workflows() {
         <MetricCard label="Guarded" value={stats.destructive} tone="orange" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 14, padding: '0 20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.12fr 0.88fr', gap: 14, padding: '0 20px' }}>
         <div style={{ display: 'grid', gap: 14 }}>
           <Card style={{ padding: 16 }}>
             <div style={{ display: 'grid', gap: 12 }}>
@@ -293,22 +293,13 @@ export function Workflows() {
                 placeholder="Search workflows, tags, or categories"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: 12,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  outline: 'none',
-                }}
+                style={{ borderRadius: 999 }}
               />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div className="seg" style={{ flexWrap: 'wrap' }}>
                 {CATEGORIES.map((item) => (
                   <button
                     key={item}
-                    className={`btn${category === item ? ' primary' : ''}`}
-                    style={{ minHeight: 34, padding: '0 12px' }}
+                    className={`seg-btn${category === item ? ' active' : ''}`}
                     onClick={() => setCategory(item)}
                   >
                     {item}
@@ -320,17 +311,14 @@ export function Workflows() {
 
           <SectionLabel>{loading ? 'Loading library' : `${workflows.length} workflows`}</SectionLabel>
           {loading ? (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} style={{ padding: 18 }}>
-                  <Skeleton width="28%" height={14} />
-                  <div style={{ height: 12 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} style={{ padding: 16 }}>
+                  <Skeleton width="34%" height={12} />
+                  <div style={{ height: 10 }} />
+                  <Skeleton width="64%" height={18} radius={10} />
+                  <div style={{ height: 10 }} />
                   <SkeletonText lines={3} />
-                  <div style={{ height: 12 }} />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Skeleton width="96px" height={24} radius={999} />
-                    <Skeleton width="120px" height={24} radius={999} />
-                  </div>
                 </Card>
               ))}
             </div>
@@ -339,53 +327,61 @@ export function Workflows() {
           ) : workflows.length === 0 ? (
             <Card><Empty>No workflows matched the current filters.</Empty></Card>
           ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
               {workflows.map((workflow) => {
                 const selected = selectedId === workflow.id
+                const categoryColor = CATEGORY_COLORS[workflow.category] || 'blue'
                 return (
-                  <div
+                  <button
                     key={workflow.id}
-                    role="button"
-                    tabIndex={0}
+                    type="button"
                     onClick={() => setSelectedId(workflow.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        setSelectedId(workflow.id)
-                      }
-                    }}
                     style={{
-                      textAlign: 'left',
-                      padding: 0,
+                      border: 'none',
                       background: 'transparent',
+                      padding: 0,
+                      textAlign: 'left',
                       cursor: 'pointer',
                     }}
                   >
                     <Card
                       style={{
-                        padding: 18,
-                        borderColor: selected ? 'rgba(77, 143, 247, 0.28)' : undefined,
-                        boxShadow: selected ? '0 22px 52px rgba(15, 23, 42, 0.18)' : undefined,
+                        padding: 16,
+                        display: 'grid',
+                        gap: 12,
+                        borderColor: selected ? 'rgba(0, 122, 255, 0.24)' : 'var(--border)',
+                        boxShadow: selected ? 'var(--shadow)' : 'var(--shadow-sm)',
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <div style={{ fontSize: 16, fontWeight: 600 }}>{workflow.name}</div>
-                            <Badge color={CATEGORY_COLORS[workflow.category] || 'blue'}>{workflow.category}</Badge>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <Badge color={categoryColor}>{workflow.category}</Badge>
                             <Badge color={workflow.needs_agent ? 'purple' : 'green'}>
                               {workflow.needs_agent ? 'agent' : 'direct'}
                             </Badge>
-                            {HERO_WORKFLOW_IDS.has(workflow.id) ? <Badge color="orange">hero demo</Badge> : null}
                             {workflow.destructive ? <Badge color="orange">guarded</Badge> : null}
                           </div>
-                          <div style={{ marginTop: 8, color: 'var(--text-2)', lineHeight: 1.55 }}>
-                            {workflow.description}
-                          </div>
+                          <div style={{ fontSize: 16, fontWeight: 600 }}>{workflow.name}</div>
                         </div>
+                        {HERO_WORKFLOW_IDS.has(workflow.id) ? <Badge color="blue">hero</Badge> : null}
+                      </div>
 
+                      <div style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
+                        {workflow.description}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <Badge color="gray">{formatPlatforms(workflow)}</Badge>
+                        {workflow.timeout_s ? <Badge color="gray">{workflow.timeout_s}s budget</Badge> : null}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {workflow.requires?.length ? `requires ${workflow.requires.join(', ')}` : 'ready to run'}
+                        </span>
                         <button
-                          className={`btn${runningId === workflow.id ? '' : ' primary'}`}
+                          className={`btn${runningId === workflow.id ? '' : ' primary'} sm`}
                           disabled={!!runningId}
                           onClick={(event) => {
                             event.stopPropagation()
@@ -395,14 +391,8 @@ export function Workflows() {
                           {runningId === workflow.id ? 'Running...' : 'Run'}
                         </button>
                       </div>
-
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-                        <Badge color="gray">{formatPlatforms(workflow)}</Badge>
-                        {workflow.timeout_s ? <Badge color="gray">{workflow.timeout_s}s budget</Badge> : null}
-                        {workflow.requires?.length ? <Badge color="gray">requires {workflow.requires.join(', ')}</Badge> : null}
-                      </div>
                     </Card>
-                  </div>
+                  </button>
                 )
               })}
             </div>
@@ -414,18 +404,17 @@ export function Workflows() {
             <PanelHeader
               eyebrow="Execution"
               title={selectedWorkflow ? selectedWorkflow.name : 'Select a workflow'}
-              description={selectedWorkflow ? selectedWorkflow.description : 'Pick a workflow from the library to inspect its posture and run it.'}
+              description={selectedWorkflow ? selectedWorkflow.description : 'Pick a workflow from the library to inspect posture and run it.'}
               aside={selectedWorkflow ? <Badge color={runningId === selectedWorkflow.id ? 'orange' : 'blue'}>{runningId === selectedWorkflow.id ? 'live' : 'ready'}</Badge> : null}
             />
             {selectedWorkflow ? (
               <div style={{ display: 'grid', gap: 14 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <Badge color={CATEGORY_COLORS[selectedWorkflow.category] || 'blue'}>{selectedWorkflow.category}</Badge>
                   <Badge color={selectedWorkflow.needs_agent ? 'purple' : 'green'}>
                     {selectedWorkflow.needs_agent ? 'agent-mediated' : 'direct run'}
                   </Badge>
                   <Badge color="gray">{formatPlatforms(selectedWorkflow)}</Badge>
-                  {HERO_WORKFLOW_IDS.has(selectedWorkflow.id) ? <Badge color="orange">hero workflow</Badge> : null}
                   {selectedWorkflow.destructive ? <Badge color="orange">approval-sensitive</Badge> : null}
                 </div>
 
@@ -435,7 +424,7 @@ export function Workflows() {
                     {selectedWorkflow.id === 'organize-downloads' ? (
                       <>
                         <label style={{ display: 'grid', gap: 6 }}>
-                          <span style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
                             Downloads folder
                           </span>
                           <input
@@ -445,28 +434,28 @@ export function Workflows() {
                             style={inputStyle}
                           />
                         </label>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <div className="seg">
                           <button
-                            className={`btn${selectedDraft.dry_run !== false ? ' primary' : ''}`}
+                            className={`seg-btn${selectedDraft.dry_run !== false ? ' active' : ''}`}
                             onClick={() => updateDraft(selectedWorkflow.id, 'dry_run', true)}
                           >
                             Preview only
                           </button>
                           <button
-                            className={`btn${selectedDraft.dry_run === false ? ' primary' : ''}`}
+                            className={`seg-btn${selectedDraft.dry_run === false ? ' active' : ''}`}
                             onClick={() => updateDraft(selectedWorkflow.id, 'dry_run', false)}
                           >
                             Apply live
                           </button>
                         </div>
-                        <div style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.55 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.55 }}>
                           Start with a preview for demos. When the plan looks good, rerun in apply mode to actually move the files.
                         </div>
                       </>
                     ) : (
                       <>
                         <label style={{ display: 'grid', gap: 6 }}>
-                          <span style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
                             PDF path
                           </span>
                           <input
@@ -476,7 +465,7 @@ export function Workflows() {
                             style={inputStyle}
                           />
                         </label>
-                        <div style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.55 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.55 }}>
                           Paste a local PDF path and ClawOS will extract the text, summarize it, and return a structured briefing with live progress.
                         </div>
                       </>
@@ -500,15 +489,14 @@ export function Workflows() {
                         <Badge color={progressColor(liveProgress.status)}>{liveProgress.status}</Badge>
                       </div>
                     </div>
-                    <div style={{ color: 'var(--text-3)', fontSize: 13, lineHeight: 1.55 }}>
+                    <div style={{ color: 'var(--text-2)', fontSize: 12, lineHeight: 1.55 }}>
                       {liveProgress.message || liveProgress.output || 'ClawOS is streaming updates here as the workflow runs.'}
                     </div>
-                    <div style={{ height: 8, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                    <div className="progress-bar">
                       <div
+                        className="progress-fill"
                         style={{
                           width: progressWidth(liveProgress.progress, liveProgress.status),
-                          height: '100%',
-                          borderRadius: 999,
                           background: `var(--${progressColor(liveProgress.status)})`,
                         }}
                       />
@@ -517,26 +505,19 @@ export function Workflows() {
                 ) : null}
 
                 {selectedProgressFeed.length ? (
-                  <div className="glass" style={{ padding: 14, display: 'grid', gap: 8 }}>
-                    <div className="section-label">Progress feed</div>
+                  <div className="grouped-list">
                     {selectedProgressFeed.map((entry, index) => (
                       <div
                         key={`${entry.id}-${entry.phase || 'phase'}-${entry.updatedAt}-${index}`}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          gap: 12,
-                          padding: '10px 12px',
-                          borderRadius: 12,
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border)',
-                        }}
+                        className="row"
+                        style={{ alignItems: 'flex-start' }}
                       >
-                        <div style={{ display: 'grid', gap: 4 }}>
+                        <span className={`dot ${progressColor(entry.status)}`} style={{ marginTop: 6 }} />
+                        <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600 }}>
                             {entry.phase ? entry.phase.replace(/-/g, ' ') : 'workflow'}
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.45 }}>
+                          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.45 }}>
                             {entry.message || entry.output || 'Waiting for the next event.'}
                           </div>
                         </div>
@@ -553,23 +534,8 @@ export function Workflows() {
                   <HeroInsights workflowId={selectedWorkflow.id} metadata={selectedResult.metadata} />
                 ) : null}
 
-                <div className="glass" style={{ padding: 14 }}>
-                  <div className="section-label">Output</div>
-                  <pre
-                    style={{
-                      margin: 0,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      minHeight: 220,
-                      maxHeight: 320,
-                      overflowY: 'auto',
-                      color: liveOutput ? 'var(--text-2)' : 'var(--text-3)',
-                      fontSize: 12,
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  >
-                    {liveOutput || 'Run a workflow to inspect output, errors, or generated notes here.'}
-                  </pre>
+                <div className="log-terminal" style={{ minHeight: 220, maxHeight: 320, overflowY: 'auto' }}>
+                  {liveOutput || 'Run a workflow to inspect output, errors, or generated notes here.'}
                 </div>
               </div>
             ) : (
@@ -587,21 +553,10 @@ export function Workflows() {
             {history.length === 0 ? (
               <Empty>No workflow runs yet.</Empty>
             ) : (
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div className="grouped-list">
                 {history.map((entry) => (
-                  <div
-                    key={`${entry.id}-${entry.ts}`}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                    }}
-                  >
-                    <div>
+                  <div key={`${entry.id}-${entry.ts}`} className="row">
+                    <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600 }}>{entry.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
                         {new Date(entry.ts).toLocaleTimeString()}
@@ -670,12 +625,12 @@ function InsightCard({ label, value }: { label: string; value: string }) {
     <div
       style={{
         padding: '12px 14px',
-        borderRadius: 12,
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
+        borderRadius: 10,
+        background: 'var(--surface-2)',
+        border: '0.5px solid var(--border)',
       }}
     >
-      <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
+      <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
       <div style={{ marginTop: 8, fontSize: 20, fontWeight: 700, letterSpacing: '-0.04em' }}>{value}</div>
     </div>
   )
@@ -690,9 +645,9 @@ function MetricCard({ label, value, tone }: { label: string; value: number; tone
   }[tone]
 
   return (
-    <Card style={{ padding: 18 }}>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
-      <div style={{ marginTop: 8, fontSize: 30, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.05em', color: toneValue }}>
+    <Card style={{ padding: 16 }}>
+      <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
+      <div style={{ marginTop: 8, fontSize: 28, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.04em', color: toneValue }}>
         {value}
       </div>
     </Card>
@@ -701,10 +656,10 @@ function MetricCard({ label, value, tone }: { label: string; value: number; tone
 
 const inputStyle = {
   width: '100%',
-  padding: '11px 14px',
-  borderRadius: 12,
-  border: '1px solid var(--border)',
-  background: 'var(--surface)',
+  padding: '8px 12px',
+  borderRadius: 8,
+  border: '0.5px solid var(--border)',
+  background: 'var(--surface-2)',
   color: 'var(--text)',
   outline: 'none',
 } as const

@@ -11,23 +11,23 @@ export function InspectorRail({ approvals, services, events }: InspectorRailProp
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: 18, borderBottom: '1px solid var(--sep)' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase' }}>
+      <div style={{ padding: 16, borderBottom: '0.5px solid var(--border)' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase' }}>
           Inspector
         </div>
       </div>
 
-      <div style={{ padding: 18, borderBottom: '1px solid var(--sep)' }}>
+      <div style={{ padding: 16, borderBottom: '0.5px solid var(--border)' }}>
         <div className="section-label">Approvals</div>
         <div className="glass" style={{ padding: 14 }}>
           <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.04em' }}>{approvals.length}</div>
-          <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-3)' }}>Awaiting human review</div>
+          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-2)' }}>Awaiting human review</div>
         </div>
       </div>
 
-      <div style={{ padding: 18, borderBottom: '1px solid var(--sep)' }}>
+      <div style={{ padding: 16, borderBottom: '0.5px solid var(--border)' }}>
         <div className="section-label">Services</div>
-        <div className="glass" style={{ overflow: 'hidden' }}>
+        <div className="grouped-list">
           {serviceEntries.length === 0 ? (
             <div className="row"><span style={{ color: 'var(--text-3)' }}>No data yet</span></div>
           ) : (
@@ -37,25 +37,25 @@ export function InspectorRail({ approvals, services, events }: InspectorRailProp
                 <div style={{ flex: 1 }}>
                   <div className="mono" style={{ fontSize: 12 }}>{name}</div>
                 </div>
-                <span className="ts">{item?.latency_ms ? `${item.latency_ms}ms` : '—'}</span>
+                <span className="ts">{item?.latency_ms ? `${item.latency_ms}ms` : '-'}</span>
               </div>
             ))
           )}
         </div>
       </div>
 
-      <div style={{ padding: 18, minHeight: 0, flex: 1 }}>
+      <div style={{ padding: 16, minHeight: 0, flex: 1 }}>
         <div className="section-label">Activity</div>
-        <div className="glass" style={{ height: '100%', overflow: 'auto' }}>
+        <div className="grouped-list" style={{ height: '100%', overflow: 'auto' }}>
           {eventEntries.length === 0 ? (
             <div className="row"><span style={{ color: 'var(--text-3)' }}>Waiting for activity</span></div>
           ) : (
             eventEntries.map((event, index) => (
               <div key={`${event.type}-${index}`} className="row" style={{ alignItems: 'flex-start' }}>
-                <span className="dot blue" style={{ marginTop: 6 }} />
+                <span className="dot blue" style={{ marginTop: 5 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600 }}>{event.type}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3, wordBreak: 'break-word' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 3, wordBreak: 'break-word', lineHeight: 1.5 }}>
                     {JSON.stringify(event.data ?? event).slice(0, 120)}
                   </div>
                 </div>

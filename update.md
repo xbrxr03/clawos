@@ -37,6 +37,33 @@ Feels like it was made by people who care about every second of the experience.
 - **Promotion:** happening on owned channels (not HN). Assets: dashboard screenshot,
   setup wizard screenshot, organize-downloads GIF, summarize-pdf GIF, voice demo GIF.
 
+## Current Release Frontier
+
+This section is the authoritative release-status snapshot.
+Historical notes below are preserved for context, but they are not the current build order.
+
+- Active milestone: `Milestone 3 - Ship v0.1`
+- Release version target: `0.1.0`
+- Canonical roadmap: `docs/ROADMAP.md`
+- Canonical release gates:
+  - repo verification green
+  - security audit green
+  - install path validated on supported targets
+  - packaging / ISO validation completed on a Linux host
+  - docs accuracy pass complete
+
+## Current Release Gate Status
+
+- `pyproject.toml` is already set to `0.1.0`.
+- `python scripts/security_audit.py` passed on 2026-04-07 from this checkout.
+- `python -m pytest tests -q` passed on 2026-04-07 with `166 passed, 25 skipped`.
+- `npm run typecheck` passed on 2026-04-07.
+- `npm run build` passed on 2026-04-07.
+- The pre-release macOS-themed dashboard redesign is complete and built into `services/dashd/static`.
+- `install.sh` validation is only partially verifiable from this Windows checkout unless a real Linux or macOS target is available.
+- `.deb` and ISO validation require a Linux environment with the Debian / ISO toolchain.
+- The release tag remains blocked until the install / packaging validation gaps above are closed or explicitly waived.
+
 ## Current Canonical Surfaces
 
 - `services/dashd` is the canonical dashboard/backend surface.
@@ -48,8 +75,10 @@ Feels like it was made by people who care about every second of the experience.
 ## High-Signal Files
 
 - `docs/ARCHITECTURE_CURRENT.md`
-- `docs/STABILIZATION_ROADMAP.md`
+- `docs/PRODUCT_VISION.md`
+- `docs/ROADMAP.md`
 - `docs/COMPETITIVE_PLATFORM.md`
+- `docs/PRODUCTION.md`
 - `services/dashd/api.py`
 - `services/setupd/service.py`
 - `services/setupd/state.py`
@@ -297,6 +326,69 @@ Built the Browser Workbench surface end to end.
 7. real ISO/Calamares validation on target environments
 
 ## Updates Done By Codex
+
+### 2026-04-07 - Codex
+
+#### macOS-themed dashboard redesign completed
+
+- Reworked `dashboard/frontend` to the requested macOS Sonoma/Ventura-inspired visual language:
+  - shared tokens and palette moved to Apple-system colors and SF-style typography
+  - sidebar, toolbar, inspector rail, and command palette now use compact vibrancy/frosted-glass surfaces
+  - Tauri/desktop mode now renders a dedicated traffic-light title bar
+  - nav density, buttons, pills, progress bars, grouped settings rows, and trace filters were restyled to match the spec
+- Updated the highest-traffic surfaces called out in the redesign brief:
+  - `src/app/AppShell.tsx`
+  - `src/app/navigation.tsx`
+  - `src/app/InspectorRail.tsx`
+  - `src/index.css`
+  - `src/design/tokens.ts`
+  - `src/pages/Overview.tsx`
+  - `src/pages/Workflows.tsx`
+  - `src/pages/Settings.tsx`
+  - `src/pages/Traces.tsx`
+  - `src/pages/pages.jsx`
+- Rebuilt the generated dashboard assets into `services/dashd/static`.
+
+#### Verification performed in this pass
+
+- Ran `npm run typecheck` -> passed.
+- Ran `npm run build` -> passed.
+
+#### Release impact
+
+- The frontend redesign is no longer a pending/deferred task.
+- `0.1.0` is still blocked only by supported-target install validation and Linux-host packaging / ISO validation.
+
+### 2026-04-07 - Codex
+
+#### Release-prep alignment pass
+
+- Updated the top of `update.md` so it now names one authoritative current frontier:
+  - `Milestone 3 - Ship v0.1`
+  - `0.1.0` as the release target
+  - explicit release-gate status
+- Kept the preserved historical entries intact instead of rewriting prior session history.
+
+#### Verification performed in this pass
+
+- Confirmed `pyproject.toml` is already at `0.1.0`.
+- Confirmed `python scripts/security_audit.py` passes in this checkout.
+- Ran `python -m pytest tests -q` -> passed, `166 passed, 25 skipped`.
+- Ran `npm run typecheck` -> passed.
+- Ran `npm run build` -> passed.
+- Validated `install.sh`, `scripts/test_install.sh`, `scripts/validate_package.sh`,
+  `packaging/deb/build_deb.sh`, `packaging/deb/validate.sh`, and `packaging/iso/build_iso.sh`
+  for shell syntax under Git Bash.
+- Confirmed `install.sh` exits immediately on an unsupported Windows shell instead of attempting a partial install.
+- Confirmed guard behavior on unsupported hosts:
+  - `packaging/deb/build_deb.sh --skip-frontend-build` stops immediately when required Linux tooling is absent
+  - `packaging/iso/build_iso.sh --skip-download` stops immediately when not run as root
+  - `scripts/test_install.sh --skip-uninstall` stops immediately when not run as root
+
+#### Remaining release blockers
+
+- install validation needs a supported Ubuntu/macOS target
+- `.deb` and ISO validation need a Linux host with the required packaging toolchain
 
 ### 2026-04-07 - Codex
 
@@ -826,7 +918,9 @@ Built the Browser Workbench surface end to end.
 - true native packaging validation
 - real ISO/Calamares validation on native target environments
 
-## Pending Task: macOS-Themed Dashboard Redesign
+## Completed Design Task: macOS-Themed Dashboard Redesign
+
+Completed on 2026-04-07 as pre-release work. The original requested spec is preserved below for traceability.
 
 ### Requested by user — 2026-04-06
 
@@ -863,7 +957,10 @@ Built the Browser Workbench surface end to end.
 
 ---
 
-## Claude Pickup Point
+## Historical Claude Pickup Point
+
+This section is preserved history from 2026-04-06.
+It is superseded by the current release frontier near the top of this file.
 
 Updated 2026-04-06. Previous pickup point preserved below under "Archived Pickup Point".
 
