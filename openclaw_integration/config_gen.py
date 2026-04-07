@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Generate pre-patched openclaw.json for offline Ollama use.
-Phase 9: ctx cap at 8192 for local models, kimi-k2.5 added, qwen3 removed.
+Compatible with OpenClaw 2026.4.5+ schema (stripped deprecated keys).
 """
 import json
 import subprocess
@@ -11,30 +11,27 @@ OPENCLAW_DIR  = Path.home() / ".openclaw"
 CONFIG_PATH   = OPENCLAW_DIR / "openclaw.json"
 AUTH_FIX_PATH = OPENCLAW_DIR / "agents" / "main" / "agent" / "auth-profiles.json"
 
-# Four models. Nothing else. No exceptions.
 # qwen3 excluded — Ollama bug #14745 (prints tool calls instead of executing)
 GOOD_MODELS = {
-    "qwen2.5:1.5b":    {"ctx": 4096,  "maxOutput": 2048, "tier": "basic"},
-    "qwen2.5:3b":      {"ctx": 8192,  "maxOutput": 4096, "tier": "standard"},
-    "qwen2.5:7b":      {"ctx": 8192,  "maxOutput": 4096, "tier": "full"},
-    "kimi-k2.5:cloud": {"ctx": 32768, "maxOutput": 8192, "tier": "openclaw"},
+    "qwen2.5:1.5b":    {"ctx": 4096,  "tier": "basic"},
+    "qwen2.5:3b":      {"ctx": 8192,  "tier": "standard"},
+    "qwen2.5:7b":      {"ctx": 8192,  "tier": "full"},
+    "kimi-k2.5:cloud": {"ctx": 32768, "tier": "openclaw"},
 }
 
-CTX_CAP = 8192  # hard cap for local models — prevents 262k OOM (qwen3 bug)
+CTX_CAP = 8192  # hard cap for local models — prevents 262k OOM
 
 
 def gen_config(model: str = "qwen2.5:7b", openrouter_key: str = "") -> dict:
     """
-    Pre-patched openclaw.json for offline Ollama + optional OpenRouter cloud.
-    If openrouter_key is provided, includes OpenRouter as a provider and sets
-    Kimi k2.5 as the default agent model.
-    Critical: api must be 'openai-completions' (not 'openai-responses').
-    baseUrl must include /v1.
+    Pre-patched openclaw.json for OpenClaw 2026.4.5+.
+    Removed: maxOutput, inputCostPer1M, outputCostPer1M, capabilities,
+             cloud, network, _clawos, skills.web-browser, skills.file-manager
     """
     import os
     key = openrouter_key or os.environ.get("OPENROUTER_API_KEY", "") or "__OPENROUTER_API_KEY__"
 
-    m   = GOOD_MODELS.get(model, {"ctx": CTX_CAP, "maxOutput": 4096})
+    m   = GOOD_MODELS.get(model, {"ctx": CTX_CAP})
     ctx = min(m["ctx"], CTX_CAP) if "cloud" not in model else m["ctx"]
 
     providers = {
@@ -43,73 +40,38 @@ def gen_config(model: str = "qwen2.5:7b", openrouter_key: str = "") -> dict:
             "apiKey":  "ollama-local",
             "api":     "openai-completions",
             "models":  [{
-                "id":              model,
-                "name":            model,
-                "contextWindow":   ctx,
-                "maxOutput":       m["maxOutput"],
-                "inputCostPer1M":  0,
-                "outputCostPer1M": 0,
-                "capabilities":    ["tools", "streaming"],
+                "id":            model,
+                "name":          model,
+                "contextWindow": ctx,
             }]
         }
     }
 
-    # Add OpenRouter provider (always included so placer.py can write the key later)
+    # Always include openrouter so placer.py can write the key later
     providers["openrouter"] = {
         "baseUrl": "https://openrouter.ai/api/v1",
         "apiKey":  key,
         "api":     "openai-completions",
         "models": [
-            {
-                "id":            "moonshotai/kimi-k2",
-                "name":          "Kimi k2.5",
-                "contextWindow": 131072,
-                "maxOutput":     8192,
-                "capabilities":  ["tools", "streaming"],
-            },
-            {
-                "id":            "openai/gpt-4o",
-                "name":          "GPT-4o",
-                "contextWindow": 128000,
-                "maxOutput":     4096,
-                "capabilities":  ["tools", "streaming"],
-            },
-            {
-                "id":            "anthropic/claude-sonnet-4-20250514",
-                "name":          "Claude Sonnet",
-                "contextWindow": 200000,
-                "maxOutput":     8192,
-                "capabilities":  ["tools", "streaming"],
-            },
+            {"id": "moonshotai/kimi-k2",                 "name": "Kimi k2.5",     "contextWindow": 131072},
+            {"id": "openai/gpt-4o",                      "name": "GPT-4o",        "contextWindow": 128000},
+            {"id": "anthropic/claude-sonnet-4-20250514", "name": "Claude Sonnet", "contextWindow": 200000},
         ]
     }
 
-    # Default model: Kimi if OpenRouter key provided, else local Ollama
     has_cloud = bool(openrouter_key or (os.environ.get("OPENROUTER_API_KEY", "") not in ("", "__OPENROUTER_API_KEY__")))
     default_model = "openrouter/moonshotai/kimi-k2" if has_cloud else f"ollama/{model}"
 
     return {
         "gateway": {"mode": "local", "port": 18789},
-        "models": {
-            "providers": providers
-        },
+        "models":  {"providers": providers},
         "agents": {
             "defaults": {
                 "model": {"primary": default_model},
                 "memorySearch": {"enabled": False},
             }
         },
-        "cloud":   {"enabled": has_cloud, "fallback": False},
-        "network": {
-            "mode":                "offline" if not has_cloud else "hybrid",
-            "allow_local_network": True,
-            "allow_internet":      has_cloud,
-        },
-        "skills": {
-            "web-browser":  {"offline_behavior": "disable"},
-            "file-manager": {"offline_behavior": "normal"},
-        },
-        "_clawos": "Generated by ClawOS — github.com/xbrxr03/clawos",
+        "skills": {},
     }
 
 
