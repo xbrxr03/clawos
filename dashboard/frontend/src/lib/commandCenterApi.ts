@@ -734,4 +734,6 @@ export const commandCenterApi = {
       body: JSON.stringify({ message, workspace }),
     }),
   listApprovals: () => fetchJson<any[]>('/api/approvals'),
+  getTask: (taskId: string) =>
+    fetchJson<{ task_id: string; status: string; result?: string; error?: string }>(`/api/tasks/${taskId}`),
 }

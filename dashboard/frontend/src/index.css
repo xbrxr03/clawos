@@ -715,6 +715,15 @@ code,
 }
 
 .shell-sidebar {
+  /* sidebar is always dark — pin text vars to light so both themes are readable */
+  color-scheme: dark;
+  --text: #f4f7fb;
+  --text-2: rgba(244, 247, 251, 0.76);
+  --text-3: rgba(244, 247, 251, 0.46);
+  --text-4: rgba(244, 247, 251, 0.24);
+  --border: rgba(255, 255, 255, 0.14);
+  --border-2: rgba(255, 255, 255, 0.2);
+  --glass-hover: rgba(255, 255, 255, 0.08);
   width: var(--sidebar-w);
   flex-shrink: 0;
   display: flex;

@@ -205,8 +205,12 @@ install_node() {
   step "Installing Node.js"
 
   if command -v node >/dev/null 2>&1; then
-    ok "Node.js $(node --version) already installed"
-    return 0
+    NODE_MAJOR=$(node --version | sed 's/v\([0-9]*\).*/\1/')
+    if [ "${NODE_MAJOR}" -ge 22 ] 2>/dev/null; then
+      ok "Node.js $(node --version) already installed"
+      return 0
+    fi
+    warn "Node.js $(node --version) is too old (openclaw needs v22+) — upgrading"
   fi
 
   if [ "$PLATFORM" = "macos" ]; then

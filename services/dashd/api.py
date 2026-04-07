@@ -420,6 +420,22 @@ def _collect_service_health() -> dict[str, dict]:
         checks["voiced"] = voiced_health
     except Exception:
         pass
+    # PicoClaw — check if process is running via port
+    try:
+        import urllib.request as _ur
+        _r = _ur.urlopen("http://127.0.0.1:18800/health", timeout=1)
+        checks["picoclaw"] = lambda: {"status": "up"}
+    except Exception:
+        import shutil as _sh
+        checks["picoclaw"] = lambda: {"status": "installed" if _sh.which("picoclaw") else "not_installed"}
+    # OpenClaw — check if binary exists and gateway is reachable
+    try:
+        import urllib.request as _ur2
+        _r2 = _ur2.urlopen("http://127.0.0.1:18789/health", timeout=1)
+        checks["openclaw"] = lambda: {"status": "up"}
+    except Exception:
+        import shutil as _sh2
+        checks["openclaw"] = lambda: {"status": "installed" if _sh2.which("openclaw") else "not_installed"}
 
     for name, check in checks.items():
         started = time.perf_counter()
