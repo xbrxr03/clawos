@@ -1,8 +1,8 @@
-# ClawOS Roadmap — To The Finish Line
+﻿# ClawOS Roadmap â€” To The Finish Line
 
 > Canonical roadmap. Supersedes `docs/STABILIZATION_ROADMAP.md`.
-> Updated: 2026-04-06 by Claude.
-> Nothing from the Codex PRs is omitted — each item is sequenced correctly.
+> Updated: 2026-04-06 by Codex.
+> Nothing from the Codex PRs is omitted â€” each item is sequenced correctly.
 
 ---
 
@@ -15,37 +15,47 @@ Polish before features. Infrastructure before experience. Experience before plat
 
 ## Current State (2026-04-06)
 
-- Phases 1–11 merged. 122 tests passing. Security audit green.
+- Phases 1â€“11 merged. `python -m pytest tests -q` now passes with `155 passed, 25 skipped`. Security audit green.
 - 29 workflow modules across 6 categories.
 - 19 services: agentd, policyd, memd, toolbridge, modeld, dashd, voiced, gatewayd, a2ad,
   capabilityd, metricd, picoclawd, ragd, scheduler, secretd, setupd, skilld, clawd + helpers.
 - Dashboard: Overview, Workflows, Packs, Providers, Registry, Traces, Settings, Setup.
 - Competitive platform primitives: UseCasePack, ProviderProfile, ExtensionManifest,
-  WorkflowProgram, TraceRecord, OpenClawImportManifest — all wired in catalog.py.
+  WorkflowProgram, TraceRecord, OpenClawImportManifest â€” all wired in catalog.py.
 - CLI: clawctl with packs, providers, extensions, benchmark, rescue openclaw.
 - Wave 1 Packs defined: daily-briefing-os, coding-autopilot, sales-meeting-operator,
   chat-app-command-center.
 - A2A: agent card, peer discovery, task delegation API.
 - OpenClaw rescue path implemented.
-- Known debt: two dashboard stacks (legacy backend vs canonical dashd), auth needs tightening,
-  some workflows are prompt-only and brittle, ISO not yet validated on real hardware.
+- Stabilization is materially cleaner now: the legacy dashboard stack is gone, auth is tightened,
+  the top-10 workflows are deterministic, and the first-party contracts are cleaner.
+- Milestone 2 is underway: the premium shell/design-system pass is live, the setup wizard has
+  been rebuilt into the 8-step first-run flow with real model-pull progress, and the dashboard
+  polish pass now covers Overview, Workflows, Packs, Providers, Registry, Traces, and Settings.
+- Milestone 2D is now end-to-end enough for the premium path: PipeWire-first 44.1 kHz capture,
+  Piper playback checks, wake-word readiness confirmation, dashboard push-to-talk, and live voice-session
+  broadcasts are all wired through the shell and setup wizard.
+- Milestone 2E is now in place for the WhatsApp bridge: inbound JIDs route into stable workspaces,
+  approval-by-reply and automatic voice-note transcription are wired, reconnect remains automatic,
+  and dashboard settings now expose the phone-bridge connection posture.
+- Remaining debt is mostly release-facing: `.deb` validation still needs a built artifact, and ISO / real-hardware validation remains.
 
 ---
 
-## Milestone 1 — Stabilize
+## Milestone 1 â€” Stabilize
 
 **Goal:** Eliminate structural debt so every future session builds on solid ground.
 **Definition of done:** 150+ tests passing, security green, one dashboard stack, contract-clean.
 
 ### 1A. Kill the legacy dashboard stack
-- Archive `dashboard/backend/` — it is documented as legacy in ARCHITECTURE_CURRENT.md.
+- Archive `dashboard/backend/` â€” it is documented as legacy in ARCHITECTURE_CURRENT.md.
 - Canonical: `services/dashd/api.py` + `dashboard/frontend/`.
 - Remove all imports and references that cross into the legacy backend.
 - Update docs that still point to the old stack.
 
 ### 1B. Auth hardening
-- Tighten auth on `dashd` endpoints — no unauthenticated access to sensitive routes in production.
-- Tighten auth on `a2ad` endpoints — A2A peer trust model should require explicit allow-listing.
+- Tighten auth on `dashd` endpoints â€” no unauthenticated access to sensitive routes in production.
+- Tighten auth on `a2ad` endpoints â€” A2A peer trust model should require explicit allow-listing.
 - Session token rotation on setup completion.
 - Document the auth posture in `docs/SECURITY_AUDIT.md`.
 
@@ -73,7 +83,7 @@ Each of these must:
 
 ---
 
-## Milestone 2 — Premium Experience
+## Milestone 2 â€” Premium Experience
 
 **Goal:** Make ClawOS feel like Apple built it.
 **Definition of done:** Every surface passes the premium quality bars in PRODUCT_VISION.md.
@@ -82,27 +92,27 @@ Each of these must:
 - `docs/FIGMA_SYSTEM.md` is the law. Every component uses it.
 - Audit all frontend pages against the design system.
 - Fix any inconsistent spacing, color, typography, or animation.
-- Every page has a designed empty state — not a blank screen.
+- Every page has a designed empty state â€” not a blank screen.
 - Transitions are animated. Loading is skeleton, not spinner.
 
-### 2B. First-run wizard — Apple-grade
+### 2B. First-run wizard â€” Apple-grade
 The setup wizard (setupd + SetupPage.tsx) is the product's first impression.
 
 - Step 1: Welcome screen. Brand identity. One button: "Begin Setup".
 - Step 2: Hardware detection + profile auto-select. Show what was detected. Confirm.
 - Step 3: Pack selection. Visual cards. Brief descriptions. One click.
 - Step 4: Provider selection. Local Ollama first. Cloud option visible but not default.
-- Step 5: Model pull. Animated progress. "Downloading your AI..." — real progress, real ETA.
+- Step 5: Model pull. Animated progress. "Downloading your AI..." â€” real progress, real ETA.
 - Step 6: Voice setup. Enable or skip. If enabled: mic test, wake word test.
 - Step 7: WhatsApp. QR scan or skip. Works or skips cleanly.
-- Step 8: Summary. "ClawOS is ready." — show what was configured. Launch dashboard.
+- Step 8: Summary. "ClawOS is ready." â€” show what was configured. Launch dashboard.
 
 Each step must:
 - Never fail silently.
 - Have a back button.
 - Have a skip option where appropriate.
 - Show progress (step X of Y).
-- Be beautiful on a 1366×768 screen (minimum target).
+- Be beautiful on a 1366Ã—768 screen (minimum target).
 
 ### 2C. Dashboard polish
 - Overview: real data, real graphs, useful at a glance.
@@ -114,17 +124,17 @@ Each step must:
 - Settings: grouped logically, every setting has a description, save feedback.
 - All pages: consistent header, breadcrumb, keyboard shortcuts documented.
 
-### 2D. Voice pipeline — end-to-end
+### 2D. Voice pipeline â€” end-to-end
 - Whisper STT at 44100Hz via pipewire. No audio gaps.
 - Piper TTS lessac-medium. Smooth playback.
-- Wake word "Hey Claw" — OpenWakeWord.
+- Wake word "Hey Claw" â€” OpenWakeWord.
 - Push-to-talk as fallback.
 - Voice status visible in dashboard header (listening / speaking / idle).
 - Voice setup in wizard tests the mic and confirms it works before proceeding.
 
-### 2E. WhatsApp bridge — reliable
+### 2E. WhatsApp bridge â€” reliable
 - Scan QR once. It stays connected.
-- Message in → routed to correct workspace.
+- Message in â†’ routed to correct workspace.
 - Tool approval by reply ("yes" / "no").
 - Voice notes transcribed automatically.
 - Reconnect on drop with no user action.
@@ -135,7 +145,7 @@ The two hero workflows must be demo-perfect for promotional use:
 - `organize-downloads`: scans a real Downloads folder, categorizes, moves, shows summary.
   Works in < 2 minutes on Tier B hardware.
 - `summarize-pdf`: takes a PDF path, returns a structured summary with key points.
-  Works in < 2 minutes on Tier B hardware using qwen2.5:7b.
+  Works in < 2 minutes on Tier B hardware using local extractive summarization.
 
 Both must work in the dashboard with live WebSocket progress updates.
 
@@ -144,15 +154,17 @@ Both must work in the dashboard with live WebSocket progress updates.
 - Update LICENSE, README badge, pyproject.toml.
 - No licensing ambiguity before public release.
 
+Status on 2026-04-06: Milestone 2 is complete. Voice, WhatsApp, hero workflows, and the AGPL migration are all in place. Milestone 3 is the active frontier.
+
 ---
 
-## Milestone 3 — Ship v0.1
+## Milestone 3 â€” Ship v0.1
 
 **Goal:** The product is publicly available, documented, and reproducible.
 **Definition of done:** Clean install works on target hardware, assets ready for promotion.
 
 ### 3A. ISO validated
-- Build Ubuntu 22.04 LTS base ISO with ClawOS preinstalled.
+- Build Ubuntu 24.04 LTS base ISO with ClawOS preinstalled.
 - Calamares installer for clean machines.
 - Tested on Tier A (8GB mini PC) and Tier B (16GB laptop).
 - First boot goes directly to first-run wizard. No terminal required.
@@ -165,7 +177,7 @@ Both must work in the dashboard with live WebSocket progress updates.
 - Windows: dev checkout only, not a supported install target.
 - Every error in install.sh is caught and gives a recovery path.
 
-### 3C. README — the product pitch
+### 3C. README â€” the product pitch
 The README is the first thing anyone reads. It must:
 - Open with the "Apple made JARVIS real" framing in one strong sentence.
 - Show a screenshot of the dashboard above the fold.
@@ -182,7 +194,7 @@ Promotional assets for the platforms you're using:
 - Setup wizard screenshot: Pack selection step.
 - organize-downloads demo GIF: < 15 seconds, shows before/after.
 - summarize-pdf demo GIF: < 15 seconds, shows PDF in, structured summary out.
-- Voice demo GIF: "Hey Claw..." → response playing — ambient, natural.
+- Voice demo GIF: "Hey Claw..." â†’ response playing â€” ambient, natural.
 
 All assets: would look at home in an Apple product launch deck.
 
@@ -202,14 +214,14 @@ All assets: would look at home in an Apple product launch deck.
 
 ---
 
-## Milestone 4 — Platform Depth
+## Milestone 4 â€” Platform Depth
 
 **Goal:** Deliver the competitive platform features Codex built the foundation for.
 **Start after:** v0.1.0 is tagged and public.
 
 These are all real, all built on existing foundations, all valuable. Sequenced by user impact:
 
-### 4A. Wave 1 Packs — production-grade
+### 4A. Wave 1 Packs â€” production-grade
 Make all four Wave 1 Packs fully production-grade:
 - `daily-briefing-os`: morning digest, calendar summary, news, action items.
 - `coding-autopilot`: repo summary, PR review, README generation, TODO tracking.
@@ -257,7 +269,7 @@ policy pack, eval suite. Guided by COMPETITIVE_PLATFORM.md Wave 1 spec.
 
 ---
 
-## Milestone 5 — True Distro
+## Milestone 5 â€” True Distro
 
 **Goal:** ClawOS is a first-class Linux distribution, not just an installer.
 **Start after:** Platform depth is stable.
@@ -282,7 +294,7 @@ These apply to every session, every milestone:
 - Every tool call goes through policyd. No exceptions.
 - Every service has `main.py` + `service.py` + `health.py`.
 - All IDs use `clawos_core/util/ids.py`. All paths use `clawos_core/util/paths.py`.
-- `json_repair` wrapper in `jsonx.py` — never raw `json.loads` on LLM output.
+- `json_repair` wrapper in `jsonx.py` â€” never raw `json.loads` on LLM output.
 - Zero test failures before shipping any milestone.
 - Root cause before patch. One thing at a time.
 - Security audit and test suite both green before any merge.
@@ -293,42 +305,35 @@ These apply to every session, every milestone:
 ## Build Order Summary
 
 ```
-NOW      Milestone 1: Stabilize
-         └── Kill legacy dashboard stack
-         └── Auth hardening
-         └── Top-10 workflow hardening
-         └── Contract alignment
-         └── 150+ tests green
+NOW      Milestone 2: Premium Experience
+         â””â”€â”€ Design system enforcement foundation landed
+         â””â”€â”€ First-run wizard foundation landed
+         â””â”€â”€ Dashboard polish in progress
+         â””â”€â”€ Voice pipeline end-to-end
+         â””â”€â”€ WhatsApp bridge reliable
+         â””â”€â”€ Hero workflows demo-quality
+         â””â”€â”€ AGPL migration
 
-NEXT     Milestone 2: Premium Experience
-         └── Design system enforcement
-         └── First-run wizard — Apple-grade
-         └── Dashboard polish (all pages)
-         └── Voice pipeline end-to-end
-         └── WhatsApp bridge reliable
-         └── Hero workflows demo-quality
-         └── AGPL migration
+NEXT     Milestone 3: Ship v0.1
+         â””â”€â”€ ISO validated on real hardware
+         â””â”€â”€ install.sh validated (Ubuntu + macOS)
+         â””â”€â”€ README â€” the product pitch
+         â””â”€â”€ Social assets ready
+         â””â”€â”€ Docs accuracy pass
+         â””â”€â”€ v0.1.0 release tag
 
-THEN     Milestone 3: Ship v0.1
-         └── ISO validated on real hardware
-         └── install.sh validated (Ubuntu + macOS)
-         └── README — the product pitch
-         └── Social assets ready
-         └── Docs accuracy pass
-         └── v0.1.0 release tag
-
-AFTER    Milestone 4: Platform Depth
-         └── Wave 1 Packs production-grade
-         └── Browser Workbench
-         └── Research Engine
-         └── MCP Manager
-         └── Richer A2A Federation
-         └── Pack Studio
-         └── Extension ecosystem hardening
+THEN     Milestone 4: Platform Depth
+         â””â”€â”€ Wave 1 Packs production-grade
+         â””â”€â”€ Browser Workbench
+         â””â”€â”€ Research Engine
+         â””â”€â”€ MCP Manager
+         â””â”€â”€ Richer A2A Federation
+         â””â”€â”€ Pack Studio
+         â””â”€â”€ Extension ecosystem hardening
 
 LATER    Milestone 5: True Distro
-         └── Calamares installer
-         └── Custom branded ISO
-         └── Auto-update system
-         └── Tier A validation
+         â””â”€â”€ Calamares installer
+         â””â”€â”€ Custom branded ISO
+         â””â”€â”€ Auto-update system
+         â””â”€â”€ Tier A validation
 ```

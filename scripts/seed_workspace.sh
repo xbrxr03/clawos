@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Seed a workspace with default templates
 # Usage: bash scripts/seed_workspace.sh [workspace_id]
 set -e

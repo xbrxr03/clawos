@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""folder-summary — generate markdown summary of folder contents."""
+"""folder-summary â€” generate markdown summary of folder contents."""
 from pathlib import Path
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus
 
@@ -21,7 +21,7 @@ async def run(args: dict, agent) -> WorkflowResult:
 
     prompt = (
         f"Generate a markdown summary of the folder: {path}\n\n"
-        "1. Use fs.list and shell.run (ls -lh) to get file list with sizes and dates.\n"
+        "1. Use fs.list and shell.restricted (ls -lh) to get file list with sizes and dates.\n"
         "2. Write a markdown report:\n\n"
         "# Folder Summary: <folder name>\n"
         "**Path:** <full path>\n"

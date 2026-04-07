@@ -1,28 +1,30 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import type { ReactNode } from 'react'
 
 export type AppNavItem = {
   label: string
   to: string
+  description: string
   icon: ReactNode
 }
 
 export const appNav: AppNavItem[] = [
-  { to: '/', label: 'Home', icon: <IconHome /> },
-  { to: '/tasks', label: 'Tasks', icon: <IconTasks /> },
-  { to: '/approvals', label: 'Approvals', icon: <IconShield /> },
-  { to: '/packs', label: 'Packs', icon: <IconLayers /> },
-  { to: '/workflows', label: 'Workflows', icon: <IconWorkflow /> },
-  { to: '/providers', label: 'Providers', icon: <IconNodes /> },
-  { to: '/registry', label: 'Registry', icon: <IconGrid /> },
-  { to: '/traces', label: 'Traces', icon: <IconPulse /> },
-  { to: '/models', label: 'Models', icon: <IconCpu /> },
-  { to: '/studio', label: 'Pack Studio', icon: <IconStudio /> },
-  { to: '/workbench', label: 'Workbench', icon: <IconWorkbench /> },
-  { to: '/research', label: 'Research', icon: <IconResearch /> },
-  { to: '/mcp', label: 'MCP', icon: <IconMCP /> },
-  { to: '/federation', label: 'Federation', icon: <IconFederation /> },
-  { to: '/memory', label: 'Memory/Audit', icon: <IconDatabase /> },
-  { to: '/settings', label: 'Settings', icon: <IconSettings /> },
+  { to: '/', label: 'Overview', description: 'Signal-rich snapshot of ClawOS, your approvals, and today.', icon: <IconHome /> },
+  { to: '/tasks', label: 'Tasks', description: 'Live queue for delegated work, missions, and execution history.', icon: <IconTasks /> },
+  { to: '/approvals', label: 'Approvals', description: 'Human review for high-trust actions and sensitive tool calls.', icon: <IconShield /> },
+  { to: '/packs', label: 'Packs', description: 'Curated ClawOS outcomes with defaults, dashboards, and eval posture.', icon: <IconLayers /> },
+  { to: '/workflows', label: 'Workflows', description: 'Local-first automations with direct execution and live output.', icon: <IconWorkflow /> },
+  { to: '/providers', label: 'Providers', description: 'Local Ollama first, with cloud posture and testing when needed.', icon: <IconNodes /> },
+  { to: '/registry', label: 'Registry', description: 'Trust-aware extension catalog and local A2A identity surface.', icon: <IconGrid /> },
+  { to: '/traces', label: 'Traces', description: 'Release confidence, eval suites, and execution timeline history.', icon: <IconPulse /> },
+  { to: '/models', label: 'Models', description: 'Ollama runtime inventory and model posture for this machine.', icon: <IconCpu /> },
+  { to: '/studio', label: 'Pack Studio', description: 'Visual workflow composition for packs, approvals, and deployment.', icon: <IconStudio /> },
+  { to: '/workbench', label: 'Workbench', description: 'Fetch pages, inspect source material, and hand context to Nexus.', icon: <IconWorkbench /> },
+  { to: '/research', label: 'Research', description: 'Citation-backed multi-source research sessions with resumable runs.', icon: <IconResearch /> },
+  { to: '/mcp', label: 'MCP', description: 'Install, connect, and inspect model-context protocol servers and tools.', icon: <IconMCP /> },
+  { to: '/federation', label: 'Federation', description: 'Peer trust, agent-card identity, and multi-node ClawOS posture.', icon: <IconFederation /> },
+  { to: '/memory', label: 'Memory/Audit', description: 'Workspace memory layers, audit surfaces, and runtime history.', icon: <IconDatabase /> },
+  { to: '/settings', label: 'Settings', description: 'Desktop posture, support tooling, startup behavior, and recovery.', icon: <IconSettings /> },
 ]
 
 function IconHome() {

@@ -1,7 +1,9 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { FormEvent, Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './app/AppShell'
 import { InspectorRail } from './app/InspectorRail'
+import { Card, LoadingPanel, ShortcutKey } from './components/ui.jsx'
 import { useCommandCenter } from './hooks/useCommandCenter'
 
 const OverviewPage = lazy(() => import('./pages/Overview').then((mod) => ({ default: mod.Overview })))
@@ -27,16 +29,12 @@ const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => (
 
 function RouteFallback({ message, compact = false }: { message: string; compact?: boolean }) {
   return (
-    <div
-      style={{
-        minHeight: compact ? 280 : '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        padding: compact ? 32 : 0,
-        color: 'var(--text-3)',
-      }}
-    >
-      {message}
+    <div style={{ minHeight: compact ? 420 : '100vh', padding: compact ? 28 : 36 }}>
+      <LoadingPanel
+        eyebrow="Loading"
+        title={message}
+        body="ClawOS is composing the current surface, restoring live state, and warming up the command center."
+      />
     </div>
   )
 }
@@ -49,6 +47,7 @@ function ShellRoutes({
   pullProgress,
   runtimes,
   services,
+  voiceSession,
 }: {
   tasks: any
   approvals: any[]
@@ -57,6 +56,7 @@ function ShellRoutes({
   pullProgress: Record<string, any>
   runtimes: Record<string, any>
   services: Record<string, any>
+  voiceSession: Record<string, any>
 }) {
   return (
     <Suspense fallback={<RouteFallback message="Loading workspace..." compact />}>
@@ -71,6 +71,7 @@ function ShellRoutes({
               events={events}
               models={models}
               runtimes={runtimes}
+              voiceSession={voiceSession}
             />
           }
         />
@@ -98,7 +99,7 @@ function ShellRoutes({
 }
 
 function AuthenticatedApp() {
-  const { connected, events, approvals, services, tasks, models, pullProgress, runtimes } = useCommandCenter()
+  const { connected, events, approvals, services, tasks, models, pullProgress, runtimes, voiceSession } = useCommandCenter()
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (window.localStorage.getItem('clawos-theme') as 'dark' | 'light') || 'dark'
   })
@@ -127,6 +128,7 @@ function AuthenticatedApp() {
               services={services}
               approvals={approvals}
               events={events}
+              voiceSession={voiceSession}
               inspector={<InspectorRail approvals={approvals} services={services} events={events} />}
               theme={theme}
               onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
@@ -139,6 +141,7 @@ function AuthenticatedApp() {
                 pullProgress={pullProgress}
                 runtimes={runtimes}
                 services={services}
+                voiceSession={voiceSession}
               />
             </AppShell>
           }
@@ -194,8 +197,12 @@ export default function CommandCenterApp() {
 
   if (!ready) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', color: 'var(--text-3)' }}>
-        Loading ClawOS...
+      <div style={{ minHeight: '100vh', padding: 36 }}>
+        <LoadingPanel
+          eyebrow="ClawOS"
+          title="Loading Command Center"
+          body="Restoring your local dashboard session, service posture, and the latest Nexus state."
+        />
       </div>
     )
   }
@@ -214,37 +221,51 @@ export default function CommandCenterApp() {
 
   if (authRequired && !authenticated) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
-        <form
-          onSubmit={login}
-          className="glass"
-          style={{ width: 'min(420px, 100%)', padding: 24, background: 'var(--panel-solid)' }}
-        >
-          <div className="section-label">Dashboard access</div>
-          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.04em' }}>Unlock ClawOS</div>
-          <div style={{ marginTop: 10, color: 'var(--text-3)' }}>
-            Enter the dashboard token from your local ClawOS config to continue.
+      <div className="auth-screen">
+        <div className="auth-screen-panel">
+          <div className="auth-screen-copy">
+            <div className="page-eyebrow">Dashboard Access</div>
+            <div className="page-title">Unlock ClawOS</div>
+            <div className="page-description">
+              Your command center is local-first and private by default. Enter the dashboard token from your ClawOS config to continue.
+            </div>
+            <div className="auth-screen-tips">
+              <div className="auth-tip">
+                <span>Privacy-first</span>
+                <span>Local session cookie after login</span>
+              </div>
+              <div className="auth-tip">
+                <span>Quick actions</span>
+                <span><ShortcutKey>Ctrl</ShortcutKey> <ShortcutKey>K</ShortcutKey> opens the command palette after unlock</span>
+              </div>
+              <div className="auth-tip">
+                <span>Setup flow</span>
+                <span><a href="/setup">Open the first-run wizard</a></span>
+              </div>
+            </div>
           </div>
-          <input
-            type="password"
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            placeholder="Dashboard token"
-            style={{
-              width: '100%',
-              marginTop: 18,
-              padding: '12px 14px',
-              borderRadius: 12,
-              border: '1px solid var(--border)',
-              background: 'var(--surface-2)',
-              color: 'var(--text)',
-            }}
-          />
-          {error && <div style={{ marginTop: 12, color: 'var(--red)', fontSize: 12 }}>{error}</div>}
-          <button type="submit" className="btn primary" style={{ width: '100%', marginTop: 18 }}>
-            Unlock Command Center
-          </button>
-        </form>
+
+          <form onSubmit={login}>
+            <Card className="auth-card" style={{ padding: 24, background: 'var(--panel-solid)' }}>
+              <div className="section-label">Local Token</div>
+              <div className="panel-title">Dashboard token</div>
+              <div className="panel-description">
+                Paste the token exactly as it appears in your local ClawOS config.
+              </div>
+              <input
+                type="password"
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+                placeholder="Dashboard token"
+                style={{ width: '100%', marginTop: 18 }}
+              />
+              {error ? <div style={{ marginTop: 12, color: 'var(--red)', fontSize: 12 }}>{error}</div> : null}
+              <button type="submit" className="btn primary" style={{ width: '100%', marginTop: 18 }}>
+                Unlock Command Center
+              </button>
+            </Card>
+          </form>
+        </div>
       </div>
     )
   }

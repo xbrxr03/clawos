@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # content-factory installer — Pollinations.ai edition
 # No ComfyUI, no GPU required for images.
 # Installs: system deps, Python packages, Piper TTS + model,

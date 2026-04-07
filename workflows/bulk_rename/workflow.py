@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""bulk-rename — rename files via natural language pattern."""
+"""bulk-rename â€” rename files via natural language pattern."""
 from pathlib import Path
 from workflows.engine import WorkflowMeta, WorkflowResult, WorkflowStatus
 
@@ -25,9 +25,9 @@ async def run(args: dict, agent) -> WorkflowResult:
         f"Rule: {pattern}\n\n"
         "1. Use fs.list to list all files.\n"
         "2. Apply the rename rule to generate new filenames.\n"
-        "3. " + ("Show what the renames WOULD be (dry run — do not rename).\n" if dry_run else
-                  "Rename each file using shell.run or fs operations.\n") +
-        "4. List: old name → new name for each file.\n"
+        "3. " + ("Show what the renames WOULD be (dry run - do not rename).\n" if dry_run else
+                  "Rename each file using shell.restricted or fs operations.\n") +
+        "4. List: old name -> new name for each file.\n"
         "End with: Renamed N files."
     )
 

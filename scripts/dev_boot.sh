@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS dev_boot.sh — start all services for development
 # Usage: bash scripts/dev_boot.sh [--no-dashboard] [--no-voice]
 

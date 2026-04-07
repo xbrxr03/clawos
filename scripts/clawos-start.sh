@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# ClawOS ordered startup — called by clawos.service ExecStart
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# ClawOS ordered startup - called by clawos.service ExecStart
 # Launches all services as background processes in dependency order.
-# clawos.service is the supervisor — all child processes live under it.
+# clawos.service is the supervisor - all child processes live under it.
 
 set -uo pipefail
 
@@ -11,9 +12,9 @@ PIDS_DIR="$CLAWOS_HOME/run"
 mkdir -p "$LOG_DIR" "$PIDS_DIR"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
-ok()   { echo -e "  ${GREEN}✓${NC} $*"; }
-fail() { echo -e "  ${RED}✗${NC} $*"; }
-info() { echo -e "  ${YELLOW}→${NC} $*"; }
+ok()   { echo -e "  ${GREEN}OK${NC} $*"; }
+fail() { echo -e "  ${RED}XX${NC} $*"; }
+info() { echo -e "  ${YELLOW}->${NC} $*"; }
 
 start_svc() {
     local name="$1"
@@ -42,31 +43,12 @@ start_svc() {
     if kill -0 "$pid" 2>/dev/null; then
         ok "$name (pid $pid)"
     else
-        fail "$name exited — check $LOG_DIR/$name.log"
-        if [[ "$name" =~ ^(policyd|memd|modeld|agentd|clawd) ]]; then
+        fail "$name exited - check $LOG_DIR/$name.log"
+        if [[ "$name" =~ ^(policyd|memd|modeld|agentd|clawd)$ ]]; then
             echo "  Critical service failed. Aborting."
             exit 1
         fi
     fi
-}
-
-start_dashd() {
-    local name="dashd"
-    local pidfile="$PIDS_DIR/$name.pid"
-    info "Starting $name..."
-    [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null || true
-    rm -f "$pidfile"
-
-    PYTHONPATH="$CLAWOS_HOME" CLAWOS_HOME="$CLAWOS_HOME" \
-        /usr/bin/python3 -m uvicorn service:app \
-        --host 0.0.0.0 --port 7070 --log-level warning \
-        --app-dir "$CLAWOS_HOME/dashboard/backend" \
-        >> "$LOG_DIR/$name.log" 2>&1 &
-
-    local pid=$!
-    echo "$pid" > "$pidfile"
-    sleep 2
-    kill -0 "$pid" 2>/dev/null && ok "$name (pid $pid)" || fail "$name exited — check $LOG_DIR/$name.log"
 }
 
 start_gatewayd() {
@@ -82,7 +64,7 @@ start_gatewayd() {
     local pid=$!
     echo "$pid" > "$pidfile"
     sleep 2
-    kill -0 "$pid" 2>/dev/null && ok "$name (pid $pid)" || fail "$name exited — check $LOG_DIR/$name.log"
+    kill -0 "$pid" 2>/dev/null && ok "$name (pid $pid)" || fail "$name exited - check $LOG_DIR/$name.log"
 }
 
 echo ""
@@ -96,7 +78,7 @@ start_svc  "toolbridge" "services/toolbridge/service.py" 2
 start_svc  "agentd"     "services/agentd/service.py"     2
 start_svc  "voiced"     "services/voiced/service.py"     1
 start_svc  "clawd"      "services/clawd/service.py"      2
-start_dashd
+start_svc  "dashd"      "services/dashd/main.py"         2
 start_gatewayd
 
 echo ""

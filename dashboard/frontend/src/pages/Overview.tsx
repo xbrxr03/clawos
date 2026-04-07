@@ -1,6 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Badge, Card, SectionLabel, StatusDot, Ts } from '../components/ui.jsx'
+import { Badge, Card, PageHeader, PanelHeader, SectionLabel, StatusDot, Ts } from '../components/ui.jsx'
 import {
   commandCenterApi,
   type AttentionEvent,
@@ -31,6 +32,7 @@ export function Overview({
   events,
   models,
   runtimes = {},
+  voiceSession: liveVoiceSession = null,
 }: {
   services: ServiceMap
   tasks: TaskMap
@@ -38,6 +40,7 @@ export function Overview({
   events: EventRecord[]
   models: ModelRecord
   runtimes?: RuntimeRecord
+  voiceSession?: VoiceSession | null
 }) {
   const navigate = useNavigate()
   const [presence, setPresence] = useState<PresencePayload | null>(null)
@@ -57,6 +60,7 @@ export function Overview({
   ])
   const [working, setWorking] = useState(false)
   const [conversationStatus, setConversationStatus] = useState('')
+  const [voiceBusy, setVoiceBusy] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -65,18 +69,22 @@ export function Overview({
       commandCenterApi.listAttention(),
       commandCenterApi.listMissions(),
       commandCenterApi.listApprovals(),
-      commandCenterApi.getVoiceSession(),
     ])
-      .then(([presencePayload, briefingPayload, attentionPayload, missionPayload, approvalPayload, voicePayload]) => {
+      .then(([presencePayload, briefingPayload, attentionPayload, missionPayload, approvalPayload]) => {
         setPresence(presencePayload)
         setBriefing(briefingPayload)
         setSignals(Array.isArray(attentionPayload) ? attentionPayload : [])
         setMissions(Array.isArray(missionPayload) ? missionPayload : [])
         setLiveApprovals(Array.isArray(approvalPayload) ? approvalPayload : [])
-        setVoiceSession(voicePayload)
       })
       .catch(() => null)
   }, [])
+
+  useEffect(() => {
+    if (liveVoiceSession) {
+      setVoiceSession(liveVoiceSession)
+    }
+  }, [liveVoiceSession])
 
   useEffect(() => {
     setLiveApprovals((current) => (current.length ? current : approvals || []))
@@ -98,6 +106,24 @@ export function Overview({
   const tone = presence?.profile?.tone || 'crisp-executive'
 
   const timeline = useMemo(() => events.slice(0, 6), [events])
+  const serviceCoverage = serviceEntries.length ? Math.round((healthyServices / serviceEntries.length) * 100) : 0
+  const activityMix = useMemo(() => {
+    const counts = { workflow: 0, service: 0, audit: 0, other: 0 }
+    events.slice(0, 24).forEach((event) => {
+      if ((event.type || '').startsWith('workflow_')) counts.workflow += 1
+      else if (event.type === 'service_health') counts.service += 1
+      else if (event.type === 'audit_event') counts.audit += 1
+      else counts.other += 1
+    })
+    return counts
+  }, [events])
+  const runtimeHighlights = Object.entries(runtimes || {})
+    .slice(0, 4)
+    .map(([name, item]) => ({
+      name,
+      status: item?.running ? 'running' : item?.installed ? 'installed' : 'missing',
+      model: item?.model || 'unassigned',
+    }))
 
   const submitConversation = async (event: FormEvent) => {
     event.preventDefault()
@@ -125,6 +151,44 @@ export function Overview({
       setConversationStatus(error.message || 'Nexus could not queue that request.')
     } finally {
       setWorking(false)
+    }
+  }
+
+  const pushToTalk = async () => {
+    if (voiceBusy || voiceMode === 'off') return
+    setVoiceBusy(true)
+    setConversationStatus('Listening for a local voice round trip...')
+    try {
+      const response = await commandCenterApi.pushToTalk()
+      setConversation((current) => {
+        const next = [...current]
+        if (response.transcript) {
+          next.push({
+            id: `voice-user-${Date.now()}`,
+            role: 'user',
+            content: response.transcript,
+            meta: 'Voice',
+          })
+        }
+        if (response.response) {
+          next.push({
+            id: `voice-assistant-${Date.now()}`,
+            role: 'assistant',
+            content: response.response,
+            meta: response.playback_ok ? 'Spoken' : 'Ready',
+          })
+        }
+        return next.slice(-6)
+      })
+      setConversationStatus(
+        response.error ||
+          response.issues?.[0] ||
+          (response.transcript ? 'Voice round trip complete.' : 'No speech detected in that round.')
+      )
+    } catch (error: any) {
+      setConversationStatus(error.message || 'Voice round trip failed.')
+    } finally {
+      setVoiceBusy(false)
     }
   }
 
@@ -156,6 +220,29 @@ export function Overview({
   return (
     <div className="fade-up" style={{ padding: '0 0 40px' }}>
       <div style={{ padding: '28px 24px 0', display: 'grid', gap: 16 }}>
+        <PageHeader
+          eyebrow="Overview"
+          title="Your command center is live."
+          description="Real-time posture across services, missions, approvals, and conversation lanes. This is the fastest read on what Nexus is doing for you right now."
+          meta={
+            <>
+              <Badge color={serviceCoverage >= 80 ? 'green' : serviceCoverage >= 50 ? 'orange' : 'red'}>
+                {serviceCoverage}% healthy
+              </Badge>
+              <Badge color={liveApprovals.length ? 'orange' : 'green'}>
+                {liveApprovals.length ? `${liveApprovals.length} approvals waiting` : 'No blockers'}
+              </Badge>
+              <Badge color={voiceState === 'idle' ? 'gray' : 'blue'}>{voiceState}</Badge>
+            </>
+          }
+          actions={
+            <>
+              <button className="btn primary" onClick={() => navigate('/workflows')}>Open workflows</button>
+              <button className="btn" onClick={() => navigate('/settings')}>Refine presence</button>
+            </>
+          }
+        />
+
         <Card
           style={{
             padding: 24,
@@ -175,11 +262,6 @@ export function Overview({
             <div style={{ color: 'var(--text-3)', fontSize: 14, maxWidth: 580 }}>
               A calm, conversational operator that prepares, acts inside trusted lanes, and surfaces only what matters. The command center is now your desktop home for today, missions, decisions, and signals.
             </div>
-
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button className="btn primary" onClick={() => navigate('/workflows')}>Open workflows</button>
-              <button className="btn" onClick={() => navigate('/settings')}>Refine presence</button>
-            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -187,6 +269,78 @@ export function Overview({
             <MetricPanel label="Voice state" value={voiceState} tone={voiceState === 'idle' ? 'gray' : 'green'} />
             <MetricPanel label="Pending decisions" value={liveApprovals.length} tone={liveApprovals.length ? 'orange' : 'green'} />
             <MetricPanel label="Active missions" value={topMissions.length} tone={topMissions.length ? 'blue' : 'gray'} />
+          </div>
+        </Card>
+      </div>
+
+      <SectionLabel>At A Glance</SectionLabel>
+      <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Card style={{ padding: 20, display: 'grid', gap: 16 }}>
+          <PanelHeader
+            eyebrow="Pulse"
+            title="Service and task health"
+            description="Real usage signals instead of placeholder stats."
+            aside={<Badge color={serviceCoverage >= 80 ? 'green' : serviceCoverage >= 50 ? 'orange' : 'red'}>{serviceCoverage}% ready</Badge>}
+          />
+          <BarRow label="Healthy services" value={healthyServices} total={serviceEntries.length || 1} tone="green" />
+          <BarRow label="Active tasks" value={taskCounts.active} total={Math.max(taskCounts.active + taskCounts.queued + taskCounts.completed + taskCounts.failed, 1)} tone="blue" />
+          <BarRow label="Queued tasks" value={taskCounts.queued} total={Math.max(taskCounts.active + taskCounts.queued + taskCounts.completed + taskCounts.failed, 1)} tone="orange" />
+          <BarRow label="Running models" value={runningModels} total={Math.max((models.models || []).length, 1)} tone="purple" />
+        </Card>
+
+        <Card style={{ padding: 20, display: 'grid', gap: 16 }}>
+          <PanelHeader
+            eyebrow="Flow"
+            title="Recent activity mix"
+            description="What the command center has been handling in the latest event window."
+            aside={<Badge color="blue">{events.length} events</Badge>}
+          />
+          <BarRow label="Workflow activity" value={activityMix.workflow} total={Math.max(events.length, 1)} tone="blue" />
+          <BarRow label="Service health" value={activityMix.service} total={Math.max(events.length, 1)} tone="green" />
+          <BarRow label="Audit signals" value={activityMix.audit} total={Math.max(events.length, 1)} tone="orange" />
+          <BarRow label="Other events" value={activityMix.other} total={Math.max(events.length, 1)} tone="gray" />
+        </Card>
+      </div>
+
+      <div style={{ padding: '12px 24px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Card style={{ padding: 20, display: 'grid', gap: 14 }}>
+          <PanelHeader
+            eyebrow="Runtimes"
+            title="Model posture"
+            description="Which execution lanes are warm and what model each lane is carrying."
+          />
+          {runtimeHighlights.length === 0 ? (
+            <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No runtime adapters have reported posture yet.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {runtimeHighlights.map((runtime) => (
+                <div key={runtime.name} style={{ padding: 14, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>{runtime.name}</div>
+                    <div className="mono" style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{runtime.model}</div>
+                  </div>
+                  <Badge color={runtime.status === 'running' ? 'green' : runtime.status === 'installed' ? 'blue' : 'gray'}>
+                    {runtime.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card style={{ padding: 20, display: 'grid', gap: 14 }}>
+          <PanelHeader
+            eyebrow="Decisions"
+            title="Approval pressure"
+            description="Which review lane is most likely to interrupt your flow."
+          />
+          <BarRow label="High risk" value={liveApprovals.filter((item) => item.risk === 'high').length} total={Math.max(liveApprovals.length, 1)} tone="red" />
+          <BarRow label="Medium risk" value={liveApprovals.filter((item) => !item.risk || item.risk === 'medium').length} total={Math.max(liveApprovals.length, 1)} tone="orange" />
+          <BarRow label="Low risk" value={liveApprovals.filter((item) => item.risk === 'low').length} total={Math.max(liveApprovals.length, 1)} tone="blue" />
+          <div style={{ color: 'var(--text-3)', fontSize: 12 }}>
+            {liveApprovals.length === 0
+              ? 'No approval queue right now, so Nexus can stay in trusted lanes.'
+              : 'Approval-sensitive work is visible here before it becomes a blocker.'}
           </div>
         </Card>
       </div>
@@ -256,7 +410,18 @@ export function Overview({
                 Tone: {tone}. Voice mode: {voiceMode.replace('_', ' ')}. Follow-up windows stay short by default.
               </div>
             </div>
-            <Badge color={voiceState === 'idle' ? 'gray' : 'green'}>{voiceState}</Badge>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Badge color={voiceState === 'idle' ? 'gray' : 'green'}>{voiceState}</Badge>
+              <button className="btn" type="button" onClick={pushToTalk} disabled={voiceBusy || voiceMode === 'off'}>
+                {voiceBusy ? 'Listening...' : voiceMode === 'off' ? 'Voice off' : 'Push to talk'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            <SmallMetric label="Input device" value={voiceSession?.device_label || 'Default input'} />
+            <SmallMetric label="Last utterance" value={voiceSession?.last_utterance || 'Waiting for voice input'} />
+            <SmallMetric label="Last response" value={voiceSession?.last_response || 'No spoken reply yet'} />
           </div>
 
           <div style={{ display: 'grid', gap: 10 }}>
@@ -303,7 +468,12 @@ export function Overview({
             </button>
           </form>
 
-          {conversationStatus && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>{conversationStatus}</div>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+            {conversationStatus ? <div style={{ color: 'var(--text-3)', fontSize: 12 }}>{conversationStatus}</div> : <div />}
+            <div style={{ color: 'var(--text-3)', fontSize: 12 }}>
+              <Ts value={voiceSession?.updated_at} /> {voiceMode === 'off' ? 'Voice is disabled right now.' : 'Ctrl+Shift+Space also starts push-to-talk.'}
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -469,6 +639,40 @@ function SmallMetric({ label, value }: { label: string; value: string | number }
     <div style={{ borderRadius: 12, padding: 12, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
       <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text)' }}>{value}</div>
       <div style={{ marginTop: 4, color: 'var(--text-3)', fontSize: 12 }}>{label}</div>
+    </div>
+  )
+}
+
+function BarRow({
+  label,
+  value,
+  total,
+  tone,
+}: {
+  label: string
+  value: number
+  total: number
+  tone: 'blue' | 'green' | 'orange' | 'red' | 'gray' | 'purple'
+}) {
+  const color = {
+    blue: 'var(--blue)',
+    green: 'var(--green)',
+    orange: 'var(--orange)',
+    red: 'var(--red)',
+    gray: 'var(--text-3)',
+    purple: 'var(--purple)',
+  }[tone]
+  const width = Math.max(8, Math.round((Math.max(value, 0) / Math.max(total, 1)) * 100))
+
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13 }}>
+        <span style={{ color: 'var(--text-2)' }}>{label}</span>
+        <span className="mono" style={{ color }}>{value}/{total}</span>
+      </div>
+      <div style={{ height: 9, borderRadius: 999, background: 'var(--surface-2)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ width: `${width}%`, height: '100%', borderRadius: 999, background: color }} />
+      </div>
     </div>
   )
 }

@@ -32,6 +32,17 @@ def test_a2a_send_requires_auth_when_token_configured(monkeypatch):
         return "handled"
 
     monkeypatch.setattr("services.a2ad.task_handler.handle_task", fake_handle_task)
+    monkeypatch.setattr(
+        "services.a2ad.peer_registry.get_registry",
+        lambda: type(
+            "Registry",
+            (),
+            {
+                "is_blocked": staticmethod(lambda url: False),
+                "is_trusted_url": staticmethod(lambda url: url == "http://trusted-peer.test/a2a"),
+            },
+        )(),
+    )
 
     from services.a2ad.service import create_app
 
@@ -50,13 +61,64 @@ def test_a2a_send_requires_auth_when_token_configured(monkeypatch):
     with TestClient(app) as client:
         assert client.post("/a2a/tasks/send", json=body).status_code == 401
         assert client.get("/a2a/peers").status_code == 401
+        assert client.post(
+            "/a2a/tasks/send",
+            json=body,
+            headers={"Authorization": "Bearer secret-token"},
+        ).status_code == 403
 
         response = client.post(
             "/a2a/tasks/send",
             json=body,
-            headers={"Authorization": "Bearer secret-token"},
+            headers={
+                "Authorization": "Bearer secret-token",
+                "X-ClawOS-Peer-URL": "http://trusted-peer.test/a2a",
+            },
         )
         assert response.status_code == 200
         payload = response.json()
         assert payload["status"]["state"] == "completed"
         assert payload["artifacts"][0]["parts"][0]["text"] == "handled"
+
+
+def test_a2a_rejects_untrusted_peers(monkeypatch):
+    async def fake_handle_task(_task):
+        return "handled"
+
+    monkeypatch.setattr("services.a2ad.task_handler.handle_task", fake_handle_task)
+    monkeypatch.setattr(
+        "services.a2ad.peer_registry.get_registry",
+        lambda: type(
+            "Registry",
+            (),
+            {
+                "is_blocked": staticmethod(lambda url: False),
+                "is_trusted_url": staticmethod(lambda url: False),
+            },
+        )(),
+    )
+
+    from services.a2ad.service import create_app
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_token": "secret-token",
+        "mdns_enabled": False,
+    })
+
+    body = {
+        "id": "task-1",
+        "message": {"parts": [{"type": "text", "text": "hello from peer"}]},
+        "metadata": {"workspace": "nexus_default"},
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/a2a/tasks/send",
+            json=body,
+            headers={
+                "Authorization": "Bearer secret-token",
+                "X-ClawOS-Peer-URL": "http://unknown-peer.test/a2a",
+            },
+        )
+        assert response.status_code == 403

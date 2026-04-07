@@ -116,3 +116,58 @@ def test_setupd_plan_apply_repair_and_diagnostics(monkeypatch):
         assert final_state["completion_marker"] is True
         assert any("Setup complete" in entry for entry in final_state["logs"])
         assert any("Launch on login enabled" in entry for entry in final_state["logs"])
+
+
+def test_setupd_options_and_model_preparation(monkeypatch):
+    from services.setupd import service as setup_service
+    from services.setupd.state import SetupState
+
+    seed_state = SetupState(
+        install_channel="desktop",
+        platform="linux",
+        architecture="x86_64",
+        service_manager="systemd",
+        detected_hardware={"summary": "Tier B - 16 GB RAM - CPU only", "tier": "B", "has_mic": True},
+        selected_models=["qwen2.5:7b"],
+        selected_provider_profile="local-ollama",
+    )
+
+    def fake_ensure_model(model, show_progress=True, progress_callback=None):
+        if progress_callback:
+            progress_callback({"model": model, "status": "pulling manifest", "percent": 12, "eta_seconds": 40})
+            progress_callback({"model": model, "status": "ready", "percent": 100, "eta_seconds": 0})
+        return True
+
+    monkeypatch.setattr(setup_service.SetupState, "load", classmethod(lambda cls: seed_state))
+    monkeypatch.setattr(setup_service.SetupState, "save", lambda self, path=None: None)
+    monkeypatch.setattr(setup_service, "record_trace", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(setup_service, "sync_presence_from_setup", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("bootstrap.model_provision.ensure_model", fake_ensure_model)
+
+    setup_service._SERVICE = None
+    app = setup_service.create_app()
+
+    with TestClient(app) as client:
+        options = client.post(
+            "/api/setup/options",
+            headers=SETUP_HEADERS,
+            json={"selected_models": ["qwen2.5-coder:7b"], "whatsapp_enabled": True, "launch_on_login": False},
+        )
+        assert options.status_code == 200
+        assert options.json()["selected_models"] == ["qwen2.5-coder:7b"]
+        assert options.json()["whatsapp_enabled"] is True
+        assert options.json()["launch_on_login"] is False
+
+        prepare = client.post("/api/setup/model", headers=SETUP_HEADERS, json={"model": "qwen2.5-coder:7b"})
+        assert prepare.status_code == 200
+
+        for _ in range(20):
+            current = client.get("/api/setup/state", headers=SETUP_HEADERS).json()
+            if current["progress_stage"] == "model-ready":
+                break
+            time.sleep(0.05)
+
+        final_state = client.get("/api/setup/state", headers=SETUP_HEADERS).json()
+        assert final_state["progress_stage"] == "model-ready"
+        assert final_state["model_pull_progress"]["percent"] == 100
+        assert final_state["model_pull_progress"]["model"] == "qwen2.5-coder:7b"

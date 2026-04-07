@@ -15,7 +15,7 @@ PRESETS = Path(__file__).parent.parent / "data" / "presets" / "workspaces" / "de
 
 def _copy_if_missing(src: Path, dst: Path):
     if not dst.exists() and src.exists():
-        dst.write_text(src.read_text())
+        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
         return True
     return False
 
@@ -33,7 +33,10 @@ def init_workspace(workspace_id: str = "nexus_default") -> Path:
     # PINNED.md — blank if not present
     p = pinned_path(workspace_id)
     if not p.exists():
-        p.write_text("# Pinned Facts\n# Add permanent facts here — Nexus always reads this.\n")
+        p.write_text(
+            "# Pinned Facts\n# Add permanent facts here - Nexus always reads this.\n",
+            encoding="utf-8",
+        )
 
     return ws
 

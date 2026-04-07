@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Badge, Card, Empty, SectionLabel } from '../components/ui.jsx'
 import { commandCenterApi, type WorkbenchPage, type WorkbenchSession } from '../lib/commandCenterApi'

@@ -10,6 +10,7 @@ Runs:
 """
 from __future__ import annotations
 
+import ast
 import json
 import re
 import shutil
@@ -22,34 +23,39 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
 FRONTEND_DIR = ROOT / "dashboard" / "frontend"
+GLOBAL_EXCLUDE_PARTS = {".claude", ".git", "node_modules", "storybook-static", "playwright-report", "test-results"}
 
 STATIC_SCANS = (
     {
         "label": "no shell=True in product code",
-        "pattern": re.compile(r"\bshell=True\b"),
+        "kind": "ast",
+        "ast_check": "shell_true",
         "include": {".py"},
-        "exclude_parts": {"tests", "node_modules", ".git", "storybook-static", "playwright-report", "test-results"},
+        "exclude_parts": {"tests"},
         "exclude_paths": {Path("scripts/security_audit.py")},
     },
     {
         "label": "no tempfile.mktemp in product code",
-        "pattern": re.compile(r"\btempfile\.mktemp\("),
+        "kind": "ast",
+        "ast_check": "tempfile_mktemp",
         "include": {".py"},
-        "exclude_parts": {"tests", "node_modules", ".git"},
+        "exclude_parts": {"tests"},
         "exclude_paths": set(),
     },
     {
         "label": "no exec(open(...)) shims in product code",
-        "pattern": re.compile(r"exec\(open\("),
+        "kind": "ast",
+        "ast_check": "exec_open",
         "include": {".py"},
-        "exclude_parts": {"tests", "node_modules", ".git"},
+        "exclude_parts": {"tests"},
         "exclude_paths": {Path("scripts/security_audit.py")},
     },
     {
         "label": "no curl-pipe-shell installers in product code",
+        "kind": "regex",
         "pattern": re.compile(r"curl[^\n|]*\|\s*(sh|bash)"),
         "include": {".py", ".sh"},
-        "exclude_parts": {"tests", "node_modules", ".git", "README.md"},
+        "exclude_parts": {"tests", "README.md"},
         "exclude_paths": {
             Path("bootstrap/model_provision.py"),
             Path("clawctl/commands/model.py"),
@@ -73,7 +79,42 @@ def _iter_repo_files():
     for path in ROOT.rglob("*"):
         if not path.is_file():
             continue
+        if any(part in GLOBAL_EXCLUDE_PARTS for part in path.parts):
+            continue
         yield path
+
+
+def _ast_match_lines(path: Path, check: str) -> list[int]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+    except SyntaxError:
+        return []
+
+    matches: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if check == "shell_true":
+            for keyword in node.keywords:
+                if keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True:
+                    matches.append(node.lineno)
+        elif check == "tempfile_mktemp":
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr == "mktemp"
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "tempfile"
+            ):
+                matches.append(node.lineno)
+        elif check == "exec_open":
+            func = node.func
+            if not (isinstance(func, ast.Name) and func.id == "exec" and node.args):
+                continue
+            first_arg = node.args[0]
+            if isinstance(first_arg, ast.Call) and isinstance(first_arg.func, ast.Name) and first_arg.func.id == "open":
+                matches.append(node.lineno)
+    return sorted(set(matches))
 
 
 def _scan_patterns():
@@ -86,6 +127,10 @@ def _scan_patterns():
             if any(part in scan["exclude_parts"] for part in path.parts):
                 continue
             if path.relative_to(ROOT) in scan["exclude_paths"]:
+                continue
+            if scan["kind"] == "ast":
+                for line_number in _ast_match_lines(path, scan["ast_check"]):
+                    matches.append(f"{path.relative_to(ROOT)}:{line_number}")
                 continue
             text = path.read_text(encoding="utf-8", errors="replace")
             for index, line in enumerate(text.splitlines(), start=1):

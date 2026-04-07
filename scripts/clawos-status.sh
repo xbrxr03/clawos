@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # clawos status — ClawOS service health and runtime info
 
 CLAWOS_HOME="${CLAWOS_HOME:-$HOME/clawos}"

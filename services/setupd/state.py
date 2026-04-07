@@ -41,10 +41,13 @@ class SetupState:
     voice_mode: str = "push_to_talk"
     briefing_enabled: bool = True
     voice_enabled: bool = True
+    whatsapp_enabled: bool = False
     enable_openclaw: bool = False
     launch_on_login: bool = True
     policy_mode: str = "recommended"
     progress_stage: str = "idle"
+    model_pull_progress: dict[str, Any] = field(default_factory=dict)
+    voice_test: dict[str, Any] = field(default_factory=dict)
     logs: list[str] = field(default_factory=list)
     retry_state: str = ""
     completion_marker: bool = False
@@ -124,6 +127,7 @@ class SetupState:
             state.voice_mode = "push_to_talk" if legacy.voice_enabled else "off"
             state.briefing_enabled = True
             state.voice_enabled = legacy.voice_enabled
+            state.whatsapp_enabled = legacy.whatsapp_enabled
             state.enable_openclaw = legacy.runtime in {"openclaw", "both"} or legacy.whatsapp_enabled
             state.selected_provider_profile = "local-ollama"
             state.primary_pack = "chat-app-command-center" if legacy.whatsapp_enabled else state.primary_pack

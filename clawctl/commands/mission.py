@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl mission - inspect or start Nexus missions."""
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS ISO Builder — builds bootable ISO from Ubuntu 24.04 minimal
 # Usage: sudo bash packaging/iso/build_iso.sh [--skip-download]
 set -euo pipefail

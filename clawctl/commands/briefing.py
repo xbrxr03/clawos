@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl briefing - generate and display the current Nexus briefing."""
 from __future__ import annotations
 

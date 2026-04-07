@@ -1,5 +1,6 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Card, Empty, SectionLabel } from '../components/ui.jsx'
+import { Badge, Card, Empty, PageHeader, PanelHeader, SectionLabel, Skeleton, SkeletonText, StatusDot } from '../components/ui.jsx'
 import { commandCenterApi, type ProviderProfile } from '../lib/commandCenterApi'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -15,10 +16,16 @@ export function ProvidersPage() {
   const [selectedId, setSelectedId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    const data = await commandCenterApi.listProviders()
-    setProviders(Array.isArray(data) ? data : [])
+    setLoading(true)
+    try {
+      const data = await commandCenterApi.listProviders()
+      setProviders(Array.isArray(data) ? data : [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -33,6 +40,15 @@ export function ProvidersPage() {
   const selected = useMemo(
     () => providers.find((provider) => provider.id === selectedId) || null,
     [providers, selectedId],
+  )
+  const stats = useMemo(
+    () => ({
+      total: providers.length,
+      online: providers.filter((provider) => provider.status === 'online').length,
+      selected: providers.filter((provider) => provider.selected).length,
+      cloudReady: providers.filter((provider) => provider.kind !== 'local').length,
+    }),
+    [providers],
   )
 
   const runTest = async (profileId: string) => {
@@ -64,15 +80,38 @@ export function ProvidersPage() {
   return (
     <div className="fade-up" style={{ padding: '0 0 48px' }}>
       <div style={{ padding: '32px 24px 18px' }}>
-        <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.05em' }}>Providers</div>
-        <div style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 6, maxWidth: 720 }}>
-          Local Ollama by default, cloud and compatible endpoints when they materially improve the job.
-        </div>
+        <PageHeader
+          eyebrow="Providers"
+          title="Provider posture with health, switching, and inline testing."
+          description="Keep local Ollama first, but make cloud and compatible backends visible when they materially improve the job."
+          meta={
+            <>
+              <Badge color="blue">{stats.total} profiles</Badge>
+              <Badge color={stats.online ? 'green' : 'orange'}>{stats.online} online</Badge>
+              <Badge color="gray">{stats.cloudReady} non-local</Badge>
+            </>
+          }
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, padding: '0 20px 16px' }}>
+        <MetricCard label="Profiles" value={stats.total} tone="blue" />
+        <MetricCard label="Online" value={stats.online} tone="green" />
+        <MetricCard label="Selected" value={stats.selected} tone="orange" />
+        <MetricCard label="Cloud-ready" value={stats.cloudReady} tone="purple" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, padding: '0 20px' }}>
         <div style={{ display: 'grid', gap: 10 }}>
-          {providers.length === 0 ? (
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} style={{ padding: 18 }}>
+                <Skeleton width="30%" height={14} />
+                <div style={{ height: 12 }} />
+                <SkeletonText lines={2} />
+              </Card>
+            ))
+          ) : providers.length === 0 ? (
             <Card><Empty>No provider profiles have been registered yet.</Empty></Card>
           ) : (
             providers.map((profile) => (
@@ -88,6 +127,7 @@ export function ProvidersPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <StatusDot status={profile.status === 'online' ? 'up' : profile.status === 'offline' ? 'down' : 'pending'} />
                       <div style={{ fontSize: 16, fontWeight: 600 }}>{profile.name}</div>
                       <Badge color={STATUS_COLORS[profile.status || 'unknown'] || 'gray'}>{profile.status || 'unknown'}</Badge>
                       {profile.selected ? <Badge color="green">selected</Badge> : null}
@@ -113,11 +153,12 @@ export function ProvidersPage() {
         <Card style={{ padding: 20 }}>
           {selected ? (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div>
-                <div className="section-label">Selected profile</div>
-                <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em' }}>{selected.name}</div>
-                <div style={{ marginTop: 8, color: 'var(--text-3)' }}>{selected.detail || 'Provider profile posture and fallback chain.'}</div>
-              </div>
+              <PanelHeader
+                eyebrow="Selected profile"
+                title={selected.name}
+                description={selected.detail || 'Provider profile posture and fallback chain.'}
+                aside={<Badge color={STATUS_COLORS[selected.status || 'unknown'] || 'gray'}>{selected.status || 'unknown'}</Badge>}
+              />
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <Detail label="Kind" value={selected.kind} />
@@ -162,5 +203,23 @@ function Detail({ label, value }: { label: string; value: string }) {
       <div className="section-label">{label}</div>
       <div className="mono" style={{ marginTop: 6 }}>{value}</div>
     </div>
+  )
+}
+
+function MetricCard({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'green' | 'orange' | 'purple' }) {
+  const toneValue = {
+    blue: 'var(--blue)',
+    green: 'var(--green)',
+    orange: 'var(--orange)',
+    purple: 'var(--purple)',
+  }[tone]
+
+  return (
+    <Card style={{ padding: 18 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
+      <div style={{ marginTop: 8, fontSize: 30, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.05em', color: toneValue }}>
+        {value}
+      </div>
+    </Card>
   )
 }

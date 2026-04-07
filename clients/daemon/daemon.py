@@ -66,11 +66,10 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
         log.error(f"Failed to start ClawOS services: {e}")
         sys.exit(1)
 
-    # Also start dashd if available
+    # Start the canonical dashboard API if available
     try:
         import uvicorn
         from services.dashd.api import create_app, load_dashboard_settings
-        from services.setupd.service import create_app as create_setup_app
 
         dash_settings = load_dashboard_settings()
 
@@ -83,6 +82,13 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
         server = uvicorn.Server(config)
         asyncio.create_task(server.serve())
         log.info(f"Dashboard started: http://localhost:{PORT_DASHD}")
+    except Exception as dashd_error:
+        log.warning(f"Dashboard not started: canonical dashd failed ({dashd_error})")
+
+    # Start setupd separately so a setup failure does not suppress dashd.
+    try:
+        import uvicorn
+        from services.setupd.service import create_app as create_setup_app
 
         setup_config = uvicorn.Config(
             create_setup_app(),
@@ -93,26 +99,8 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
         setup_server = uvicorn.Server(setup_config)
         asyncio.create_task(setup_server.serve())
         log.info(f"Setup service started: http://127.0.0.1:{PORT_SETUPD}")
-    except Exception as dashd_error:
-        try:
-            import uvicorn
-            dashboard_dir = Path(__file__).parent.parent.parent / "dashboard" / "backend"
-            if (dashboard_dir / "service.py").exists():
-                sys.path.insert(0, str(dashboard_dir))
-                config = uvicorn.Config(
-                    "service:app",
-                    host="0.0.0.0",
-                    port=7070,
-                    log_level="warning",
-                )
-                server = uvicorn.Server(config)
-                asyncio.create_task(server.serve())
-                log.info("Legacy dashboard started: http://localhost:7070")
-        except Exception as legacy_error:
-            log.warning(
-                f"Dashboard not started: canonical dashd failed ({dashd_error}); "
-                f"legacy backend failed ({legacy_error})"
-            )
+    except Exception as setup_error:
+        log.warning(f"Setup service not started: {setup_error}")
 
     # Handle shutdown signals gracefully
     stop_event = asyncio.Event()

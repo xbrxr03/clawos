@@ -131,55 +131,60 @@ class AgentManager:
             await self._sessions[workspace_id].reset()
             log.info(f"Session reset: {workspace_id}")
 
-
     async def start_api(self):
         """Start agentd HTTP API on PORT_AGENTD for dashboard integration."""
         try:
-            from fastapi import FastAPI
             import uvicorn
-            from clawos_core.constants import PORT_AGENTD, DEFAULT_WORKSPACE
-            api = FastAPI(title="agentd API")
+            from clawos_core.constants import PORT_AGENTD
 
-            def _parse_body(body: dict | None) -> tuple[str, str, str]:
-                body = body or {}
-                intent = str(body.get("intent") or body.get("task") or "").strip()
-                workspace = str(body.get("workspace") or DEFAULT_WORKSPACE)
-                channel = str(body.get("channel") or body.get("source") or "api")
-                return intent, workspace, self._derive_channel(channel=channel)
-
-            async def _submit_from_body(body: dict | None):
-                intent, workspace, channel = _parse_body(body)
-                if not intent:
-                    return {"error": "no intent"}
-                task = await self.submit(intent, workspace, channel=channel)
-                return {"task_id": task.task_id, "status": "queued"}
-
-            @api.get("/health")
-            def health_endpoint():
-                return {
-                    "status": "ok",
-                    "running": self._running,
-                    "tasks": len(self._tasks),
-                    "sessions": len(self._sessions),
-                }
-
-            @api.get("/tasks")
-            def list_tasks_endpoint(limit: int = 50):
-                return self.list_tasks(limit)
-
-            @api.post("/submit")
-            async def submit_endpoint(body: dict):
-                return await _submit_from_body(body)
-
-            @api.post("/tasks")
-            async def submit_legacy_endpoint(body: dict):
-                return await _submit_from_body(body)
-
+            api = create_api(self)
             config = uvicorn.Config(api, host="127.0.0.1", port=PORT_AGENTD,
                                     log_level="warning")
             await uvicorn.Server(config).serve()
         except Exception as e:
             log.warning(f"agentd API not started: {e}")
+
+
+def create_api(manager: Optional[AgentManager] = None):
+    from fastapi import FastAPI, HTTPException
+
+    from clawos_core.constants import DEFAULT_WORKSPACE
+
+    manager = manager or get_manager()
+    api = FastAPI(title="agentd API")
+
+    def _parse_body(body: dict | None) -> tuple[str, str, str]:
+        body = body or {}
+        intent = str(body.get("intent", "")).strip()
+        workspace = str(body.get("workspace") or DEFAULT_WORKSPACE).strip() or DEFAULT_WORKSPACE
+        channel = str(body.get("channel") or "api").strip() or "api"
+        return intent, workspace, manager._derive_channel(channel=channel)
+
+    async def _submit_from_body(body: dict | None):
+        intent, workspace, channel = _parse_body(body)
+        if not intent:
+            raise HTTPException(status_code=400, detail="intent required")
+        task = await manager.submit(intent, workspace, channel=channel)
+        return {"task_id": task.task_id, "status": "queued"}
+
+    @api.get("/health")
+    def health_endpoint():
+        return {
+            "status": "ok",
+            "running": manager._running,
+            "tasks": len(manager._tasks),
+            "sessions": len(manager._sessions),
+        }
+
+    @api.get("/tasks")
+    def list_tasks_endpoint(limit: int = 50):
+        return manager.list_tasks(limit)
+
+    @api.post("/submit")
+    async def submit_endpoint(body: dict):
+        return await _submit_from_body(body)
+
+    return api
 
 
 

@@ -257,6 +257,253 @@ Built the Browser Workbench surface end to end.
 
 ### 2026-04-06 - Codex
 
+#### Milestone 2F hero workflows + 2G AGPL finish
+
+- Finished the hero workflow demo pass end to end:
+  - `workflows/engine.py` now exposes live workflow progress phases over the event bus so the dashboard can stream real mid-run updates instead of only start/end state
+  - `services/dashd/api.py` now forwards `workflow_progress` and `workflow_error` events to WebSocket clients
+  - `workflows/organize_downloads/workflow.py` now reports richer breakdowns (category counts, bytes, largest items, preview/apply posture)
+  - `workflows/summarize_pdf/workflow.py` now returns a more demo-ready structured briefing with coverage, key points, key terms, and follow-up prompts
+  - `dashboard/frontend/src/pages/Workflows.tsx` now gives the two hero workflows tailored inputs, live progress feeds, and metadata-backed insight cards inside the dashboard
+- Finished the AGPL migration cleanup:
+  - replaced the stub `LICENSE` with the full GNU AGPL-3.0 text
+  - updated `README.md` to show the AGPL badge and correct license section
+  - updated `pyproject.toml` with AGPL classifier + `license-files`
+  - added SPDX headers to the remaining tracked source files across Python, shell, frontend, and test surfaces
+  - added `tests/system/test_agpl_compliance.py` so header/license drift is caught in CI
+- Synced roadmap/project memory:
+  - `docs/ROADMAP.md` now reflects the completed Milestone 2 state and the actual summarize-PDF implementation posture
+  - `packaging/iso/README.md` now documents the ISO build path, prerequisites, and the remaining real-hardware validation checklist for Milestone 3
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_workflow_hardening.py tests/system/test_dashd_security.py tests/system/test_agpl_compliance.py -q` -> passed, `22 passed`
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests -q` -> passed, `166 passed, 25 skipped`
+- `python scripts/security_audit.py` -> passed
+
+#### Remaining frontier
+
+- Milestone 3 is now the active roadmap frontier:
+  - ISO validation
+  - install-path validation
+  - README/demo-asset polish
+  - final docs accuracy pass
+
+### 2026-04-06 - Codex
+
+#### Milestone 2E WhatsApp bridge reliability
+
+- Upgraded `gatewayd` from a thin pass-through into a real WhatsApp reliability layer:
+  - `services/gatewayd/service.py` now routes inbound JIDs into stable workspaces, emits WhatsApp activity events, and supports approval-by-reply for the owner phone
+  - `services/gatewayd/approval_bridge.py` now formats approval prompts and resolves `yes` / `no` replies back into `policyd`
+  - `services/gatewayd/media_handler.py` now transcribes voice notes automatically through the local STT path
+  - `services/gatewayd/channels/whatsapp.py` now exposes structured connection status for dashboard consumption and keeps the existing auto-restart behavior visible
+- Extended dashboard/API visibility for the bridge:
+  - `services/dashd/api.py` now includes `gatewayd` in service health and exposes `/api/gateway/health` plus route inspection/update endpoints
+  - `dashboard/frontend/src/pages/Settings.tsx` now shows linked phone posture, route count, approval queue, last activity, and disconnect context
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` now includes typed gateway-health and route APIs
+- Added regression coverage in `tests/system/test_whatsapp_bridge.py` for:
+  - approval-by-reply
+  - voice-note routing/transcription
+  - dashboard gateway health + route endpoints
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_whatsapp_bridge.py tests/system/test_competitive_platform.py tests/system/test_dashd_security.py -q` -> passed, `11 passed`
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests -q` -> passed, `161 passed, 25 skipped`
+
+#### Remaining frontier after this slice
+
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 2D voice pipeline finish
+
+- Finished the remaining Milestone 2D interaction loop instead of stopping at diagnostics:
+  - `services/voiced/service.py` now supports session listeners, wake-word readiness checks, and a push-to-talk round trip
+  - `services/dashd/api.py` now broadcasts live `voice_session` updates and exposes `/api/voice/push-to-talk`
+  - `services/setupd/service.py` now treats wake-word mode as a real setup confirmation path instead of a cosmetic toggle
+  - `runtimes/voice/microphone.py` now prefers `pw-record` first so 44.1 kHz capture follows the PipeWire-first roadmap posture
+- Polished the dashboard voice UX:
+  - `dashboard/frontend/src/app/AppShell.tsx` now has a native push-to-talk action plus `Ctrl+Shift+Space`
+  - `dashboard/frontend/src/pages/Overview.tsx` now surfaces live voice controls, latest utterance/response, and round-trip feedback in the conversation lane
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx` now blocks wake-word mode until microphone plus wake-detector confirmation passes
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` now includes typed wake-word and push-to-talk calls
+- Expanded regression coverage in `tests/system/test_voice_pipeline.py` for:
+  - setup wake-word confirmation
+  - dashd wake-word test routing
+  - dashd push-to-talk routing
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_voice_pipeline.py tests/system/test_setupd.py tests/system/test_nexus_presence.py tests/system/test_dashd_security.py -q` -> passed, `16 passed`
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+
+#### Remaining frontier after this slice
+
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 2D voice pipeline slice
+
+- Replaced the old `voiced` stub with a real local voice orchestration layer in `services/voiced/service.py`:
+  - shared voice-session state now updates through `clawos_core/presence.py`
+  - microphone capture helpers now live in `runtimes/voice/microphone.py`
+  - Whisper transcription helpers now live in `runtimes/voice/stt_client.py`
+  - `voiced` now reports microphone / STT / TTS / wake-word readiness, keeps the current voice mode in sync, and exposes real microphone/pipeline test paths
+- Extended dashboard and setup backend contracts:
+  - `services/dashd/api.py` now includes voice state in snapshots, exposes `/api/voice/health` and `/api/voice/test`, and routes `/api/voice/mode` through the actual voice service
+  - `services/setupd/state.py` now persists `voice_test`
+  - `services/setupd/service.py` now exposes setup voice diagnostics plus a real setup voice-test path, and persists the latest microphone check result into setup state
+- Wired the frontend to those contracts:
+  - `dashboard/frontend/src/hooks/useCommandCenter.ts` now tracks live voice session state
+  - `dashboard/frontend/src/app/AppShell.tsx` now shows voice status/mode in the shell header
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx` now treats the voice step as a real readiness gate, storing and displaying the latest microphone test result before continuing
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` now includes typed voice health/test/setup voice-test calls
+- Added regression coverage in `tests/system/test_voice_pipeline.py` for dashd voice endpoints and setupd voice-test persistence/diagnostics.
+
+#### Verification completed
+
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests/system/test_voice_pipeline.py tests/system/test_setupd.py tests/system/test_nexus_presence.py -q` -> passed, `9 passed`
+
+#### Remaining frontier after this slice
+
+- Milestone 2E WhatsApp bridge reliability
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 2 premium-experience foundation + dashboard polish slice
+
+- Landed the premium shell/design-system pass in `dashboard/frontend`:
+  - richer shared UI primitives in `src/components/ui.jsx`
+  - command-palette and shell cleanup in `src/app/AppShell.tsx`
+  - premium token/CSS pass already carried through `src/index.css`, `src/design/tokens.ts`, and nav metadata
+  - skeleton-first loading states across the major product surfaces
+- Rebuilt the first-run wizard into the roadmap order and wired the missing setup control-plane support:
+  - `services/setupd/state.py` now persists `whatsapp_enabled` and `model_pull_progress`
+  - `bootstrap/model_provision.py` now emits model-pull progress snapshots
+  - `services/setupd/service.py` now supports `POST /api/setup/options` and `POST /api/setup/model`
+  - `services/dashd/api.py` proxies those new setup routes
+  - `dashboard/frontend/src/pages/setup/SetupPage.tsx` now runs an 8-step wizard with back/skip controls, live model pull progress, voice and WhatsApp steps, and a real completion state
+  - `dashboard/frontend/src/lib/commandCenterApi.ts` gained the corresponding setup types and calls
+- Started Milestone 2C dashboard polish with real product-facing improvements instead of placeholder chrome:
+  - `src/pages/Overview.tsx` now shows real service/task/activity bars plus runtime and approval posture cards
+  - `src/pages/Workflows.tsx` now exposes clearer live-progress state alongside the existing filters/search/run/history flow
+  - `src/pages/Packs.tsx`, `src/pages/Providers.tsx`, and `src/pages/Registry.tsx` now use the premium page-header/stat-card pattern and surface install/trust/provider posture more clearly at a glance
+  - `src/pages/Traces.tsx` now supports filterable timelines, detail inspection, and JSON export
+  - `src/pages/Settings.tsx` is now grouped by purpose with descriptions and explicit save/action feedback
+- Added setup regression coverage in `tests/system/test_setupd.py` for options persistence and background model preparation progress.
+
+#### Verification completed
+
+- `npm run typecheck` -> passed
+- `npm run build` -> passed
+- `python -m pytest tests/system/test_setupd.py tests/system/test_competitive_platform.py tests/system/test_nexus_presence.py tests/system/test_dashd_security.py -q` -> passed, `16 passed`
+
+#### Remaining frontier after this slice
+
+- Milestone 2D voice pipeline end-to-end
+- Milestone 2E WhatsApp bridge reliability
+- Milestone 2F hero workflow demo quality
+- Milestone 2G finish work, including replacing the AGPL LICENSE stub with the full text
+
+### 2026-04-06 - Codex
+
+#### Milestone 1B-1E stabilization pass
+
+- Hardened dashboard auth in `services/dashd/api.py`:
+  - browser cookies now use a separate session secret instead of the raw dashboard bearer token
+  - setup bypass is loopback-only and automatically shuts off once setup is marked complete
+  - setup completion now rotates the dashboard session secret
+- Hardened A2A trust in `services/a2ad/service.py`, `services/a2ad/peer_registry.py`, and `services/gatewayd/service.py`:
+  - remote A2A task ingress now requires both bearer auth and an explicit trusted peer URL
+  - blocked or untrusted peers are rejected on outbound delegation too
+- Finished the top-10 workflow hardening work:
+  - replaced prompt-only implementations for `organize-downloads`, `summarize-pdf`, `repo-summary`,
+    `pr-review`, `write-readme`, and `changelog`
+  - kept `disk-report`, `log-summarize`, `find-duplicates`, and `clean-empty-dirs` as direct deterministic helpers
+  - added shared deterministic helper logic in `workflows/helpers.py`
+- Completed the contract cleanup:
+  - `agentd` now exposes `/submit` as the only first-party submit route and requires `intent`
+  - removed the `shell.run` compatibility alias from `toolbridge`
+  - updated remaining docs/prompts to use `shell.restricted`
+- Raised the test floor:
+  - added new auth, A2A, agentd, workflow, and helper regression coverage
+  - added repo-local pytest temp handling in `tests/conftest.py`
+  - fixed the packaging test harness so `.deb` checks skip cleanly unless `--deb` is provided
+- Hardened `scripts/security_audit.py` itself:
+  - ignores duplicate `.claude/worktrees/**` copies
+  - uses AST-based checks for Python risk patterns to avoid string-literal false positives
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_dashd_security.py tests/system/test_a2a_security.py tests/system/test_agentd_contract.py tests/system/test_workflow_hardening.py -q` -> passed, `23 passed`
+- `python -m pytest tests -q` -> passed, `155 passed, 25 skipped`
+- `python scripts/security_audit.py` -> passed
+
+#### Remaining frontier after this slice
+
+- Milestone 2 premium-experience work is now the main frontier in roadmap order
+- packaging validation still needs a real built `.deb` artifact supplied to the packaging tests
+- macOS packaging polish, ISO validation, and real hardware install checks still remain
+
+### 2026-04-06 - Codex
+
+#### Milestone 1A dashboard-stack cleanup
+
+- Archived the retired dashboard backend from `dashboard/backend/` to `archive/legacy/dashboard-backend/`.
+- Removed runtime fallback paths that still booted the legacy backend:
+  - `clients/daemon/daemon.py`
+  - `scripts/clawos-start.sh`
+  - `systemd/clawos-dashd.service`
+- Kept `services/dashd/api.py` + `dashboard/frontend/` + `services/dashd/static/` as the only active dashboard path.
+- Removed the old single-file dashboard fallback from `services/dashd/api.py`; root now serves the built static bundle only.
+
+#### Docs and verification cleanup
+
+- Updated canonical docs to reflect the archive and single-stack dashboard model:
+  - `docs/ARCHITECTURE_CURRENT.md`
+  - `docs/ROADMAP.md`
+  - `docs/MACOS.md`
+  - `docs/STABILIZATION_ROADMAP.md`
+  - `docs/adr/0001-canonical-frontend.md`
+  - `docs/adr/0002-canonical-dashboard-api.md`
+- Cleaned stale absolute `.codex/worktrees/...` links out of:
+  - `docs/SECURITY_AUDIT.md`
+  - `docs/VERIFICATION.md`
+- Updated phase scripts to match the canonical frontend path and made their console output/windows behavior safer.
+- Fixed a real portability bug in `bootstrap/workspace_init.py` by forcing UTF-8 when seeding workspace preset markdown files.
+
+#### Verification completed
+
+- `python -m pytest tests/system/test_dashd_security.py tests/system/test_nexus_presence.py tests/system/test_competitive_platform.py -q` -> passed, `11 passed`
+- `python tests/system/test_phase1.py` -> passed, `46/46 passed`
+- `python tests/system/test_phase2.py` -> passed, `25/25 passed`
+- `git grep` confirmed no live runtime references remain to `dashboard/backend` or `uvicorn service:app`; only roadmap/archive historical references remain
+
+#### Remaining frontier after this slice
+
+- Milestone 1B auth hardening
+- Milestone 1C top-10 workflow hardening
+- Milestone 1D contract alignment
+- Milestone 1E test floor
+- later premium-experience dashboard redesign still remains under Milestone 2
+
+### 2026-04-06 - Codex
+
 #### Nexus presence implementation
 
 - Implemented the Nexus presence layer so ClawOS now presents itself as the platform and `Nexus` as the assistant identity.

@@ -3,7 +3,7 @@
 dashd - Dashboard API
 =====================
 REST + WebSocket dashboard with cookie-backed auth, safe bind defaults,
-and a snapshot contract that matches the bundled single-file frontend.
+and a snapshot contract that matches the bundled React frontend assets.
 """
 import asyncio
 import logging
@@ -59,7 +59,6 @@ log = logging.getLogger("dashd")
 DEFAULT_COOKIE_NAME = "clawos_dashboard"
 SETUP_ACCESS_HEADER = "x-clawos-setup"
 SETUP_ACCESS_VALUE = "1"
-DASHBOARD_HTML = Path(__file__).parent.parent.parent / "clients" / "dashboard" / "index.html"
 DASHBOARD_STATIC_DIR = Path(__file__).parent / "static"
 DASHBOARD_STATIC_INDEX = DASHBOARD_STATIC_DIR / "index.html"
 
@@ -85,6 +84,7 @@ except ImportError:
 
 
 _WORKBENCH_SESSIONS: deque = deque(maxlen=50)
+_VOLATILE_SECRETS: dict[str, str] = {}
 
 
 def _workbench_fetch(url: str, timeout: int = 12) -> dict:
@@ -194,22 +194,63 @@ def _dashboard_token_file() -> Path:
     return CONFIG_DIR / "dashboard.token"
 
 
+def _dashboard_session_token_file() -> Path:
+    return CONFIG_DIR / "dashboard.session"
+
+
+def _load_or_create_secret(path: Path) -> str:
+    cache_key = str(path)
+    if cache_key in _VOLATILE_SECRETS and not path.exists():
+        return _VOLATILE_SECRETS[cache_key]
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            secret = secrets.token_urlsafe(32)
+            path.write_text(secret, encoding="utf-8")
+            try:
+                path.chmod(0o600)
+            except OSError:
+                pass
+            _VOLATILE_SECRETS[cache_key] = secret
+            return secret
+        secret = path.read_text(encoding="utf-8").strip()
+        _VOLATILE_SECRETS[cache_key] = secret
+        return secret
+    except OSError:
+        secret = _VOLATILE_SECRETS.get(cache_key) or secrets.token_urlsafe(32)
+        _VOLATILE_SECRETS[cache_key] = secret
+        return secret
+
+
 def _load_dashboard_token(auth_required: bool) -> str:
     env_token = os.environ.get("CLAWOS_DASHBOARD_TOKEN", "").strip()
     if env_token:
         return env_token
     if not auth_required:
         return ""
+    return _load_or_create_secret(_dashboard_token_file())
 
-    token_file = _dashboard_token_file()
-    token_file.parent.mkdir(parents=True, exist_ok=True)
-    if not token_file.exists():
-        token_file.write_text(secrets.token_urlsafe(32), encoding="utf-8")
+
+def _load_dashboard_session_token(auth_required: bool) -> str:
+    if not auth_required:
+        return ""
+    return _load_or_create_secret(_dashboard_session_token_file())
+
+
+def rotate_dashboard_session_token() -> str:
+    token = secrets.token_urlsafe(32)
+    path = _dashboard_session_token_file()
+    _VOLATILE_SECRETS[str(path)] = token
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(token, encoding="utf-8")
         try:
-            token_file.chmod(0o600)
+            path.chmod(0o600)
         except OSError:
             pass
-    return token_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        pass
+    return token
 
 
 def load_dashboard_settings(overrides: Optional[dict[str, Any]] = None) -> DashboardSettings:
@@ -257,8 +298,11 @@ def _is_request_authorized(request: Request, authorization: str = "") -> bool:
     settings: DashboardSettings = request.app.state.settings
     if not settings.auth_required:
         return True
-    token = _extract_bearer_token(authorization) or request.cookies.get(settings.cookie_name, "")
-    return _token_matches(token, settings.token)
+    bearer_token = _extract_bearer_token(authorization)
+    if _token_matches(bearer_token, settings.token):
+        return True
+    cookie_token = request.cookies.get(settings.cookie_name, "")
+    return _token_matches(cookie_token, _load_dashboard_session_token(settings.auth_required))
 
 
 def require_auth(request: Request, authorization: str = Header(default="")):
@@ -275,7 +319,7 @@ def require_setup_access(request: Request, authorization: str = Header(default="
     settings: DashboardSettings = request.app.state.settings
     if _is_request_authorized(request, authorization=authorization):
         return
-    if _is_loopback_host(settings.host) and _has_setup_access(request):
+    if _setup_bypass_allowed(settings, request):
         return
     raise HTTPException(
         status_code=401,
@@ -288,7 +332,7 @@ def require_auth_or_setup_access(request: Request, authorization: str = Header(d
     settings: DashboardSettings = request.app.state.settings
     if _is_request_authorized(request, authorization=authorization):
         return
-    if _is_loopback_host(settings.host) and _has_setup_access(request):
+    if _setup_bypass_allowed(settings, request):
         return
     raise HTTPException(
         status_code=401,
@@ -341,6 +385,12 @@ def _collect_service_health() -> dict[str, dict]:
     except Exception:
         pass
     try:
+        from services.gatewayd.health import health as gatewayd_health
+
+        checks["gatewayd"] = gatewayd_health
+    except Exception:
+        pass
+    try:
         from services.memd.health import health as memd_health
 
         checks["memd"] = memd_health
@@ -362,6 +412,12 @@ def _collect_service_health() -> dict[str, dict]:
         from services.setupd.health import health as setupd_health
 
         checks["setupd"] = setupd_health
+    except Exception:
+        pass
+    try:
+        from services.voiced.health import health as voiced_health
+
+        checks["voiced"] = voiced_health
     except Exception:
         pass
 
@@ -500,6 +556,27 @@ def _setup_state():
         return None
 
 
+def _voice_service():
+    from services.voiced.service import get_service
+
+    return get_service()
+
+
+def _gateway_service():
+    from services.gatewayd.service import get_service
+
+    return get_service()
+
+
+def _setup_bypass_allowed(settings: DashboardSettings, request: Request) -> bool:
+    if not _is_loopback_host(settings.host):
+        return False
+    state = _setup_state()
+    if getattr(state, "completion_marker", False):
+        return False
+    return _has_setup_access(request)
+
+
 def _pack_payloads() -> list[dict]:
     state = _setup_state()
     primary = getattr(state, "primary_pack", "")
@@ -579,6 +656,7 @@ def _build_snapshot(app: "FastAPI") -> dict:
         "models": _collect_models(),
         "tasks": [],
         "approvals": _approval_payloads(),
+        "voice": get_voice_session(),
     }
 
 
@@ -594,18 +672,28 @@ def _websocket_authorized(websocket: WebSocket) -> bool:
     settings: DashboardSettings = websocket.app.state.settings
     if not settings.auth_required:
         return True
-    token = (
-        websocket.query_params.get("token", "")
-        or _extract_bearer_token(websocket.headers.get("authorization", ""))
-        or websocket.cookies.get(settings.cookie_name, "")
+    query_token = websocket.query_params.get("token", "")
+    bearer_token = _extract_bearer_token(websocket.headers.get("authorization", ""))
+    cookie_token = websocket.cookies.get(settings.cookie_name, "")
+    return any(
+        [
+            _token_matches(query_token, settings.token),
+            _token_matches(bearer_token, settings.token),
+            _token_matches(cookie_token, _load_dashboard_session_token(settings.auth_required)),
+        ]
     )
-    return _token_matches(token, settings.token)
 
 
 def _setup_websocket_authorized(websocket: WebSocket) -> bool:
     settings: DashboardSettings = websocket.app.state.settings
     setup_signal = websocket.query_params.get("setup", "").strip() == SETUP_ACCESS_VALUE
-    if _is_loopback_host(settings.host) and setup_signal and _origin_is_trusted(websocket.headers.get("origin", "")):
+    state = _setup_state()
+    if (
+        not getattr(state, "completion_marker", False)
+        and _is_loopback_host(settings.host)
+        and setup_signal
+        and _origin_is_trusted(websocket.headers.get("origin", ""))
+    ):
         return True
     return _websocket_authorized(websocket)
 
@@ -622,6 +710,17 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         normalized = _normalize_event(event)
         event_history.appendleft(normalized)
         await mgr.broadcast({"type": "audit_event", "data": normalized})
+        if event.get("type") in {"workflow_progress", "workflow_error"}:
+            await mgr.broadcast(
+                {
+                    "type": event.get("type"),
+                    "data": {
+                        key: value
+                        for key, value in event.items()
+                        if key not in {"type", "timestamp"}
+                    },
+                }
+            )
         if event.get("type") in {EV_SERVICE_UP, EV_SERVICE_DOWN}:
             await mgr.broadcast({"type": "service_health", "data": _collect_service_health()})
 
@@ -631,14 +730,25 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except RuntimeError:
             return
 
+    async def _fan_out_voice_session(session: dict[str, Any]):
+        await mgr.broadcast({"type": "voice_session", "data": session})
+
     @asynccontextmanager
     async def lifespan(app_obj: "FastAPI"):
         bus.subscribe(app_obj.state.bus_handler)
+        app_obj.state.voice_listener = _fan_out_voice_session
+        voice_service = _voice_service()
+        add_listener = getattr(voice_service, "add_session_listener", None)
+        if callable(add_listener):
+            add_listener(app_obj.state.voice_listener)
         app_obj.state.health_task = asyncio.create_task(_service_health_loop(app_obj))
         try:
             yield
         finally:
             bus.unsubscribe(app_obj.state.bus_handler)
+            remove_listener = getattr(voice_service, "remove_session_listener", None)
+            if callable(remove_listener):
+                remove_listener(app_obj.state.voice_listener)
             task = app_obj.state.health_task
             if task:
                 task.cancel()
@@ -660,14 +770,16 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     app.state.event_history = event_history
     app.state.health_task = None
     app.state.bus_handler = _on_bus_event
+    app.state.voice_listener = None
 
     @app.get("/", response_class=HTMLResponse)
     async def root():
         if DASHBOARD_STATIC_INDEX.exists():
             return FileResponse(str(DASHBOARD_STATIC_INDEX))
-        if DASHBOARD_HTML.exists():
-            return HTMLResponse(DASHBOARD_HTML.read_text(encoding="utf-8", errors="ignore"))
-        return HTMLResponse("<h1>ClawOS Dashboard</h1><p>Frontend not found.</p>")
+        return HTMLResponse(
+            "<h1>ClawOS Dashboard</h1><p>Built frontend not found in services/dashd/static.</p>",
+            status_code=503,
+        )
 
     @app.get("/api/health")
     async def health():
@@ -707,7 +819,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         response = JSONResponse({"ok": True, "auth_required": True})
         response.set_cookie(
             settings_obj.cookie_name,
-            token,
+            _load_dashboard_session_token(settings_obj.auth_required),
             httponly=True,
             secure=request.url.scheme == "https",
             samesite="strict",
@@ -754,7 +866,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except Exception:
             from services.agentd.service import get_manager
 
-            intent = str((body or {}).get("intent") or (body or {}).get("task") or "").strip()
+            intent = str((body or {}).get("intent", "")).strip()
             workspace = str((body or {}).get("workspace") or DEFAULT_WORKSPACE)
             channel = str((body or {}).get("channel") or "dashboard")
             if not intent:
@@ -997,7 +1109,33 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
     @app.get("/api/voice/session", dependencies=[Depends(require_auth)])
     async def voice_session():
-        return get_voice_session()
+        return _voice_service().session()
+
+    @app.get("/api/voice/health", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_health():
+        return _voice_service().health()
+
+    @app.post("/api/voice/test", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_test(body: dict | None = None):
+        payload = body or {}
+        kind = str(payload.get("kind", "pipeline")).strip() or "pipeline"
+        sample_text = str(payload.get("sample_text", "Voice pipeline ready.")).strip() or "Voice pipeline ready."
+        service = _voice_service()
+        if kind == "microphone":
+            result = await service.test_microphone()
+        elif kind == "wake_word":
+            result = await service.test_wake_word()
+        else:
+            result = await service.test_pipeline(sample_text=sample_text)
+        await app.state.connections.broadcast({"type": "voice_session", "data": service.session()})
+        return result
+
+    @app.post("/api/voice/push-to-talk", dependencies=[Depends(require_auth_or_setup_access)])
+    async def voice_push_to_talk():
+        service = _voice_service()
+        result = await service.push_to_talk()
+        await app.state.connections.broadcast({"type": "voice_session", "data": service.session()})
+        return result
 
     @app.post("/api/voice/mode", dependencies=[Depends(require_auth_or_setup_access)])
     async def voice_mode(body: dict | None = None):
@@ -1005,7 +1143,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         if not mode:
             raise HTTPException(status_code=400, detail="mode required")
         try:
-            session = set_voice_mode(mode)
+            session = await _voice_service().set_mode(mode)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
@@ -1016,7 +1154,29 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             state.save()
             sync_presence_from_setup(state)
 
+        await app.state.connections.broadcast({"type": "voice_session", "data": session})
         return session
+
+    @app.get("/api/gateway/health", dependencies=[Depends(require_auth_or_setup_access)])
+    async def gateway_health():
+        return _gateway_service().health()
+
+    @app.get("/api/gateway/routes", dependencies=[Depends(require_auth)])
+    async def gateway_routes():
+        return _gateway_service().routes()
+
+    @app.post("/api/gateway/routes", dependencies=[Depends(require_auth)])
+    async def gateway_set_route(body: dict | None = None):
+        payload = body or {}
+        jid = str(payload.get("jid", "")).strip()
+        workspace_id = str(payload.get("workspace_id", "")).strip()
+        if not jid or not workspace_id:
+            raise HTTPException(status_code=400, detail="jid and workspace_id required")
+        try:
+            routes = _gateway_service().set_route(jid, workspace_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return {"ok": True, "routes": routes}
 
     @app.get("/api/extensions", dependencies=[Depends(require_auth_or_setup_access)])
     async def extensions():
@@ -1124,6 +1284,15 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
+    @app.post("/api/setup/options", dependencies=[Depends(require_setup_access)])
+    async def setup_options(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().update_options(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
     @app.post("/api/setup/autonomy", dependencies=[Depends(require_setup_access)])
     async def setup_autonomy(body: dict | None = None):
         from services.setupd.service import get_service
@@ -1145,6 +1314,22 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         from services.setupd.service import get_service
 
         return get_service().build_plan()
+
+    @app.post("/api/setup/model", dependencies=[Depends(require_setup_access)])
+    async def setup_model(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().prepare_model(str((body or {}).get("model", "")).strip())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/setup/voice-test", dependencies=[Depends(require_setup_access)])
+    async def setup_voice_test(body: dict | None = None):
+        from services.setupd.service import get_service
+
+        sample_text = str((body or {}).get("sample_text", "")).strip()
+        return await get_service().run_voice_test(sample_text=sample_text)
 
     @app.post("/api/setup/apply", dependencies=[Depends(require_setup_access)])
     async def setup_apply():
@@ -1257,23 +1442,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
             eng = get_engine()
             eng.load_registry()
-            await mgr.broadcast(
-                {
-                    "type": "workflow_progress",
-                    "data": {"id": workflow_id, "status": "running"},
-                }
-            )
             result = await eng.run(workflow_id, workflow_args, workspace_id=workspace_id)
-            await mgr.broadcast(
-                {
-                    "type": "workflow_progress",
-                    "data": {
-                        "id": workflow_id,
-                        "status": result.status.value,
-                        "output": result.output[:500] if result.output else "",
-                    },
-                }
-            )
             return {
                 "status": result.status.value,
                 "output": result.output,

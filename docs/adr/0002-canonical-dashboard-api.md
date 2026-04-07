@@ -16,6 +16,6 @@ It is responsible for:
 
 ## Consequences
 
-- `dashboard/backend` is legacy only and must not receive new features.
+- `archive/legacy/dashboard-backend/` is historical only and must not receive new features.
 - frontend build artifacts are published into `services/dashd/static`.
 - desktop shells may call lower-level services directly, but browser clients talk to `dashd`.

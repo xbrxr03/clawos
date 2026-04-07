@@ -1,13 +1,11 @@
-# Legacy Dashboard Backend
+# Archived Legacy Dashboard Backend
 
-`dashboard/backend/` is a compatibility surface from an older dashboard stack.
+This directory preserves the retired `dashboard/backend/` implementation for historical reference.
 
-The canonical dashboard service is:
+The canonical dashboard stack is:
 
 - `services/dashd/api.py`
-
-If you are making new dashboard changes, prefer the canonical service and the frontend under:
-
 - `dashboard/frontend/`
+- `services/dashd/static/`
 
-This folder should be treated as legacy until it is either archived or removed in a dedicated cleanup pass.
+Do not route runtime traffic here, and do not land new product changes in this archive.

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 export type SetupState = {
   install_channel?: string
   platform?: string
@@ -20,10 +21,33 @@ export type SetupState = {
   voice_mode?: string
   briefing_enabled?: boolean
   voice_enabled?: boolean
+  whatsapp_enabled?: boolean
   enable_openclaw?: boolean
   launch_on_login?: boolean
   policy_mode?: string
   progress_stage?: string
+  model_pull_progress?: {
+    model?: string
+    status?: string
+    percent?: number
+    eta_seconds?: number | null
+  }
+  voice_test?: {
+    kind?: string
+    ok?: boolean
+    state?: string
+    device_label?: string
+    sample_rate_hz?: number
+    microphone_backend?: string
+    transcript?: string
+    playback_ok?: boolean
+    pipeline_ok?: boolean
+    sample_text?: string
+    wake_word_ok?: boolean
+    wake_word_phrase?: string
+    wake_word_armed?: boolean
+    issues?: string[]
+  }
   logs?: string[]
   completion_marker?: boolean
   last_error?: string
@@ -45,6 +69,17 @@ export type SetupDiagnostics = {
   support_dir?: string
   cwd?: string
   desktop?: DesktopPosture
+  gateway?: {
+    status?: string
+    whatsapp?: string
+    channels?: string[]
+    linked_phone?: string
+    last_message_at?: string
+    last_disconnect_reason?: string
+    routes_count?: number
+    approval_queue?: number
+  }
+  voice?: VoiceHealth
 }
 
 export type DashboardHealth = {
@@ -53,6 +88,23 @@ export type DashboardHealth = {
   host?: string
   port?: number
   local_only?: boolean
+}
+
+export type GatewayHealth = {
+  status?: string
+  whatsapp?: string
+  channels?: string[]
+  linked_phone?: string
+  ready?: boolean
+  last_ready_at?: string
+  last_disconnect_reason?: string
+  last_message_at?: string
+  last_sender?: string
+  last_workspace?: string
+  last_preview?: string
+  routes_count?: number
+  approval_queue?: number
+  restart_count?: number
 }
 
 export type DesktopPosture = {
@@ -77,12 +129,14 @@ export type WorkflowRecord = {
   destructive?: boolean
   needs_agent?: boolean
   requires?: string[]
+  timeout_s?: number
 }
 
 export type WorkflowRunResult = {
   status?: string
   output?: string
   error?: string
+  metadata?: Record<string, any>
 }
 
 export type UseCasePack = {
@@ -272,7 +326,46 @@ export type VoiceSession = {
   device_label?: string
   last_utterance?: string
   last_response?: string
+  last_trigger?: string
   updated_at?: string
+}
+
+export type VoiceHealth = {
+  status?: string
+  enabled?: boolean
+  mode?: string
+  state?: string
+  running?: boolean
+  stt_ok?: boolean
+  tts_ok?: boolean
+  wake_word_ok?: boolean
+  microphone_ok?: boolean
+  microphone_backend?: string
+  playback_backend?: string
+  device_label?: string
+  sample_rate_hz?: number
+  follow_up_open?: boolean
+}
+
+export type VoiceTestResult = {
+  kind?: string
+  ok?: boolean
+  state?: string
+  mode?: string
+  device_label?: string
+  sample_rate_hz?: number
+  microphone_backend?: string
+  transcript?: string
+  playback_ok?: boolean
+  pipeline_ok?: boolean
+  sample_text?: string
+  response?: string
+  error?: string
+  armed?: boolean
+  wake_word_ok?: boolean
+  wake_word_phrase?: string
+  wake_word_armed?: boolean
+  issues?: string[]
 }
 
 export type PresencePayload = {
@@ -390,6 +483,14 @@ function maybeSetupHeaders(extra?: HeadersInit): HeadersInit | undefined {
 export const commandCenterApi = {
   getHealth: () => fetchJson<DashboardHealth>('/api/health'),
   getDesktopPosture: () => fetchJson<DesktopPosture>('/api/desktop/posture'),
+  getGatewayHealth: () => fetchJson<GatewayHealth>('/api/gateway/health', { headers: maybeSetupHeaders() }),
+  getGatewayRoutes: () => fetchJson<Record<string, string>>('/api/gateway/routes'),
+  setGatewayRoute: (jid: string, workspace_id: string) =>
+    fetchJson<{ ok?: boolean; routes?: Record<string, string> }>('/api/gateway/routes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jid, workspace_id }),
+    }),
   setLaunchOnLogin: (enabled: boolean, command?: string) =>
     fetchJson<DesktopPosture>('/api/desktop/launch-on-login', {
       method: 'POST',
@@ -443,6 +544,18 @@ export const commandCenterApi = {
       body: JSON.stringify({ title, summary, trust_lane }),
     }),
   getVoiceSession: () => fetchJson<VoiceSession>('/api/voice/session'),
+  getVoiceHealth: () => fetchJson<VoiceHealth>('/api/voice/health', { headers: maybeSetupHeaders() }),
+  testVoice: (kind: 'microphone' | 'pipeline' | 'wake_word' = 'pipeline', sample_text = 'Voice pipeline ready.') =>
+    fetchJson<VoiceTestResult>('/api/voice/test', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ kind, sample_text }),
+    }),
+  pushToTalk: () =>
+    fetchJson<VoiceTestResult>('/api/voice/push-to-talk', {
+      method: 'POST',
+      headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
+    }),
   setVoiceMode: (mode: string) =>
     fetchJson<VoiceSession>('/api/voice/mode', {
       method: 'POST',
@@ -455,11 +568,29 @@ export const commandCenterApi = {
       headers: { 'Content-Type': 'application/json', ...setupHeaders() },
       body: JSON.stringify(body),
     }),
+  updateSetupOptions: (body: Record<string, unknown>) =>
+    fetchJson<SetupState>('/api/setup/options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify(body),
+    }),
   updateSetupAutonomy: (body: Record<string, unknown>) =>
     fetchJson<SetupState>('/api/setup/autonomy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...setupHeaders() },
       body: JSON.stringify(body),
+    }),
+  prepareSetupModel: (model = '') =>
+    fetchJson<{ ok?: boolean; status?: string; model?: string }>('/api/setup/model', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify({ model }),
+    }),
+  runSetupVoiceTest: (sample_text = '') =>
+    fetchJson<SetupState>('/api/setup/voice-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+      body: JSON.stringify({ sample_text }),
     }),
   listPacks: () => fetchJson<UseCasePack[]>('/api/packs', { headers: maybeSetupHeaders() }),
   installPack: (pack_id: string, primary = false, provider_profile = '') =>

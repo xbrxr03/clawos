@@ -405,7 +405,7 @@ clawos/
 | policyd_client.py | adapters/policy/local_policy_adapter.py |
 | toolbridge.py | services/toolbridge/service.py |
 | voice_service.py | services/voiced/service.py + adapters/audio/ |
-| dashd.py | services/dashd/api.py + websocket.py |
+| dashd.py | services/dashd/api.py + main.py |
 | clawd.py | services/clawd/service.py |
 | test_phase1.py | tests/system/test_phase1.py |
 | test_phase3_4.py | tests/system/test_phase3_4.py |

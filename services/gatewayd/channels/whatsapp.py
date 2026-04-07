@@ -21,6 +21,7 @@ import subprocess
 import time
 from pathlib import Path
 from clawos_core.constants import CONFIG_DIR
+from clawos_core.util.time import now_iso
 
 log = logging.getLogger("gatewayd.whatsapp")
 
@@ -37,6 +38,11 @@ class WhatsAppChannel:
         self._bridge_proc = None
         self._running     = False
         self._on_message  = None
+        self._ready = False
+        self._last_ready_at = ""
+        self._last_disconnect_reason = ""
+        self._last_message_at = ""
+        self._restart_count = 0
 
     def set_message_handler(self, fn):
         self._on_message = fn
@@ -178,17 +184,36 @@ class WhatsAppChannel:
             cwd=str(WA_DIR)
         )
         self._running = True
+        self._ready = False
         asyncio.create_task(self._read_loop())
         return True
 
     async def stop(self):
         self._running = False
+        self._ready = False
         if self._bridge_proc:
             try:
                 self._bridge_proc.terminate()
                 self._bridge_proc.wait(timeout=5)
             except Exception:
                 self._bridge_proc.kill()
+
+    def status(self) -> dict:
+        linked = LINKED_FILE.exists()
+        if not linked:
+            whatsapp = "not linked"
+        else:
+            whatsapp = "linked"
+        return {
+            "status": "running" if self._running else "stopped",
+            "whatsapp": whatsapp,
+            "phone_number": self.phone_number or "",
+            "ready": self._ready,
+            "last_ready_at": self._last_ready_at,
+            "last_disconnect_reason": self._last_disconnect_reason,
+            "last_message_at": self._last_message_at,
+            "restart_count": self._restart_count,
+        }
 
     async def _read_loop(self):
         loop = asyncio.get_event_loop()
@@ -208,6 +233,8 @@ class WhatsAppChannel:
                 break
         if self._running:
             log.warning("Bridge exited — will restart in 10s")
+            self._ready = False
+            self._restart_count += 1
             await asyncio.sleep(10)
             await self.start()
 

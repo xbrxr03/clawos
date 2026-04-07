@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl presence - inspect Nexus presence and autonomy."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Shared Nexus presence, autonomy, briefing, mission, and voice-session state.
 """
@@ -203,22 +204,34 @@ def get_voice_session(path: Path | None = None) -> dict[str, Any]:
     return dict(state["voice_session"])
 
 
+def update_voice_session(updates: dict[str, Any], path: Path | None = None) -> dict[str, Any]:
+    state = load_presence_state(path)
+    session = dict(state["voice_session"])
+    for key, value in (updates or {}).items():
+        if key in session and value is not None:
+            session[key] = value
+    session["updated_at"] = now_iso()
+    state["voice_session"] = session
+    if session.get("mode"):
+        profile = dict(state["presence_profile"])
+        profile["preferred_voice_mode"] = session["mode"]
+        state["presence_profile"] = profile
+    save_presence_state(state, path)
+    return dict(session)
+
+
 def set_voice_mode(mode: str, path: Path | None = None) -> dict[str, Any]:
     allowed = {"off", "push_to_talk", "wake_word", "continuous"}
     if mode not in allowed:
         raise ValueError(f"Unsupported voice mode: {mode}")
-    state = load_presence_state(path)
-    session = dict(state["voice_session"])
-    session["mode"] = mode
-    session["state"] = "idle"
-    session["follow_up_open"] = False
-    session["updated_at"] = now_iso()
-    state["voice_session"] = session
-    profile = dict(state["presence_profile"])
-    profile["preferred_voice_mode"] = mode
-    state["presence_profile"] = profile
-    save_presence_state(state, path)
-    return session
+    return update_voice_session(
+        {
+            "mode": mode,
+            "state": "idle",
+            "follow_up_open": False,
+        },
+        path,
+    )
 
 
 def list_missions(path: Path | None = None) -> list[dict[str, Any]]:

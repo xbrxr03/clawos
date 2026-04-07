@@ -141,6 +141,9 @@ class PeerRegistry:
     def get_peer(self, peer_id: str) -> Optional[PeerRecord]:
         return self._find(peer_id)
 
+    def get_peer_by_url(self, url: str) -> Optional[PeerRecord]:
+        return self._find_by_url(url)
+
     def add_peer(self, url: str, name: str = "", trust_tier: str = "unverified") -> PeerRecord:
         url = url.rstrip("/")
         if trust_tier not in TRUST_TIERS:
@@ -226,6 +229,10 @@ class PeerRegistry:
 
     def is_trusted(self, peer_id: str) -> bool:
         peer = self._find(peer_id)
+        return peer is not None and peer.trust_tier == "trusted"
+
+    def is_trusted_url(self, url: str) -> bool:
+        peer = self._find_by_url(url)
         return peer is not None and peer.trust_tier == "trusted"
 
     def is_blocked(self, url: str) -> bool:

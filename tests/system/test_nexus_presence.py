@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Nexus presence and autonomy contract tests.
 """
@@ -169,8 +170,14 @@ def test_dashd_exposes_nexus_presence_surface(monkeypatch):
         lambda: [{"id": "m1", "title": "Morning briefing", "status": "active", "trust_lane": "automatic"}],
     )
     monkeypatch.setattr("services.dashd.api.start_mission", lambda title, summary="", trust_lane="trusted-automatic": {"id": "m2", "title": title, "trust_lane": trust_lane})
-    monkeypatch.setattr("services.dashd.api.get_voice_session", lambda: {"mode": "wake_word", "state": "idle"})
-    monkeypatch.setattr("services.dashd.api.set_voice_mode", lambda mode: {"mode": mode, "state": "idle"})
+    class FakeVoiceService:
+        def session(self):
+            return {"mode": "wake_word", "state": "idle"}
+
+        async def set_mode(self, mode: str):
+            return {"mode": mode, "state": "idle"}
+
+    monkeypatch.setattr("services.dashd.api._voice_service", lambda: FakeVoiceService())
     monkeypatch.setattr("services.dashd.api.record_trace", lambda *_args, **_kwargs: None)
 
     app = create_app({"host": "127.0.0.1", "auth_required": True, "token": "dash-token", "cookie_name": "dash_session"})
