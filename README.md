@@ -40,7 +40,7 @@ OpenClaw hit 280,000 GitHub stars in six weeks. Most people who tried it gave up
 
 The setup takes hours. It requires API keys. It costs $300-750/month in tokens. The creator left for OpenAI in February. CVE-2026-25253 lets anyone steal your keys in one click. Cisco found that 17% of ClawHub skills are malicious.
 
-ClawOS fixes all of that. It runs OpenClaw on your hardware, with your models, for the cost of electricity.
+ClawOS fixes all of that. It runs OpenClaw on your hardware, with your models, for the cost of electricity. No monthly bill. No API keys. No cloud dependency.
 
 ---
 
