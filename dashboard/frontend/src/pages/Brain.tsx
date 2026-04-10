@@ -103,6 +103,33 @@ export function BrainPage() {
     return () => wsRef.current?.close()
   }, [])
 
+  // ── Bloom post-processing (optional, degrades gracefully) ────────────────────
+  useEffect(() => {
+    if (!fgRef.current) return
+    // Wait one frame for the graph engine to initialise
+    const t = setTimeout(() => {
+      try {
+        const fg = fgRef.current
+        if (!fg?.postProcessingComposer) return
+        const composer = fg.postProcessingComposer()
+        if (!composer) return
+        // postprocessing package is a peer dep — import dynamically so it
+        // never blocks the page if it isn't installed
+        import('postprocessing').then(({ BloomEffect, EffectPass }) => {
+          try {
+            const camera = fg.camera()
+            composer.addPass(
+              new EffectPass(camera,
+                new BloomEffect({ intensity: 1.8, luminanceThreshold: 0.15, luminanceSmoothing: 0.8 })
+              )
+            )
+          } catch { /* bloom unavailable – silently skip */ }
+        }).catch(() => { /* postprocessing not installed – skip */ })
+      } catch { /* graph not ready – skip */ }
+    }, 500)
+    return () => clearTimeout(t)
+  }, [graph])
+
   const fetchGraph = async () => {
     try {
       const r = await fetch('/api/brain/graph', { credentials: 'include' })
@@ -476,20 +503,6 @@ export function BrainPage() {
               rendererConfig={{
                 antialias: true,
                 alpha: false,
-              }}
-              postProcessingComposer={(renderer: any, scene: any, camera: any) => {
-                try {
-                  const { EffectComposer } = require('postprocessing')
-                  const { RenderPass, BloomEffect, EffectPass } = require('postprocessing')
-                  const composer = new EffectComposer(renderer)
-                  composer.addPass(new RenderPass(scene, camera))
-                  composer.addPass(new EffectPass(camera,
-                    new BloomEffect({ intensity: 1.8, luminanceThreshold: 0.15, luminanceSmoothing: 0.8 })
-                  ))
-                  return composer
-                } catch {
-                  return null
-                }
               }}
             />
           </Suspense>
