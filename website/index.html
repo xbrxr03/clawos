@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClawOS — Your AI, on your machine</title>
+  <meta name="description" content="ClawOS is a local-first AI operating system. Boot into a full agent environment — voice, memory, WhatsApp, 27+ workflows — on consumer hardware, offline, free." />
+  <meta property="og:title" content="ClawOS — Your AI, on your machine" />
+  <meta property="og:description" content="Local-first AI OS. No cloud. No API keys. No monthly bill." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #09090f;
+      --bg2:      #0f0f1a;
+      --bg3:      #141420;
+      --border:   rgba(255,255,255,0.07);
+      --violet:   #7c6af5;
+      --violet2:  #9d8fff;
+      --violet-dim: rgba(124,106,245,0.15);
+      --text:     #e8e6f0;
+      --muted:    #7a7890;
+      --green:    #4ade80;
+      --amber:    #f59e0b;
+      --radius:   12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px;
+      height: 60px;
+      background: rgba(9,9,15,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 17px; font-weight: 700; color: var(--text); text-decoration: none;
+    }
+    .nav-logo .claw { font-size: 22px; }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a {
+      color: var(--muted); text-decoration: none; font-size: 14px;
+      transition: color .15s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--violet); color: #fff !important;
+      padding: 7px 18px; border-radius: 8px; font-weight: 600;
+      font-size: 13px !important; transition: opacity .15s !important;
+    }
+    .nav-cta:hover { opacity: .85; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 120px 24px 80px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute; top: -160px; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 600px;
+      background: radial-gradient(ellipse at center, rgba(124,106,245,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--violet-dim); border: 1px solid rgba(124,106,245,0.3);
+      color: var(--violet2); font-size: 12px; font-weight: 600;
+      padding: 5px 14px; border-radius: 100px; margin-bottom: 28px;
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .hero-badge .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    h1 {
+      font-size: clamp(40px, 7vw, 76px);
+      font-weight: 800; line-height: 1.05;
+      letter-spacing: -0.03em;
+      max-width: 900px;
+      background: linear-gradient(160deg, #fff 40%, var(--violet2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      margin-top: 24px;
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--muted); max-width: 580px;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      justify-content: center; margin-top: 44px;
+    }
+    .btn-primary {
+      background: var(--violet); color: #fff;
+      padding: 14px 32px; border-radius: 10px;
+      font-size: 15px; font-weight: 700; text-decoration: none;
+      transition: opacity .15s, transform .15s;
+      box-shadow: 0 0 40px rgba(124,106,245,0.35);
+    }
+    .btn-primary:hover { opacity:.88; transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+      padding: 14px 32px; border-radius: 10px;
+      font-size: 15px; font-weight: 600; text-decoration: none;
+      transition: border-color .15s, transform .15s;
+    }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
+
+    /* install command */
+    .install-cmd {
+      margin-top: 48px;
+      display: inline-flex; align-items: center; gap: 12px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 20px;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 13px; color: var(--text);
+    }
+    .install-cmd .prompt { color: var(--violet); user-select: none; }
+    .copy-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); padding: 2px 6px; border-radius: 4px;
+      font-size: 12px; transition: color .15s;
+    }
+    .copy-btn:hover { color: var(--text); }
+
+    /* hero stats */
+    .hero-stats {
+      display: flex; gap: 40px; flex-wrap: wrap; justify-content: center;
+      margin-top: 64px;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 28px; font-weight: 800; color: var(--violet2); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── SECTION COMMON ── */
+    section { padding: 96px 24px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 11px; font-weight: 700; color: var(--violet);
+      text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 44px); font-weight: 800;
+      letter-spacing: -0.02em; line-height: 1.15;
+    }
+    .section-sub {
+      margin-top: 16px; font-size: 17px; color: var(--muted); max-width: 560px;
+    }
+
+    /* ── FEATURE GRID ── */
+    .features { background: var(--bg); }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 56px;
+    }
+    .feat-card {
+      background: var(--bg2);
+      padding: 32px;
+      transition: background .2s;
+    }
+    .feat-card:hover { background: var(--bg3); }
+    .feat-icon {
+      font-size: 28px; margin-bottom: 16px;
+      display: block;
+    }
+    .feat-title {
+      font-size: 16px; font-weight: 700; margin-bottom: 8px;
+    }
+    .feat-body { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .feat-tag {
+      display: inline-block; margin-top: 12px;
+      font-size: 11px; font-weight: 600; padding: 3px 8px;
+      border-radius: 4px; background: var(--violet-dim);
+      color: var(--violet2);
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how { background: var(--bg2); }
+    .steps {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 32px; margin-top: 56px;
+    }
+    .step { position: relative; }
+    .step-num {
+      font-size: 48px; font-weight: 900;
+      color: rgba(124,106,245,0.15);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+    .step-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .step-body { font-size: 14px; color: var(--muted); }
+
+    /* ── TERMINAL DEMO ── */
+    .terminal-wrap {
+      margin-top: 56px;
+      background: #0a0a12;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .terminal-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    .dot-r { width:12px;height:12px;border-radius:50%;background:#ff5f57; }
+    .dot-y { width:12px;height:12px;border-radius:50%;background:#ffbd2e; }
+    .dot-g { width:12px;height:12px;border-radius:50%;background:#28ca41; }
+    .terminal-title { margin-left: auto; margin-right: auto; font-size: 12px; color: var(--muted); }
+    .terminal-body {
+      padding: 24px 28px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px; line-height: 1.9;
+    }
+    .t-prompt { color: var(--violet); }
+    .t-cmd { color: var(--text); }
+    .t-out { color: var(--muted); }
+    .t-success { color: var(--green); }
+    .t-amber { color: var(--amber); }
+    .t-violet { color: var(--violet2); }
+
+    /* ── HARDWARE TIERS ── */
+    .hw-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px; margin-top: 56px;
+    }
+    .hw-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+      position: relative; overflow: hidden;
+    }
+    .hw-card.featured { border-color: var(--violet); }
+    .hw-card.featured::before {
+      content: 'RECOMMENDED';
+      position: absolute; top: 16px; right: -28px;
+      background: var(--violet); color: #fff;
+      font-size: 10px; font-weight: 700; padding: 3px 36px;
+      transform: rotate(35deg); letter-spacing:.08em;
+    }
+    .hw-tier { font-size: 11px; font-weight: 700; color: var(--violet); text-transform: uppercase; letter-spacing: .08em; }
+    .hw-device { font-size: 18px; font-weight: 800; margin: 6px 0; }
+    .hw-specs { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .hw-feature {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; margin-bottom: 6px;
+    }
+    .hw-feature .check { color: var(--green); }
+    .hw-feature .cross { color: #555; }
+
+    /* ── PRICING ── */
+    .pricing-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px; margin-top: 56px;
+    }
+    .price-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px;
+    }
+    .price-card.featured { border-color: var(--violet); background: linear-gradient(160deg, var(--bg2) 0%, rgba(124,106,245,0.06) 100%); }
+    .price-tier { font-size: 12px; font-weight: 700; color: var(--violet); text-transform: uppercase; letter-spacing: .08em; }
+    .price-amount { font-size: 40px; font-weight: 900; margin: 8px 0 4px; }
+    .price-amount span { font-size: 16px; font-weight: 400; color: var(--muted); }
+    .price-desc { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+    .price-feature { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; margin-bottom: 10px; }
+    .price-feature .icon { color: var(--green); flex-shrink: 0; margin-top: 2px; }
+    .price-btn {
+      display: block; text-align: center; margin-top: 28px;
+      padding: 12px; border-radius: 8px; font-weight: 700; font-size: 14px;
+      text-decoration: none; transition: opacity .15s;
+    }
+    .price-btn-primary { background: var(--violet); color: #fff; }
+    .price-btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .price-btn:hover { opacity: .8; }
+
+    /* ── FAQ ── */
+    .faq { background: var(--bg2); }
+    .faq-list { margin-top: 48px; }
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 24px 0;
+    }
+    .faq-q { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+    .faq-a { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 680px; }
+
+    /* ── CTA ── */
+    .cta-section {
+      text-align: center; padding: 120px 24px;
+      background: var(--bg);
+      position: relative; overflow: hidden;
+    }
+    .cta-glow {
+      position: absolute; bottom: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 500px;
+      background: radial-gradient(ellipse, rgba(124,106,245,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-section h2 {
+      font-size: clamp(32px, 5vw, 56px); font-weight: 800;
+      letter-spacing: -0.03em; margin-bottom: 16px;
+    }
+    .cta-section p { font-size: 18px; color: var(--muted); margin-bottom: 40px; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .footer-logo { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .15s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-legal { font-size: 12px; color: var(--muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      nav { padding: 0 20px; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      .hero-stats { gap: 24px; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="/" class="nav-logo">
+    <span class="claw">🐾</span> ClawOS
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#hardware">Hardware</a>
+    <a href="#pricing">Pricing</a>
+    <a href="https://github.com/xbrxr03/clawos" target="_blank">GitHub</a>
+    <a href="#get-started" class="nav-cta">Get Early Access</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge">
+    <span class="dot"></span> v0.1.0 prototype — early access open
+  </div>
+  <h1>Your AI.<br/>On your machine.<br/>Answering to no one.</h1>
+  <p class="hero-sub">
+    ClawOS boots into a full agent environment — memory, voice, WhatsApp, 27+ workflows, a living knowledge graph — on consumer hardware. Offline. Free.
+  </p>
+  <div class="hero-actions">
+    <a href="#get-started" class="btn-primary">Get Early Access</a>
+    <a href="https://github.com/xbrxr03/clawos" class="btn-secondary" target="_blank">View on GitHub →</a>
+  </div>
+  <div class="install-cmd">
+    <span class="prompt">$</span>
+    <span id="cmd-text">curl -fsSL https://clawos.ai/install.sh | bash</span>
+    <button class="copy-btn" onclick="copyInstall()" title="Copy">⎘ copy</button>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num">8 GB</div><div class="stat-label">Min RAM</div></div>
+    <div class="stat"><div class="stat-num">27+</div><div class="stat-label">Built-in Workflows</div></div>
+    <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Local & Private</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-label">API Keys Needed</div></div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-label">What's inside</div>
+    <h2 class="section-title">Everything you'd pay for.<br/>Running locally. For free.</h2>
+    <p class="section-sub">ClawOS ships a complete AI stack preconfigured and working out of the box.</p>
+    <div class="feat-grid">
+
+      <div class="feat-card">
+        <span class="feat-icon">🧠</span>
+        <div class="feat-title">Kizuna (絆) — Living Knowledge Graph</div>
+        <div class="feat-body">Every file you drop, every chat you have, every task you run — ClawOS builds a 3D knowledge graph of your world. Context travels with every request.</div>
+        <span class="feat-tag">GraphRAG</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">📱</span>
+        <div class="feat-title">WhatsApp Command Center</div>
+        <div class="feat-body">Message your AI from your phone. "Summarise my downloads", "what's on today", "buy oat milk". Approve tool calls by replying "yes". Works offline on LAN.</div>
+        <span class="feat-tag">No Cloud</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">🎙️</span>
+        <div class="feat-title">Offline Voice</div>
+        <div class="feat-body">Whisper STT + Piper TTS. Fully local, zero latency, no streaming subscription. Wake word, push-to-talk, or always-on. Pluggable via ElevenLabs if you want quality.</div>
+        <span class="feat-tag">Whisper + Piper</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">⚙️</span>
+        <div class="feat-title">27+ Automation Workflows</div>
+        <div class="feat-body">Organise Downloads, summarise PDFs, batch-rename photos, daily briefing, GitHub PR review, invoice scanner, meal planner — and counting. Each runs in one click.</div>
+        <span class="feat-tag">Phase 11</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">🛡️</span>
+        <div class="feat-title">Policy-Gated Tools</div>
+        <div class="feat-body">Every shell command, browser action, or file write goes through policyd. You define allow/deny rules. The AI can't do anything you haven't explicitly permitted.</div>
+        <span class="feat-tag">policyd</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">📡</span>
+        <div class="feat-title">Proactive Ambient Intelligence</div>
+        <div class="feat-body">ClawOS watches quietly in the background. Low disk? It tells you. Downloads cluttered? It suggests. Morning briefing at 7am via WhatsApp — automatically.</div>
+        <span class="feat-tag">Phase 8</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">🌐</span>
+        <div class="feat-title">Browser Agent</div>
+        <div class="feat-body">Playwright-powered browser automation. Research, fill forms, scrape, screenshot — all inside a sandboxed session. Tracks every action in the audit log.</div>
+        <span class="feat-tag">Playwright</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">🔌</span>
+        <div class="feat-title">Skills Marketplace</div>
+        <div class="feat-body">Install community skills from ClawHub — one command, sandboxed, signed. Build your own. OpenClaw-compatible. Verified, Community, or Local trust tiers.</div>
+        <span class="feat-tag">ClawHub</span>
+      </div>
+
+      <div class="feat-card">
+        <span class="feat-icon">🖥️</span>
+        <div class="feat-title">Operations Dashboard</div>
+        <div class="feat-body">Full-screen ops console at :7070. Live agent traces, memory browser, workflow history, settings, voice control, Kizuna graph — everything in one dark interface.</div>
+        <span class="feat-tag">PWA-ready</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="section-label">Setup</div>
+    <h2 class="section-title">Zero to agent OS<br/>in under 10 minutes.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Boot or install</div>
+        <div class="step-body">Flash the ClawOS ISO to a USB — boots on any x86 machine. Or run the install script on Ubuntu 24.04.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">First-run wizard</div>
+        <div class="step-body">Pick your runtime (Claw Core or OpenClaw), scan a WhatsApp QR, and set a dashboard PIN. Done.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Models pull automatically</div>
+        <div class="step-body">Ollama downloads gemma3:4b (or qwen2.5:7b for OpenClaw) on first boot. Works CPU-only.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">Start talking</div>
+        <div class="step-body">Message via WhatsApp, use the dashboard, or speak. Your AI is live. All data stays on the machine.</div>
+      </div>
+    </div>
+    <div class="terminal-wrap">
+      <div class="terminal-bar">
+        <div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div>
+        <div class="terminal-title">clawos install</div>
+      </div>
+      <div class="terminal-body">
+        <div><span class="t-prompt">$</span> <span class="t-cmd">curl -fsSL https://clawos.ai/install.sh | bash</span></div>
+        <div class="t-out"> </div>
+        <div><span class="t-violet">ClawOS v0.1.0 installer</span></div>
+        <div class="t-out">▸ Detecting hardware… ROG Ally (16 GB RAM, AMD Ryzen Z1)</div>
+        <div class="t-out">▸ Installing Ollama…</div>
+        <div class="t-out">▸ Pulling gemma3:4b (2.4 GB)…</div>
+        <div class="t-amber">? Choose runtime: [1] Claw Core  [2] OpenClaw  [3] Both</div>
+        <div class="t-out">  → 1</div>
+        <div class="t-out">▸ Starting services: agentd, dashd, gatewayd, braind, voiced…</div>
+        <div class="t-out">▸ Scan WhatsApp QR to link your phone:</div>
+        <div class="t-out">  ████ ▀▀▀▀ ████</div>
+        <div class="t-out">  ▀▀▀▀ ████ ▀▀▀▀</div>
+        <div class="t-out"> </div>
+        <div><span class="t-success">✓ ClawOS ready.</span> <span class="t-out">Dashboard → http://localhost:7070</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HARDWARE ── -->
+<section id="hardware" style="background: var(--bg);">
+  <div class="container">
+    <div class="section-label">Hardware</div>
+    <h2 class="section-title">Runs on what you already own.</h2>
+    <p class="section-sub">CPU-first by design. No GPU required. Scales up if you have the RAM.</p>
+    <div class="hw-grid">
+      <div class="hw-card">
+        <div class="hw-tier">Tier A — Minimal</div>
+        <div class="hw-device">8 GB mini PC / NUC</div>
+        <div class="hw-specs">8 GB RAM · Any x86 CPU · 40 GB disk</div>
+        <div class="hw-feature"><span class="check">✓</span> Claw Core (gemma3:4b)</div>
+        <div class="hw-feature"><span class="check">✓</span> Voice, WhatsApp, workflows</div>
+        <div class="hw-feature"><span class="cross">—</span> OpenClaw (too heavy)</div>
+        <div class="hw-feature"><span class="cross">—</span> Browser agent (slow)</div>
+      </div>
+      <div class="hw-card featured">
+        <div class="hw-tier">Tier B — Balanced</div>
+        <div class="hw-device">ROG Ally / 16 GB Laptop</div>
+        <div class="hw-specs">16 GB RAM · Ryzen Z1/5 · 256 GB SSD</div>
+        <div class="hw-feature"><span class="check">✓</span> Claw Core (default)</div>
+        <div class="hw-feature"><span class="check">✓</span> OpenClaw (optional)</div>
+        <div class="hw-feature"><span class="check">✓</span> Full browser agent</div>
+        <div class="hw-feature"><span class="check">✓</span> Kizuna graph at scale</div>
+      </div>
+      <div class="hw-card">
+        <div class="hw-tier">Tier C — Full Power</div>
+        <div class="hw-device">32 GB+ Workstation</div>
+        <div class="hw-specs">32 GB+ RAM · Any CPU · GPU optional</div>
+        <div class="hw-feature"><span class="check">✓</span> Both runtimes simultaneously</div>
+        <div class="hw-feature"><span class="check">✓</span> qwen2.5:32b or better</div>
+        <div class="hw-feature"><span class="check">✓</span> GPU acceleration (if present)</div>
+        <div class="hw-feature"><span class="check">✓</span> Federation (multi-node)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section id="pricing" style="background: var(--bg2);">
+  <div class="container">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Open core. Forever free<br/>where it matters.</h2>
+    <p class="section-sub">The full local agent OS is free and open source. Pay only if you want cloud sync, priority support, or team features.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">£0 <span>/ forever</span></div>
+        <div class="price-desc">Everything you need for a personal AI OS. No credit card. No account.</div>
+        <div class="price-feature"><span class="icon">✓</span> Full Claw Core runtime</div>
+        <div class="price-feature"><span class="icon">✓</span> Kizuna knowledge graph</div>
+        <div class="price-feature"><span class="icon">✓</span> 27+ workflows</div>
+        <div class="price-feature"><span class="icon">✓</span> Voice + WhatsApp</div>
+        <div class="price-feature"><span class="icon">✓</span> Skills marketplace</div>
+        <div class="price-feature"><span class="icon">✓</span> AGPL-3.0 open source</div>
+        <a href="https://github.com/xbrxr03/clawos" class="price-btn price-btn-secondary" target="_blank">Download Free →</a>
+      </div>
+      <div class="price-card featured">
+        <div class="price-tier">Pro</div>
+        <div class="price-amount">£9 <span>/ month</span></div>
+        <div class="price-desc">For power users who want sync, support, and extra packs.</div>
+        <div class="price-feature"><span class="icon">✓</span> Everything in Free</div>
+        <div class="price-feature"><span class="icon">✓</span> Encrypted cloud backup</div>
+        <div class="price-feature"><span class="icon">✓</span> Priority ClawHub packs</div>
+        <div class="price-feature"><span class="icon">✓</span> ElevenLabs voice quality</div>
+        <div class="price-feature"><span class="icon">✓</span> Priority support</div>
+        <div class="price-feature"><span class="icon">✓</span> Early feature access</div>
+        <a href="#get-started" class="price-btn price-btn-primary">Get Early Access</a>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">Team</div>
+        <div class="price-amount">£29 <span>/ seat/mo</span></div>
+        <div class="price-desc">Shared workspace, federated nodes, admin controls.</div>
+        <div class="price-feature"><span class="icon">✓</span> Everything in Pro</div>
+        <div class="price-feature"><span class="icon">✓</span> Multi-node federation</div>
+        <div class="price-feature"><span class="icon">✓</span> Shared Kizuna graph</div>
+        <div class="price-feature"><span class="icon">✓</span> SSO / admin dashboard</div>
+        <div class="price-feature"><span class="icon">✓</span> Audit log export</div>
+        <div class="price-feature"><span class="icon">✓</span> SLA + dedicated support</div>
+        <a href="mailto:hello@clawos.ai" class="price-btn price-btn-secondary">Contact Us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section class="faq">
+  <div class="container">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Common questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q">Does it actually run without internet?</div>
+        <div class="faq-a">Yes. Claw Core is 100% offline. Ollama runs the LLM locally, Whisper/Piper handle voice locally, and WhatsApp works over LAN. The only time it phones home is to pull model weights on first install and (optionally) sync Pro backups.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What's the difference between Claw Core and OpenClaw?</div>
+        <div class="faq-a">Claw Core is our native Python ReAct agent — fast, low RAM (works on 8 GB), CPU-only. OpenClaw is the open-source version of Claude's full tool ecosystem (430K lines, 13K+ skills) pre-configured for Ollama — needs 16 GB+ and a stronger model like qwen2.5:7b.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Is my data sent anywhere?</div>
+        <div class="faq-a">Never, unless you explicitly enable Pro cloud backup (E2E encrypted). All LLM inference, voice, memory, and tool execution happens on your machine. No telemetry, no analytics, no tracking.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I run it on macOS?</div>
+        <div class="faq-a">The dashboard and most services run on macOS. The full OS image (ISO) is Linux (Ubuntu 24.04). macOS users can run ClawOS as a stack via the install script — all features work except the bootable ISO.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What models does it use?</div>
+        <div class="faq-a">Default: gemma3:4b (great on 8 GB, CPU-only). OpenClaw mode needs qwen2.5:7b or better for tool calling. You can swap to any Ollama-compatible model in Settings → Model. Mistral, Llama 3, Phi-3 — all work.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How is this different from just running Ollama + Open WebUI?</div>
+        <div class="faq-a">ClawOS is an agent OS, not a chat UI. It has: policy-gated tool execution, a 4-layer memory system, a living knowledge graph, 27+ automation workflows, WhatsApp integration, proactive ambient intelligence, a browser agent, and a skills marketplace — all wired together and working on first boot.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section" id="get-started">
+  <div class="cta-glow"></div>
+  <div class="container">
+    <h2>Your machine.<br/>Your AI.<br/>Your rules.</h2>
+    <p>Join the early access list and get the ISO + install script when v0.1.0 ships.</p>
+    <form id="waitlist-form" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;max-width:480px;margin:0 auto;" onsubmit="handleSubmit(event)">
+      <input
+        type="email"
+        placeholder="your@email.com"
+        required
+        style="
+          flex:1; min-width:200px;
+          background:var(--bg2); border:1px solid var(--border);
+          color:var(--text); padding:14px 18px; border-radius:10px;
+          font-size:15px; outline:none;
+        "
+      />
+      <button type="submit" class="btn-primary" style="border:none;cursor:pointer;">
+        Get Early Access
+      </button>
+    </form>
+    <p id="waitlist-thanks" style="display:none;color:var(--green);margin-top:16px;font-weight:600;">
+      ✓ You're on the list. We'll be in touch.
+    </p>
+    <p style="margin-top:16px;font-size:13px;color:var(--muted);">No spam. Unsubscribe any time. Or just <a href="https://github.com/xbrxr03/clawos" style="color:var(--violet);">grab it from GitHub</a> now.</p>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">🐾 ClawOS</div>
+  <div class="footer-links">
+    <a href="https://github.com/xbrxr03/clawos" target="_blank">GitHub</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/docs/SUPABASE_SETUP.md">Docs</a>
+    <a href="mailto:hello@clawos.ai">Contact</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/LICENSE">AGPL-3.0</a>
+  </div>
+  <div class="footer-legal">© 2026 ClawOS. Built in public.</div>
+</footer>
+
+<script>
+  function copyInstall() {
+    const text = document.getElementById('cmd-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = '✓ copied';
+      setTimeout(() => { btn.textContent = '⎘ copy'; }, 2000);
+    });
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    // TODO: wire to your email service (Resend, Loops, etc.)
+    document.getElementById('waitlist-form').style.display = 'none';
+    document.getElementById('waitlist-thanks').style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
