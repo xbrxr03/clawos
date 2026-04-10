@@ -71,6 +71,8 @@ def gen_config(model: str = "qwen2.5:7b", openrouter_key: str = "") -> dict:
                 "memorySearch": {"enabled": False},
             }
         },
+        "cloud":   {"enabled": has_cloud},
+        "network": {"mode": "online" if has_cloud else "offline"},
         "skills": {},
     }
 
