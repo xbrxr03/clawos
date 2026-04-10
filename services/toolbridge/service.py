@@ -42,6 +42,13 @@ ALL_TOOL_DESCRIPTIONS = {
     "system.info":      "Get system info: disk, RAM, services.",
     "workspace.create": "Create a new workspace. Input: workspace name.",
     "workspace.inspect":"Inspect workspace contents and memory summary.",
+    # Browser tools (Playwright) — disabled by default, enabled by config
+    "browser.open":     "Open a URL in a sandboxed browser session. Input: url.",
+    "browser.read":     "Read the visible text content of the current page.",
+    "browser.click":    "Click an element on the current page. Input: CSS selector or text.",
+    "browser.type":     "Type text into a focused input field. Input: text string.",
+    "browser.screenshot": "Take a screenshot of the current page. Returns image path.",
+    "browser.close":    "Close the current browser session.",
 }
 
 
@@ -125,8 +132,14 @@ class ToolBridge:
             "memory.write":     lambda: _sync_wrap(self._memory_write, target),
             "memory.delete":    lambda: _sync_wrap(self._memory_delete, target),
             "system.info":      lambda: _sync_wrap(self._system_info),
-            "workspace.create": lambda: _sync_wrap(self._ws_create, target),
-            "workspace.inspect":lambda: _sync_wrap(self._ws_inspect),
+            "workspace.create":   lambda: _sync_wrap(self._ws_create, target),
+            "workspace.inspect":  lambda: _sync_wrap(self._ws_inspect),
+            "browser.open":       lambda: self._browser_dispatch("open", target),
+            "browser.read":       lambda: self._browser_dispatch("read", target),
+            "browser.click":      lambda: self._browser_dispatch("click", target),
+            "browser.type":       lambda: self._browser_dispatch("type", target),
+            "browser.screenshot": lambda: self._browser_dispatch("screenshot", target),
+            "browser.close":      lambda: self._browser_dispatch("close", target),
         }
         fn = dispatch.get(tool)
         if fn is None:
@@ -293,3 +306,33 @@ class ToolBridge:
         entries = list(self._ws_root.iterdir()) if self._ws_root.exists() else []
         mem_count = len(self.memory.get_all(self.workspace))
         return f"Workspace: {self.workspace} | Files: {len(entries)} | Memories: {mem_count}"
+
+    async def _browser_dispatch(self, action: str, target: str = "") -> str:
+        """Route browser.* tool calls through the Playwright adapter (Phase 13).
+
+        Falls back gracefully when Playwright is not installed or browser is
+        disabled in config — the test suite exercises this path.
+        """
+        try:
+            from adapters.browser.session_manager import get as get_session
+            session = await get_session(self._workspace_id)
+            if session is None:
+                return "[browser disabled] Set browser.enabled=true in config to use browser tools."
+            if action == "open":
+                return await session.goto(target)
+            elif action == "read":
+                return await session.inner_text("body")
+            elif action == "click":
+                return await session.click(target)
+            elif action == "type":
+                return await session.type(target)
+            elif action == "screenshot":
+                path = self._ws_root / "screenshot.png"
+                return await session.screenshot(str(path))
+            elif action == "close":
+                await session.close()
+                return "[browser] session closed"
+            else:
+                return f"[ERROR] Unknown browser action: {action}"
+        except Exception as e:
+            return f"[browser error] {e}"

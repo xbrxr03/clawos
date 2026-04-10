@@ -53,6 +53,13 @@ TOOL_SCORES: dict[str, int] = {
     "workspace.delete": 75,
     "system.info":      8,
     "workflow.destructive": 70,
+    # Browser tools (Phase 13)
+    "browser.open":       25,
+    "browser.read":       15,
+    "browser.click":      45,
+    "browser.type":       60,
+    "browser.screenshot": 20,
+    "browser.close":      5,
 }
 
 BLOCKED_PATHS = default_blocked_paths()

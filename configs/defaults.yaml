@@ -33,6 +33,13 @@ voice:
   record_rate: 44100
   silence_rms: 300
   silence_secs: 1.8
+  tts_provider: "piper"    # piper | elevenlabs
+  elevenlabs_voice_id: ""  # set to enable ElevenLabs TTS (Pro tier)
+
+browser:
+  enabled: false           # set true to enable Playwright browser agent
+  headless: true
+  timeout_ms: 30000
 
 policy:
   mode: "recommended"      # recommended | developer
