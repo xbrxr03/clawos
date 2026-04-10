@@ -318,6 +318,30 @@ build_command_center() {
   fi
 }
 
+login_ollama() {
+  # Only run if OpenClaw is installed and we have an interactive terminal
+  [ "$OPENCLAW_OK" = "true" ] || return 0
+  [ -t 0 ] && [ -t 1 ] || return 0
+
+  step "Signing in to Ollama (Kimi K2.5 cloud)"
+
+  # Fast-path: kimi-k2.5:cloud already pulled/authorised
+  if ollama list 2>/dev/null | grep -q "kimi-k2.5"; then
+    ok "Kimi K2.5 already authorised on this machine"
+    return 0
+  fi
+
+  echo ""
+  echo -e "  ${D}Log in to Ollama to use Kimi K2.5 cloud (free tier available).${RESET}"
+  echo -e "  ${D}A browser tab will open for authentication.${RESET}"
+  echo ""
+  if ollama login; then
+    ok "Ollama login complete"
+  else
+    warn "Ollama login skipped — run 'ollama login' then 'ollama launch openclaw --model kimi-k2.5:cloud' later"
+  fi
+}
+
 configure_openclaw() {
   step "Configuring OpenClaw"
 
@@ -759,6 +783,7 @@ ok "Python $PY_VER"
 install_ollama
 install_node
 install_openclaw
+login_ollama
 
 step "Installing Nexus"
 if [ -d "$INSTALL_DIR/clawos_core" ]; then
@@ -870,13 +895,19 @@ if [ -f "$_TOKEN_FILE" ]; then
 fi
 
 if [ -t 0 ] && [ -t 1 ]; then
-  echo -e "  ${B}Opening ClawOS Setup...${RESET}"
-  echo ""
-  if ! clawos-setup --timeout 180; then
-    warn "GUI setup launch failed - falling back to the terminal wizard"
-    python3 -m setup.first_run.wizard
+  if [ "$OPENCLAW_OK" = "true" ]; then
+    echo -e "  ${B}Launching OpenClaw + Kimi K2.5...${RESET}"
+    echo ""
+    ollama launch openclaw --model kimi-k2.5:cloud
+  else
+    echo -e "  ${B}Opening ClawOS Setup...${RESET}"
+    echo ""
+    if ! clawos-setup --timeout 180; then
+      warn "GUI setup launch failed - falling back to the terminal wizard"
+      python3 -m setup.first_run.wizard
+    fi
   fi
 else
-  echo -e "  ${D}Non-interactive install detected. Run ${RESET}${B}clawos-setup${RESET}${D} or ${RESET}${B}nexus setup${RESET}${D} later.${RESET}"
+  echo -e "  ${D}Non-interactive install detected. Run ${RESET}${B}ollama launch openclaw --model kimi-k2.5:cloud${RESET}${D} to start.${RESET}"
   echo ""
 fi
