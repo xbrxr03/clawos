@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type Key, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Badge, Card, PageHeader, PanelHeader } from '../components/ui.jsx'
 import { commandCenterApi, type DashboardHealth, type DesktopPosture, type GatewayHealth } from '../lib/commandCenterApi'
 import { desktopBridge } from '../desktop/bridge'
@@ -315,7 +315,7 @@ function runtimeDescription(label: string) {
   return descriptions[label] || 'Current runtime setting.'
 }
 
-function SettingRow({ label, description, value }: { label: string; description: string; value: string }) {
+function SettingRow({ label, description, value }: { label: string; description: string; value: string; key?: Key }) {
   return (
     <div className="setting-row">
       <div className="setting-row-copy">
@@ -327,7 +327,7 @@ function SettingRow({ label, description, value }: { label: string; description:
   )
 }
 
-function SettingActionRow({ label, description, action }: { label: string; description: string; action: ReactNode }) {
+function SettingActionRow({ label, description, action }: { label: string; description: string; action: ReactNode; key?: Key }) {
   return (
     <div className="setting-row">
       <div className="setting-row-copy">

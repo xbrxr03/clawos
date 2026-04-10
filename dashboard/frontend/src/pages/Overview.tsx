@@ -61,6 +61,7 @@ export function Overview({
   const [working, setWorking] = useState(false)
   const [conversationStatus, setConversationStatus] = useState('')
   const [voiceBusy, setVoiceBusy] = useState(false)
+  const [suggestions, setSuggestions] = useState<any[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -69,16 +70,23 @@ export function Overview({
       commandCenterApi.listAttention(),
       commandCenterApi.listMissions(),
       commandCenterApi.listApprovals(),
+      fetch('/api/suggestions', { credentials: 'include' }).then(r => r.ok ? r.json() : { suggestions: [] }),
     ])
-      .then(([presencePayload, briefingPayload, attentionPayload, missionPayload, approvalPayload]) => {
+      .then(([presencePayload, briefingPayload, attentionPayload, missionPayload, approvalPayload, suggestionsPayload]) => {
         setPresence(presencePayload)
         setBriefing(briefingPayload)
         setSignals(Array.isArray(attentionPayload) ? attentionPayload : [])
         setMissions(Array.isArray(missionPayload) ? missionPayload : [])
         setLiveApprovals(Array.isArray(approvalPayload) ? approvalPayload : [])
+        setSuggestions((suggestionsPayload as any)?.suggestions || [])
       })
       .catch(() => null)
   }, [])
+
+  const dismissSuggestion = async (id: string) => {
+    setSuggestions(current => current.filter(s => s.id !== id))
+    await fetch(`/api/suggestions/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => null)
+  }
 
   useEffect(() => {
     if (liveVoiceSession) {
@@ -397,6 +405,40 @@ export function Overview({
         </Card>
       </div>
 
+      {suggestions.length > 0 && (
+        <>
+          <SectionLabel>Kizuna Noticed</SectionLabel>
+          <div style={{ padding: '0 20px 4px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+            {suggestions.map((s: any) => (
+              <Card key={s.id} style={{ padding: 16, display: 'grid', gap: 10, borderLeft: `3px solid ${suggestionColor(s.category)}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: suggestionColor(s.category) }}>
+                    {s.category?.replace(/_/g, ' ') || 'noticed'}
+                  </div>
+                  <button
+                    onClick={() => dismissSuggestion(s.id)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{s.title}</div>
+                <div style={{ color: 'var(--text-2)', fontSize: 12, lineHeight: 1.55 }}>{s.body}</div>
+                {s.action_label && (
+                  <button
+                    className="btn primary"
+                    style={{ fontSize: 12, padding: '6px 14px', justifySelf: 'start' }}
+                    onClick={() => s.action_route && navigate(s.action_route)}
+                  >
+                    {s.action_label}
+                  </button>
+                )}
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+
       <SectionLabel>Conversation</SectionLabel>
       <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 12 }}>
         <Card style={{ padding: 18, display: 'grid', gap: 14 }}>
@@ -615,6 +657,16 @@ function toneForEvent(event: EventRecord) {
   if (event.type === 'workflow_progress') return 'var(--blue)'
   if (event.type === 'audit_event') return 'var(--orange)'
   if (event.type === 'service_health') return 'var(--green)'
+  return 'var(--text-3)'
+}
+
+function suggestionColor(category: string) {
+  if (category === 'approval_needed') return 'var(--red)'
+  if (category === 'system_health') return 'var(--orange)'
+  if (category === 'nexus_noticed') return 'var(--purple)'
+  if (category === 'briefing_ready') return 'var(--blue)'
+  if (category === 'brain_update') return '#7c6af5'
+  if (category === 'workflow_nudge') return 'var(--green)'
   return 'var(--text-3)'
 }
 

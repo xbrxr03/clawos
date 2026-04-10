@@ -169,6 +169,67 @@ class GatewayService:
         if self._wa and message:
             self._wa.send(jid, message)
 
+    async def send_morning_briefing(self, workspace_id: str = DEFAULT_WORKSPACE) -> bool:
+        """
+        Push the morning briefing to WhatsApp (self-message to the owner JID).
+        Called by the scheduler at the user-configured briefing time (default 7am).
+        Marks today's briefing as sent to suppress the ambient suggestion card.
+        """
+        if not self._wa:
+            log.warning("Morning briefing skipped: WhatsApp not linked")
+            return False
+
+        try:
+            from services.agentd.service import get_manager
+
+            # Build briefing including any Kizuna brain connections discovered overnight
+            brain_insight = ""
+            try:
+                from services.braind.service import get_brain
+                brain = get_brain()
+                from clawos_core.ambient import _check_brain_connections
+                brain_event = _check_brain_connections()
+                if brain_event:
+                    brain_insight = f"\n\n🧠 *Kizuna noticed*: {brain_event.body}"
+            except Exception:
+                pass
+
+            briefing_prompt = (
+                "Generate a concise morning briefing for the day. Include: "
+                "today's date, a quick weather note if available, any urgent tasks, "
+                "and 3 things to focus on today. Keep it under 200 words."
+                + brain_insight
+            )
+
+            reply = await get_manager().chat_direct(
+                briefing_prompt,
+                workspace_id=workspace_id,
+                channel="scheduler",
+                source="morning_briefing",
+            )
+
+            if reply:
+                briefing_text = f"☀️ *Good morning — ClawOS Morning Briefing*\n\n{reply}"
+                self._send_self_message(briefing_text)
+
+                # Mark today's briefing as sent
+                try:
+                    from clawos_core.constants import CLAWOS_DIR
+                    marker = CLAWOS_DIR / "state" / "briefing_sent_today.txt"
+                    marker.parent.mkdir(parents=True, exist_ok=True)
+                    import time
+                    marker.write_text(time.strftime("%Y-%m-%d"))
+                except Exception:
+                    pass
+
+                log.info("Morning briefing sent via WhatsApp")
+                return True
+
+        except Exception as e:
+            log.error(f"Morning briefing failed: {e}")
+
+        return False
+
     def health(self) -> dict:
         linked = (CONFIG_DIR / "whatsapp" / ".wa_linked").exists()
         channel_status = self._wa.status() if self._wa and hasattr(self._wa, "status") else {}

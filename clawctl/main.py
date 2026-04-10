@@ -443,6 +443,83 @@ if CLICK_OK:
         from clawctl.commands.project import run_stats
         run_stats(workspace)
 
+# ── skill marketplace ─────────────────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def skill():
+        """Browse and install skills from ClawHub."""
+        pass
+
+    @skill.command("search")
+    @click.argument("query", default="")
+    @click.option("--page", default=1, help="Page number")
+    def skill_search(query, page):
+        """Search ClawHub for skills."""
+        from clawctl.commands.skill import run_search; run_search(query, page)
+
+    @skill.command("install")
+    @click.argument("skill_id")
+    @click.option("--force", is_flag=True, help="Reinstall if already installed")
+    @click.option("--no-community", is_flag=True, help="Reject community (unverified) skills")
+    def skill_install(skill_id, force, no_community):
+        """Install a skill from ClawHub."""
+        from clawctl.commands.skill import run_install
+        run_install(skill_id, force=force, allow_community=not no_community)
+
+    @skill.command("remove")
+    @click.argument("skill_id")
+    def skill_remove(skill_id):
+        """Remove an installed skill."""
+        from clawctl.commands.skill import run_remove; run_remove(skill_id)
+
+    @skill.command("list")
+    def skill_list():
+        """List installed skills."""
+        from clawctl.commands.skill import run_list; run_list()
+
+    @skill.command("verify")
+    @click.argument("skill_path")
+    def skill_verify(skill_path):
+        """Verify Ed25519 signature of a local skill directory."""
+        from clawctl.commands.skill import run_verify; run_verify(skill_path)
+
+    @skill.command("local")
+    @click.argument("skill_path")
+    @click.option("--id", "skill_id", default="", help="Override skill ID")
+    def skill_local(skill_path, skill_id):
+        """Install skill from local path (dev mode)."""
+        from clawctl.commands.skill import run_local; run_local(skill_path, skill_id)
+
+    @skill.command("sign")
+    @click.argument("skill_path")
+    def skill_sign(skill_path):
+        """Sign a skill with Ed25519 (requires CLAWOS_SIGN_KEY env var)."""
+        from clawctl.commands.skill import run_sign; run_sign(skill_path)
+
+# ── license ────────────────────────────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def license():
+        """Manage ClawOS Premium license."""
+        pass
+
+    @license.command("activate")
+    @click.argument("key")
+    def license_activate(key):
+        """Activate a license key (CLAW-XXXX-XXXX-XXXX-XXXX)."""
+        from clawctl.commands.license import run_activate; run_activate(key)
+
+    @license.command("status")
+    def license_status():
+        """Show current license status."""
+        from clawctl.commands.license import run_status; run_status()
+
+    @license.command("deactivate")
+    def license_deactivate():
+        """Deactivate license on this machine."""
+        from clawctl.commands.license import run_deactivate; run_deactivate()
+
+
 if __name__ == "__main__":
     main()
 

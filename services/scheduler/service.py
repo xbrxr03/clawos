@@ -148,10 +148,48 @@ async def health_server() -> None:
     log.info(f"Health endpoint: http://localhost:{HEALTH_PORT}/health")
 
 
+async def _run_ambient_checks() -> None:
+    """Run ambient intelligence checks (non-fatal, logged on error)."""
+    try:
+        from clawos_core.ambient import run_checks
+        results = run_checks(force=True)
+        log.info(f"Ambient checks: {len(results)} suggestion(s) generated")
+    except Exception as e:
+        log.debug(f"Ambient checks skipped: {e}")
+
+
+async def _maybe_send_morning_briefing(now: datetime) -> None:
+    """
+    Send morning briefing to WhatsApp if:
+    - The current hour matches the configured briefing_hour (default 7)
+    - The briefing has not been sent today already
+    """
+    try:
+        briefing_hour = int(os.environ.get("CLAWOS_BRIEFING_HOUR", "7"))
+        if now.hour != briefing_hour:
+            return
+
+        # Check if already sent today
+        from clawos_core.constants import CLAWOS_DIR
+        marker = CLAWOS_DIR / "state" / "briefing_sent_today.txt"
+        today = now.strftime("%Y-%m-%d")
+        if marker.exists() and marker.read_text().strip() == today:
+            return
+
+        from services.gatewayd.service import get_service
+        gw = get_service()
+        await gw.send_morning_briefing()
+    except Exception as e:
+        log.debug(f"Morning briefing check skipped: {e}")
+
+
 async def scheduler_loop() -> None:
-    """Main loop — checks schedules every 60 seconds, fires matching tasks."""
+    """Main loop — checks schedules every 60 seconds, fires matching tasks.
+    Also runs ambient intelligence checks every 30 minutes."""
     log.info("Scheduler started")
     last_fired: dict[str, str] = {}  # schedule_id -> last fired minute str
+    last_ambient: float = 0.0
+    AMBIENT_INTERVAL = 30 * 60  # 30 minutes
 
     while True:
         now = datetime.now(timezone.utc)
@@ -169,6 +207,16 @@ async def scheduler_loop() -> None:
             if cron_matches(cron, now):
                 last_fired[sid] = minute_key
                 asyncio.create_task(dispatch_task(schedule))
+
+        # Run ambient checks every 30 minutes
+        import time as _time
+        now_ts = _time.time()
+        if (now_ts - last_ambient) >= AMBIENT_INTERVAL:
+            last_ambient = now_ts
+            asyncio.create_task(_run_ambient_checks())
+
+        # Check morning briefing every loop (self-deduplicates via marker file)
+        asyncio.create_task(_maybe_send_morning_briefing(now))
 
         await asyncio.sleep(60)
 

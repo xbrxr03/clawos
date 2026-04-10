@@ -1,9 +1,26 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // three-render-objects (used by react-force-graph-3d) imports WebGPURenderer
+      // from the three/webgpu subpath export. ClawOS targets WebGL only, so we
+      // shim that module to re-export WebGLRenderer under the WebGPURenderer name.
+      // This makes the optional WebGPU path silently fall back to WebGL.
+      'three/webgpu': path.resolve(__dirname, 'src/shims/three-webgpu.js'),
+      'three/tsl': path.resolve(__dirname, 'src/shims/three-webgpu.js'),
+    },
+  },
+  optimizeDeps: {
+    exclude: ['three/webgpu', 'three/tsl'],
+  },
   server: {
     port: 5173,
     proxy: {

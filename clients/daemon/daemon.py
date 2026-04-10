@@ -112,6 +112,15 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
 
+    # Start Kizuna service (braind) — living knowledge graph
+    try:
+        from services.braind.service import get_brain
+        brain = get_brain()
+        stats = brain.stats()
+        log.info(f"Kizuna (絆) ready: {stats['node_count']} nodes, {stats['edge_count']} edges")
+    except Exception as brain_error:
+        log.warning(f"Kizuna not started (non-fatal): {brain_error}")
+
     log.info("Daemon holding. Send SIGTERM to stop.")
     await stop_event.wait()
     log.info("ClawOS daemon stopped.")

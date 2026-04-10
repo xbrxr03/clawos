@@ -1,7 +1,57 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge, Card, Empty, PageHeader, PanelHeader, SectionLabel, Skeleton, SkeletonText } from '../components/ui.jsx'
 import { commandCenterApi, type UseCasePack } from '../lib/commandCenterApi'
+
+// ── Pack-specific setup guides ─────────────────────────────────────────────────
+
+const PACK_SETUP: Record<string, {
+  steps: string[]
+  firstWorkflow?: string
+  quickstartNote?: string
+}> = {
+  'daily-briefing-os': {
+    steps: [
+      '1. Set your WhatsApp JID in Settings → Gateway to receive briefings',
+      '2. Set CLAWOS_BRIEFING_HOUR env var (default: 7 for 7am)',
+      '3. Run "Morning Briefing" workflow once to verify delivery',
+      '4. Optionally connect your calendar for event summaries',
+    ],
+    firstWorkflow: 'morning-briefing',
+    quickstartNote: 'Your first morning briefing will arrive on WhatsApp tomorrow at 7am.',
+  },
+  'coding-autopilot': {
+    steps: [
+      '1. Set your default repo path in Settings → Workspace',
+      '2. Run "repo-summary" workflow on your main repo to seed Kizuna',
+      '3. Enable "pr-review" workflow for GitHub PRs',
+      '4. Set policyd to "developer-workstation" for sensible defaults',
+    ],
+    firstWorkflow: 'repo-summary',
+    quickstartNote: 'Kizuna will index your repo and surface TODOs, patterns, and tech debt.',
+  },
+  'sales-meeting-operator': {
+    steps: [
+      '1. Run "meeting-notes" workflow after your next call',
+      '2. Connect calendar in Settings → Providers for auto-prep',
+      '3. Enable approval gates for all external draft sends',
+      '4. Set your CRM field mapping in Settings → Integrations',
+    ],
+    firstWorkflow: 'meeting-notes',
+    quickstartNote: 'Meeting notes and follow-up drafts will route through the approval lane.',
+  },
+  'chat-app-command-center': {
+    steps: [
+      '1. Link WhatsApp via Settings → Gateway → Scan QR code',
+      '2. Send "Hey Jarvis, run morning brief" to test routing',
+      '3. Add trusted contact JIDs in Settings → Gateway → Routes',
+      '4. Enable voice transcription for voice note support',
+    ],
+    firstWorkflow: 'organize-downloads',
+    quickstartNote: 'Once WhatsApp is linked, every message routes through ClawOS.',
+  },
+}
 
 const WAVE_COLORS: Record<string, string> = {
   'wave-1': 'green',
@@ -10,11 +60,13 @@ const WAVE_COLORS: Record<string, string> = {
 }
 
 export function PacksPage() {
+  const navigate = useNavigate()
   const [packs, setPacks] = useState<UseCasePack[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -62,6 +114,29 @@ export function PacksPage() {
       setMessage(error.message || `Failed to install ${pack.name}`)
     } finally {
       setBusy(null)
+    }
+  }
+
+  const runFirstWorkflow = async (workflowId: string, packName: string) => {
+    setRunningWorkflow(workflowId)
+    setMessage('')
+    try {
+      const r = await fetch(`/api/workflows/${encodeURIComponent(workflowId)}/run`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (r.ok) {
+        setMessage(`${packName} quickstart workflow started — check Tasks for progress.`)
+        setTimeout(() => navigate('/tasks'), 1500)
+      } else {
+        setMessage(`Run "${workflowId}" manually from the Workflows tab.`)
+      }
+    } catch {
+      setMessage(`Run "${workflowId}" manually from the Workflows tab.`)
+    } finally {
+      setRunningWorkflow(null)
     }
   }
 
@@ -197,6 +272,56 @@ export function PacksPage() {
                 <div className="section-label">Policy pack</div>
                 <div className="mono" style={{ marginTop: 6 }}>{selected.policy_pack || 'recommended'}</div>
               </div>
+
+              {/* ── Quick Setup Guide ── */}
+              {PACK_SETUP[selected.id] && (
+                <div style={{
+                  background: 'rgba(124, 106, 245, 0.06)',
+                  border: '1px solid rgba(124, 106, 245, 0.2)',
+                  borderRadius: 12,
+                  padding: 16,
+                  display: 'grid',
+                  gap: 12,
+                }}>
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a78bfa', fontWeight: 700 }}>
+                    Quick Setup
+                  </div>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {PACK_SETUP[selected.id].steps.map((step, i) => (
+                      <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.55 }}>{step}</div>
+                    ))}
+                  </div>
+                  {PACK_SETUP[selected.id].quickstartNote && (
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                      {PACK_SETUP[selected.id].quickstartNote}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {PACK_SETUP[selected.id].firstWorkflow && (
+                      <button
+                        className="btn primary"
+                        style={{ fontSize: 12 }}
+                        disabled={runningWorkflow !== null}
+                        onClick={() => runFirstWorkflow(
+                          PACK_SETUP[selected.id].firstWorkflow!,
+                          selected.name,
+                        )}
+                      >
+                        {runningWorkflow === PACK_SETUP[selected.id].firstWorkflow
+                          ? 'Starting...'
+                          : `Run ${PACK_SETUP[selected.id].firstWorkflow} →`}
+                      </button>
+                    )}
+                    <button
+                      className="btn"
+                      style={{ fontSize: 12 }}
+                      onClick={() => navigate('/workflows')}
+                    >
+                      Open Workflows
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <Empty>Select a pack to inspect its setup shape and defaults.</Empty>

@@ -25,6 +25,9 @@ const MCPManagerPage = lazy(() => import('./pages/MCPManager').then((mod) => ({ 
 const FederationPage = lazy(() => import('./pages/Federation').then((mod) => ({ default: mod.FederationPage })))
 const StudioPage = lazy(() => import('./pages/Studio').then((mod) => ({ default: mod.StudioPage })))
 const SettingsPage = lazy(() => import('./pages/Settings').then((mod) => ({ default: mod.SettingsPage })))
+const BrainPage = lazy(() => import('./pages/Brain').then((mod) => ({ default: mod.BrainPage })))
+const SkillsPage = lazy(() => import('./pages/Skills').then((mod) => ({ default: mod.SkillsPage })))
+const LicensePage = lazy(() => import('./pages/License').then((mod) => ({ default: mod.LicensePage })))
 const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => ({ default: mod.SetupPage })))
 
 function RouteFallback({ message, compact = false }: { message: string; compact?: boolean }) {
@@ -93,6 +96,9 @@ function ShellRoutes({
         <Route path="/federation" element={<FederationPage />} />
         <Route path="/studio" element={<StudioPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/brain" element={<BrainPage />} />
+        <Route path="/skills" element={<SkillsPage />} />
+        <Route path="/license" element={<LicensePage />} />
       </Routes>
     </Suspense>
   )

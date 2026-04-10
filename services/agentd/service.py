@@ -73,11 +73,36 @@ class AgentManager:
 
         try:
             session = await self._get_session(task.workspace)
-            result  = await session.chat(task.intent)
+
+            # ── Kizuna GraphRAG: prepend brain context to intent ──────────────
+            enriched_intent = task.intent
+            try:
+                from services.braind.service import get_brain
+                brain = get_brain()
+                if brain.stats().get("node_count", 0) > 0:
+                    ctx = brain.get_context(task.intent, top_n=6)
+                    if ctx.get("context_text"):
+                        enriched_intent = f"{ctx['context_text']}\n\n{task.intent}"
+                        log.debug(f"Kizuna context injected: {len(ctx['nodes'])} nodes")
+            except Exception as brain_err:
+                log.debug(f"Kizuna context skipped: {brain_err}")
+
+            result = await session.chat(enriched_intent)
             task.result      = result
             task.status      = TaskStatus.COMPLETED
             task.finished_at = now_iso()
             await get_bus().emit_task(task.task_id, "completed", result[:120])
+
+            # ── Kizuna write-back: add new knowledge from result ─────────────
+            try:
+                from services.braind.service import get_brain
+                brain = get_brain()
+                asyncio.create_task(
+                    brain.expand_from_agent(result, source="agentd", task_id=task.task_id)
+                )
+            except Exception as expand_err:
+                log.debug(f"Kizuna expand skipped: {expand_err}")
+
         except Exception as e:
             task.error       = str(e)
             task.status      = TaskStatus.FAILED

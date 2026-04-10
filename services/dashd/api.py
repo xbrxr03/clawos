@@ -774,11 +774,12 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                     pass
 
     app = FastAPI(
-        title="ClawOS Dashboard",
+        title="ClawOS Dashboard API",
+        description="ClawOS command center REST API — 100+ endpoints for agents, workflows, brain, voice, and more.",
         version="0.2.0",
-        docs_url=None,
-        redoc_url=None,
-        openapi_url=None,
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
         lifespan=lifespan,
     )
     app.state.settings = load_dashboard_settings(settings)
@@ -1862,6 +1863,275 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except (ValueError, RuntimeError) as exc:
             raise HTTPException(status_code=502, detail=str(exc))
         return {"ok": True, "content": result}
+
+    # ── Kizuna (絆) — Living Knowledge Graph ────────────────────────────────
+
+    @app.get("/api/brain/status", dependencies=[Depends(require_auth)])
+    async def brain_status():
+        """Get Kizuna ingestion status and node/edge counts."""
+        try:
+            from services.braind.service import get_brain
+            return get_brain().get_status()
+        except Exception as e:
+            return {"node_count": 0, "edge_count": 0, "ingesting": False, "error": str(e)}
+
+    @app.get("/api/brain/graph", dependencies=[Depends(require_auth)])
+    async def brain_graph():
+        """Get {nodes, links} for react-force-graph-3d renderer."""
+        try:
+            from services.braind.service import get_brain
+            return get_brain().get_graph()
+        except Exception as e:
+            return {"nodes": [], "links": [], "error": str(e)}
+
+    @app.get("/api/brain/node/{node_id}", dependencies=[Depends(require_auth)])
+    async def brain_node(node_id: str):
+        """Get detail for a single node: neighbors, sources, pagerank."""
+        try:
+            from services.braind.service import get_brain
+            node = get_brain().get_node(node_id)
+            if not node:
+                raise HTTPException(status_code=404, detail="Node not found")
+            return node
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/brain/context", dependencies=[Depends(require_auth)])
+    async def brain_context(q: str = ""):
+        """GraphRAG context retrieval — used by agents for context assembly."""
+        if not q:
+            return {"nodes": [], "context_text": ""}
+        try:
+            from services.braind.service import get_brain
+            return get_brain().get_context(q)
+        except Exception as e:
+            return {"nodes": [], "context_text": "", "error": str(e)}
+
+    @app.get("/api/brain/gaps", dependencies=[Depends(require_auth)])
+    async def brain_gaps():
+        """Find isolated nodes and disconnected clusters."""
+        try:
+            from services.braind.service import get_brain
+            return {"gaps": get_brain().get_gaps()}
+        except Exception as e:
+            return {"gaps": [], "error": str(e)}
+
+    @app.post("/api/brain/expand", dependencies=[Depends(require_auth)])
+    async def brain_expand(body: dict | None = None):
+        """Agent write-back — add new knowledge to brain (significance-filtered)."""
+        payload = body or {}
+        text = str(payload.get("text", "")).strip()
+        source = str(payload.get("source", "agent"))
+        task_id = str(payload.get("task_id", ""))
+        if not text:
+            raise HTTPException(status_code=400, detail="text required")
+        try:
+            from services.braind.service import get_brain
+            return await get_brain().expand_from_agent(text, source=source, task_id=task_id)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/brain/upload", dependencies=[Depends(require_auth)])
+    async def brain_upload(request):
+        """Upload ZIP of documents for ingestion into Kizuna."""
+        import tempfile
+        from fastapi import Request
+        from pathlib import Path
+        try:
+            from services.braind.service import get_brain
+            brain = get_brain()
+
+            if brain.get_status()["ingesting"]:
+                raise HTTPException(status_code=409, detail="Ingestion already in progress")
+
+            # Read the upload
+            body = await request.body()
+            if not body:
+                raise HTTPException(status_code=400, detail="No file data received")
+
+            # Save to temp file
+            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+                f.write(body)
+                tmp_path = Path(f.name)
+
+            # Start ingestion in background
+            asyncio.create_task(brain.ingest_zip(tmp_path))
+
+            return {"ok": True, "message": "Ingestion started — watch /api/brain/status for progress"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.websocket("/ws/brain")
+    async def brain_websocket(websocket):
+        """WebSocket for real-time ingestion progress and neuron-firing events."""
+        from fastapi.websockets import WebSocketDisconnect
+        await websocket.accept()
+
+        try:
+            from services.braind.service import get_brain
+            brain = get_brain()
+
+            async def send_progress(event: str, data: dict):
+                try:
+                    await websocket.send_json({"event": event, **data})
+                except Exception:
+                    pass
+
+            brain.register_ws_callback(send_progress)
+
+            # Send current status immediately
+            await websocket.send_json({"event": "status", **brain.get_status()})
+
+            # Keep alive
+            while True:
+                try:
+                    msg = await asyncio.wait_for(websocket.receive_text(), timeout=30)
+                    if msg == "ping":
+                        await websocket.send_json({"event": "pong"})
+                except asyncio.TimeoutError:
+                    await websocket.send_json({"event": "heartbeat"})
+                except Exception:
+                    break
+
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            pass
+        finally:
+            try:
+                from services.braind.service import get_brain
+                get_brain().unregister_ws_callback(send_progress)
+            except Exception:
+                pass
+
+    # ── License & Feature Gate (Phase 16) ─────────────────────────────────────
+
+    @app.get("/api/license", dependencies=[Depends(require_auth)])
+    async def license_get():
+        """Get current license status."""
+        try:
+            from clawos_core.license import get_license_manager
+            mgr = get_license_manager()
+            return mgr.get_status()
+        except Exception as e:
+            return {"tier": "free", "valid": False, "error": str(e)}
+
+    @app.post("/api/license/activate", dependencies=[Depends(require_auth)])
+    async def license_activate(body: dict | None = None):
+        """Activate a license key."""
+        key = str((body or {}).get("key", "")).strip()
+        if not key:
+            raise HTTPException(status_code=400, detail="key required")
+        try:
+            from clawos_core.license import get_license_manager
+            mgr = get_license_manager()
+            result = mgr.activate(key)
+            if not result["ok"]:
+                raise HTTPException(status_code=400, detail=result["error"])
+            return result
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/license/deactivate", dependencies=[Depends(require_auth)])
+    async def license_deactivate():
+        """Deactivate license on this machine."""
+        try:
+            from clawos_core.license import get_license_manager
+            return get_license_manager().deactivate()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # ── Proactive Ambient Intelligence (Phase 8) ─────────────────────────────
+
+    @app.get("/api/suggestions", dependencies=[Depends(require_auth)])
+    async def suggestions_get():
+        """Return proactive suggestion cards for the Overview page."""
+        try:
+            from clawos_core.ambient import get_suggestions
+            return {"suggestions": get_suggestions()}
+        except Exception as e:
+            log.warning(f"Suggestions check failed: {e}")
+            return {"suggestions": []}
+
+    @app.delete("/api/suggestions/{suggestion_id}", dependencies=[Depends(require_auth)])
+    async def suggestions_dismiss(suggestion_id: str):
+        """Dismiss a suggestion card."""
+        try:
+            from clawos_core.ambient import dismiss_suggestion
+            ok = dismiss_suggestion(suggestion_id)
+            return {"ok": ok}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/suggestions/refresh", dependencies=[Depends(require_auth)])
+    async def suggestions_refresh():
+        """Force-refresh ambient checks immediately."""
+        try:
+            from clawos_core.ambient import run_checks
+            results = run_checks(force=True)
+            return {"suggestions": [s.to_dict() for s in results]}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # ── Skill Marketplace (Phase 15) ──────────────────────────────────────────
+
+    @app.get("/api/skills", dependencies=[Depends(require_auth)])
+    async def skills_search(q: str = "", page: int = 1, limit: int = 20):
+        """Search ClawHub for skills."""
+        try:
+            from skills.marketplace.registry import search_skills
+            return search_skills(query=q, page=page, limit=limit)
+        except Exception as e:
+            return {"results": [], "total": 0, "error": str(e)}
+
+    @app.get("/api/skills/installed", dependencies=[Depends(require_auth)])
+    async def skills_installed():
+        """List installed skills."""
+        try:
+            from skills.marketplace.registry import get_installed_skills
+            return {"skills": get_installed_skills()}
+        except Exception as e:
+            return {"skills": [], "error": str(e)}
+
+    @app.post("/api/skills/install", dependencies=[Depends(require_auth)])
+    async def skills_install(body: dict | None = None):
+        """Install a skill from ClawHub."""
+        payload = body or {}
+        skill_id = str(payload.get("skill_id", "")).strip()
+        if not skill_id:
+            raise HTTPException(status_code=400, detail="skill_id required")
+        force = bool(payload.get("force", False))
+        allow_community = bool(payload.get("allow_community", True))
+        try:
+            from skills.marketplace.installer import install_skill
+            result = install_skill(skill_id, force=force, allow_community=allow_community)
+            if not result["ok"]:
+                raise HTTPException(status_code=400, detail=result["error"])
+            return result
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/api/skills/{skill_id}", dependencies=[Depends(require_auth)])
+    async def skills_remove(skill_id: str):
+        """Remove an installed skill."""
+        try:
+            from skills.marketplace.installer import uninstall_skill
+            result = uninstall_skill(skill_id)
+            if not result["ok"]:
+                raise HTTPException(status_code=404, detail=result["error"])
+            return result
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     @app.websocket("/ws")
     async def ws_endpoint(websocket: WebSocket):

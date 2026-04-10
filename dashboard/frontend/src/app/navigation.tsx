@@ -15,16 +15,19 @@ export const appNav: AppNavItem[] = [
   { section: 'Operate', to: '/approvals', label: 'Approvals', description: 'Human review for sensitive tool calls and irreversible actions.', icon: <IconShield /> },
   { section: 'Operate', to: '/workflows', label: 'Workflows', description: 'Run local-first automations with live progress and output.', icon: <IconWorkflow /> },
   { section: 'Operate', to: '/studio', label: 'Pack Studio', description: 'Compose and prepare pack flows, approvals, and deployment posture.', icon: <IconStudio /> },
+  { section: 'Knowledge', to: '/brain', label: 'Kizuna', description: 'Living 3D knowledge graph — drop files and watch your brain build itself.', icon: <IconBrain /> },
   { section: 'Knowledge', to: '/workbench', label: 'Workbench', description: 'Fetch pages, inspect source material, and hand context to Nexus.', icon: <IconWorkbench /> },
   { section: 'Knowledge', to: '/research', label: 'Research', description: 'Citation-backed research sessions with resumable runs.', icon: <IconResearch /> },
   { section: 'Knowledge', to: '/memory', label: 'Memory/Audit', description: 'Workspace memory layers, audit surfaces, and runtime history.', icon: <IconDatabase /> },
   { section: 'Platform', to: '/packs', label: 'Packs', description: 'Curated ClawOS outcomes with defaults, dashboards, and eval posture.', icon: <IconLayers /> },
+  { section: 'Platform', to: '/skills', label: 'Skills', description: 'Browse and install 13,000+ skills from ClawHub with signature verification.', icon: <IconSkills /> },
   { section: 'Platform', to: '/providers', label: 'Providers', description: 'Local Ollama first, with cloud posture and testing when needed.', icon: <IconNodes /> },
   { section: 'Platform', to: '/models', label: 'Models', description: 'Ollama runtime inventory and model posture for this machine.', icon: <IconCpu /> },
   { section: 'Platform', to: '/registry', label: 'Registry', description: 'Trust-aware extension catalog and local A2A identity surface.', icon: <IconGrid /> },
   { section: 'Platform', to: '/mcp', label: 'MCP', description: 'Install, connect, and inspect model-context protocol servers and tools.', icon: <IconMCP /> },
   { section: 'Platform', to: '/federation', label: 'Federation', description: 'Peer trust, agent-card identity, and multi-node ClawOS posture.', icon: <IconFederation /> },
   { section: 'System', to: '/traces', label: 'Traces', description: 'Release confidence, eval suites, and execution timeline history.', icon: <IconPulse /> },
+  { section: 'System', to: '/license', label: 'License', description: 'Activate your ClawOS key, view tier features, and manage machine binding.', icon: <IconLicense /> },
   { section: 'System', to: '/settings', label: 'Settings', description: 'Desktop posture, support tooling, startup behavior, and recovery.', icon: <IconSettings /> },
 ]
 
@@ -90,4 +93,16 @@ function IconWorkbench() {
 
 function IconSettings() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="m6.85 2.1.31 1.44a4.77 4.77 0 0 1 1.68 0l.31-1.44 1.57.45-.52 1.38c.46.25.88.57 1.24.95l1.33-.66.84 1.41-1.14.95c.1.27.17.56.21.85l1.46.18v1.63l-1.46.18a4.66 4.66 0 0 1-.21.84l1.14.96-.84 1.4-1.33-.65c-.36.37-.78.69-1.24.95l.52 1.38-1.57.45-.31-1.44a4.77 4.77 0 0 1-1.68 0l-.31 1.44-1.57-.45.52-1.38a4.6 4.6 0 0 1-1.24-.95l-1.33.65-.84-1.4 1.14-.96a4.66 4.66 0 0 1-.21-.84l-1.46-.18V7.38l1.46-.18c.04-.29.11-.58.21-.85l-1.14-.95.84-1.41 1.33.66c.36-.38.78-.7 1.24-.95l-.52-1.38 1.57-.45Z" stroke="currentColor" strokeWidth="1.05" strokeLinejoin="round"/><circle cx="8" cy="8.19" r="2.05" stroke="currentColor" strokeWidth="1.2"/></svg>
+}
+
+function IconSkills() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="9" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.2"/><path d="M4.5 9V7A2.5 2.5 0 0 1 7 4.5H9" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><circle cx="11.5" cy="11.5" r="2.25" stroke="currentColor" strokeWidth="1.1"/><path d="M13 13l1.25 1.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+}
+
+function IconLicense() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2.75" y="2.75" width="10.5" height="10.5" rx="2" stroke="currentColor" strokeWidth="1.2"/><path d="M5.5 8h5M5.5 5.5h5M5.5 10.5h3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+}
+
+function IconBrain() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2.75c-1.65 0-2.75 1.1-2.75 2.75 0 .55.17 1.07.47 1.5-.3.43-.47.95-.47 1.5 0 1.65 1.1 2.75 2.75 2.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M10 2.75c1.65 0 2.75 1.1 2.75 2.75 0 .55-.17 1.07-.47 1.5.3.43.47.95.47 1.5 0 1.65-1.1 2.75-2.75 2.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M6 11.25v2M10 11.25v2M6 5.5h4M8 3.5v5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><circle cx="8" cy="8" r="1.25" fill="currentColor" opacity=".6"/></svg>
 }

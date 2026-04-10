@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { FormEvent, useEffect, useState } from 'react'
+import { type Key, FormEvent, useEffect, useState } from 'react'
 import { Badge, Card, Empty, SectionLabel } from '../components/ui.jsx'
 import { commandCenterApi, type Citation, type ResearchSession } from '../lib/commandCenterApi'
 
@@ -23,7 +23,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   none: 'No Search',
 }
 
-function CitationCard({ citation }: { citation: Citation }) {
+function CitationCard({ citation }: { citation: Citation; key?: Key }) {
   return (
     <div
       className="glass"
@@ -73,6 +73,7 @@ function SessionRow({
   onResume: () => void
   onPause: () => void
   onDelete: () => void
+  key?: Key
 }) {
   return (
     <div

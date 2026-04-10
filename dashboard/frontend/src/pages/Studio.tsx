@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Badge, Card, Empty, SectionLabel } from '../components/ui.jsx'
 import { commandCenterApi } from '../lib/commandCenterApi'
 
