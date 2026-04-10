@@ -79,7 +79,7 @@ async function stubCommandCenterData(page: Page) {
     approvals: [],
     services: {},
     tasks: { active: [], queued: [], failed: [], completed: [] },
-    models: { models: [], default: 'qwen2.5:7b' },
+    models: { models: [], default: 'gemma3:4b' },
   })
 
   await stubSession(page, { auth_required: false, authenticated: true })
@@ -227,7 +227,8 @@ test('command center shell renders', async ({ page }) => {
 
   await expect(page.getByText('ClawOS', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Workflows' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Browse workflows' })).toBeVisible()
+  // Overview page has an "Open workflows" button (updated from "Browse workflows" in redesign)
+  await expect(page.getByRole('button', { name: 'Open workflows' })).toBeVisible()
 })
 
 test('setup flow renders machine posture and actions', async ({ page }) => {
@@ -243,7 +244,7 @@ test('setup flow renders machine posture and actions', async ({ page }) => {
       tier: 'A',
     },
     recommended_profile: 'balanced',
-    selected_models: ['qwen2.5:7b'],
+    selected_models: ['gemma3:4b'],
     workspace: 'nexus_default',
     voice_enabled: true,
     enable_openclaw: false,
@@ -256,10 +257,16 @@ test('setup flow renders machine posture and actions', async ({ page }) => {
 
   await page.goto('/setup')
 
+  // "ClawOS Setup" is the eyebrow text of the PanelHeader
   await expect(page.getByText('ClawOS Setup', { exact: true })).toBeVisible()
-  await expect(page.getByText('Recommended profile:', { exact: false })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Apply Setup' })).toBeVisible()
-  await expect(page.getByText('Apple Silicon balanced profile')).toBeVisible()
+  // "Current posture" is the section label above the hardware fact rows
+  await expect(page.getByText('Current posture', { exact: false })).toBeVisible()
+  // Hardware summary is formatted as "summary - ram GB RAM - gpu"
+  await expect(page.getByText('Apple Silicon balanced profile', { exact: false })).toBeVisible()
+  // Navigation/action button: "Continue" on non-summary steps, "Launch ClawOS" on summary
+  await expect(
+    page.getByRole('button', { name: /Continue|Launch ClawOS/i }).first()
+  ).toBeVisible()
 })
 
 test('auth gate renders when dashboard token is required', async ({ page }) => {
@@ -267,7 +274,8 @@ test('auth gate renders when dashboard token is required', async ({ page }) => {
 
   await page.goto('/')
 
-  await expect(page.getByText('Dashboard access', { exact: true })).toBeVisible()
+  // Auth gate title is "Unlock ClawOS" (updated from "Dashboard access" in redesign)
+  await expect(page.getByText('Unlock ClawOS', { exact: true })).toBeVisible()
   await expect(page.getByPlaceholder('Dashboard token')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Unlock Command Center' })).toBeVisible()
 })
