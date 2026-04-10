@@ -908,6 +908,12 @@ def main(argv: list = None):
 
     first = argv[0].lower()
 
+    # Version
+    if first in ("-v", "--version", "version"):
+        from clawos_core.constants import VERSION_FULL
+        print(f"nexus {VERSION_FULL}")
+        return
+
     # Help
     if first in ("-h", "--help", "help"):
         print_help()

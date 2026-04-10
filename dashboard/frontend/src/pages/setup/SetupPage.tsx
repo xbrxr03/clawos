@@ -23,9 +23,9 @@ const STEPS = [
 ] as const
 
 const MODEL_OPTIONS = [
-  ['qwen2.5:7b', 'Best default for Tier B hardware.'],
+  ['gemma3:4b', 'Best default — runs on 8 GB RAM, no GPU needed.'],
+  ['qwen2.5:7b', 'Larger reasoning model — 16 GB RAM recommended.'],
   ['qwen2.5-coder:7b', 'Sharper for coding-heavy workflows.'],
-  ['gemma3:4b', 'Smaller footprint for lighter systems.'],
 ] as const
 
 const VOICE_OPTIONS = [
@@ -583,10 +583,17 @@ function renderStep({
         <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
           <FactRow label="Pack" value={selectedPack?.name || state.primary_pack || 'daily-briefing-os'} />
           <FactRow label="Provider" value={selectedProvider?.name || state.selected_provider_profile || 'local-ollama'} />
-          <FactRow label="Model" value={state.selected_models?.join(', ') || 'qwen2.5:7b'} />
+          <FactRow label="Model" value={state.selected_models?.join(', ') || 'gemma3:4b'} />
           <FactRow label="Voice" value={voiceMode} />
           <FactRow label="WhatsApp" value={state.whatsapp_enabled ? 'Prepared for pairing' : 'Skipped'} />
           <FactRow label="Launch on login" value={state.launch_on_login === false ? 'Disabled' : 'Enabled'} />
+          {state.completion_marker && (state as any).dashboard_token ? (
+            <div style={{ marginTop: 8, padding: '12px 14px', background: 'var(--surface-2, rgba(255,255,255,0.05))', borderRadius: 8, border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Dashboard token</div>
+              <code style={{ fontSize: 13, color: 'var(--accent, #7c6af5)', wordBreak: 'break-all', fontFamily: 'monospace' }}>{(state as any).dashboard_token}</code>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>Use this to unlock the dashboard on first login.</div>
+            </div>
+          ) : null}
         </div>
       </Card>
       <Card style={{ padding: 20, background: 'var(--surface)' }}>

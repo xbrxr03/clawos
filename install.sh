@@ -860,6 +860,15 @@ echo -e "  ${D}Open setup:${RESET} ${B}clawos-setup${RESET}"
 echo -e "  ${D}Open home:${RESET} ${B}clawos-command-center${RESET}"
 echo ""
 
+# Print dashboard token so new users can log in
+_CLAWOS_DIR="${CLAWOS_DIR:-$HOME/clawos}"
+_TOKEN_FILE="$_CLAWOS_DIR/config/dashboard.token"
+if [ -f "$_TOKEN_FILE" ]; then
+  echo -e "  ${Y}Dashboard token:${RESET} ${B}$(cat "$_TOKEN_FILE")${RESET}"
+  echo -e "  ${D}(saved at ${_TOKEN_FILE})${RESET}"
+  echo ""
+fi
+
 if [ -t 0 ] && [ -t 1 ]; then
   echo -e "  ${B}Opening ClawOS Setup...${RESET}"
   echo ""

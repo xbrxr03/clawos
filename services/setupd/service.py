@@ -671,7 +671,17 @@ class SetupService:
         }
 
     def to_dict(self) -> dict[str, Any]:
-        return self._state.__dict__.copy()
+        payload = self._state.__dict__.copy()
+        # Inject dashboard token once setup is complete so the browser can show it
+        if self._state.completion_marker:
+            try:
+                from clawos_core.constants import CONFIG_DIR
+                token_file = CONFIG_DIR / "dashboard.token"
+                if token_file.exists():
+                    payload["dashboard_token"] = token_file.read_text().strip()
+            except Exception:
+                pass
+        return payload
 
     def health(self) -> dict[str, Any]:
         return {
