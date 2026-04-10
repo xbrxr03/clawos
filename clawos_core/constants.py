@@ -91,14 +91,14 @@ OLLAMA_HOST   = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("
 
 # ── Models ────────────────────────────────────────────────────────────────────
 # Four canonical models. Nothing else.
-DEFAULT_MODEL       = os.environ.get("CLAWOS_MODEL", "qwen2.5:7b")
+DEFAULT_MODEL       = os.environ.get("CLAWOS_MODEL", "gemma3:4b")
 DEFAULT_EMBED_MODEL = "nomic-embed-text"
 
 MODEL_PROFILES = {
-    # Tier A: ARM / CPU-only / ≤8GB RAM
-    "lowram":      {"chat": "qwen2.5:1.5b", "ctx": 2048,  "voice": False, "tier": "A"},
-    # Tier B: x86 8-16GB
-    "balanced":    {"chat": "qwen2.5:3b",   "ctx": 4096,  "voice": True,  "tier": "B"},
+    # Tier A: CPU-only / ≤8GB RAM — gemma3:4b is the best CPU model at this tier
+    "lowram":      {"chat": "gemma3:4b",    "ctx": 2048,  "voice": False, "tier": "A"},
+    # Tier B: x86 8-16GB — gemma3:4b still best for CPU, qwen2.5:7b with GPU
+    "balanced":    {"chat": "gemma3:4b",    "ctx": 4096,  "voice": True,  "tier": "B"},
     # Tier C: x86 16-32GB with GPU
     "performance": {"chat": "qwen2.5:7b",   "ctx": 8192,  "voice": True,  "tier": "C"},
     # Tier D: 32GB+ RAM + GPU ≥10GB VRAM
