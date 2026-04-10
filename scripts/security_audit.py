@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
 FRONTEND_DIR = ROOT / "dashboard" / "frontend"
-GLOBAL_EXCLUDE_PARTS = {".claude", ".git", "node_modules", "storybook-static", "playwright-report", "test-results"}
+GLOBAL_EXCLUDE_PARTS = {".claude", ".git", "node_modules", "storybook-static", "playwright-report", "test-results", ".venv", "venv", "site-packages", "__pycache__"}
 
 STATIC_SCANS = (
     {
@@ -62,6 +62,12 @@ STATIC_SCANS = (
             Path("setup/repair/doctor.py"),
             Path("tools/shell/do/safety.py"),
             Path("scripts/security_audit.py"),
+            # ISO hooks are intentional bootstrap installers — curl|bash is expected
+            Path("packaging/iso/hooks/01-install-deps.sh"),
+            Path("packaging/iso/hooks/02-clone-clawos.sh"),
+            Path("packaging/iso/hooks/03-pull-models.sh"),
+            Path("packaging/iso/hooks/04-desktop.sh"),
+            Path("packaging/iso/hooks/05-first-boot.sh"),
         },
     },
 )

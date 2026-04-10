@@ -23,6 +23,13 @@ dependencies = [
     "uvicorn>=0.24",
     "ollama>=0.1",
     "click>=8.0",
+    "websockets>=11.0",
+    "httpx>=0.25",
+    "python-multipart>=0.0.9",
+    "cryptography>=41.0",
+    "networkx>=3.2",
+    "pdfplumber>=0.10",
+    "python-docx>=1.1",
 ]
 
 [project.optional-dependencies]
@@ -30,14 +37,25 @@ voice = [
     "openai-whisper>=20231117",
     "piper-tts>=1.2",
     "pyaudio>=0.2",
+    "elevenlabs>=1.0",
 ]
 memory = [
-    "chromadb>=0.4",
+    "chromadb>=0.5",
     "json-repair>=0.20",
+]
+browser = [
+    "playwright>=1.40",
+]
+brain = [
+    "langchain-experimental>=0.0.50",
+    "langchain-ollama>=0.1",
+    "cdlib>=0.3",
 ]
 full = [
     "clawos[voice]",
     "clawos[memory]",
+    "clawos[browser]",
+    "clawos[brain]",
 ]
 
 [project.scripts]
@@ -57,6 +75,9 @@ include = [
     "clawctl*",
     "clients*",
     "openclaw_integration*",
+    "workflows*",
+    "nexus*",
+    "skills*",
 ]
 
 [tool.setuptools]

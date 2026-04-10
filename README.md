@@ -40,7 +40,7 @@ OpenClaw hit 280,000 GitHub stars in six weeks. Most people who tried it gave up
 
 The setup takes hours. It requires API keys. It costs $300-750/month in tokens. The creator left for OpenAI in February. CVE-2026-25253 lets anyone steal your keys in one click. Cisco found that 17% of ClawHub skills are malicious.
 
-ClawOS fixes all of that. It runs OpenClaw on your hardware, with your models, for the cost of electricity.
+ClawOS fixes all of that. It runs OpenClaw on your hardware, with your models, for the cost of electricity. No monthly bill. No API keys. No cloud dependency.
 
 ---
 
@@ -48,19 +48,20 @@ ClawOS fixes all of that. It runs OpenClaw on your hardware, with your models, f
 
 After one command:
 
-- **OpenClaw** - pre-configured for offline Ollama, no API keys required
-- **Ollama** - local model runtime, right model for your hardware pulled automatically
-- **Nexus** - native Python agent with memory, tools, and voice
-- **Pack-first setup** - choose a primary job like Daily Briefing OS, Sales and Meeting Operator, Chat-App Command Center, or Coding Autopilot
-- **Provider control plane** - local Ollama by default, with switchable profiles for Anthropic API, OpenAI API, Azure/OpenAI, OpenAI-compatible endpoints, and custom relays
-- **Trusted extension registry** - extensions are labeled by trust tier, network posture, and permission surface
-- **Trace and eval surfaces** - local traces, run inspectors, and pack eval suites are built into the Command Center
-- **OpenClaw rescue** - inspect an existing OpenClaw install, import safe config, and map it into ClawOS packs
-- **29 one-command workflows** - organize downloads, summarize PDFs, review PRs, disk reports, daily digest, and more - all offline
-- **WhatsApp bridge** - text your AI from your phone
-- **policyd** - every tool call gated and audited before it runs
-- **Dashboard** - web UI showing tasks, approvals, models, memory, audit log, and workflows
-- **Full OpenClaw ecosystem** - 13,700+ skills and more to come
+- **OpenClaw** — pre-configured for offline Ollama, no API keys required
+- **Ollama** — local model runtime, right model for your hardware auto-selected
+- **Nexus** — native Python agent with memory, voice, browser control, and 29 workflows
+- **Pack-first setup** — Daily Briefing OS, Sales Operator, Chat-App Command Center, or Coding Autopilot
+- **MCP Manager** — visual UI to connect any Model Context Protocol server (local or remote)
+- **A2A Federation** — Agent-to-Agent protocol to link multiple ClawOS instances on your network
+- **Nexus Brain** — 3D knowledge graph: drop a ZIP of notes, watch your personal knowledge base build itself
+- **Proactive ambient intelligence** — ClawOS notices things and tells you ("82% disk full", "brain found new connection")
+- **Skill Marketplace** — Ed25519-signed skills; unsigned packages cannot install
+- **Provider control plane** — switch between Ollama, OpenRouter, Anthropic API, Azure/OpenAI
+- **WhatsApp bridge** — text your AI from your phone, approve sensitive actions by reply
+- **policyd** — every tool call gated, audited, and logged before it runs; human approval queue for sensitive ops
+- **Dashboard** — 17-page React UI: tasks, approvals, models, memory, audit log, workflows, brain graph, MCP
+- **29 one-command workflows** — organize downloads, summarize PDFs, review PRs, disk reports, daily digest, and more
 
 ```
 $ clawos
@@ -114,19 +115,20 @@ And in the Command Center:
 
 The installer automatically detects your hardware and picks the right model:
 
-| Hardware | RAM | Model | Speed |
-|----------|-----|-------|-------|
-| Raspberry Pi 5, ARM devices | 8GB | `qwen2.5:1.5b` | ~3-5 tok/s on CPU |
-| x86 laptop / mini PC | 8-16GB | `qwen2.5:3b` | ~8-15 tok/s |
-| x86 workstation with GPU | 16GB+ | `qwen2.5:7b` | ~40-80 tok/s GPU |
+| Hardware | RAM | Tier | Model | Speed |
+|----------|-----|------|-------|-------|
+| Raspberry Pi 5 / ARM | 8GB | A | `gemma3:4b` | ~3-5 tok/s CPU |
+| x86 laptop / mini PC | 8-16GB | B | `gemma3:4b` | ~8-20 tok/s CPU |
+| x86 workstation with GPU | 16-32GB | C | `qwen2.5:7b` | ~40-80 tok/s GPU |
+| Gaming rig / workstation | 32GB+ + GPU | D | `qwen2.5:7b` | ~80+ tok/s GPU |
 
-GPU optional. NVIDIA (CUDA) and AMD (ROCm) both supported via Ollama.
+`gemma3:4b` is the best CPU-only model at 3.3GB — runs comfortably on 8GB RAM with no GPU required. GPU optional (NVIDIA CUDA and AMD ROCm both supported via Ollama).
 
 ---
 
 ## Raspberry Pi 5 / ARM
 
-ClawOS works on RPi 5 8GB. The installer detects ARM and pulls `qwen2.5:1.5b` automatically - no configuration needed.
+ClawOS works on RPi 5 8GB. The installer detects ARM and pulls `gemma3:4b` automatically - no configuration needed.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
@@ -144,7 +146,8 @@ If you have a more powerful machine running Ollama on your local network, you ca
 ```bash
 OLLAMA_HOST=0.0.0.0 ollama serve
 # Pull the models ClawOS needs:
-ollama pull qwen2.5:7b
+ollama pull gemma3:4b          # for CPU-only / 8-16GB RAM machines
+ollama pull qwen2.5:7b         # for GPU-equipped machines (16GB+)
 ollama pull nomic-embed-text
 ```
 
@@ -246,9 +249,16 @@ ClawOS meets 6 of 7 enterprise security requirements. No other open-source agent
 ```bash
 git clone https://github.com/xbrxr03/clawos
 cd clawos
-pip install pyyaml aiohttp fastapi uvicorn ollama click json-repair chromadb --break-system-packages
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[full]"
 python3 -m bootstrap.bootstrap
 clawos
+```
+
+Or use the pre-flight check to see what the installer will do on your machine before committing:
+
+```bash
+bash install.sh --check
 ```
 
 ---
@@ -257,19 +267,26 @@ clawos
 
 Linux remains the most battle-tested install path. macOS now uses Homebrew + `launchd`; the primary target is macOS 14+ on Apple Silicon, with Intel as best-effort.
 
-- [x] Core runtime - policyd, memd, toolbridge, agentd, modeld, voiced
-- [x] Voice pipeline - Whisper STT + Piper TTS
-- [x] One-command installer - Ubuntu, Debian, macOS
-- [x] OpenClaw offline + WhatsApp
-- [x] Dashboard - FastAPI + WebSocket + React
-- [x] systemd service units
-- [x] First-run wizard - hardware profiling, model selection, API key vault
-- [x] nexus CLI - 12 commands, RAG pipeline, project upload/query
-- [x] Key vault - secretd, per-service credential isolation
-- [x] OpenRouter support - use cloud models as fallback
-- [x] 29 offline workflows - files, documents, developer, content, system, data categories
-- [x] Capability discovery - auto-suggests workflows based on your hardware and profile
-- [ ] **Bootable ISO** - flash and boot, no install needed (final stage)
+- [x] Core runtime — policyd, memd, toolbridge, agentd, modeld, voiced, metricd
+- [x] Voice pipeline — Whisper STT + Piper TTS + wake word detection
+- [x] One-command installer — Ubuntu, Debian, macOS, `--check` pre-flight mode
+- [x] OpenClaw offline + WhatsApp bridge with approval-by-reply
+- [x] Dashboard — 17-page React UI, WebSocket real-time updates, dark mode
+- [x] systemd / launchd service management
+- [x] First-run setup wizard — hardware profiling, model selection, API key vault
+- [x] nexus CLI — 12 commands, RAG pipeline, project upload/query
+- [x] Key vault — secretd, per-service credential isolation
+- [x] OpenRouter support — cloud models as fallback
+- [x] 29 offline workflows — files, documents, developer, content, system, data categories
+- [x] Capability discovery — auto-suggests workflows based on your setup
+- [x] MCP Manager — connect any Model Context Protocol server, visual UI
+- [x] A2A Federation — Agent-to-Agent protocol, multi-instance networking
+- [x] Nexus Brain — 3D knowledge graph, ZIP ingestion, GraphRAG retrieval
+- [x] Proactive ambient intelligence — suggestions feed, morning briefing push
+- [x] Skill Marketplace — Ed25519 signing, sandbox, trust tiers
+- [x] Browser control — Playwright-backed headless browser tools for the agent
+- [x] PWA — installable as app on desktop and mobile
+- [ ] **Bootable ISO** — flash and boot, no install needed (v0.1.1)
 
 ---
 
@@ -277,16 +294,21 @@ Linux remains the most battle-tested install path. macOS now uses Homebrew + `la
 
 macOS support in ClawOS now means the Homebrew + `launchd` path described in [docs/MACOS.md](docs/MACOS.md). Apple Silicon is the primary target today.
 
-| | OpenClaw | Nanobot | NanoClaw | ZeroClaw | ClawOS |
+| | OpenClaw | Leon | khoj | Open WebUI | ClawOS |
 |---|---|---|---|---|---|
-| One-command install | No | No | No | No | Yes |
-| Offline - no API keys | No | No | No | No | Yes |
-| OpenClaw ecosystem | Yes | No | No | No | Yes |
-| Human approval queue | No | No | No | No | Yes |
-| Tamper-evident audit | No | No | No | No | Yes |
-| WhatsApp bridge | Yes | No | No | No | Yes |
-| macOS support | No | Yes | No | Yes | Yes |
-| Zero monthly cost | No | Yes | Yes | Yes | Yes |
+| One-command install | No | No | No | Partial | **Yes** |
+| Fully offline, no API keys | No | No | No | Yes | **Yes** |
+| Dashboard UI (17 pages) | No | No | No | Yes | **Yes** |
+| 29 built-in workflows | No | Partial | No | No | **Yes** |
+| MCP Manager (visual UI) | No | No | No | Partial | **Yes** |
+| Agent-to-Agent federation | No | No | No | No | **Yes** |
+| 3D knowledge brain | No | No | No | No | **Yes** |
+| Proactive ambient alerts | No | No | No | No | **Yes** |
+| Signed skill marketplace | Unsafe | No | No | No | **Yes** |
+| Human approval queue | No | No | No | No | **Yes** |
+| WhatsApp bridge | Yes | No | No | No | **Yes** |
+| Voice pipeline (offline) | No | Partial | No | No | **Yes** |
+| Zero monthly cost | No | Yes | Partial | Yes | **Yes** |
 
 ---
 

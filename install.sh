@@ -463,7 +463,7 @@ install_picoclaw_if_needed() {
 {
   "provider": "ollama",
   "endpoint": "http://localhost:11434",
-  "model": "qwen2.5:1.5b",
+  "model": "gemma3:4b",
   "timeout": 300
 }
 EOF
@@ -610,6 +610,23 @@ MODEL_SIZE=""
 MODEL_NOTE=""
 OPENCLAW_OK=false
 BREW_BIN=""
+CHECK_ONLY=false
+
+# ── Parse flags ───────────────────────────────────────────────────────────────
+for _arg in "$@"; do
+  case "$_arg" in
+    --check)  CHECK_ONLY=true ;;
+    --skip-model) SKIP_MODEL=true ;;
+    --help|-h)
+      echo "Usage: bash install.sh [--check] [--skip-model]"
+      echo ""
+      echo "  --check       Pre-flight only: detect hardware profile and report what would be"
+      echo "                installed without changing anything on this machine."
+      echo "  --skip-model  Skip pulling Ollama models (useful for CI or offline installs)."
+      echo ""
+      exit 0 ;;
+  esac
+done
 
 OS_NAME="$(uname -s)"
 case "$OS_NAME" in
@@ -675,24 +692,24 @@ ok "Hardware: $TIER"
 
 case "$PROFILE" in
   lowram)
-    MODEL="qwen2.5:1.5b"
-    MODEL_SIZE="~1.1GB"
-    MODEL_NOTE="ARM and CPU friendly"
+    MODEL="gemma3:4b"
+    MODEL_SIZE="~3.3GB"
+    MODEL_NOTE="best CPU-only model, runs on 8GB RAM"
     ;;
   balanced)
-    MODEL="qwen2.5:3b"
-    MODEL_SIZE="~2.0GB"
-    MODEL_NOTE="balanced speed and quality"
+    MODEL="gemma3:4b"
+    MODEL_SIZE="~3.3GB"
+    MODEL_NOTE="best CPU-only model, runs on 8GB RAM"
     ;;
   performance|gaming)
     MODEL="qwen2.5:7b"
     MODEL_SIZE="~4.7GB"
-    MODEL_NOTE="full local capability"
+    MODEL_NOTE="full local capability, GPU recommended"
     ;;
   *)
-    MODEL="qwen2.5:3b"
-    MODEL_SIZE="~2.0GB"
-    MODEL_NOTE="balanced speed and quality"
+    MODEL="gemma3:4b"
+    MODEL_SIZE="~3.3GB"
+    MODEL_NOTE="best CPU-only model, runs on 8GB RAM"
     ;;
 esac
 
@@ -713,6 +730,26 @@ if [ -z "$CLAWOS_RUNTIMES" ]; then
   esac
 fi
 export CLAWOS_RUNTIMES
+
+# ── --check mode: report and exit without installing anything ─────────────────
+if [ "$CHECK_ONLY" = "true" ]; then
+  echo ""
+  divider
+  echo ""
+  echo -e "  ${P}${BOLD}ClawOS Pre-flight Report${RESET}"
+  echo ""
+  echo -e "  ${W}Platform   :${RESET} $(platform_name) (${ARCH})"
+  echo -e "  ${W}RAM        :${RESET} ${RAM_GB}GB"
+  echo -e "  ${W}Disk free  :${RESET} ${DISK_FREE}GB"
+  echo -e "  ${W}Profile    :${RESET} ${PROFILE} (Tier ${CLAWOS_DETECTED_TIER})"
+  echo -e "  ${W}Model      :${RESET} ${MODEL} (${MODEL_SIZE}) — ${MODEL_NOTE}"
+  echo -e "  ${W}Runtimes   :${RESET} ${CLAWOS_RUNTIMES}"
+  echo -e "  ${W}Install to :${RESET} ${INSTALL_DIR}"
+  echo ""
+  echo -e "  ${G}${BOLD}OK to install.${RESET} Run without --check to proceed."
+  echo ""
+  exit 0
+fi
 
 install_system_packages
 require_cmd python3

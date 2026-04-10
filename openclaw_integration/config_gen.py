@@ -43,6 +43,8 @@ def gen_config(model: str = "qwen2.5:7b", openrouter_key: str = "") -> dict:
                 "id":            model,
                 "name":          model,
                 "contextWindow": ctx,
+                "inputCostPer1M":  0,
+                "outputCostPer1M": 0,
             }]
         }
     }
@@ -71,6 +73,8 @@ def gen_config(model: str = "qwen2.5:7b", openrouter_key: str = "") -> dict:
                 "memorySearch": {"enabled": False},
             }
         },
+        "cloud":   {"enabled": has_cloud},
+        "network": {"mode": "online" if has_cloud else "offline", "allow_internet": has_cloud},
         "skills": {},
     }
 

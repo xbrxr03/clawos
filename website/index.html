@@ -523,6 +523,95 @@
   </div>
 </section>
 
+<!-- ── SAVINGS CALCULATOR ── -->
+<section id="savings" style="background: var(--bg2);">
+  <div class="container" style="max-width:760px;">
+    <div class="section-label">Savings Calculator</div>
+    <h2 class="section-title">What does your AI stack cost?</h2>
+    <p class="section-sub" style="max-width:100%;">Toggle what you pay for today. ClawOS replaces all of it — locally, for free.</p>
+    <div id="calc-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:40px;">
+      <div class="calc-item" data-cost="20" onclick="toggleCalc(this)">
+        <div class="calc-icon">🤖</div>
+        <div class="calc-name">ChatGPT Plus</div>
+        <div class="calc-price">$20/mo</div>
+      </div>
+      <div class="calc-item" data-cost="5" onclick="toggleCalc(this)">
+        <div class="calc-icon">🎙️</div>
+        <div class="calc-name">ElevenLabs</div>
+        <div class="calc-price">$5/mo</div>
+      </div>
+      <div class="calc-item" data-cost="10" onclick="toggleCalc(this)">
+        <div class="calc-icon">📝</div>
+        <div class="calc-name">Notion AI</div>
+        <div class="calc-price">$10/mo</div>
+      </div>
+      <div class="calc-item" data-cost="20" onclick="toggleCalc(this)">
+        <div class="calc-icon">⚡</div>
+        <div class="calc-name">Zapier (AI plan)</div>
+        <div class="calc-price">$20/mo</div>
+      </div>
+      <div class="calc-item" data-cost="10" onclick="toggleCalc(this)">
+        <div class="calc-icon">🎤</div>
+        <div class="calc-name">Speech API</div>
+        <div class="calc-price">$10/mo</div>
+      </div>
+      <div class="calc-item" data-cost="15" onclick="toggleCalc(this)">
+        <div class="calc-icon">🔍</div>
+        <div class="calc-name">Perplexity Pro</div>
+        <div class="calc-price">$15/mo</div>
+      </div>
+    </div>
+    <div id="calc-result" style="margin-top:32px;padding:28px 32px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Current monthly spend</div>
+          <div id="calc-total" style="font-size:42px;font-weight:800;color:#f87171;margin-top:4px;">$0/mo</div>
+        </div>
+        <div style="font-size:32px;color:var(--muted);">→</div>
+        <div>
+          <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">With ClawOS</div>
+          <div style="font-size:42px;font-weight:800;color:var(--green);margin-top:4px;">$0/mo</div>
+          <div style="font-size:12px;color:var(--muted);">Free forever. Own your stack.</div>
+        </div>
+      </div>
+      <div id="calc-savings-msg" style="margin-top:20px;padding:14px 20px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:8px;font-size:14px;color:var(--green);"></div>
+    </div>
+  </div>
+</section>
+<style>
+  .calc-item {
+    background: var(--bg3); border: 2px solid var(--border); border-radius: 10px;
+    padding: 20px 16px; cursor: pointer; text-align: center;
+    transition: border-color .15s, background .15s, transform .15s;
+    user-select: none;
+  }
+  .calc-item:hover { border-color: rgba(124,106,245,0.4); transform: translateY(-2px); }
+  .calc-item.active { border-color: var(--violet); background: var(--violet-dim); }
+  .calc-icon { font-size: 28px; margin-bottom: 8px; }
+  .calc-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .calc-price { font-size: 12px; color: var(--muted); }
+  .calc-item.active .calc-price { color: var(--violet2); }
+</style>
+<script>
+  function toggleCalc(el) {
+    el.classList.toggle('active');
+    var total = 0;
+    document.querySelectorAll('.calc-item.active').forEach(function(c) {
+      total += parseInt(c.dataset.cost, 10);
+    });
+    var result = document.getElementById('calc-result');
+    if (total > 0) {
+      result.style.display = 'block';
+      document.getElementById('calc-total').textContent = '$' + total + '/mo';
+      var annual = total * 12;
+      document.getElementById('calc-savings-msg').textContent =
+        'That\'s $' + annual + '/year going to SaaS subscriptions. ClawOS replaces every one of these — running locally, offline, free.';
+    } else {
+      result.style.display = 'none';
+    }
+  }
+</script>
+
 <!-- ── HARDWARE ── -->
 <section id="hardware" style="background: var(--bg);">
   <div class="container">

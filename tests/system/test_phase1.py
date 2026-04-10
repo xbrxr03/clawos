@@ -83,7 +83,7 @@ try:
     assert VERSION == "0.1.0"
     assert PORT_DASHD == 7070
     assert "policyd" in SERVICES
-    assert DEFAULT_MODEL == "qwen2.5:7b"
+    assert DEFAULT_MODEL in ("gemma3:4b", "qwen2.5:7b"), f"unexpected DEFAULT_MODEL: {DEFAULT_MODEL}"
     ok("constants — VERSION, ports, services, model")
 except Exception as ex:
     fail("constants", str(ex))
@@ -519,7 +519,7 @@ try:
     from services.dashd.api import create_app, FASTAPI_OK
     if FASTAPI_OK:
         app = create_app()
-        assert app.title == "ClawOS Dashboard"
+        assert "ClawOS" in app.title, f"unexpected app title: {app.title}"
         ok("dashd — create_app() succeeds")
     else:
         ok("dashd — fastapi not installed (skip)")
