@@ -50,6 +50,7 @@ ALL_TOOL_DESCRIPTIONS = {
     "browser.screenshot": "Take a screenshot of the current page. Returns image path.",
     "browser.close":    "Close the current browser session.",
     "browser.scroll":   "Scroll the page. Input: 'up', 'down', or a CSS selector.",
+    "browser.wait":     "Wait for an element or condition. Input: CSS selector or milliseconds.",
 }
 
 
