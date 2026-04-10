@@ -60,6 +60,7 @@ TOOL_SCORES: dict[str, int] = {
     "browser.type":       60,
     "browser.screenshot": 20,
     "browser.close":      5,
+    "browser.scroll":     10,
 }
 
 BLOCKED_PATHS = default_blocked_paths()

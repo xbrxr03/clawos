@@ -49,6 +49,7 @@ ALL_TOOL_DESCRIPTIONS = {
     "browser.type":     "Type text into a focused input field. Input: text string.",
     "browser.screenshot": "Take a screenshot of the current page. Returns image path.",
     "browser.close":    "Close the current browser session.",
+    "browser.scroll":   "Scroll the page. Input: 'up', 'down', or a CSS selector.",
 }
 
 
