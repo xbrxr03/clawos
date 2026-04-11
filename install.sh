@@ -434,7 +434,7 @@ install_picoclaw_if_needed() {
 {
   "provider": "ollama",
   "endpoint": "http://localhost:11434",
-  "model": "gemma3:4b",
+  "model": "qwen2.5:3b",
   "timeout": 300
 }
 EOF
@@ -655,14 +655,14 @@ ok "Hardware: $TIER"
 
 case "$PROFILE" in
   lowram)
-    MODEL="gemma3:4b"
-    MODEL_SIZE="~3.3GB"
-    MODEL_NOTE="best CPU-only model, runs on 8GB RAM"
+    MODEL="qwen2.5:3b"
+    MODEL_SIZE="~2.0GB"
+    MODEL_NOTE="fast CPU-only model, optimised for 8GB RAM"
     ;;
   balanced)
-    MODEL="gemma3:4b"
-    MODEL_SIZE="~3.3GB"
-    MODEL_NOTE="best CPU-only model, runs on 8GB RAM"
+    MODEL="qwen2.5:7b"
+    MODEL_SIZE="~4.7GB"
+    MODEL_NOTE="strong reasoning model, 16GB RAM recommended"
     ;;
   performance|gaming)
     MODEL="qwen2.5:7b"
@@ -670,9 +670,9 @@ case "$PROFILE" in
     MODEL_NOTE="full local capability, GPU recommended"
     ;;
   *)
-    MODEL="gemma3:4b"
-    MODEL_SIZE="~3.3GB"
-    MODEL_NOTE="best CPU-only model, runs on 8GB RAM"
+    MODEL="qwen2.5:3b"
+    MODEL_SIZE="~2.0GB"
+    MODEL_NOTE="fast CPU-only model, optimised for 8GB RAM"
     ;;
 esac
 

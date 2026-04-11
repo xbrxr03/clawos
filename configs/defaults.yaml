@@ -7,7 +7,7 @@ clawos:
 
 model:
   provider: "ollama"
-  chat: "gemma3:4b"
+  chat: "qwen2.5:3b"
   embed: "nomic-embed-text"
   host: "http://localhost:11434"
   ctx_window: 4096

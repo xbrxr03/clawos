@@ -23,8 +23,8 @@ const STEPS = [
 ] as const
 
 const MODEL_OPTIONS = [
-  ['gemma3:4b', 'Best default — runs on 8 GB RAM, no GPU needed.'],
-  ['qwen2.5:7b', 'Larger reasoning model — 16 GB RAM recommended.'],
+  ['qwen2.5:3b', 'Fastest on CPU — 8 GB RAM, no GPU needed. (Recommended)'],
+  ['qwen2.5:7b', 'Stronger reasoning — 16 GB RAM recommended.'],
   ['qwen2.5-coder:7b', 'Sharper for coding-heavy workflows.'],
 ] as const
 
@@ -583,7 +583,7 @@ function renderStep({
         <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
           <FactRow label="Pack" value={selectedPack?.name || state.primary_pack || 'daily-briefing-os'} />
           <FactRow label="Provider" value={selectedProvider?.name || state.selected_provider_profile || 'local-ollama'} />
-          <FactRow label="Model" value={state.selected_models?.join(', ') || 'gemma3:4b'} />
+          <FactRow label="Model" value={state.selected_models?.join(', ') || 'qwen2.5:3b'} />
           <FactRow label="Voice" value={voiceMode} />
           <FactRow label="WhatsApp" value={state.whatsapp_enabled ? 'Prepared for pairing' : 'Skipped'} />
           <FactRow label="Launch on login" value={state.launch_on_login === false ? 'Disabled' : 'Enabled'} />
