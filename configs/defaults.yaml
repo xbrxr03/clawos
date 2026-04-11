@@ -27,8 +27,8 @@ memory:
   dedup_threshold: 0.8
 
 voice:
-  enabled: false
-  mode: "push_to_talk"     # push_to_talk | always_on | off
+  enabled: true
+  mode: "wake_word"        # push_to_talk | wake_word | off
   stt_model: "base"
   record_rate: 44100
   silence_rms: 300

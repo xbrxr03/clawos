@@ -6,7 +6,7 @@ ConditionHost=
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 -m services.picoclawd.main
+ExecStart=/usr/bin/env python3 -m services.picoclawd.main
 WorkingDirectory=%h/clawos
 Environment=PYTHONPATH=%h/clawos
 Restart=on-failure

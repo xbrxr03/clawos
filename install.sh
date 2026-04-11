@@ -488,6 +488,7 @@ EOF
     systemctl --user restart clawos.service >/dev/null 2>&1 \
       && ok "ClawOS service started" \
       || warn "Start manually: systemctl --user start clawos.service"
+    sleep 5  # wait for sub-services to initialize before verify check
 
     if command -v openclaw >/dev/null 2>&1; then
       OPENCLAW_BIN="$(command -v openclaw)"
@@ -827,7 +828,24 @@ if [ -f "$_TOKEN_FILE" ]; then
   echo ""
 fi
 
+play_jarvis_greeting() {
+  local TEXT="Hello sir. All systems are online."
+  if command -v piper >/dev/null 2>&1 && [ -f "$HOME/.local/share/piper/en_US-lessac-medium.onnx" ]; then
+    echo "$TEXT" | piper --model "$HOME/.local/share/piper/en_US-lessac-medium.onnx" --output_raw 2>/dev/null | \
+      aplay -r 22050 -f S16_LE -c 1 2>/dev/null || true
+    return
+  fi
+  if command -v say >/dev/null 2>&1; then
+    say -v "Samantha" "$TEXT" 2>/dev/null || true
+    return
+  fi
+  if command -v espeak >/dev/null 2>&1; then
+    espeak "$TEXT" 2>/dev/null || true
+  fi
+}
+
 if [ -t 0 ] && [ -t 1 ]; then
+  play_jarvis_greeting
   echo -e "  ${B}Launching OpenClaw + Kimi K2.5...${RESET}"
   echo ""
   ollama launch openclaw --model kimi-k2.5:cloud

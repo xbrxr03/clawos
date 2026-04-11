@@ -372,7 +372,16 @@ class VoiceService:
     async def _handle_voice_roundtrip(self, trigger: str) -> dict[str, Any]:
         self._ensure_runtime()
         transcript = await self.listen(duration_s=4.0)
-        response = f"I heard: {transcript}" if transcript else ""
+        if transcript and transcript.strip():
+            try:
+                from services.agentd.service import get_manager
+                self._sync_session(state="thinking")
+                response = await get_manager().chat_direct(transcript.strip(), channel="voice")
+            except Exception as exc:
+                log.warning("Voice agent call failed: %s", exc)
+                response = "Sorry, I couldn't process that request."
+        else:
+            response = ""
         playback_ok = await self.speak(response) if response else False
         return {
             "ok": bool(transcript),

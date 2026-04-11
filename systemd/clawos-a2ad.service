@@ -5,7 +5,7 @@ Wants=clawos-agentd.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 -m services.a2ad.main
+ExecStart=/usr/bin/env python3 -m services.a2ad.main
 WorkingDirectory=%h/clawos
 Environment=PYTHONPATH=%h/clawos
 Restart=on-failure
