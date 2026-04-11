@@ -639,13 +639,6 @@ OPENCLAW_OK=false
 BREW_BIN=""
 CHECK_ONLY=false
 
-# ── Reattach stdin to terminal when running via curl | bash ───────────────────
-# Without this, [ -t 0 ] is false and all interactive prompts (ollama login,
-# OpenClaw TUI launch) are silently skipped.
-if [ ! -t 0 ] && [ -e /dev/tty ]; then
-  exec 0</dev/tty
-fi
-
 # ── Parse flags ───────────────────────────────────────────────────────────────
 for _arg in "$@"; do
   case "$_arg" in
