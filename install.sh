@@ -321,40 +321,6 @@ build_command_center() {
   fi
 }
 
-login_ollama() {
-  # Only run if OpenClaw is installed and we have an interactive terminal
-  [ "$OPENCLAW_OK" = "true" ] || return 0
-  [ -t 0 ] && [ -t 1 ] || return 0
-
-  step "Signing in to Ollama (Kimi K2.5 cloud)"
-
-  # Fast-path: kimi-k2.5:cloud already pulled/authorised
-  if ollama list 2>/dev/null | grep -q "kimi-k2.5"; then
-    ok "Kimi K2.5 already authorised on this machine"
-    return 0
-  fi
-
-  echo ""
-  echo -e "  ${D}Log in to Ollama to use Kimi K2.5 cloud (free tier available).${RESET}"
-  echo -e "  ${D}A browser tab will open for authentication.${RESET}"
-  echo ""
-  if ollama login; then
-    ok "Ollama login complete"
-    # ollama login regenerates ~/.ollama/id_ed25519 — restart the server so it
-    # picks up the new key before model pulls happen
-    pkill -x ollama 2>/dev/null || pkill -f "ollama serve" 2>/dev/null || true
-    sleep 2
-    nohup "$OLLAMA_BIN" serve >/dev/null 2>&1 &
-    for _ in 1 2 3 4 5 6; do
-      sleep 1
-      curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
-    done
-    "$OLLAMA_BIN" list >/dev/null 2>&1 || true   # warmup: confirm key is ready
-  else
-    warn "Ollama login skipped — run 'ollama login' later to enable Kimi K2.5"
-  fi
-}
-
 configure_openclaw() {
   step "Configuring OpenClaw"
 
@@ -796,7 +762,6 @@ ok "Python $PY_VER"
 install_ollama
 install_node
 install_openclaw
-login_ollama
 
 step "Installing Nexus"
 if [ -d "$INSTALL_DIR/clawos_core" ]; then
@@ -911,10 +876,7 @@ if [ -t 0 ] && [ -t 1 ]; then
   if [ "$OPENCLAW_OK" = "true" ]; then
     echo -e "  ${B}Launching OpenClaw + Kimi K2.5...${RESET}"
     echo ""
-    # Try ollama cloud launch first; fall back to local gateway TUI
-    if ! ollama launch openclaw --model kimi-k2.5:cloud 2>/dev/null; then
-      openclaw tui
-    fi
+    ollama launch openclaw --model kimi-k2.5:cloud
   else
     echo -e "  ${B}Opening ClawOS Setup...${RESET}"
     echo ""
