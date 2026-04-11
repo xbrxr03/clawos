@@ -787,7 +787,6 @@ else
   fi
 fi
 
-configure_openclaw
 install_wrapper_commands
 install_picoclaw_if_needed
 enable_autostart
