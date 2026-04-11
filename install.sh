@@ -16,7 +16,7 @@ fi
 
 divider() { echo -e "${D}  --------------------------------------------------------${RESET}"; }
 step()    { echo -e "\n${B}${BOLD}  >${RESET}  ${W}${BOLD}$1${RESET}"; }
-ok()      { echo -e "  ${G}OK${RESET}  $1"; }
+ok()      { echo -e "  ${G}✓${RESET}   $1"; }
 info()    { echo -e "  ${D}..  $1${RESET}"; }
 warn()    { echo -e "  ${Y}!!${RESET}  ${Y}$1${RESET}"; }
 die()     { echo -e "\n  ${R}XX${RESET}  $1\n"; exit 1; }
@@ -749,7 +749,7 @@ if [ "$CHECK_ONLY" = "true" ]; then
   echo -e "  ${W}Runtimes   :${RESET} ${CLAWOS_RUNTIMES}"
   echo -e "  ${W}Install to :${RESET} ${INSTALL_DIR}"
   echo ""
-  echo -e "  ${G}${BOLD}OK to install.${RESET} Run without --check to proceed."
+  echo -e "  ${G}${BOLD}✓ Ready to install.${RESET} Run without --check to proceed."
   echo ""
   exit 0
 fi
