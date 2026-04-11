@@ -14,17 +14,17 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #080b0f;
-      --surface: #0e1318;
-      --surface-2: #141b24;
-      --border: rgba(255,255,255,0.07);
-      --accent: #7c6af5;
-      --accent-2: #38bdf8;
-      --text: #f0f4f8;
-      --text-2: #8b98a8;
-      --text-3: #4a5568;
+      --bg: #0a0000;
+      --surface: #120606;
+      --surface-2: #1a0808;
+      --border: rgba(255,50,50,0.10);
+      --accent: #e53935;
+      --accent-2: #ff6b6b;
+      --text: #f5f0f0;
+      --text-2: #9a8888;
+      --text-3: #4a3a3a;
       --green: #22c55e;
-      --glow: rgba(124,106,245,0.15);
+      --glow: rgba(229,57,53,0.18);
     }
 
     html { scroll-behavior: smooth; }
@@ -35,6 +35,22 @@
       line-height: 1.6;
       overflow-x: hidden;
     }
+
+    /* ── Audience banner ── */
+    .audience-banner {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: linear-gradient(90deg, rgba(229,57,53,0.18) 0%, rgba(255,107,107,0.08) 100%);
+      border-bottom: 1px solid rgba(229,57,53,0.25);
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text-2);
+      backdrop-filter: blur(8px);
+    }
+    .audience-banner a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .audience-banner a:hover { text-decoration: underline; }
 
     /* ── Fixed side nav (PAPI pattern) ── */
     .sidenav {
@@ -82,8 +98,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse 60% 40% at 50% 30%, rgba(124,106,245,0.12) 0%, transparent 70%),
-        radial-gradient(ellipse 40% 30% at 70% 60%, rgba(56,189,248,0.06) 0%, transparent 60%);
+        radial-gradient(ellipse 60% 40% at 50% 30%, rgba(229,57,53,0.14) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 70% 60%, rgba(255,107,107,0.06) 0%, transparent 60%);
       pointer-events: none;
     }
     .hero-eyebrow {
@@ -160,7 +176,7 @@
       display: inline-block;
       transition: all 0.2s;
     }
-    .btn-primary:hover { background: #6b5ae0; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,106,245,0.35); }
+    .btn-primary:hover { background: #c62828; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(229,57,53,0.35); }
     .btn-ghost {
       background: transparent;
       color: var(--text-2);
@@ -226,7 +242,7 @@
       border-bottom: 1px solid var(--border);
     }
     .compare-header.plain { background: var(--surface); color: var(--text-2); }
-    .compare-header.clawos { background: rgba(124,106,245,0.12); color: var(--accent); }
+    .compare-header.clawos { background: rgba(229,57,53,0.12); color: var(--accent); }
     .compare-row {
       display: contents;
     }
@@ -258,7 +274,7 @@
       padding: 24px;
       transition: border-color 0.2s, transform 0.2s;
     }
-    .feature-card:hover { border-color: rgba(124,106,245,0.4); transform: translateY(-2px); }
+    .feature-card:hover { border-color: rgba(229,57,53,0.35); transform: translateY(-2px); }
     .feature-icon { font-size: 24px; margin-bottom: 12px; }
     .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
     .feature-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
@@ -348,8 +364,8 @@
 
     /* ── Premium CTA ── */
     .premium-card {
-      background: linear-gradient(135deg, rgba(124,106,245,0.1) 0%, rgba(56,189,248,0.06) 100%);
-      border: 1px solid rgba(124,106,245,0.3);
+      background: linear-gradient(135deg, rgba(229,57,53,0.10) 0%, rgba(255,107,107,0.05) 100%);
+      border: 1px solid rgba(229,57,53,0.30);
       border-radius: 20px;
       padding: 60px 40px;
       text-align: center;
@@ -373,6 +389,33 @@
       border-radius: 6px;
       margin-bottom: 24px;
     }
+    /* ── Switch card ── */
+    .switch-card {
+      background: var(--surface);
+      border: 1px solid rgba(229,57,53,0.25);
+      border-radius: 16px;
+      padding: 48px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .switch-badge {
+      display: inline-block;
+      background: rgba(229,57,53,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(229,57,53,0.25);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      margin-bottom: 20px;
+    }
+    .switch-title { font-size: 1.6rem; font-weight: 700; line-height: 1.25; margin-bottom: 16px; }
+    .switch-body { color: var(--text-2); font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
+    .switch-list { display: flex; flex-direction: column; gap: 10px; }
+    .switch-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14.5px; color: var(--text-2); }
+
     .premium-features {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -414,6 +457,11 @@
   <a href="#premium" title="Premium"></a>
 </nav>
 
+<!-- Hosted OpenClaw audience banner -->
+<div class="audience-banner">
+  💸 Paying $29–$59/mo for managed OpenClaw hosting?&nbsp; <a href="#savings">ClawOS sets it up in 4 minutes for $10 once. →</a>
+</div>
+
 <!-- Hero -->
 <section class="hero" id="hero">
   <div class="hero-eyebrow">Open Source · AGPL-3.0 · Built on the OpenClaw Ecosystem</div>
@@ -440,8 +488,8 @@
       <div class="stat-label">Services</div>
     </div>
     <div class="stat">
-      <div class="stat-num">100%</div>
-      <div class="stat-label">Offline-capable</div>
+      <div class="stat-num">4 min</div>
+      <div class="stat-label">To install</div>
     </div>
     <div class="stat">
       <div class="stat-num">$0</div>
@@ -602,6 +650,22 @@
         <a href="https://github.com/xbrxr03/clawos" class="btn-primary">$10 once →</a>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- Switching from hosted OpenClaw -->
+<section id="switch" style="padding-top: 0;">
+  <div class="switch-card">
+    <div class="switch-badge">For hosted OpenClaw customers</div>
+    <div class="switch-title">Paying monthly for something that should be a one-time install?</div>
+    <p class="switch-body">Managed OpenClaw services charge $29–$59/mo because setup is genuinely hard — 15+ steps, broken dependencies, no voice, no dashboard, no automations. ClawOS solves the setup problem. One command handles everything Elestio and RunMyClaw charge you monthly to manage.</p>
+    <div class="switch-list">
+      <div class="switch-item"><span class="check">✓</span> Same OpenClaw ecosystem — no migration</div>
+      <div class="switch-item"><span class="check">✓</span> Runs on your hardware, not their VPS</div>
+      <div class="switch-item"><span class="check">✓</span> Adds voice, WhatsApp, workflows, and 3D brain that hosted plans don't have</div>
+      <div class="switch-item"><span class="check">✓</span> $10 once vs $29–$59 every month</div>
+    </div>
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="margin-top: 28px; display: inline-block;">Switch to ClawOS →</a>
   </div>
 </section>
 
