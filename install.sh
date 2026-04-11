@@ -233,36 +233,7 @@ install_node() {
   ok "Node.js $(node --version)"
 }
 
-install_openclaw() {
-  step "Installing OpenClaw"
-
-  OPENCLAW_OK=false
-  npm config set prefix "$HOME/.local" >/dev/null 2>&1 || true
-  export PATH="$HOME/.local/bin:$PATH"
-
-  if ! command -v node >/dev/null 2>&1; then
-    warn "Skipping OpenClaw because Node.js is missing"
-    return 0
-  fi
-
-  if command -v openclaw >/dev/null 2>&1; then
-    ok "OpenClaw already installed"
-    OPENCLAW_OK=true
-    return 0
-  fi
-
-  if run_with_spinner "Installing OpenClaw via npm" npm install -g openclaw@latest --quiet; then
-    refresh_shell_env
-    if command -v openclaw >/dev/null 2>&1; then
-      ok "OpenClaw installed"
-      OPENCLAW_OK=true
-    else
-      warn "OpenClaw install completed but binary is not on PATH yet"
-    fi
-  else
-    warn "OpenClaw install failed - continuing without gateway support"
-  fi
-}
+# OpenClaw is installed by 'ollama launch openclaw' at the end of the install.
 
 install_python_packages() {
   step "Installing Python packages"
@@ -326,10 +297,7 @@ configure_openclaw() {
 
   OPENCLAW_MODEL="kimi-k2.5:cloud"
 
-  if [ "$OPENCLAW_OK" != "true" ]; then
-    warn "Skipping OpenClaw config because the binary is not installed"
-    return 0
-  fi
+  # Config is written now; openclaw binary is installed later by 'ollama launch'
 
   mkdir -p "$HOME/.openclaw" "$HOME/.openclaw/agents/main/sessions"
 
@@ -521,7 +489,7 @@ EOF
       && ok "ClawOS service started" \
       || warn "Start manually: systemctl --user start clawos.service"
 
-    if [ "$OPENCLAW_OK" = "true" ]; then
+    if command -v openclaw >/dev/null 2>&1; then
       OPENCLAW_BIN="$(command -v openclaw)"
       write_file_if_changed "$HOME/.config/systemd/user/openclaw-gateway.service" 644 <<EOF
 [Unit]
@@ -559,9 +527,7 @@ verify_install() {
 
   command -v clawos >/dev/null 2>&1 && ok "clawos command available"
   command -v clawctl >/dev/null 2>&1 && ok "clawctl command available"
-  if [ "$OPENCLAW_OK" = "true" ]; then
-    command -v openclaw >/dev/null 2>&1 && ok "openclaw command available"
-  fi
+  command -v openclaw >/dev/null 2>&1 && ok "openclaw command available" || true
 
   curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 \
     && ok "Ollama API reachable" \
@@ -571,20 +537,14 @@ verify_install() {
     launchctl print "gui/$(id -u)/io.clawos.daemon" >/dev/null 2>&1 \
       && ok "io.clawos.daemon active" \
       || warn "io.clawos.daemon is not active"
-    if [ "$OPENCLAW_OK" = "true" ]; then
-      launchctl print "gui/$(id -u)/io.clawos.openclaw-gateway" >/dev/null 2>&1 \
-        && ok "io.clawos.openclaw-gateway active" \
-        || warn "io.clawos.openclaw-gateway is not active"
-    fi
+    launchctl print "gui/$(id -u)/io.clawos.openclaw-gateway" >/dev/null 2>&1 \
+        && ok "io.clawos.openclaw-gateway active" || true
   elif systemd_user_ready; then
     systemctl --user is-active --quiet clawos.service \
       && ok "clawos.service active" \
       || warn "clawos.service is not active"
-    if [ "$OPENCLAW_OK" = "true" ]; then
-      systemctl --user is-active --quiet openclaw-gateway.service \
-        && ok "openclaw-gateway.service active" \
-        || warn "openclaw-gateway.service is not active"
-    fi
+    systemctl --user is-active --quiet openclaw-gateway.service \
+      && ok "openclaw-gateway.service active" || true
   fi
 }
 
@@ -611,7 +571,6 @@ START_TIME=$SECONDS
 MODEL=""
 MODEL_SIZE=""
 MODEL_NOTE=""
-OPENCLAW_OK=false
 BREW_BIN=""
 CHECK_ONLY=false
 
@@ -761,7 +720,6 @@ ok "Python $PY_VER"
 
 install_ollama
 install_node
-install_openclaw
 
 step "Installing Nexus"
 if [ -d "$INSTALL_DIR/clawos_core" ]; then
@@ -847,11 +805,9 @@ echo ""
 echo -e "  ${B}nexus workflow list${RESET}"
 echo -e "  ${D}Browse built-in workflows${RESET}"
 echo ""
-if [ "$OPENCLAW_OK" = "true" ]; then
-  echo -e "  ${B}openclaw tui${RESET}"
-  echo -e "  ${D}OpenClaw TUI with gateway port ${OPENCLAW_GATEWAY_PORT}${RESET}"
-  echo ""
-fi
+echo -e "  ${B}openclaw tui${RESET}"
+echo -e "  ${D}OpenClaw TUI with Kimi K2.5 on port ${OPENCLAW_GATEWAY_PORT}${RESET}"
+echo ""
 
 if [ "$PLATFORM" = "macos" ]; then
   echo -e "  ${D}Reload shell if needed:${RESET} ${B}source ~/.zprofile${RESET}"
@@ -873,19 +829,10 @@ if [ -f "$_TOKEN_FILE" ]; then
 fi
 
 if [ -t 0 ] && [ -t 1 ]; then
-  if [ "$OPENCLAW_OK" = "true" ]; then
-    echo -e "  ${B}Launching OpenClaw + Kimi K2.5...${RESET}"
-    echo ""
-    ollama launch openclaw --model kimi-k2.5:cloud
-  else
-    echo -e "  ${B}Opening ClawOS Setup...${RESET}"
-    echo ""
-    if ! clawos-setup --timeout 180; then
-      warn "GUI setup launch failed - falling back to the terminal wizard"
-      python3 -m setup.first_run.wizard
-    fi
-  fi
+  echo -e "  ${B}Launching OpenClaw + Kimi K2.5...${RESET}"
+  echo ""
+  ollama launch openclaw --model kimi-k2.5:cloud
 else
-  echo -e "  ${D}Non-interactive install detected. Run ${RESET}${B}ollama launch openclaw --model kimi-k2.5:cloud${RESET}${D} to start.${RESET}"
+  echo -e "  ${D}Run: ${RESET}${B}ollama launch openclaw --model kimi-k2.5:cloud${RESET}"
   echo ""
 fi
