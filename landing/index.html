@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClawOS — Your Private JARVIS</title>
-  <meta name="description" content="One command turns any PC into a voice assistant, WhatsApp bot, and automation engine. Fully offline, no subscriptions, no API keys." />
+  <meta name="description" content="The complete JARVIS stack built on the OpenClaw ecosystem — voice, memory, 3D knowledge brain, 29 automations, WhatsApp, and a command center dashboard." />
   <meta property="og:title" content="ClawOS — Your Private JARVIS" />
   <meta property="og:description" content="Take any spare PC and turn it into a private JARVIS. Voice, WhatsApp, 27+ automations — all local." />
   <meta property="og:image" content="https://raw.githubusercontent.com/xbrxr03/clawos/main/landing/og.png" />
@@ -299,7 +299,7 @@
     }
     .calc-total-label { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
     .calc-total-num { font-size: 2rem; font-weight: 700; color: var(--text); }
-    .calc-total-num span { color: var(--text-3); font-size: 1rem; font-weight: 400; text-decoration: line-through; margin-left: 8px; }
+    .calc-total-num span { color: var(--text-2); font-size: 1rem; font-weight: 400; margin-left: 8px; }
     .calc-cta { text-align: right; }
     .calc-cta-label { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
 
@@ -416,9 +416,9 @@
 
 <!-- Hero -->
 <section class="hero" id="hero">
-  <div class="hero-eyebrow">Open Source · AGPL-3.0 · Runs on Your Hardware</div>
-  <h1>Your private <em>JARVIS</em>.<br>Running on your spare PC.</h1>
-  <p class="hero-sub">One command turns any PC into a voice assistant, WhatsApp bot, and automation engine. Fully offline, no subscriptions, no API keys. Just your hardware — answering to no one.</p>
+  <div class="hero-eyebrow">Open Source · AGPL-3.0 · Built on the OpenClaw Ecosystem</div>
+  <h1>The complete <em>JARVIS stack</em>.<br>One command.</h1>
+  <p class="hero-sub">ClawOS brings together everything the OpenClaw ecosystem needs to actually work — voice, memory, a 3D knowledge brain, 29 automations, WhatsApp, and a command center dashboard. Curated, integrated, and running on your hardware.</p>
 
   <div class="install-block">
     <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash</code>
@@ -452,63 +452,68 @@
 
 <!-- Why not Ollama -->
 <section id="why">
-  <div class="section-eyebrow">The honest answer</div>
-  <div class="section-title">Why not just run Ollama?</div>
-  <p class="section-sub">Ollama runs models. ClawOS is what you build <em>with</em> Ollama — the JARVIS layer on top. It's the difference between having an engine and having a car.</p>
+  <div class="section-eyebrow">The curated stack</div>
+  <div class="section-title">Everything people stitch together from 7 different repos — integrated.</div>
+  <p class="section-sub">OpenClaw is powerful. But raw OpenClaw still needs a voice pipeline, a memory system, a knowledge graph, a dashboard, and an automation engine. People normally spend days assembling these from separate projects. ClawOS ships them as one coherent stack.</p>
 
   <div class="compare-grid">
-    <div class="compare-header plain">Just Ollama</div>
+    <div class="compare-header plain">DIY / OpenClaw alone</div>
     <div class="compare-header clawos">ClawOS</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> Chat in terminal</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Wake word — "Hey Jarvis"</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> whisper + piper + openwakeword (manual wiring)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Wake word voice pipeline, ready out of the box</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> One conversation at a time</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> 29+ background automations</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> ChromaDB + vector search (build yourself)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 4-layer memory — pinned, workflow, semantic, history</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> No memory between sessions</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> 4-layer persistent memory</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> Obsidian + plugins (separate app, no agent link)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Nexus Brain — 3D knowledge graph agents write to</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> No phone integration</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> WhatsApp command center</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> n8n or Zapier (another subscription)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 29 built-in automations, no config required</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> Terminal only</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Full ops dashboard at :7070</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> baileys / whatsapp-web.js (breaks constantly)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> WhatsApp bridge with approval-by-reply</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> No schedules</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Morning briefing at 7am</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> No dashboard — terminal only</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 17-page command center at :7070</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> Model only</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Model + brain + voice + policies</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> No safety layer — tools run unchecked</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> policyd — every action gated, human approval queue</div>
   </div>
 </section>
 
 <!-- Features -->
 <section id="features">
-  <div class="section-eyebrow">What you get</div>
-  <div class="section-title">Everything JARVIS needs. Nothing you don't.</div>
-  <p class="section-sub">Built to replace Alexa, Google Nest, and $60/month of cloud subscriptions — with hardware you already own.</p>
+  <div class="section-eyebrow">What's in the stack</div>
+  <div class="section-title">The OpenClaw ecosystem, fully assembled.</div>
+  <p class="section-sub">Each piece is best-in-class. Together they form something nobody else ships as a single install.</p>
 
   <div class="feature-grid">
     <div class="feature-card">
       <div class="feature-icon">🎙️</div>
-      <div class="feature-title">Wake Word Voice</div>
-      <div class="feature-body">Say "Hey Jarvis" — it listens, thinks with a real LLM, and speaks back. Whisper STT + Piper TTS, fully offline.</div>
+      <div class="feature-title">Wake Word Voice Pipeline</div>
+      <div class="feature-body">Say "Hey Jarvis" — Whisper transcribes, your LLM thinks, Piper speaks. Local by default, cloud quality on demand.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔮</div>
+      <div class="feature-title">Nexus Brain — 3D Knowledge Graph</div>
+      <div class="feature-body">Drop a folder of notes. ClawOS builds a living knowledge graph your agents can query, expand, and surface connections in — visualised in 3D.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">📱</div>
-      <div class="feature-title">WhatsApp Bridge</div>
-      <div class="feature-body">Message your JARVIS on WhatsApp from anywhere. Get your morning briefing every day. Approve actions by reply.</div>
+      <div class="feature-title">WhatsApp Command Center</div>
+      <div class="feature-body">Message your JARVIS from anywhere. Get your morning briefing every day. Approve sensitive actions by reply.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
-      <div class="feature-title">29+ Automations</div>
-      <div class="feature-body">Organize downloads, summarize PDFs, review PRs, write READMEs, morning news brief — one command, done.</div>
+      <div class="feature-title">29 Built-in Automations</div>
+      <div class="feature-body">Organise downloads, summarise PDFs, review PRs, write READMEs, morning news brief — all pre-wired, one command to run.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🧠</div>
-      <div class="feature-title">Persistent Memory</div>
-      <div class="feature-body">4-layer memory: pinned notes, workflow context, semantic search, history. Your JARVIS remembers everything.</div>
+      <div class="feature-title">4-Layer Persistent Memory</div>
+      <div class="feature-body">Pinned notes, workflow context, semantic vector search, and conversation history. Your JARVIS remembers across every session.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🌐</div>
@@ -518,17 +523,17 @@
     <div class="feature-card">
       <div class="feature-icon">🔒</div>
       <div class="feature-title">Policy Gatekeeper</div>
-      <div class="feature-body">Every tool call is logged. Sensitive actions need your approval. You have the kill switch — always.</div>
+      <div class="feature-body">Every tool call logged. Sensitive actions need your approval. Tamper-evident audit trail. You have the kill switch — always.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🖥️</div>
-      <div class="feature-title">Ops Dashboard</div>
-      <div class="feature-body">17-page command center at localhost:7070. Services, workflows, memory, traces, MCP, agents — all in one place.</div>
+      <div class="feature-title">17-Page Command Center</div>
+      <div class="feature-body">Services, workflows, memory, traces, MCP manager, agent federation, skills — one dashboard at :7070.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🔌</div>
-      <div class="feature-title">MCP + A2A</div>
-      <div class="feature-body">Full Model Context Protocol support. Agent-to-agent federation. Claude, OpenClaw, or your own agents — all wired.</div>
+      <div class="feature-title">MCP + A2A Federation</div>
+      <div class="feature-body">Connect any Model Context Protocol server. Link multiple ClawOS instances on your LAN. Claude, OpenClaw, your own agents — all wired.</div>
     </div>
   </div>
 </section>
@@ -536,45 +541,45 @@
 <!-- Savings Calculator -->
 <section id="savings">
   <div class="section-eyebrow">The math is simple</div>
-  <div class="section-title">ClawOS replaces $65/mo of subscriptions.</div>
-  <p class="section-sub">Toggle what you currently pay for. ClawOS does all of it — on your hardware, for $10 once.</p>
+  <div class="section-title">ClawOS replaces a $52/mo toolchain.</div>
+  <p class="section-sub">Select the tools that do what ClawOS does. ClawOS ships all of it, integrated, for $10 once.</p>
 
   <div class="calc-card">
-    <div class="calc-title">What are you paying for today?</div>
-    <div class="calc-sub">Select all that apply. The savings update in real time.</div>
+    <div class="calc-title">What would you pay to build this yourself?</div>
+    <div class="calc-sub">These are the closest alternatives to what ClawOS includes. Select all that apply.</div>
     <div class="calc-items" id="calc-items">
       <div class="calc-item">
         <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="20" checked id="c1" />
-          <label class="calc-item-name" for="c1">ChatGPT Plus</label>
-        </div>
-        <div class="calc-item-price">$20/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="5" id="c2" />
-          <label class="calc-item-name" for="c2">ElevenLabs (voice)</label>
-        </div>
-        <div class="calc-item-price">$5/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="10" id="c3" />
-          <label class="calc-item-name" for="c3">Notion AI</label>
+          <input type="checkbox" class="calc-checkbox" data-cost="10" checked id="c1" />
+          <label class="calc-item-name" for="c1">Voice assistant (Amazon Echo + Alexa Pro)</label>
         </div>
         <div class="calc-item-price">$10/mo</div>
       </div>
       <div class="calc-item">
         <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="20" id="c4" />
-          <label class="calc-item-name" for="c4">Zapier (automations)</label>
+          <input type="checkbox" class="calc-checkbox" data-cost="9" checked id="c2" />
+          <label class="calc-item-name" for="c2">Workflow automation (Make.com Basic)</label>
         </div>
-        <div class="calc-item-price">$20/mo</div>
+        <div class="calc-item-price">$9/mo</div>
       </div>
       <div class="calc-item">
         <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="10" id="c5" />
-          <label class="calc-item-name" for="c5">STT / Transcription APIs</label>
+          <input type="checkbox" class="calc-checkbox" data-cost="8" checked id="c3" />
+          <label class="calc-item-name" for="c3">Personal AI memory (Mem.ai)</label>
+        </div>
+        <div class="calc-item-price">$8/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="15" checked id="c4" />
+          <label class="calc-item-name" for="c4">WhatsApp bot hosting (Twilio + n8n)</label>
+        </div>
+        <div class="calc-item-price">$15/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="10" checked id="c5" />
+          <label class="calc-item-name" for="c5">AI document assistant (Notion AI)</label>
         </div>
         <div class="calc-item-price">$10/mo</div>
       </div>
@@ -582,8 +587,8 @@
     <div class="calc-divider"></div>
     <div class="calc-result">
       <div>
-        <div class="calc-total-label">You currently pay</div>
-        <div class="calc-total-num" id="calc-total">$20<span id="calc-annual">&nbsp;≈ $240/yr</span></div>
+        <div class="calc-total-label">Equivalent toolchain costs</div>
+        <div class="calc-total-num" id="calc-total">$52<span id="calc-annual">&nbsp;≈ $624/yr</span></div>
       </div>
       <div class="calc-cta">
         <div class="calc-cta-label">ClawOS replaces all of it for</div>
@@ -597,13 +602,13 @@
 <section id="security">
   <div class="section-eyebrow">Your machine, your rules</div>
   <div class="section-title">Built for the privacy-obsessed.</div>
-  <p class="section-sub">No telemetry. No cloud dependency. No API keys required. Your data never leaves your network.</p>
+  <p class="section-sub">No telemetry. No forced cloud. Local by default, cloud when you want it — you choose. Your data never leaves without your permission.</p>
 
   <div class="security-grid">
     <div class="security-card">
-      <div class="security-badge">Offline-first</div>
-      <div class="security-title">Zero cloud required</div>
-      <div class="security-body">Runs on Ollama + local models. No OpenAI, no Anthropic, no subscriptions. Works with the internet off.</div>
+      <div class="security-badge">You choose</div>
+      <div class="security-title">Local or cloud, on your terms</div>
+      <div class="security-body">Run Ollama locally for privacy, or connect OpenRouter / Anthropic API for better quality. Switch any time — no lock-in.</div>
     </div>
     <div class="security-card">
       <div class="security-badge">Policy-gated</div>
