@@ -340,8 +340,18 @@ login_ollama() {
   echo ""
   if ollama login; then
     ok "Ollama login complete"
+    # ollama login regenerates ~/.ollama/id_ed25519 — restart the server so it
+    # picks up the new key before model pulls happen
+    pkill -x ollama 2>/dev/null || pkill -f "ollama serve" 2>/dev/null || true
+    sleep 2
+    nohup "$OLLAMA_BIN" serve >/dev/null 2>&1 &
+    for _ in 1 2 3 4 5 6; do
+      sleep 1
+      curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
+    done
+    "$OLLAMA_BIN" list >/dev/null 2>&1 || true   # warmup: confirm key is ready
   else
-    warn "Ollama login skipped — run 'ollama login' then 'ollama launch openclaw --model kimi-k2.5:cloud' later"
+    warn "Ollama login skipped — run 'ollama login' later to enable Kimi K2.5"
   fi
 }
 
@@ -901,7 +911,10 @@ if [ -t 0 ] && [ -t 1 ]; then
   if [ "$OPENCLAW_OK" = "true" ]; then
     echo -e "  ${B}Launching OpenClaw + Kimi K2.5...${RESET}"
     echo ""
-    ollama launch openclaw --model kimi-k2.5:cloud
+    # Try ollama cloud launch first; fall back to local gateway TUI
+    if ! ollama launch openclaw --model kimi-k2.5:cloud 2>/dev/null; then
+      openclaw tui
+    fi
   else
     echo -e "  ${B}Opening ClawOS Setup...${RESET}"
     echo ""
