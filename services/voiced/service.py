@@ -233,19 +233,48 @@ class VoiceService:
             return False
         self._ensure_runtime()
         playback_backend = self._playback_backend()
-        if shutil.which("piper") is None or not PIPER_MODEL.exists() or not playback_backend:
+        if not playback_backend:
             return False
         try:
             self._sync_session(state="speaking", last_response=text)
             self._set_tray_state("speaking")
-            proc = subprocess.Popen(
-                ["piper", "--model", str(PIPER_MODEL), "--output-raw"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-            )
-            audio, _ = await asyncio.to_thread(proc.communicate, text.encode("utf-8"), 20)
-            if playback_backend == "aplay":
+
+            # Route through TTSRouter (handles ElevenLabs → Piper fallback)
+            try:
+                from adapters.audio.tts_router import speak as tts_speak, active_provider
+                provider = active_provider()
+                audio = await asyncio.to_thread(tts_speak, text)
+            except Exception as tts_exc:
+                log.warning("TTSRouter unavailable, falling back to Piper directly: %s", tts_exc)
+                audio = b""
+                provider = "piper"
+
+            # Direct Piper fallback if TTSRouter returned nothing
+            if not audio:
+                if shutil.which("piper") is None or not PIPER_MODEL.exists():
+                    return False
+                proc = subprocess.Popen(
+                    ["piper", "--model", str(PIPER_MODEL), "--output-raw"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                )
+                audio, _ = await asyncio.to_thread(proc.communicate, text.encode("utf-8"), 20)
+                provider = "piper"
+
+            if not audio:
+                return False
+
+            # Playback — ElevenLabs returns MP3, Piper returns raw PCM
+            is_mp3 = provider == "elevenlabs" or audio[:3] == b"ID3" or audio[:2] == b"\xff\xfb"
+            if is_mp3:
+                play = await asyncio.to_thread(
+                    subprocess.run,
+                    ["ffplay", "-autoexit", "-nodisp", "-loglevel", "quiet", "-"],
+                    input=audio,
+                    capture_output=True,
+                )
+            elif playback_backend == "aplay":
                 play = await asyncio.to_thread(
                     subprocess.run,
                     ["aplay", "-q", "-r", "22050", "-f", "S16_LE", "-t", "raw", "-"],

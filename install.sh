@@ -242,6 +242,7 @@ install_python_packages() {
     pyyaml aiohttp fastapi "uvicorn[standard]"
     ollama click chromadb json_repair
     pypdf python-docx aiofiles httpx gitpython rich openai-whisper
+    openwakeword cryptography
   )
 
   if [ "$PLATFORM" = "macos" ]; then
@@ -261,6 +262,61 @@ install_python_packages() {
   fi
 
   ok "pyyaml  fastapi  chromadb  ollama  pypdf  python-docx"
+}
+
+install_wake_word_model() {
+  local MODEL_DIR="$INSTALL_DIR/services/voiced/models"
+  local MODEL_FILE="$MODEL_DIR/hey_jarvis.onnx"
+  mkdir -p "$MODEL_DIR"
+  if [ -f "$MODEL_FILE" ]; then
+    ok "Wake word model ready"
+    return 0
+  fi
+  step "Downloading wake word model"
+  if python3 -c "
+import sys, shutil
+from pathlib import Path
+dest = Path('$MODEL_FILE')
+try:
+    import openwakeword
+    from openwakeword.utils import download_models
+    download_models()
+    pkg = Path(openwakeword.__file__).parent
+    candidates = sorted(pkg.glob('**/*hey_jarvis*.onnx'))
+    if not candidates:
+        candidates = sorted(pkg.glob('**/*.onnx'))
+    if candidates:
+        shutil.copy2(candidates[0], dest)
+        sys.exit(0)
+    sys.exit(1)
+except Exception as e:
+    print(f'error: {e}', file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null
+  then
+    ok "Wake word model ready"
+  else
+    warn "Wake word model unavailable — voice degrades to push-to-talk"
+  fi
+}
+
+install_playwright() {
+  if [ "$IS_ARM" = "true" ]; then
+    return 0
+  fi
+  if python3 -c "import playwright" 2>/dev/null; then
+    ok "Playwright already installed"
+    return 0
+  fi
+  step "Installing Playwright browser engine"
+  if [ "$PLATFORM" = "macos" ]; then
+    python3 -m pip install -q playwright --user 2>/dev/null || true
+  else
+    python3 -m pip install -q playwright --break-system-packages 2>/dev/null || \
+      python3 -m pip install -q playwright --user 2>/dev/null || true
+  fi
+  python3 -m playwright install chromium --with-deps 2>/dev/null || true
+  ok "Playwright ready"
 }
 
 build_command_center() {
@@ -739,6 +795,8 @@ cd "$INSTALL_DIR" || die "Install directory not found: $INSTALL_DIR"
 export PYTHONPATH="$INSTALL_DIR"
 
 install_python_packages
+install_wake_word_model
+install_playwright
 build_command_center
 
 step "Bootstrapping Nexus"
