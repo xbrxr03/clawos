@@ -1,6 +1,6 @@
 ﻿# ClawOS
 
-> ClawOS is what you get when Apple builds JARVIS for everyone: a local-first AI operating environment that runs on your hardware, works offline, and costs nothing.
+> Take any spare PC and turn it into a private JARVIS. Voice, WhatsApp, 29+ automations, a living knowledge brain — all running locally on your hardware, answering to no one.
 >
 > [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3%2B-1f6feb.svg)](LICENSE)
 
@@ -8,7 +8,7 @@
 curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
 ```
 
-In ~4 minutes you have the ClawOS command center and the OpenClaw ecosystem running locally - offline, private, and free.
+One command. ~4 minutes. Your spare PC becomes a private JARVIS — voice assistant, WhatsApp bot, automation engine, and personal AI. No subscriptions. No cloud. No API keys.
 
 Current release status:
 
@@ -31,6 +31,44 @@ A dedicated security-audit path now lives in [docs/SECURITY_AUDIT.md](docs/SECUR
 The end goal is a **bootable ISO** - flash a USB, boot, your AI is ready. That's the last stage on the roadmap. We're building in public and shipping working software at each stage instead of waiting until it's perfect.
 
 If you want to follow along or contribute: [github.com/xbrxr03/clawos](https://github.com/xbrxr03/clawos)
+
+---
+
+## Why not just run Ollama?
+
+Ollama runs models. ClawOS is what you build *with* Ollama.
+
+| Just Ollama | ClawOS |
+|---|---|
+| Chat in terminal | Wake word ("Hey Claw") + voice replies |
+| One conversation at a time | 29+ background automations |
+| No memory | 4-layer persistent memory |
+| No phone | WhatsApp command center |
+| No dashboard | Full ops console at `:7070` |
+| No schedules | Morning briefing at 7am |
+| No policies | Every tool call gated, logged, approval queue |
+| Model only | Model + brain + workflows + voice |
+
+**Ollama is the engine. ClawOS is the car.**
+
+---
+
+## Turn your spare hardware into a JARVIS server
+
+Got an old mini PC, NUC, or laptop collecting dust?
+
+```bash
+bash install.sh
+```
+
+In 10 minutes that machine is running:
+- A private voice assistant (wake word, no cloud)
+- WhatsApp integration (brief yourself every morning)
+- 29 background automations (organise downloads, summarise PDFs, PR reviews)
+- A living knowledge brain (drop your notes in, it builds a 3D graph)
+- A full ops dashboard accessible from any device on your LAN
+
+No subscription. No API keys. No data leaving your network. The only cost is electricity.
 
 ---
 
@@ -117,18 +155,18 @@ The installer automatically detects your hardware and picks the right model:
 
 | Hardware | RAM | Tier | Model | Speed |
 |----------|-----|------|-------|-------|
-| Raspberry Pi 5 / ARM | 8GB | A | `gemma3:4b` | ~3-5 tok/s CPU |
-| x86 laptop / mini PC | 8-16GB | B | `gemma3:4b` | ~8-20 tok/s CPU |
+| Raspberry Pi 5 / ARM | 8GB | A | `qwen2.5:3b` | ~3-5 tok/s CPU |
+| x86 laptop / mini PC | 8-16GB | B | `qwen2.5:3b` | ~8-20 tok/s CPU |
 | x86 workstation with GPU | 16-32GB | C | `qwen2.5:7b` | ~40-80 tok/s GPU |
 | Gaming rig / workstation | 32GB+ + GPU | D | `qwen2.5:7b` | ~80+ tok/s GPU |
 
-`gemma3:4b` is the best CPU-only model at 3.3GB — runs comfortably on 8GB RAM with no GPU required. GPU optional (NVIDIA CUDA and AMD ROCm both supported via Ollama).
+`qwen2.5:3b` is the best CPU-only model at ~2GB — fast enough for voice replies on 8GB RAM with no GPU required. GPU optional (NVIDIA CUDA and AMD ROCm both supported via Ollama).
 
 ---
 
 ## Raspberry Pi 5 / ARM
 
-ClawOS works on RPi 5 8GB. The installer detects ARM and pulls `gemma3:4b` automatically - no configuration needed.
+ClawOS works on RPi 5 8GB. The installer detects ARM and pulls `qwen2.5:3b` automatically - no configuration needed.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh -o /tmp/clawos.sh && bash /tmp/clawos.sh
@@ -146,7 +184,7 @@ If you have a more powerful machine running Ollama on your local network, you ca
 ```bash
 OLLAMA_HOST=0.0.0.0 ollama serve
 # Pull the models ClawOS needs:
-ollama pull gemma3:4b          # for CPU-only / 8-16GB RAM machines
+ollama pull qwen2.5:3b         # for CPU-only / 8-16GB RAM machines
 ollama pull qwen2.5:7b         # for GPU-equipped machines (16GB+)
 ollama pull nomic-embed-text
 ```
