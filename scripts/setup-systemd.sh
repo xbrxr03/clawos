@@ -41,6 +41,8 @@ remove_units() {
     systemctl --user disable clawos.service 2>/dev/null || true
     for unit in "${ALL_UNITS[@]}"; do
         rm -f "$UNIT_DST/$unit"
+        # Remove any drop-in overrides that may shadow our unit
+        rm -rf "$UNIT_DST/${unit%.service}.service.d"
         ok "Removed $unit"
     done
     systemctl --user daemon-reload
@@ -69,6 +71,8 @@ install_units() {
               "$SCRIPTS_DIR/clawos-status.sh" 2>/dev/null || true
 
     for unit in "${ALL_UNITS[@]}"; do
+        # Remove stale drop-in overrides before installing so they can't shadow our ExecStart
+        rm -rf "$UNIT_DST/${unit%.service}.service.d" 2>/dev/null || true
         if [ -f "$UNIT_SRC/$unit" ]; then
             # Substitute /home/user placeholder with the actual home directory
             sed "s|/home/user|${HOME}|g" "$UNIT_SRC/$unit" > "$UNIT_DST/$unit"
