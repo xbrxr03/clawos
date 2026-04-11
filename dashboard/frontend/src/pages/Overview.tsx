@@ -439,6 +439,8 @@ export function Overview({
         </>
       )}
 
+      <EvolutionLog />
+
       <SectionLabel>Conversation</SectionLabel>
       <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 12 }}>
         <Card style={{ padding: 18, display: 'grid', gap: 14 }}>
@@ -583,6 +585,47 @@ export function Overview({
         </Card>
       </div>
     </div>
+  )
+}
+
+type EvolutionEntry = { date: string; title: string; what_happened: string; root_cause: string; what_learned: string; fix_shipped: string }
+
+function EvolutionLog() {
+  const [entries, setEntries] = useState<EvolutionEntry[]>([])
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/evolution', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { entries: [] })
+      .then(d => setEntries(d.entries || []))
+      .catch(() => null)
+  }, [])
+
+  if (!entries.length) return null
+
+  return (
+    <>
+      <SectionLabel>
+        <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setOpen(o => !o)}>
+          What Kizuna Learned {open ? '▾' : '▸'} <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 400 }}>{entries.length} entries</span>
+        </span>
+      </SectionLabel>
+      {open && (
+        <div style={{ padding: '0 20px 4px', display: 'grid', gap: 10 }}>
+          {entries.map((e, i) => (
+            <Card key={i} style={{ padding: 16, display: 'grid', gap: 8, borderLeft: '3px solid var(--accent)' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{e.date}</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>{e.title}</span>
+              </div>
+              {e.what_happened && <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}><strong>What happened:</strong> {e.what_happened}</div>}
+              {e.what_learned && <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}><strong>Learned:</strong> {e.what_learned}</div>}
+              {e.fix_shipped && <div style={{ fontSize: 12, color: 'var(--green)', lineHeight: 1.5 }}><strong>Fix:</strong> {e.fix_shipped}</div>}
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
   )
 }
 
