@@ -2133,6 +2133,55 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    # ── Evolution Log (Learning Log) ─────────────────────────────────────────
+
+    EVOLUTION_PATH = Path(__file__).parent.parent.parent / "EVOLUTION.md"
+
+    @app.get("/api/evolution")
+    async def get_evolution():
+        """Return the EVOLUTION.md learning log as structured data."""
+        if not EVOLUTION_PATH.exists():
+            return {"entries": [], "total": 0}
+        try:
+            text = EVOLUTION_PATH.read_text(encoding="utf-8")
+        except Exception:
+            return {"entries": [], "total": 0}
+
+        entries = []
+        # Split on level-2 headings of the form "## YYYY-MM-DD — Title"
+        blocks = re.split(r"\n(?=## \d{4}-\d{2}-\d{2})", text)
+        for block in blocks:
+            heading_m = re.match(
+                r"^## (\d{4}-\d{2}-\d{2})\s+[—\-]+\s+(.+)", block.strip()
+            )
+            if not heading_m:
+                continue
+            date = heading_m.group(1)
+            title = heading_m.group(2).strip()
+
+            def _extract(label: str, src: str) -> str:
+                m = re.search(
+                    rf"\*\*{re.escape(label)}\*\*[:\s]*(.*?)(?=\n\*\*|\Z)",
+                    src,
+                    re.DOTALL,
+                )
+                return m.group(1).strip() if m else ""
+
+            entries.append(
+                {
+                    "date": date,
+                    "title": title,
+                    "sections": {
+                        "what_happened": _extract("What happened:", block),
+                        "root_cause": _extract("Root cause:", block),
+                        "learned": _extract("What ClawOS learned:", block),
+                        "fix": _extract("Fix shipped:", block),
+                    },
+                }
+            )
+
+        return {"entries": entries, "total": len(entries)}
+
     @app.websocket("/ws")
     async def ws_endpoint(websocket: WebSocket):
         if not _websocket_authorized(websocket):
