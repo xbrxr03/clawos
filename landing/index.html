@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClawOS — Your Private JARVIS</title>
+  <meta name="description" content="One command turns any PC into a voice assistant, WhatsApp bot, and automation engine. Fully offline, no subscriptions, no API keys." />
+  <meta property="og:title" content="ClawOS — Your Private JARVIS" />
+  <meta property="og:description" content="Take any spare PC and turn it into a private JARVIS. Voice, WhatsApp, 27+ automations — all local." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/xbrxr03/clawos/main/landing/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="favicon.ico" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0f;
+      --surface: #0e1318;
+      --surface-2: #141b24;
+      --border: rgba(255,255,255,0.07);
+      --accent: #7c6af5;
+      --accent-2: #38bdf8;
+      --text: #f0f4f8;
+      --text-2: #8b98a8;
+      --text-3: #4a5568;
+      --green: #22c55e;
+      --glow: rgba(124,106,245,0.15);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Fixed side nav (PAPI pattern) ── */
+    .sidenav {
+      position: fixed;
+      left: 28px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 100;
+    }
+    .sidenav a {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-3);
+      display: block;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    .sidenav a.active, .sidenav a:hover {
+      background: var(--accent);
+      transform: scale(1.6);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    @media (max-width: 900px) { .sidenav { display: none; } }
+
+    /* ── Sections ── */
+    section { padding: 100px 24px; max-width: 1000px; margin: 0 auto; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      padding: 60px 24px;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 30%, rgba(124,106,245,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 70% 60%, rgba(56,189,248,0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+      font-weight: 600;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4.4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--text-2);
+      max-width: 560px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .install-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    .install-block code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: var(--accent-2);
+      white-space: nowrap;
+    }
+    .copy-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: var(--text-2);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .hero-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: #6b5ae0; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,106,245,0.35); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 1.8rem; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; }
+
+    /* ── Section headers ── */
+    .section-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+    .section-sub {
+      color: var(--text-2);
+      font-size: 1.05rem;
+      max-width: 520px;
+      line-height: 1.7;
+    }
+
+    /* ── Why not just Ollama ── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 40px;
+    }
+    .compare-col { }
+    .compare-header {
+      padding: 16px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-header.plain { background: var(--surface); color: var(--text-2); }
+    .compare-header.clawos { background: rgba(124,106,245,0.12); color: var(--accent); }
+    .compare-row {
+      display: contents;
+    }
+    .compare-cell {
+      padding: 14px 24px;
+      font-size: 13.5px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .compare-cell.plain { background: var(--surface); color: var(--text-2); }
+    .compare-cell.clawos { background: var(--surface-2); color: var(--text); }
+    .compare-cell:last-of-type { border-bottom: none; }
+    .check { color: var(--green); font-size: 15px; }
+    .cross { color: var(--text-3); font-size: 15px; }
+
+    /* ── Feature grid ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { border-color: rgba(124,106,245,0.4); transform: translateY(-2px); }
+    .feature-icon { font-size: 24px; margin-bottom: 12px; }
+    .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .feature-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+
+    /* ── Savings calculator ── */
+    .calc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin-top: 48px;
+    }
+    .calc-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; }
+    .calc-sub { color: var(--text-2); font-size: 13.5px; margin-bottom: 32px; }
+    .calc-items { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
+    .calc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .calc-item-left { display: flex; align-items: center; gap: 12px; }
+    .calc-checkbox {
+      width: 18px; height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .calc-item-name { font-size: 14px; }
+    .calc-item-price { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+    .calc-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    .calc-result {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .calc-total-label { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
+    .calc-total-num { font-size: 2rem; font-weight: 700; color: var(--text); }
+    .calc-total-num span { color: var(--text-3); font-size: 1rem; font-weight: 400; text-decoration: line-through; margin-left: 8px; }
+    .calc-cta { text-align: right; }
+    .calc-cta-label { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+
+    /* ── Security story ── */
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+    .security-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .security-badge {
+      display: inline-block;
+      background: rgba(34,197,94,0.12);
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .security-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .security-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+
+    /* ── Metrics bar ── */
+    .metrics-bar {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 48px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin-top: 48px;
+    }
+    .metric { text-align: center; }
+    .metric-num { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .metric-label { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+    /* ── Premium CTA ── */
+    .premium-card {
+      background: linear-gradient(135deg, rgba(124,106,245,0.1) 0%, rgba(56,189,248,0.06) 100%);
+      border: 1px solid rgba(124,106,245,0.3);
+      border-radius: 20px;
+      padding: 60px 40px;
+      text-align: center;
+    }
+    .premium-price {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin: 16px 0 8px;
+      letter-spacing: -0.04em;
+    }
+    .premium-price sup { font-size: 1.5rem; vertical-align: super; }
+    .premium-tag {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 24px;
+    }
+    .premium-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      text-align: left;
+      margin: 32px 0;
+    }
+    .premium-feature {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      color: var(--text-2);
+    }
+    .premium-feature .check { font-size: 13px; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 13px;
+    }
+    footer a { color: var(--text-2); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+    .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<!-- Fixed side nav -->
+<nav class="sidenav" id="sidenav">
+  <a href="#hero" class="active" title="Home"></a>
+  <a href="#why" title="Why not Ollama"></a>
+  <a href="#features" title="Features"></a>
+  <a href="#savings" title="Savings"></a>
+  <a href="#security" title="Security"></a>
+  <a href="#premium" title="Premium"></a>
+</nav>
+
+<!-- Hero -->
+<section class="hero" id="hero">
+  <div class="hero-eyebrow">Open Source · AGPL-3.0 · Runs on Your Hardware</div>
+  <h1>Your private <em>JARVIS</em>.<br>Running on your spare PC.</h1>
+  <p class="hero-sub">One command turns any PC into a voice assistant, WhatsApp bot, and automation engine. Fully offline, no subscriptions, no API keys. Just your hardware — answering to no one.</p>
+
+  <div class="install-block">
+    <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash</code>
+    <button class="copy-btn" onclick="copyInstall()">Copy</button>
+  </div>
+
+  <div class="hero-cta-row">
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary">Get ClawOS free →</a>
+    <a href="#why" class="btn-ghost">See how it works ↓</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num">29+</div>
+      <div class="stat-label">Automations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">20</div>
+      <div class="stat-label">Services</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">Offline-capable</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">$0</div>
+      <div class="stat-label">To get started</div>
+    </div>
+  </div>
+</section>
+
+<!-- Why not Ollama -->
+<section id="why">
+  <div class="section-eyebrow">The honest answer</div>
+  <div class="section-title">Why not just run Ollama?</div>
+  <p class="section-sub">Ollama runs models. ClawOS is what you build <em>with</em> Ollama — the JARVIS layer on top. It's the difference between having an engine and having a car.</p>
+
+  <div class="compare-grid">
+    <div class="compare-header plain">Just Ollama</div>
+    <div class="compare-header clawos">ClawOS</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> Chat in terminal</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Wake word — "Hey Jarvis"</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> One conversation at a time</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 29+ background automations</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> No memory between sessions</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 4-layer persistent memory</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> No phone integration</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> WhatsApp command center</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> Terminal only</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Full ops dashboard at :7070</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> No schedules</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Morning briefing at 7am</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> Model only</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Model + brain + voice + policies</div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-eyebrow">What you get</div>
+  <div class="section-title">Everything JARVIS needs. Nothing you don't.</div>
+  <p class="section-sub">Built to replace Alexa, Google Nest, and $60/month of cloud subscriptions — with hardware you already own.</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🎙️</div>
+      <div class="feature-title">Wake Word Voice</div>
+      <div class="feature-body">Say "Hey Jarvis" — it listens, thinks with a real LLM, and speaks back. Whisper STT + Piper TTS, fully offline.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📱</div>
+      <div class="feature-title">WhatsApp Bridge</div>
+      <div class="feature-body">Message your JARVIS on WhatsApp from anywhere. Get your morning briefing every day. Approve actions by reply.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">29+ Automations</div>
+      <div class="feature-body">Organize downloads, summarize PDFs, review PRs, write READMEs, morning news brief — one command, done.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <div class="feature-title">Persistent Memory</div>
+      <div class="feature-body">4-layer memory: pinned notes, workflow context, semantic search, history. Your JARVIS remembers everything.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌐</div>
+      <div class="feature-title">Browser Control</div>
+      <div class="feature-body">"Look up GPU prices and tell me if my 1060 is worth upgrading." Playwright-powered, policy-gated.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">Policy Gatekeeper</div>
+      <div class="feature-body">Every tool call is logged. Sensitive actions need your approval. You have the kill switch — always.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🖥️</div>
+      <div class="feature-title">Ops Dashboard</div>
+      <div class="feature-body">17-page command center at localhost:7070. Services, workflows, memory, traces, MCP, agents — all in one place.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔌</div>
+      <div class="feature-title">MCP + A2A</div>
+      <div class="feature-body">Full Model Context Protocol support. Agent-to-agent federation. Claude, OpenClaw, or your own agents — all wired.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Savings Calculator -->
+<section id="savings">
+  <div class="section-eyebrow">The math is simple</div>
+  <div class="section-title">ClawOS replaces $65/mo of subscriptions.</div>
+  <p class="section-sub">Toggle what you currently pay for. ClawOS does all of it — on your hardware, for $10 once.</p>
+
+  <div class="calc-card">
+    <div class="calc-title">What are you paying for today?</div>
+    <div class="calc-sub">Select all that apply. The savings update in real time.</div>
+    <div class="calc-items" id="calc-items">
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="20" checked id="c1" />
+          <label class="calc-item-name" for="c1">ChatGPT Plus</label>
+        </div>
+        <div class="calc-item-price">$20/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="5" id="c2" />
+          <label class="calc-item-name" for="c2">ElevenLabs (voice)</label>
+        </div>
+        <div class="calc-item-price">$5/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="10" id="c3" />
+          <label class="calc-item-name" for="c3">Notion AI</label>
+        </div>
+        <div class="calc-item-price">$10/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="20" id="c4" />
+          <label class="calc-item-name" for="c4">Zapier (automations)</label>
+        </div>
+        <div class="calc-item-price">$20/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="10" id="c5" />
+          <label class="calc-item-name" for="c5">STT / Transcription APIs</label>
+        </div>
+        <div class="calc-item-price">$10/mo</div>
+      </div>
+    </div>
+    <div class="calc-divider"></div>
+    <div class="calc-result">
+      <div>
+        <div class="calc-total-label">You currently pay</div>
+        <div class="calc-total-num" id="calc-total">$20<span id="calc-annual">&nbsp;≈ $240/yr</span></div>
+      </div>
+      <div class="calc-cta">
+        <div class="calc-cta-label">ClawOS replaces all of it for</div>
+        <a href="https://github.com/xbrxr03/clawos" class="btn-primary">$10 once →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Security -->
+<section id="security">
+  <div class="section-eyebrow">Your machine, your rules</div>
+  <div class="section-title">Built for the privacy-obsessed.</div>
+  <p class="section-sub">No telemetry. No cloud dependency. No API keys required. Your data never leaves your network.</p>
+
+  <div class="security-grid">
+    <div class="security-card">
+      <div class="security-badge">Offline-first</div>
+      <div class="security-title">Zero cloud required</div>
+      <div class="security-body">Runs on Ollama + local models. No OpenAI, no Anthropic, no subscriptions. Works with the internet off.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">Policy-gated</div>
+      <div class="security-title">Human approval queue</div>
+      <div class="security-body">Every sensitive action — file writes, shell commands, browser — requires your explicit approval before executing.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">Signed skills</div>
+      <div class="security-title">Ed25519 skill signing</div>
+      <div class="security-body">OpenClaw's skill store had 341 malicious packages. ClawOS signs every skill. Unsigned code cannot install.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">AGPL-3.0</div>
+      <div class="security-title">Fully open source</div>
+      <div class="security-body">Every line of code is public. No hidden telemetry, no black boxes. Audit it yourself.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Metrics -->
+<section style="padding: 0 24px;">
+  <div class="metrics-bar">
+    <div class="metric"><div class="metric-num">20</div><div class="metric-label">Services</div></div>
+    <div class="metric"><div class="metric-num">29</div><div class="metric-label">Workflows</div></div>
+    <div class="metric"><div class="metric-num">93</div><div class="metric-label">API endpoints</div></div>
+    <div class="metric"><div class="metric-num">166</div><div class="metric-label">Tests passing</div></div>
+    <div class="metric"><div class="metric-num">v0.1</div><div class="metric-label">Release</div></div>
+  </div>
+</section>
+
+<!-- Premium -->
+<section id="premium">
+  <div class="premium-card">
+    <div class="premium-tag">Premium</div>
+    <div class="section-title" style="margin-bottom: 0;">Pay once. Own it forever.</div>
+    <div class="premium-price"><sup>$</sup>10</div>
+    <p style="color: var(--text-2); font-size: 14px; margin-bottom: 32px;">One-time purchase. No subscription. No renewals. Yours forever.</p>
+
+    <div class="premium-features">
+      <div class="premium-feature"><span class="check">✓</span> All 29 workflows</div>
+      <div class="premium-feature"><span class="check">✓</span> OpenRouter cloud models</div>
+      <div class="premium-feature"><span class="check">✓</span> ElevenLabs JARVIS voice</div>
+      <div class="premium-feature"><span class="check">✓</span> Nexus 3D knowledge brain</div>
+      <div class="premium-feature"><span class="check">✓</span> Advanced RAG + GraphRAG</div>
+      <div class="premium-feature"><span class="check">✓</span> Skill publishing to ClawHub</div>
+      <div class="premium-feature"><span class="check">✓</span> Browser control (Playwright)</div>
+      <div class="premium-feature"><span class="check">✓</span> Proactive ambient intelligence</div>
+      <div class="premium-feature"><span class="check">✓</span> A2A multi-agent federation</div>
+      <div class="premium-feature"><span class="check">✓</span> Priority support</div>
+    </div>
+
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="font-size: 15px; padding: 14px 36px;">Get ClawOS Premium — $10 →</a>
+    <p style="color: var(--text-3); font-size: 12px; margin-top: 16px;">Free tier always available. No credit card needed to start.</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-links">
+    <a href="https://github.com/xbrxr03/clawos">GitHub</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/docs/ARCHITECTURE_CURRENT.md">Docs</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/SECURITY_AUDIT.md">Security</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/LICENSE">AGPL-3.0</a>
+  </div>
+  <div>ClawOS — Built for people who want Iron Man's JARVIS, not another chatbot.</div>
+</footer>
+
+<script>
+  // Savings calculator
+  function updateCalc() {
+    let total = 0;
+    document.querySelectorAll('.calc-checkbox:checked').forEach(el => {
+      total += parseInt(el.dataset.cost) || 0;
+    });
+    document.getElementById('calc-total').childNodes[0].textContent = '$' + total;
+    document.getElementById('calc-annual').textContent = total > 0 ? '\u00a0\u2248 $' + (total * 12) + '/yr' : '';
+  }
+  document.querySelectorAll('.calc-checkbox').forEach(el => el.addEventListener('change', updateCalc));
+  updateCalc();
+
+  // Copy install command
+  function copyInstall() {
+    const cmd = document.getElementById('install-cmd').textContent;
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+  }
+
+  // Side nav active state on scroll
+  const sections = ['hero', 'why', 'features', 'savings', 'security', 'premium'];
+  const navLinks = document.querySelectorAll('.sidenav a');
+  function updateNav() {
+    let current = 'hero';
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.getBoundingClientRect().top < window.innerHeight * 0.5) {
+        current = id;
+      }
+    });
+    navLinks.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+  }
+  window.addEventListener('scroll', updateNav, { passive: true });
+  updateNav();
+</script>
+</body>
+</html>
