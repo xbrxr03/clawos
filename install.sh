@@ -199,6 +199,9 @@ install_ollama() {
   curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 \
     && ok "Ollama server running" \
     || warn "Ollama is installed but not responding yet"
+
+  # Generate ~/.ollama/id_ed25519 — required for model pulls, created on first list call
+  "$OLLAMA_BIN" list >/dev/null 2>&1 || true
 }
 
 install_node() {
@@ -635,6 +638,13 @@ MODEL_NOTE=""
 OPENCLAW_OK=false
 BREW_BIN=""
 CHECK_ONLY=false
+
+# ── Reattach stdin to terminal when running via curl | bash ───────────────────
+# Without this, [ -t 0 ] is false and all interactive prompts (ollama login,
+# OpenClaw TUI launch) are silently skipped.
+if [ ! -t 0 ] && [ -e /dev/tty ]; then
+  exec 0</dev/tty
+fi
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
 for _arg in "$@"; do
