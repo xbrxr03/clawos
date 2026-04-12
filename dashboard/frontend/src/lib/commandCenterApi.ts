@@ -562,6 +562,14 @@ export const commandCenterApi = {
       headers: maybeSetupHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ mode }),
     }),
+  getElevenLabsConfig: () =>
+    fetchJson<{ enabled: boolean; voice_id: string; key_set: boolean }>('/api/voice/elevenlabs-config'),
+  setElevenLabsConfig: (api_key: string, voice_id: string) =>
+    fetchJson<{ ok: boolean; tested: boolean; voice_id: string }>('/api/voice/elevenlabs-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key, voice_id }),
+    }),
   updateSetupPresence: (body: Record<string, unknown>) =>
     fetchJson<SetupState>('/api/setup/presence', {
       method: 'POST',

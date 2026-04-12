@@ -1174,6 +1174,70 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         await app.state.connections.broadcast({"type": "voice_session", "data": session})
         return session
 
+    @app.get("/api/voice/elevenlabs-config", dependencies=[Depends(require_auth)])
+    async def elevenlabs_config_get():
+        from clawos_core.config import get as cfg_get
+        from adapters.audio.elevenlabs_adapter import _get_api_key, _get_voice_id
+        key = _get_api_key()
+        return {
+            "enabled": cfg_get("voice.tts_provider", "piper") == "elevenlabs",
+            "voice_id": _get_voice_id(),
+            "key_set": bool(key),
+        }
+
+    @app.post("/api/voice/elevenlabs-config", dependencies=[Depends(require_auth)])
+    async def elevenlabs_config_set(body: dict | None = None):
+        import yaml
+        from clawos_core.constants import CLAWOS_CONFIG
+        payload = body or {}
+        api_key = str(payload.get("api_key", "")).strip()
+        voice_id = str(payload.get("voice_id", "")).strip() or "nPczCjzI2devNBz1zQrb"
+
+        if not api_key:
+            raise HTTPException(status_code=400, detail="api_key required")
+
+        # Load existing user config
+        user_cfg: dict = {}
+        if CLAWOS_CONFIG.exists():
+            with open(CLAWOS_CONFIG) as f:
+                user_cfg = yaml.safe_load(f) or {}
+
+        # Write ElevenLabs settings
+        user_cfg.setdefault("voice", {})
+        user_cfg["voice"]["tts_provider"] = "elevenlabs"
+        user_cfg["voice"]["elevenlabs_voice_id"] = voice_id
+        user_cfg.setdefault("secrets", {})
+        user_cfg["secrets"]["elevenlabs_api_key"] = api_key
+
+        CLAWOS_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+        with open(CLAWOS_CONFIG, "w") as f:
+            yaml.dump(user_cfg, f, default_flow_style=False)
+
+        # Inject into env so adapter picks it up immediately (no restart needed)
+        import os
+        os.environ["ELEVENLABS_API_KEY"] = api_key
+
+        # Reset adapter so it reloads with new key
+        try:
+            from adapters.audio import elevenlabs_adapter
+            elevenlabs_adapter.reset()
+        except Exception:
+            pass
+
+        # Quick test synthesis to validate key
+        tested = False
+        try:
+            from adapters.audio.elevenlabs_adapter import speak as xi_speak
+            audio = xi_speak("JARVIS online.")
+            tested = bool(audio)
+        except Exception:
+            pass
+
+        if not tested:
+            raise HTTPException(status_code=400, detail="ElevenLabs key saved but test synthesis failed — check your key")
+
+        return {"ok": True, "tested": True, "voice_id": voice_id}
+
     @app.get("/api/gateway/health", dependencies=[Depends(require_auth_or_setup_access)])
     async def gateway_health():
         return _gateway_service().health()

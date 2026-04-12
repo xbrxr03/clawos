@@ -4,6 +4,8 @@ import { Badge, Card, PageHeader, PanelHeader } from '../components/ui.jsx'
 import { commandCenterApi, type DashboardHealth, type DesktopPosture, type GatewayHealth } from '../lib/commandCenterApi'
 import { desktopBridge } from '../desktop/bridge'
 
+const JARVIS_VOICE_ID = 'nPczCjzI2devNBz1zQrb' // Brian — deep, cinematic
+
 type PathKind = 'logs' | 'config' | 'workspace' | 'support'
 
 const PATH_LABELS: Record<PathKind, string> = {
@@ -181,6 +183,8 @@ export function SettingsPage() {
             </div>
           </Card>
 
+          <ElevenLabsCard />
+
           <Card style={{ padding: 18 }}>
             <PanelHeader
               eyebrow="Startup"
@@ -313,6 +317,99 @@ function runtimeDescription(label: string) {
   }
 
   return descriptions[label] || 'Current runtime setting.'
+}
+
+function ElevenLabsCard() {
+  const [apiKey, setApiKey] = useState('')
+  const [voiceId, setVoiceId] = useState(JARVIS_VOICE_ID)
+  const [status, setStatus] = useState<{ enabled: boolean; key_set: boolean } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    commandCenterApi.getElevenLabsConfig()
+      .then(s => setStatus(s))
+      .catch(() => null)
+  }, [])
+
+  const activate = async () => {
+    if (!apiKey.trim()) { setError('Paste your ElevenLabs API key first'); return }
+    setBusy(true); setMessage(''); setError('')
+    try {
+      const result = await commandCenterApi.setElevenLabsConfig(apiKey.trim(), voiceId.trim() || JARVIS_VOICE_ID)
+      if (result.ok && result.tested) {
+        setMessage('✓ JARVIS voice activated — ElevenLabs is live')
+        setStatus({ enabled: true, key_set: true })
+        setApiKey('')
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Activation failed — check your API key')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card style={{ padding: 18 }}>
+      <PanelHeader
+        eyebrow="Voice"
+        title="ElevenLabs JARVIS voice"
+        description="Upgrade from Piper (offline) to a cinematic JARVIS voice. Paste your ElevenLabs API key — ClawOS wires the rest."
+        aside={
+          <Badge color={status?.enabled ? 'green' : 'gray'}>
+            {status?.enabled ? 'ElevenLabs ✓' : 'Piper (free)'}
+          </Badge>
+        }
+      />
+      <div className="setting-group">
+        <div className="setting-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+          <div className="setting-row-copy">
+            <div className="setting-row-title">API Key</div>
+            <div className="setting-row-description">
+              From <a href="https://elevenlabs.io" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>elevenlabs.io</a> → Profile → API Keys. Free tier has 10k characters/month.
+            </div>
+          </div>
+          <input
+            type="password"
+            placeholder={status?.key_set ? '••••••••  (key saved — paste to update)' : 'sk-...'}
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            style={{
+              width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 6, padding: '8px 12px', color: 'var(--text)', fontSize: 13,
+            }}
+          />
+        </div>
+        <div className="setting-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+          <div className="setting-row-copy">
+            <div className="setting-row-title">Voice ID</div>
+            <div className="setting-row-description">Pre-filled with Brian (cinematic, JARVIS-like). Find more at elevenlabs.io/voice-lab.</div>
+          </div>
+          <input
+            type="text"
+            value={voiceId}
+            onChange={e => setVoiceId(e.target.value)}
+            style={{
+              width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 6, padding: '8px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'monospace',
+            }}
+          />
+        </div>
+        <div className="setting-row">
+          <div className="setting-row-copy">
+            <div className="setting-row-title">Activate</div>
+            <div className="setting-row-description">Saves key, switches TTS provider, and runs a test synthesis to confirm it works.</div>
+          </div>
+          <button className="btn primary sm" onClick={activate} disabled={busy}>
+            {busy ? 'Testing…' : 'Activate JARVIS voice'}
+          </button>
+        </div>
+      </div>
+      {message && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--green)' }}>{message}</div>}
+      {error   && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--red,#e53935)' }}>{error}</div>}
+    </Card>
+  )
 }
 
 function SettingRow({ label, description, value }: { label: string; description: string; value: string; key?: Key }) {
