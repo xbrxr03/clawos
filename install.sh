@@ -579,6 +579,92 @@ EOF
   fi
 }
 
+select_profile() {
+  if [ ! -t 0 ]; then
+    CLAWOS_PROFILE=6
+    export CLAWOS_PROFILE
+    return
+  fi
+  echo ""
+  echo -e "  ${P}${BOLD}Who is ClawOS for?${RESET}"
+  echo ""
+  echo -e "  ${B}1)${RESET} ${W}Developer${RESET}     — OpenClaude (open-source Claude Code) + qwen2.5-coder"
+  echo -e "  ${B}2)${RESET} ${W}Creator${RESET}       — Content workflows + daily briefing"
+  echo -e "  ${B}3)${RESET} ${W}Business${RESET}      — Lead research, reports, scheduling"
+  echo -e "  ${B}4)${RESET} ${W}Student${RESET}       — Summarise lectures, research wiki, proofread"
+  echo -e "  ${B}5)${RESET} ${W}Teacher${RESET}       — Lesson planning, curriculum wiki, scheduling"
+  echo -e "  ${B}6)${RESET} ${W}General${RESET}       — Balanced setup, good for everything"
+  echo ""
+  read -rp "  Choose [1-6, default 6]: " CLAWOS_PROFILE
+  CLAWOS_PROFILE=${CLAWOS_PROFILE:-6}
+  export CLAWOS_PROFILE
+}
+
+apply_profile() {
+  case "$CLAWOS_PROFILE" in
+    1)
+      PROFILE_NAME="developer"
+      DEFAULT_WORKFLOWS="pr_review,write_readme,repo_summary,changelog,find_todos"
+      INSTALL_OPENCLAUDE=true
+      ;;
+    2)
+      PROFILE_NAME="creator"
+      DEFAULT_WORKFLOWS="daily_digest,caption_images,rewrite,batch_summarize,summarize_pdf"
+      INSTALL_OPENCLAUDE=false
+      ;;
+    3)
+      PROFILE_NAME="business"
+      DEFAULT_WORKFLOWS="daily_digest,csv_to_report,batch_summarize,find_todos,proofread"
+      INSTALL_OPENCLAUDE=false
+      ;;
+    4)
+      PROFILE_NAME="student"
+      DEFAULT_WORKFLOWS="summarize_pdf,pdf_to_notes,proofread,find_todos,batch_summarize"
+      INSTALL_OPENCLAUDE=false
+      ;;
+    5)
+      PROFILE_NAME="teacher"
+      DEFAULT_WORKFLOWS="summarize_pdf,batch_summarize,proofread,folder_summary,daily_digest"
+      INSTALL_OPENCLAUDE=false
+      ;;
+    *)
+      PROFILE_NAME="general"
+      DEFAULT_WORKFLOWS="daily_digest,organize_downloads,summarize_pdf,disk_report,pr_review"
+      INSTALL_OPENCLAUDE=false
+      ;;
+  esac
+
+  mkdir -p "$HOME/.config/clawos"
+  cat > "$HOME/.config/clawos/profile.yaml" <<EOF
+profile: $PROFILE_NAME
+default_workflows: [$DEFAULT_WORKFLOWS]
+EOF
+  ok "Profile: $PROFILE_NAME"
+}
+
+install_openclaude() {
+  [ "${INSTALL_OPENCLAUDE:-false}" = "true" ] || return
+  step "Installing OpenClaude (open-source Claude Code for developers)"
+  if ! command -v npm &>/dev/null; then
+    warn "npm not found — skipping OpenClaude"
+    return
+  fi
+  run_with_spinner "Installing OpenClaude" npm install -g @gitlawb/openclaude \
+    || { warn "OpenClaude install failed (non-fatal)"; return; }
+
+  cat > "$HOME/.clawos_dev_env" <<'EOF'
+# OpenClaude — open-source Claude Code, powered by local Ollama
+export CLAUDE_CODE_USE_OPENAI=1
+export OPENAI_BASE_URL=http://localhost:11434/v1
+export OPENAI_MODEL=qwen2.5-coder:7b
+EOF
+  for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    [ -f "$rc" ] && grep -q "clawos_dev_env" "$rc" || \
+      echo 'source "$HOME/.clawos_dev_env" 2>/dev/null' >> "$rc"
+  done
+  ok "OpenClaude installed — run: openclaude"
+}
+
 verify_install() {
   step "Final verification"
 
@@ -708,6 +794,7 @@ if [ "$IS_ARM" = "true" ] && [ "$PROFILE" != "lowram" ]; then
   warn "ARM CPU detected - using lightweight local defaults"
 fi
 ok "Hardware: $TIER"
+select_profile
 
 case "$PROFILE" in
   lowram)
@@ -795,6 +882,7 @@ cd "$INSTALL_DIR" || die "Install directory not found: $INSTALL_DIR"
 export PYTHONPATH="$INSTALL_DIR"
 
 install_python_packages
+apply_profile
 install_wake_word_model
 install_playwright
 build_command_center
@@ -828,6 +916,10 @@ else
   else
     info "Pulling $MODEL ($MODEL_SIZE) - $MODEL_NOTE"
     "$OLLAMA_BIN" pull "$MODEL" || warn "Model pull failed"
+    if [ "${CLAWOS_PROFILE:-6}" = "1" ]; then
+      info "Pulling qwen2.5-coder:7b for developer profile (~4.7GB)"
+      "$OLLAMA_BIN" pull qwen2.5-coder:7b || warn "qwen2.5-coder:7b pull failed"
+    fi
   fi
 fi
 
@@ -848,6 +940,7 @@ fi
 
 install_wrapper_commands
 install_picoclaw_if_needed
+install_openclaude
 enable_autostart
 verify_install
 
@@ -856,6 +949,8 @@ echo ""
 divider
 echo ""
 echo -e "  ${G}${BOLD}ClawOS installed in ${ELAPSED}s${RESET}"
+echo ""
+echo -e "  ${W}Profile:${RESET}          ${B}${PROFILE_NAME:-general}${RESET}"
 echo ""
 echo -e "  ${B}clawos${RESET}"
 echo -e "  ${D}Native ClawOS runtime using ${MODEL}${RESET}"
@@ -866,6 +961,11 @@ echo ""
 echo -e "  ${B}openclaw tui${RESET}"
 echo -e "  ${D}OpenClaw TUI with Kimi K2.5 on port ${OPENCLAW_GATEWAY_PORT}${RESET}"
 echo ""
+if [ "${INSTALL_OPENCLAUDE:-false}" = "true" ]; then
+  echo -e "  ${B}openclaude${RESET}"
+  echo -e "  ${D}Claude Code interface → Ollama qwen2.5-coder:7b (no API bill)${RESET}"
+  echo ""
+fi
 
 if [ "$PLATFORM" = "macos" ]; then
   echo -e "  ${D}Reload shell if needed:${RESET} ${B}source ~/.zprofile${RESET}"

@@ -443,6 +443,75 @@
     footer a { color: var(--text-2); text-decoration: none; }
     footer a:hover { color: var(--accent); }
     .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+
+    /* ── JARVIS animations ── */
+    @keyframes glow-pulse { 0%,100%{opacity:0.8} 50%{opacity:1.3} }
+    .hero::before { animation: glow-pulse 4s ease-in-out infinite; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    #install-cmd::after { content:'█'; animation:blink 1s step-end infinite; color:var(--accent); font-size:0.85em; margin-left:2px; }
+
+    @keyframes scan { 0%{top:0%} 100%{top:100%} }
+    .hero-scan {
+      position:absolute; left:0; right:0; height:1px;
+      background:linear-gradient(90deg,transparent,rgba(229,57,53,0.35),transparent);
+      animation:scan 6s linear infinite; pointer-events:none;
+    }
+
+    @keyframes ping { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.5} }
+    .jarvis-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); animation:ping 2s ease-in-out infinite; margin-right:6px; vertical-align:middle; }
+
+    .feature-card { position:relative; }
+    .feature-card::before, .feature-card::after {
+      content:''; position:absolute; width:12px; height:12px;
+      border-color:var(--accent); border-style:solid; opacity:0; transition:opacity 0.3s;
+    }
+    .feature-card::before { top:8px; left:8px; border-width:1px 0 0 1px; }
+    .feature-card::after  { bottom:8px; right:8px; border-width:0 1px 1px 0; }
+    .feature-card:hover::before, .feature-card:hover::after { opacity:1; }
+
+    @keyframes slide-up { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:none} }
+    .persona-card { animation:slide-up 0.5s ease both; }
+    .persona-card:nth-child(2){animation-delay:0.08s}
+    .persona-card:nth-child(3){animation-delay:0.16s}
+    .persona-card:nth-child(4){animation-delay:0.24s}
+    .persona-card:nth-child(5){animation-delay:0.32s}
+
+    /* ── Persona section ── */
+    .persona-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+      gap:16px;
+      margin-top:48px;
+    }
+    .persona-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-left:3px solid var(--accent);
+      border-radius:12px;
+      padding:24px;
+      transition:border-color 0.2s, transform 0.2s;
+    }
+    .persona-card:hover { border-color:rgba(229,57,53,0.5); transform:translateY(-2px); }
+    .persona-icon { font-size:28px; margin-bottom:10px; }
+    .persona-title { font-size:16px; font-weight:700; margin-bottom:6px; }
+    .persona-hook { font-size:13px; color:var(--accent-2); margin-bottom:14px; font-style:italic; line-height:1.5; }
+    .persona-list { list-style:none; display:flex; flex-direction:column; gap:7px; margin-bottom:16px; }
+    .persona-list li { font-size:13px; color:var(--text-2); padding-left:14px; position:relative; line-height:1.5; }
+    .persona-list li::before { content:'·'; position:absolute; left:0; color:var(--accent); }
+    .persona-cmd { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-family:'SF Mono','Fira Code',monospace; font-size:11.5px; color:var(--text-2); }
+
+    /* ── Waitlist form ── */
+    .waitlist-form { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:32px; }
+    .waitlist-form input[type=email] {
+      background:var(--surface); border:1px solid rgba(229,57,53,0.3); border-radius:8px;
+      padding:10px 16px; color:var(--text); font-size:14px; outline:none;
+      transition:border-color 0.2s; width:240px; max-width:100%;
+    }
+    .waitlist-form input[type=email]:focus { border-color:var(--accent); }
+    .waitlist-form input::placeholder { color:var(--text-3); }
+    .waitlist-form button { background:transparent; border:1px solid var(--border); border-radius:8px; padding:10px 20px; color:var(--text-2); font-size:13px; cursor:pointer; transition:all 0.2s; }
+    .waitlist-form button:hover { border-color:var(--accent); color:var(--accent); }
   </style>
 </head>
 <body>
@@ -452,6 +521,7 @@
   <a href="#hero" class="active" title="Home"></a>
   <a href="#why" title="Why not Ollama"></a>
   <a href="#features" title="Features"></a>
+  <a href="#who" title="Who it's for"></a>
   <a href="#savings" title="Savings"></a>
   <a href="#security" title="Security"></a>
   <a href="#premium" title="Premium"></a>
@@ -464,17 +534,24 @@
 
 <!-- Hero -->
 <section class="hero" id="hero">
-  <div class="hero-eyebrow">Open Source · AGPL-3.0 · Built on the OpenClaw Ecosystem</div>
+  <div class="hero-scan"></div>
+  <div class="hero-eyebrow"><span class="jarvis-dot"></span> JARVIS ONLINE &nbsp;·&nbsp; Open Source · AGPL-3.0</div>
   <h1>The complete <em>JARVIS stack</em>.<br>One command.</h1>
-  <p class="hero-sub">ClawOS brings together everything the OpenClaw ecosystem needs to actually work — voice, memory, a 3D knowledge brain, 29 automations, WhatsApp, and a command center dashboard. Curated, integrated, and running on your hardware.</p>
+  <p class="hero-sub">ClawOS brings together everything the OpenClaw ecosystem needs to actually work — voice, memory, a 3D knowledge brain, 29 automations, and a command center dashboard. Curated, integrated, and running on your hardware.</p>
 
   <div class="install-block">
     <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash</code>
     <button class="copy-btn" onclick="copyInstall()">Copy</button>
   </div>
 
+  <!-- Waitlist form — replace REPLACE_ME with your Formspree form ID -->
+  <form class="waitlist-form" action="https://formspree.io/f/mojpggob" method="POST">
+    <input type="email" name="email" placeholder="your@email.com" required />
+    <button type="submit">Join waitlist</button>
+  </form>
+
   <div class="hero-cta-row">
-    <a href="https://github.com/xbrxr03/clawos" class="btn-primary">Get ClawOS free →</a>
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary">★ Star on GitHub →</a>
     <a href="#why" class="btn-ghost">See how it works ↓</a>
   </div>
 
@@ -520,8 +597,8 @@
     <div class="compare-cell plain"><span class="cross">✗</span> n8n or Zapier (another subscription)</div>
     <div class="compare-cell clawos"><span class="check">✓</span> 29 built-in automations, no config required</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> baileys / whatsapp-web.js (breaks constantly)</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> WhatsApp bridge with approval-by-reply</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> No safety layer — agents run tools unchecked</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> policyd — every call risk-scored, sensitive ops need approval</div>
 
     <div class="compare-cell plain"><span class="cross">✗</span> No dashboard — terminal only</div>
     <div class="compare-cell clawos"><span class="check">✓</span> 17-page command center at :7070</div>
@@ -549,9 +626,9 @@
       <div class="feature-body">Drop a folder of notes. ClawOS builds a living knowledge graph your agents can query, expand, and surface connections in — visualised in 3D.</div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">📱</div>
-      <div class="feature-title">WhatsApp Command Center</div>
-      <div class="feature-body">Message your JARVIS from anywhere. Get your morning briefing every day. Approve sensitive actions by reply.</div>
+      <div class="feature-icon">👁️</div>
+      <div class="feature-title">JARVIS Notices Things</div>
+      <div class="feature-body">Disk 82% full. PR open 5 days. Brain found a connection you missed. ClawOS watches in the background and surfaces what matters — before you think to ask.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
@@ -583,67 +660,157 @@
       <div class="feature-title">MCP + A2A Federation</div>
       <div class="feature-body">Connect any Model Context Protocol server. Link multiple ClawOS instances on your LAN. Claude, OpenClaw, your own agents — all wired.</div>
     </div>
+    <div class="feature-card">
+      <div class="feature-icon">📚</div>
+      <div class="feature-title">Research Wiki</div>
+      <div class="feature-body">Andrej Karpathy doesn't use RAG. Drop sources into raw/, JARVIS builds wiki/ automatically, answers live in outputs/. Structure that compounds over time.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔀</div>
+      <div class="feature-title">Smart Model Routing</div>
+      <div class="feature-body">Exploration → DeepSeek (pennies). Hard reasoning → Claude. Local coding → Ollama (free). One workflow, every frontier model. Cuts API costs 80%.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Who it's for -->
+<section id="who">
+  <div class="section-eyebrow">For every kind of person</div>
+  <div class="section-title">You don't need to know what OpenClaw is.</div>
+  <p class="section-sub">You just need one of these to sound familiar.</p>
+
+  <div class="persona-grid">
+    <div class="persona-card">
+      <div class="persona-icon">👨‍💻</div>
+      <div class="persona-title">Developer</div>
+      <div class="persona-hook">OpenClaude pre-installed. Claude Code's interface. Your hardware. Zero API bill.</div>
+      <ul class="persona-list">
+        <li>Run <code style="font-size:11px;color:var(--accent-2)">openclaude</code> in terminal — no subscription</li>
+        <li>PR reviews, README gen, repo summaries out of the box</li>
+        <li>DeepSeek for cheap tasks, Claude for hard ones</li>
+        <li>qwen2.5-coder:7b wired to local Ollama</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run pr-review</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🎬</div>
+      <div class="persona-title">Content Creator</div>
+      <div class="persona-hook">Never run out of ideas. Batch-generate a week of content in an hour.</div>
+      <ul class="persona-list">
+        <li>Daily niche trend briefing via voice every morning</li>
+        <li>10 content ideas from one keyword</li>
+        <li>Repurpose blog → threads, scripts, captions</li>
+        <li>Batch caption your entire image library</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run daily-digest</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">💼</div>
+      <div class="persona-title">Business Owner</div>
+      <div class="persona-hook">An AI operator that never sleeps and costs nothing per query.</div>
+      <ul class="persona-list">
+        <li>Lead research + market analysis workflows</li>
+        <li>Cold outreach and follow-up draft generation</li>
+        <li>Daily briefing: pipeline status, priority tasks</li>
+        <li>Competitor reports, CSV to readable summary</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run csv-to-report</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🎒</div>
+      <div class="persona-title">Student</div>
+      <div class="persona-hook">Summarise any lecture. Proofread privately — nothing leaves your laptop.</div>
+      <ul class="persona-list">
+        <li>PDF + lecture notes → concise study summaries</li>
+        <li>Personal study wiki that grows with your course</li>
+        <li>Private essay proofreading (local, not cloud)</li>
+        <li>Deadline briefing every morning</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run summarize-pdf</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🎓</div>
+      <div class="persona-title">Teacher</div>
+      <div class="persona-hook">Research any topic, build lesson wikis, never lose a document.</div>
+      <ul class="persona-list">
+        <li>Summarise research papers and textbooks</li>
+        <li>Build a living wiki of your subject matter</li>
+        <li>Draft lesson plans from curriculum guidelines</li>
+        <li>Morning briefing: today's schedule and priorities</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run batch-summarize</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🧑‍💻</div>
+      <div class="persona-title">Freelancer</div>
+      <div class="persona-hook">Proposals drafted, clients researched, follow-ups written. An operator that works while you sleep.</div>
+      <ul class="persona-list">
+        <li>Client research + competitor analysis in one run</li>
+        <li>Proposal and scope-of-work generation from notes</li>
+        <li>Weekly invoice summary and overdue chase drafts</li>
+        <li>Daily briefing: deadlines, open threads, priorities</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run daily-digest</div>
+    </div>
   </div>
 </section>
 
 <!-- Savings Calculator -->
 <section id="savings">
   <div class="section-eyebrow">The math is simple</div>
-  <div class="section-title">ClawOS replaces a $81/mo toolchain.</div>
-  <p class="section-sub">Select what you'd otherwise pay for. ClawOS ships all of it, integrated, for $10 once.</p>
+  <div class="section-title">What you'd spend running OpenClaw without ClawOS.</div>
+  <p class="section-sub">These are the real costs people pay when they assemble this themselves. Select all that apply.</p>
 
   <div class="calc-card">
     <div class="calc-title">What would you pay without ClawOS?</div>
-    <div class="calc-sub">Real alternatives to what ClawOS includes. Select all that apply.</div>
+    <div class="calc-sub">OpenClaw-specific costs only. ClawOS eliminates every one of these.</div>
     <div class="calc-items" id="calc-items">
       <div class="calc-item">
         <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="29" checked id="c1" />
-          <label class="calc-item-name" for="c1">Managed OpenClaw hosting <span style="color:var(--text-3);font-size:12px">(Elestio, RunMyClaw etc — $29–$59/mo)</span></label>
+          <input type="checkbox" class="calc-checkbox" data-cost="20" checked id="c1" />
+          <label class="calc-item-name" for="c1">Claude Code subscription <span style="color:var(--text-3);font-size:12px">(OpenClaude via ClawOS = free)</span></label>
+        </div>
+        <div class="calc-item-price">$20/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="35" checked id="c2" />
+          <label class="calc-item-name" for="c2">Claude / GPT-4o API for agent workflows</label>
+        </div>
+        <div class="calc-item-price">$35/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="29" checked id="c3" />
+          <label class="calc-item-name" for="c3">Managed OpenClaw hosting <span style="color:var(--text-3);font-size:12px">(Elestio, RunMyClaw)</span></label>
         </div>
         <div class="calc-item-price">$29/mo</div>
       </div>
       <div class="calc-item">
         <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="10" checked id="c2" />
-          <label class="calc-item-name" for="c2">Voice assistant (Amazon Echo + Alexa Pro)</label>
+          <input type="checkbox" class="calc-checkbox" data-cost="10" checked id="c4" />
+          <label class="calc-item-name" for="c4">Personal knowledge base <span style="color:var(--text-3);font-size:12px">(Notion AI / Mem.ai)</span></label>
         </div>
         <div class="calc-item-price">$10/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="9" checked id="c3" />
-          <label class="calc-item-name" for="c3">Workflow automation (Make.com Basic)</label>
-        </div>
-        <div class="calc-item-price">$9/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="8" checked id="c4" />
-          <label class="calc-item-name" for="c4">Personal AI memory (Mem.ai)</label>
-        </div>
-        <div class="calc-item-price">$8/mo</div>
       </div>
       <div class="calc-item">
         <div class="calc-item-left">
           <input type="checkbox" class="calc-checkbox" data-cost="15" checked id="c5" />
-          <label class="calc-item-name" for="c5">WhatsApp bot hosting (Twilio + n8n)</label>
+          <label class="calc-item-name" for="c5">OpenRouter for frontier model access</label>
         </div>
         <div class="calc-item-price">$15/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="10" checked id="c6" />
-          <label class="calc-item-name" for="c6">AI document assistant (Notion AI)</label>
-        </div>
-        <div class="calc-item-price">$10/mo</div>
       </div>
     </div>
     <div class="calc-divider"></div>
     <div class="calc-result">
       <div>
         <div class="calc-total-label">Equivalent toolchain costs</div>
-        <div class="calc-total-num" id="calc-total">$81<span id="calc-annual">&nbsp;≈ $972/yr</span></div>
+        <div class="calc-total-num" id="calc-total">$109<span id="calc-annual">&nbsp;≈ $1,308/yr</span></div>
       </div>
       <div class="calc-cta">
         <div class="calc-cta-label">ClawOS replaces all of it for</div>
@@ -719,17 +886,19 @@
     <p style="color: var(--text-2); font-size: 14px; margin-bottom: 32px;">One-time purchase. No subscription. No renewals. Yours forever.</p>
 
     <div class="premium-features">
-      <div class="premium-feature"><span class="check">✓</span> All 29 workflows</div>
-      <div class="premium-feature"><span class="check">✓</span> OpenRouter cloud models</div>
-      <div class="premium-feature"><span class="check">✓</span> ElevenLabs JARVIS voice</div>
-      <div class="premium-feature"><span class="check">✓</span> Nexus 3D knowledge brain</div>
+      <div class="premium-feature"><span class="check">✓</span> ClawOS Dispatch — weekly newsletter</div>
+      <div class="premium-feature"><span class="check">✓</span> Community Discord — power users</div>
+      <div class="premium-feature"><span class="check">✓</span> All 29 workflows (free: 5)</div>
+      <div class="premium-feature"><span class="check">✓</span> Research Wiki (raw/ → wiki/ → outputs/)</div>
+      <div class="premium-feature"><span class="check">✓</span> Smart model routing (DeepSeek / Claude / Ollama)</div>
+      <div class="premium-feature"><span class="check">✓</span> ElevenLabs JARVIS voice (your key — we wire it)</div>
+      <div class="premium-feature"><span class="check">✓</span> Nexus Brain 3D knowledge graph</div>
+      <div class="premium-feature"><span class="check">✓</span> Browser control + A2A federation</div>
       <div class="premium-feature"><span class="check">✓</span> Advanced RAG + GraphRAG</div>
       <div class="premium-feature"><span class="check">✓</span> Skill publishing to ClawHub</div>
-      <div class="premium-feature"><span class="check">✓</span> Browser control (Playwright)</div>
-      <div class="premium-feature"><span class="check">✓</span> Proactive ambient intelligence</div>
-      <div class="premium-feature"><span class="check">✓</span> A2A multi-agent federation</div>
-      <div class="premium-feature"><span class="check">✓</span> Priority support</div>
     </div>
+    <p style="color: var(--text-2); font-size: 12px; margin-bottom: 8px;">Free: Piper TTS — offline, private. Premium: paste your ElevenLabs key once, JARVIS sounds cinematic.</p>
+    <p style="color: var(--text-2); font-size: 13px; margin-bottom: 24px; font-weight: 500;">Why not DIY? ~60 hours, 7 repos, $35/mo API costs vs $10 once.</p>
 
     <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="font-size: 15px; padding: 14px 36px;">Get ClawOS Premium — $10 →</a>
     <p style="color: var(--text-3); font-size: 12px; margin-top: 16px;">Free tier always available. No credit card needed to start.</p>
@@ -755,7 +924,7 @@
       total += parseInt(el.dataset.cost) || 0;
     });
     document.getElementById('calc-total').childNodes[0].textContent = '$' + total;
-    document.getElementById('calc-annual').textContent = total > 0 ? '\u00a0\u2248 $' + (total * 12) + '/yr' : '';
+    document.getElementById('calc-annual').textContent = total > 0 ? '\u00a0\u2248 $' + (total * 12).toLocaleString() + '/yr' : '';
   }
   document.querySelectorAll('.calc-checkbox').forEach(el => el.addEventListener('change', updateCalc));
   updateCalc();
@@ -771,15 +940,14 @@
   }
 
   // Side nav active state on scroll
-  const sections = ['hero', 'why', 'features', 'savings', 'security', 'premium'];
+  const sections = ['hero', 'why', 'features', 'who', 'savings', 'security', 'premium'];
   const navLinks = document.querySelectorAll('.sidenav a');
   function updateNav() {
+    const scrollY = window.scrollY || window.pageYOffset;
     let current = 'hero';
     sections.forEach(id => {
       const el = document.getElementById(id);
-      if (el && el.getBoundingClientRect().top < window.innerHeight * 0.5) {
-        current = id;
-      }
+      if (el && el.offsetTop - 100 <= scrollY) current = id;
     });
     navLinks.forEach(link => {
       link.classList.toggle('active', link.getAttribute('href') === '#' + current);
@@ -787,6 +955,57 @@
   }
   window.addEventListener('scroll', updateNav, { passive: true });
   updateNav();
+
+  // Sidenav click → smooth scroll
+  navLinks.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Stats count-up on scroll
+  function animateCounter(el, target, suffix) {
+    let start = null;
+    const duration = 1200;
+    const step = ts => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const val = Math.floor(progress * target);
+      el.textContent = (val === target ? target : val) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const statEls = document.querySelectorAll('.stat-num');
+  const statData = [
+    { target: 29, suffix: '+' },
+    { target: 20, suffix: '' },
+    { target: 4, suffix: ' min' },
+    { target: 0, suffix: '' },
+  ];
+  let statsAnimated = false;
+  const statsObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !statsAnimated) {
+      statsAnimated = true;
+      statEls.forEach((el, i) => {
+        if (statData[i] && statData[i].target > 0) animateCounter(el, statData[i].target, statData[i].suffix);
+      });
+    }
+  }, { threshold: 0.5 });
+  const statsSection = document.querySelector('.hero-stats');
+  if (statsSection) statsObserver.observe(statsSection);
+
+  // Persona cards entrance animation on scroll
+  const personaObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.style.opacity = '1'; });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.persona-card').forEach(c => {
+    c.style.opacity = '0';
+    personaObserver.observe(c);
+  });
 </script>
 </body>
 </html>

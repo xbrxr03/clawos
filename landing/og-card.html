@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background: #0a0000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      color: #f5f0f0;
+    }
+
+    /* Background glow */
+    .bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 55% at 30% 50%, rgba(229,57,53,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 80% 30%, rgba(255,107,107,0.07) 0%, transparent 60%);
+    }
+
+    /* HUD corner brackets */
+    .bracket {
+      position: absolute;
+      width: 28px; height: 28px;
+      border-color: rgba(229,57,53,0.5);
+      border-style: solid;
+    }
+    .bracket.tl { top: 28px; left: 28px; border-width: 2px 0 0 2px; }
+    .bracket.tr { top: 28px; right: 28px; border-width: 2px 2px 0 0; }
+    .bracket.bl { bottom: 28px; left: 28px; border-width: 0 0 2px 2px; }
+    .bracket.br { bottom: 28px; right: 28px; border-width: 0 2px 2px 0; }
+
+    /* Scan line */
+    .scan {
+      position: absolute;
+      left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(229,57,53,0.3), transparent);
+      top: 48%;
+    }
+
+    /* Content */
+    .content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      padding: 64px 80px;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #e53935;
+      font-weight: 600;
+      margin-bottom: 28px;
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #e53935;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px;
+      max-width: 700px;
+    }
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, #e53935 0%, #ff6b6b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sub {
+      font-size: 22px;
+      color: #9a8888;
+      line-height: 1.5;
+      max-width: 580px;
+      margin-bottom: 48px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 48px;
+    }
+    .stat-num {
+      font-size: 28px;
+      font-weight: 700;
+      color: #f5f0f0;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #4a3a3a;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2px;
+    }
+
+    /* Right side — install block */
+    .right {
+      position: absolute;
+      right: 80px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-end;
+    }
+    .install-block {
+      background: #120606;
+      border: 1px solid rgba(255,50,50,0.15);
+      border-radius: 12px;
+      padding: 18px 24px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: #ff6b6b;
+      white-space: nowrap;
+    }
+    .tag {
+      background: #e53935;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 6px;
+    }
+    .github-link {
+      font-size: 13px;
+      color: #4a3a3a;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="scan"></div>
+
+  <div class="bracket tl"></div>
+  <div class="bracket tr"></div>
+  <div class="bracket bl"></div>
+  <div class="bracket br"></div>
+
+  <div class="content">
+    <div class="eyebrow">
+      <div class="dot"></div>
+      JARVIS ONLINE &nbsp;·&nbsp; Open Source · AGPL-3.0
+    </div>
+    <h1>Your private<br><em>JARVIS</em>.<br>One command.</h1>
+    <p class="sub">Voice, memory, 29 automations &amp; a 3D knowledge brain — on your hardware, free forever.</p>
+    <div class="stats">
+      <div>
+        <div class="stat-num">29+</div>
+        <div class="stat-label">Automations</div>
+      </div>
+      <div>
+        <div class="stat-num">20</div>
+        <div class="stat-label">Services</div>
+      </div>
+      <div>
+        <div class="stat-num">$0</div>
+        <div class="stat-label">To start</div>
+      </div>
+      <div>
+        <div class="stat-num">4 min</div>
+        <div class="stat-label">To install</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="tag">Free · Open Source</div>
+    <div class="install-block">curl -fsSL clawos.dev/install.sh | bash</div>
+    <div class="github-link">github.com/xbrxr03/clawos</div>
+  </div>
+</body>
+</html>
