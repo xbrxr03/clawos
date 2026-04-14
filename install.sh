@@ -982,6 +982,9 @@ echo -e "  ${D}Service manager:${RESET} ${B}$(platform_name)${RESET} (${D}$([ "$
 echo -e "  ${D}Open setup:${RESET} ${B}clawos-setup${RESET}"
 echo -e "  ${D}Open home:${RESET} ${B}clawos-command-center${RESET}"
 echo ""
+echo -e "  ${W}Dashboard:${RESET}        ${B}http://localhost:7070${RESET}"
+echo -e "  ${D}(or from another device: http://$(hostname -I | awk '{print $1}'):7070)${RESET}"
+echo ""
 
 # Print dashboard token so new users can log in
 _CLAWOS_DIR="${CLAWOS_DIR:-$HOME/clawos}"
