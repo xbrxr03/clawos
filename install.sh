@@ -809,14 +809,14 @@ case "$PROFILE" in
     MODEL_NOTE="best CPU-only model, 256K context, runs on 8GB RAM"
     ;;
   balanced)
-    MODEL="qwen2.5:7b"
-    MODEL_SIZE="~4.7GB"
-    MODEL_NOTE="strong reasoning model, 16GB RAM recommended"
+    MODEL="qwen3.5:4b"
+    MODEL_SIZE="~3.4GB"
+    MODEL_NOTE="updated knowledge, 256K context, 16GB RAM recommended"
     ;;
   performance|gaming)
-    MODEL="qwen2.5:7b"
-    MODEL_SIZE="~4.7GB"
-    MODEL_NOTE="full local capability, GPU recommended"
+    MODEL="qwen3.5:9b"
+    MODEL_SIZE="~6.5GB"
+    MODEL_NOTE="updated knowledge, 256K context, GPU recommended"
     ;;
   *)
     MODEL="qwen3.5:4b"
@@ -835,7 +835,7 @@ esac
 CLAWOS_RUNTIMES="${CLAWOS_RUNTIMES:-}"
 if [ -z "$CLAWOS_RUNTIMES" ]; then
   case "$PROFILE" in
-    lowram)      CLAWOS_RUNTIMES="nexus,picoclaw" ;;
+    lowram)      CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
     balanced)    CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
     performance) CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
     gaming)      CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;

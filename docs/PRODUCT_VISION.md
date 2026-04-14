@@ -72,17 +72,27 @@ ISO validation target: Tier A + B on clean Ubuntu.
 
 ---
 
-## Two Runtimes
+## Runtime Ecosystem
 
-### Claw Core (default)
+### Claw Core / Nexus (default)
 Native Python ReAct agent. Works on 8GB RAM. CPU-only capable.
 The reliable foundation every user gets by default.
 
-### OpenClaw (optional)
+### PicoClaw (Tier A ARM)
+Lightweight agent runtime from Sipeed.
+Auto-activated on Raspberry Pi and ARM SBCs at install time.
+No configuration required — detected automatically by the installer.
+
+### OpenClaw (all tiers)
 Node.js ecosystem with 13,700+ skills.
 Pre-configured for Ollama offline.
 Installed via: `clawctl openclaw install`
-For users who need the full OpenClaw ecosystem.
+The main agent ecosystem for skills, automations, and community workflows.
+
+### Hermes Agent (planned)
+Self-improving agent from Nous Research.
+Persistent cross-session memory, MCP integration, autonomous skill loops.
+Support planned post-v0.1.
 
 ---
 

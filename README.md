@@ -90,10 +90,21 @@ The installer automatically detects your hardware and picks the right model:
 |---|---|---|---|
 | Raspberry Pi 5 / ARM | 8GB | `qwen3.5:4b` | ~3–5 tok/s CPU |
 | x86 laptop / mini PC | 8–16GB | `qwen3.5:4b` | ~8–20 tok/s CPU |
-| x86 workstation with GPU | 16–32GB | `qwen2.5:7b` | ~40–80 tok/s GPU |
-| Gaming rig / workstation | 32GB+ + GPU | `qwen2.5:7b` | ~80+ tok/s GPU |
+| x86 workstation with GPU | 16–32GB | `qwen3.5:4b` | ~40–80 tok/s GPU |
+| Gaming rig / workstation | 32GB+ + GPU | `qwen3.5:9b` | ~80+ tok/s GPU |
 
 GPU optional. NVIDIA CUDA and AMD ROCm both supported via Ollama.
+
+## Agent Runtimes
+
+ClawOS ships with a full agent runtime ecosystem — not just one model interface.
+
+| Runtime | Tiers | What it is |
+|---|---|---|
+| **Nexus** | All | Native Python ReAct agent. Always-on, CPU-capable, 4-layer persistent memory, skill loader, A2A federation. |
+| **PicoClaw** | Tier A (ARM) | Lightweight runtime from [Sipeed](https://github.com/sipeed/picoclaw). Auto-activated on Raspberry Pi and ARM hardware — no configuration required. |
+| **OpenClaw** | All | 13,700+ community skills. The main agent ecosystem. Activate with `clawctl openclaw install`. |
+| **Hermes Agent** | Coming soon | Self-improving agent from [Nous Research](https://github.com/nousresearch/hermes-agent). Persistent cross-session memory, MCP integration, autonomous skill building. |
 
 ---
 
