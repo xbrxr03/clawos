@@ -11,6 +11,7 @@
       "name": "Dashboard Frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
+      "cwd": "dashboard/frontend",
       "port": 5173
     },
     {

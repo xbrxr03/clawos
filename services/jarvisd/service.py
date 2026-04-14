@@ -34,6 +34,22 @@ JARVIS_WORKSPACE = "jarvis_openclaw"
 DEFAULT_JARVIS_VOICE_ID = "nPczCjzI2devNBz1zQrb"
 TURN_LIMIT = 24
 
+_BRIEFING_TRIGGERS = [
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bwhat(?:'s| is)?\s*up\b",
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\b(?:good\s+)?morning\b",
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bbrief(?:ing|\ me)?\b",
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bwhat(?:'s|\ is)?\s+(?:my\s+)?day\b",
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bcatch\s+me\s+up\b",
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bwhat\s+do\s+i\s+have\b",
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bwhat(?:'s|\ is)\s+going\s+on\b",
+    r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bgive\s+me\s+(?:my\s+)?(?:day|update|briefing)\b",
+]
+
+_AFFIRMATIVES = frozenset({
+    "yes", "yeah", "yep", "sure", "go ahead", "let's do it", "lets do it",
+    "ok", "okay", "do it", "yes please", "absolutely", "definitely", "yup",
+})
+
 WEATHER_CODES = {
     0: "clear and bright",
     1: "mostly clear",
@@ -138,6 +154,7 @@ def _current_config() -> dict[str, Any]:
         provider_pref = "elevenlabs"
     voice_id = str(cfg_get("jarvis.voice.elevenlabs_voice_id", cfg_get("voice.elevenlabs_voice_id", DEFAULT_JARVIS_VOICE_ID))).strip()
     wake_phrase = str(cfg_get("jarvis.voice.wake_phrase", "Hey Jarvis")).strip() or "Hey Jarvis"
+    calendar_ics_url = str(cfg_get("jarvis.briefing.calendar_ics_url", "")).strip()
     return {
         "voice_enabled": voice_enabled,
         "input_mode": input_mode,
@@ -145,6 +162,7 @@ def _current_config() -> dict[str, Any]:
         "tts_provider_preference": provider_pref,
         "elevenlabs_voice_id": voice_id or DEFAULT_JARVIS_VOICE_ID,
         "elevenlabs_key_set": bool(get_api_key()),
+        "calendar_ics_url": calendar_ics_url,
     }
 
 
@@ -307,6 +325,10 @@ class JarvisService:
                 pass
             os.environ["ELEVENLABS_API_KEY"] = api_key
 
+        calendar_ics_url = str(updates.get("calendar_ics_url", "")).strip()
+        if calendar_ics_url is not None and "calendar_ics_url" in updates:
+            _write_nested(config, "jarvis.briefing.calendar_ics_url", calendar_ics_url)
+
         _save_user_config(config)
         session = self.session()
         self._notify_session(session)
@@ -444,13 +466,46 @@ class JarvisService:
         }
 
     def _calendar_snapshot(self) -> dict[str, Any]:
-        return {
-            "status": "demo",
-            "items": [
-                "a product meeting at 3 PM",
-                "a webinar at 7 PM",
-            ],
-        }
+        ics_url = str(cfg_get("jarvis.briefing.calendar_ics_url", "")).strip()
+        if not ics_url:
+            return {"status": "demo", "items": ["a product meeting at 3 PM", "a webinar at 7 PM"]}
+        try:
+            import icalendar  # type: ignore[import]
+            from datetime import date, datetime, timezone
+
+            with urllib.request.urlopen(ics_url, timeout=10) as resp:  # noqa: S310
+                cal = icalendar.Calendar.from_ical(resp.read())
+            today = date.today()
+            events: list[tuple[int, str]] = []
+            for component in cal.walk():
+                if component.name != "VEVENT":
+                    continue
+                dtstart = component.get("dtstart")
+                if not dtstart:
+                    continue
+                dt = dtstart.dt
+                # Handle all-day events (date) and timed events (datetime)
+                event_date = dt if isinstance(dt, date) and not isinstance(dt, datetime) else getattr(dt, "date", lambda: today)()
+                if event_date != today:
+                    continue
+                summary = str(component.get("summary", "")).strip()
+                if not summary:
+                    continue
+                if isinstance(dt, datetime):
+                    local_dt = dt.astimezone() if dt.tzinfo else dt
+                    h = local_dt.hour % 12 or 12
+                    period = "AM" if local_dt.hour < 12 else "PM"
+                    time_str = f"{h}:{local_dt.minute:02d} {period}"
+                    events.append((local_dt.hour * 60 + local_dt.minute, f"{summary} at {time_str}"))
+                else:
+                    events.append((0, summary))
+            events.sort(key=lambda x: x[0])
+            items = [label for _, label in events[:5]]
+            if items:
+                return {"status": "live", "items": items}
+        except Exception as exc:
+            log.debug("Calendar ICS fetch failed: %s", exc)
+        return {"status": "demo", "items": ["a product meeting at 3 PM", "a webinar at 7 PM"]}
 
     def _task_snapshot(self) -> dict[str, Any]:
         try:
@@ -473,7 +528,14 @@ class JarvisService:
 
     def _looks_like_briefing_request(self, message: str) -> bool:
         normalized = " ".join(message.lower().split())
-        return bool(re.search(r"(?:^|\b)(?:hey\s+jarvis|jarvis)\b.*\bwhat(?:'s| is)? up\b", normalized))
+        return any(re.search(pattern, normalized) for pattern in _BRIEFING_TRIGGERS)
+
+    def _looks_like_standalone_greeting(self, message: str) -> bool:
+        normalized = " ".join(message.lower().split())
+        return bool(re.match(r"^(?:hey\s+jarvis|jarvis|hi\s+jarvis|hello\s+jarvis)\s*[.!?]?$", normalized))
+
+    def _is_affirmative(self, message: str) -> bool:
+        return message.lower().strip(".!? ") in _AFFIRMATIVES
 
     def _format_briefing_text(self, context: dict[str, Any]) -> str:
         headlines = context["headlines"]
@@ -593,28 +655,48 @@ class JarvisService:
         text = str(message or "").strip()
         if not text:
             raise ValueError("message required")
-        health = self.health()
-        if not health["openclaw_installed"] or not health["openclaw_running"]:
-            raise RuntimeError("OpenClaw is unavailable for JARVIS right now")
 
         self._append_turn(thread_key, role="user", text=text, source=source, spoken=False)
         self._update_thread(thread_key, state="thinking", last_utterance=text, live_caption=text, follow_up_open=False)
 
-        if self._looks_like_briefing_request(text):
-            reply, source_status = await self._briefing_reply(thread_key, source)
+        # Standalone greeting — no OpenClaw needed, just confirm presence
+        if self._looks_like_standalone_greeting(text):
+            reply = "Good morning, Sir. I'm online and ready. Say 'what's up' for your full briefing, or ask me anything."
+            source_status: dict[str, str] = {}
         else:
+            health = self.health()
+            if not health["openclaw_installed"] or not health["openclaw_running"]:
+                raise RuntimeError("OpenClaw is unavailable for JARVIS right now")
+
+            # Check if user is responding to the project continuation prompt
             state = _load_state()
-            thread = _thread_state(thread_key, state)
-            result = await asyncio.to_thread(
-                request_response,
-                text,
-                session_key=thread_key,
-                channel=source,
-                previous_response_id=str(thread.get("response_id", "")),
-            )
-            reply = str(result.get("text", "")).strip() or "I'm online, but that reply came back empty."
-            source_status = self.health()["briefing_sources"]
-            self._update_thread(thread_key, response_id=str(result.get("response_id", "")).strip() or thread.get("response_id", ""))
+            shared = state.setdefault("shared_memory", {})
+            if self._is_affirmative(text) and shared.get("awaiting_project_continue"):
+                project = str(shared.get("last_project", "")).strip()
+                shared["awaiting_project_continue"] = False
+                _save_state(state)
+                if project:
+                    text = f"Resume the project: {project}. Pick up where we left off. Acknowledge briefly and ask where to start."
+
+            if self._looks_like_briefing_request(text):
+                reply, source_status = await self._briefing_reply(thread_key, source)
+                # Mark that we offered project continuation — next "yes" will resume it
+                state2 = _load_state()
+                state2.setdefault("shared_memory", {})["awaiting_project_continue"] = True
+                _save_state(state2)
+            else:
+                state = _load_state()
+                thread = _thread_state(thread_key, state)
+                result = await asyncio.to_thread(
+                    request_response,
+                    text,
+                    session_key=thread_key,
+                    channel=source,
+                    previous_response_id=str(thread.get("response_id", "")),
+                )
+                reply = str(result.get("text", "")).strip() or "I'm online, but that reply came back empty."
+                source_status = self.health()["briefing_sources"]
+                self._update_thread(thread_key, response_id=str(result.get("response_id", "")).strip() or thread.get("response_id", ""))
 
         should_speak = self.config()["voice_enabled"] if speak_reply is None else bool(speak_reply)
         self._update_thread(thread_key, state="speaking" if should_speak else "idle", last_response=reply, live_caption=reply)

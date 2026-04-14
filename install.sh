@@ -242,7 +242,7 @@ install_python_packages() {
     pyyaml aiohttp fastapi "uvicorn[standard]"
     ollama click chromadb json_repair
     pypdf python-docx aiofiles httpx gitpython rich openai-whisper
-    openwakeword cryptography
+    openwakeword cryptography icalendar
   )
 
   if [ "$PLATFORM" = "macos" ]; then
@@ -594,8 +594,9 @@ select_profile() {
   echo -e "  ${B}4)${RESET} ${W}Student${RESET}       — Summarise lectures, research wiki, proofread"
   echo -e "  ${B}5)${RESET} ${W}Teacher${RESET}       — Lesson planning, curriculum wiki, scheduling"
   echo -e "  ${B}6)${RESET} ${W}General${RESET}       — Balanced setup, good for everything"
+  echo -e "  ${B}7)${RESET} ${W}Freelancer${RESET}    — Proposals, client research, outreach, invoicing"
   echo ""
-  read -rp "  Choose [1-6, default 6]: " CLAWOS_PROFILE
+  read -rp "  Choose [1-7, default 6]: " CLAWOS_PROFILE
   CLAWOS_PROFILE=${CLAWOS_PROFILE:-6}
   export CLAWOS_PROFILE
 }
@@ -625,6 +626,11 @@ apply_profile() {
     5)
       PROFILE_NAME="teacher"
       DEFAULT_WORKFLOWS="summarize_pdf,batch_summarize,proofread,folder_summary,daily_digest"
+      INSTALL_OPENCLAUDE=false
+      ;;
+    7)
+      PROFILE_NAME="freelancer"
+      DEFAULT_WORKFLOWS="daily_digest,csv_to_report,proofread,summarize_pdf,batch_summarize"
       INSTALL_OPENCLAUDE=false
       ;;
     *)
@@ -798,9 +804,9 @@ select_profile
 
 case "$PROFILE" in
   lowram)
-    MODEL="qwen2.5:3b"
-    MODEL_SIZE="~2.0GB"
-    MODEL_NOTE="fast CPU-only model, optimised for 8GB RAM"
+    MODEL="qwen3.5:4b"
+    MODEL_SIZE="~3.4GB"
+    MODEL_NOTE="best CPU-only model, 256K context, runs on 8GB RAM"
     ;;
   balanced)
     MODEL="qwen2.5:7b"
@@ -813,9 +819,9 @@ case "$PROFILE" in
     MODEL_NOTE="full local capability, GPU recommended"
     ;;
   *)
-    MODEL="qwen2.5:3b"
-    MODEL_SIZE="~2.0GB"
-    MODEL_NOTE="fast CPU-only model, optimised for 8GB RAM"
+    MODEL="qwen3.5:4b"
+    MODEL_SIZE="~3.4GB"
+    MODEL_NOTE="best CPU-only model, 256K context, runs on 8GB RAM"
     ;;
 esac
 

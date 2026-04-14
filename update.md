@@ -89,6 +89,87 @@ Historical notes below are preserved for context, but they are not the current b
 
 ## Updates Done By Claude
 
+### 2026-04-14 - Claude (JARVIS briefing + install profiles + launch prep)
+
+#### New test hardware
+- Machine: i7-9700K / 64GB RAM / GTX 1660 Super (6GB VRAM) / fresh Ubuntu
+- Install.sh tier: **Tier C (performance)** — ≥30GB RAM, <10GB VRAM
+- Expected model pull: `qwen2.5:7b` (~4.7GB), CUDA-accelerated
+
+#### Changes shipped
+
+**`install.sh`**
+- Added profile 7 (Freelancer) to `select_profile()` and `apply_profile()`
+- Changed Tier A / lowram default model: `qwen2.5:3b` → `qwen3.5:4b` (~3.4GB, 256K context, 5.9M Ollama downloads)
+- Changed default fallback model to `qwen3.5:4b`
+- Added `icalendar` to pip packages list
+
+**`services/jarvisd/service.py`**
+- Added `_BRIEFING_TRIGGERS` (8 regex patterns): what's up, good morning, brief me, what's my day, catch me up, what do I have today, what's going on, give me my update
+- Added `_AFFIRMATIVES` frozenset (14 yes-words)
+- `_looks_like_briefing_request()` now checks all 8 patterns (was single regex)
+- Added `_looks_like_standalone_greeting()` — just "hey jarvis" / "jarvis" alone
+- Added `_is_affirmative()` helper
+- `_calendar_snapshot()` rewritten: fetches real ICS URL from `jarvis.briefing.calendar_ics_url` config, parses today's events sorted by time, falls back to demo if no URL set
+- `set_config()` handles `calendar_ics_url` writes to `jarvis.briefing.calendar_ics_url`
+- `_current_config()` exposes `calendar_ics_url` to frontend
+- `chat()` restructured: standalone greeting branch (no OpenClaw needed) → continuation check → briefing routing → normal routing
+- After briefing delivery: sets `shared_memory["awaiting_project_continue"] = True`
+- If next message is affirmative + flag is set: rewrites text to resume last project, clears flag
+
+**`dashboard/frontend/src/pages/Settings.tsx`**
+- `<ElevenLabsCard />` now rendered (was defined but never inserted into JSX)
+- `<CalendarCard />` added: ICS URL input, instructions pointing to Google Calendar "Secret address in iCal format", save → `setJarvisConfig({ calendar_ics_url })`
+
+**`dashboard/frontend/src/lib/commandCenterApi.ts`**
+- `JarvisConfig` type: added `calendar_ics_url?: string`
+
+**`README.md`**
+- Full rewrite: product pitch style (was technical manual)
+- Leads with JARVIS hook, install command, profile selection
+- Comparison table uses policyd row (not WhatsApp)
+- Hardware table updated: Tier A/B now shows `qwen3.5:4b`
+
+#### Verification
+- `npm run dev` started, Settings page confirmed: 9 cards, ElevenLabs card, Calendar card, all text/buttons present, zero console errors
+
+---
+
+#### Next steps for Linux machine session
+
+**Priority 1 — Install validation (critical path to v0.1.0)**
+1. Run `bash install.sh --check` → confirm Tier C detected, `qwen2.5:7b` selected
+2. Run full `bash install.sh` → choose profile (try Developer=1 and General=6 separately)
+3. Validate all 7 profiles show in prompt
+4. Confirm `qwen3.5:4b` pulls correctly on a Tier A simulation (`CLAWOS_PROFILE=lowram bash install.sh`)
+5. `openclaude` command works (dev profile) — points at Ollama qwen2.5-coder:7b
+
+**Priority 2 — JARVIS voice validation**
+6. Open dashboard Settings → paste ElevenLabs key → Activate → hear test audio
+7. Open dashboard Settings → paste Google Calendar ICS URL → Connect
+8. Open JARVIS page → type "hey jarvis" → expect short greeting (no briefing)
+9. Type "hey jarvis good morning" → expect full briefing with real calendar events
+10. After briefing, type "yes" → expect JARVIS to resume last project context
+
+**Priority 3 — Demo asset recording**
+11. Record `organize-downloads` GIF: messy Downloads folder → run workflow → clean folder (15s)
+12. Record `summarize-pdf` GIF: PDF → terminal summary (10s)
+13. Record JARVIS voice demo video: ElevenLabs Brian voice briefing (30s)
+14. Screenshot dashboard dark mode with real data visible
+
+**Priority 4 — Launch prep (after validation)**
+15. Create Discord server → get invite URL → give to Claude → wires into landing + README
+16. Sign up Plausible → get domain ID → give to Claude → adds script tag to landing
+17. Docs accuracy pass — grep for TODO/FIXME/placeholder → remove stale content
+18. Tag `v0.1.0` once install validation passes
+
+**Hardware context for install.sh:**
+- i7-9700K + 64GB RAM + GTX 1660 Super (6GB VRAM) → Tier C
+- CUDA will be detected → GPU inference at ~40-80 tok/s on qwen2.5:7b
+- 6GB VRAM is tight for qwen2.5:7b fp16 but fine with Ollama's quantization
+
+---
+
 ### 2026-04-07 - Claude (doc audit + status sync)
 
 #### Full doc audit completed

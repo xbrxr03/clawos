@@ -191,6 +191,9 @@ export function SettingsPage() {
 
           <JarvisVoiceCard health={jarvisHealth} config={jarvisConfig} />
 
+          <ElevenLabsCard />
+          <CalendarCard config={jarvisConfig} />
+
           <Card style={{ padding: 18 }}>
             <PanelHeader
               eyebrow="Startup"
@@ -459,6 +462,74 @@ function ElevenLabsCard() {
           </div>
           <button className="btn primary sm" onClick={activate} disabled={busy}>
             {busy ? 'Testing…' : 'Activate JARVIS voice'}
+          </button>
+        </div>
+      </div>
+      {message && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--green)' }}>{message}</div>}
+      {error   && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--red,#e53935)' }}>{error}</div>}
+    </Card>
+  )
+}
+
+function CalendarCard({ config }: { config: JarvisConfig | null }) {
+  const hasUrl = Boolean(config?.calendar_ics_url)
+  const [icsUrl, setIcsUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  const save = async () => {
+    const url = icsUrl.trim()
+    if (!url) { setError('Paste your ICS calendar URL first'); return }
+    if (!url.startsWith('http')) { setError('URL must start with http:// or https://'); return }
+    setBusy(true); setMessage(''); setError('')
+    try {
+      await commandCenterApi.setJarvisConfig({ calendar_ics_url: url })
+      setMessage('✓ Calendar connected — JARVIS will use real events in your next briefing')
+      setIcsUrl('')
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save calendar URL')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card style={{ padding: 18 }}>
+      <PanelHeader
+        eyebrow="JARVIS Briefing"
+        title="Google Calendar"
+        description="Connect your calendar so JARVIS reads your real schedule during morning briefings. No OAuth — just paste your secret ICS link."
+        aside={<Badge color={hasUrl ? 'green' : 'gray'}>{hasUrl ? 'Connected ✓' : 'Not connected (demo)'}</Badge>}
+      />
+      <div className="setting-group">
+        <div className="setting-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+          <div className="setting-row-copy">
+            <div className="setting-row-title">Calendar ICS URL</div>
+            <div className="setting-row-description">
+              In Google Calendar: Settings → click your calendar → scroll to <strong>"Secret address in iCal format"</strong> → copy the link.
+              Works with any calendar provider that exports ICS (Apple, Nextcloud, Outlook).
+            </div>
+          </div>
+          <input
+            type="text"
+            placeholder={hasUrl ? 'Paste to update' : 'https://calendar.google.com/calendar/ical/...'}
+            value={icsUrl}
+            onChange={e => setIcsUrl(e.target.value)}
+            style={{
+              width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 6, padding: '8px 12px', color: 'var(--text)', fontSize: 12,
+              fontFamily: 'monospace',
+            }}
+          />
+        </div>
+        <div className="setting-row">
+          <div className="setting-row-copy">
+            <div className="setting-row-title">Save</div>
+            <div className="setting-row-description">JARVIS will fetch today's events each time you ask for your briefing.</div>
+          </div>
+          <button className="btn primary sm" onClick={save} disabled={busy}>
+            {busy ? 'Saving…' : 'Connect calendar'}
           </button>
         </div>
       </div>

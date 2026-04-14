@@ -384,6 +384,7 @@ export type JarvisConfig = {
   tts_provider_preference?: string
   elevenlabs_voice_id?: string
   elevenlabs_key_set?: boolean
+  calendar_ics_url?: string
 }
 
 export type VoiceHealth = {
