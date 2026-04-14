@@ -1039,6 +1039,334 @@ See `docs/ROADMAP.md` for the full breakdown. Summary:
 
 ---
 
+## 2026-04-13 Codex Handoff
+
+### Scope completed in this pass
+
+- Closed the verification and environment gaps identified during the repo-wide status check.
+- Focus stayed on repo hygiene, verifier reliability, Windows portability, frontend runtime consistency, and stale acceptance/doc drift.
+
+### Repo hygiene and verifier hardening
+
+- Removed tracked `.pytest_tmp` contents from git so generated pytest temp files stop appearing as source changes.
+- Added `.pytest_cache/` to `.gitignore`.
+- Reworked `tests/conftest.py` so tests use isolated temp roots instead of a fixed repo-local temp directory.
+- Added `CLAWOS_TEST_TEMP_ROOT` support and automatic per-run temp creation/cleanup.
+- Set pytest `basetemp` programmatically when none is provided so repeated local runs do not collide.
+- Added `clawos_core/util/git.py` with safe-directory-aware git helpers.
+- Updated `tests/system/test_agpl_compliance.py` to use the shared git helper instead of raw `git`.
+- Hardened `scripts/verify_repo.py`:
+  - inserts repo root into `sys.path` for direct execution
+  - uses safe-directory-aware git calls
+  - excludes `.claude`, `.pytest_tmp`, `.pytest_cache`, `node_modules`, `storybook-static`, `test-results`, and similar non-source trees from fallback scans
+  - runs pytest and direct phase scripts inside fresh temp/cache sandboxes
+  - sets `PYTHONUTF8=1` during verification
+
+### Windows reliability fixes
+
+- Rewrote `clawctl/commands/status.py` to use ASCII-safe output markers and separators.
+- Removed the mojibake-prone glyph output that crashed on Windows `cp1252` consoles.
+- Added `tests/system/test_clawctl_ui.py::test_status_command_is_safe_on_cp1252` to prevent regressions.
+
+### Frontend runtime and CI contract
+
+- Added `.nvmrc` with Node `24`.
+- Updated `dashboard/frontend/package.json` with `engines.node = \">=24 <25\"`.
+- Split frontend CI into smaller scripts:
+  - `ci:typecheck`
+  - `ci:build`
+  - `ci:storybook`
+  - `ci:visual`
+- Updated GitHub workflows to use `node-version-file: .nvmrc` instead of repeating a hardcoded version.
+- Updated `scripts/verify_repo.py` to fail fast with a clear message when frontend verification is run under the wrong Node major version.
+
+### Acceptance and docs drift cleanup
+
+- Updated stale expectations in:
+  - `tests/system/test_phase2.py`
+  - `tests/system/test_phase3.py`
+  - `tests/system/test_phase4.py`
+  - `tests/system/test_phase5.py`
+- Updated `docs/VERIFICATION.md` to reflect the current local verification flow, temp isolation, and Node 24 requirement.
+- Updated `docs/ROADMAP.md` so service-count language matches the current tree.
+- Removed malformed leftover directory `dashboard/{backend,frontend` that was causing verification noise.
+
+### Verification completed
+
+- `python scripts/verify_repo.py` passed end to end on Node `24`.
+- `python scripts/verify_repo.py --skip-frontend` passed.
+- `python scripts/security_audit.py` passed.
+- Full pytest passed through the verifier after the auth hardening pass: `235 passed, 25 skipped`.
+- Additional targeted checks passed, including AGPL compliance and `clawctl` UI coverage.
+- Frontend validation passed under Node 24 for:
+  - Vite production build
+  - Storybook build
+  - Playwright visual tests
+
+### Pickup note for the next agent
+
+- The core verifier path is now healthy on this machine's default `node` (`v24.14.0`).
+- `scripts/verify_repo.py` now stops early with a clear message if frontend verification is attempted under the wrong Node version.
+- I intentionally did not touch unrelated `.claude` worktree changes already present in the repo.
+- Frontend build validation refreshed tracked assets under `services/dashd/static` and `services/dashd/static/assets`; those diffs are expected from the local build runs and remain in the worktree.
+- No commit was created in this pass.
+
+### Auth hardening follow-up
+
+- Hardened `services/dashd/api.py` so `/api/openapi.json`, `/api/docs`, and `/api/redoc` require dashboard auth instead of remaining public.
+- Locked `/api/evolution` and `/ws/brain` behind the same dashboard auth gate as the rest of the private command-center surface.
+- Tightened cookie-backed dashboard websocket auth so browser sessions require a trusted loopback origin. Bearer and explicit token websocket auth still work for non-browser clients.
+- Fixed the latent `/ws/brain` route signature so FastAPI treats it as a real websocket endpoint instead of a malformed request handler.
+- Added regression coverage for protected docs/evolution routes, trusted-origin websocket behavior, protected brain websocket access, and blocked-peer rejection in `tests/system/test_a2a_security.py`.
+- Updated `docs/SECURITY_AUDIT.md` and `docs/PRODUCTION.md` to document the final auth posture.
+
+### Workflow hardening follow-up - organize-downloads
+
+- Hardened `workflows/organize_downloads/workflow.py` without changing its deterministic happy path.
+- The workflow now ignores hidden/system noise such as `.DS_Store`, `.localized`, `desktop.ini`, `Thumbs.db`, and direct symlink entries instead of trying to organize them as user content.
+- Live runs now continue past per-file move failures, report which moves failed, and preserve the successful moves instead of aborting the whole workflow at the first locked or permission-denied file.
+- Added richer metadata for planned, skipped, failed, and completed moves so the dashboard and future tests can distinguish previews from partial live runs.
+- Switched the user-facing summary separators in this workflow to ASCII-safe formatting to avoid mojibake-prone bullets in mixed Windows console setups.
+- Added workflow regressions in `tests/system/test_workflow_hardening.py` for:
+  - hidden/system file ignore behavior
+  - partial move failure reporting while other files still organize correctly
+
+### Verification after organize-downloads hardening
+
+- `python -m pytest tests/system/test_workflow_hardening.py -q` passed: `14 passed`.
+- `python scripts/verify_repo.py` passed end to end after the workflow hardening slice: `237 passed, 25 skipped`.
+- Frontend validation still passed inside the verifier on Node `24`, which refreshed tracked assets under `services/dashd/static` again.
+
+### Workflow hardening follow-up - summarize-pdf
+
+- Hardened `workflows/summarize_pdf/workflow.py` so PDF extraction failures now return explicit, typed workflow errors instead of bubbling up as vague exceptions.
+- Added a dedicated failure path for missing PDF extraction support and a separate failure path for image-only / encrypted / OCR-needed PDFs with actionable wording.
+- Added failure metadata (`failure_reason`, `pages_used`, `file`) so callers can distinguish extractor availability problems from no-text documents.
+- Switched the coverage summary line in this workflow to ASCII-safe separators for consistency with the Windows-safe CLI hardening.
+- Added workflow regressions in `tests/system/test_workflow_hardening.py` for:
+  - image-only or encrypted PDFs with no extractable text
+  - extractor-runtime failures such as missing `pypdf`
+
+### Verification after summarize-pdf hardening
+
+- `python -m pytest tests/system/test_workflow_hardening.py -q` passed: `16 passed`.
+- `python scripts/verify_repo.py` passed end to end after the second workflow hardening slice: `239 passed, 25 skipped`.
+- Frontend validation still passed inside the verifier on Node `24`, and the generated `services/dashd/static` asset diffs remain expected from those validation builds.
+
+### JARVIS / OpenClaw voice pivot - product direction locked
+
+- Voice strategy changed during follow-up product planning and should be treated as a major architecture pivot, not a cosmetic UI pass.
+- `JARVIS` is now the flagship marketed voice experience and is explicitly separate from `Nexus`.
+- The desired end state is:
+  - JARVIS UI = dedicated voice-first frontend surface
+  - JARVIS brain = OpenClaw-backed runtime
+  - JARVIS typed chat + spoken chat = same brain
+  - JARVIS memory/context = shared with OpenClaw channels such as WhatsApp, Telegram, and future external channels
+- Nexus should not own the premium JARVIS voice path.
+- ElevenLabs belongs to the JARVIS/OpenClaw lane. If ElevenLabs is unavailable, the fallback is Piper.
+
+### Architecture correction discovered during planning
+
+- The current repository does not yet route voice to OpenClaw.
+- Current live voice path is still:
+  - `dashboard -> /api/voice/*`
+  - `services/dashd/api.py -> services/voiced/service.py`
+  - `services/voiced/service.py -> services.agentd.service.get_manager().chat_direct(..., channel="voice")`
+  - `services/agentd/service.py -> runtimes/agent/runtime.py`
+- That means the existing voice pipeline still lands in the native ClawOS/Nexus-style runtime, not an OpenClaw-backed voice brain.
+- OpenClaw currently exists in this repo mainly as:
+  - install/start/stop/config support in `openclaw_integration/`
+  - optional gateway runtime posture
+  - peer/gateway integration
+- A real JARVIS implementation therefore still needs a backend bridge/adaptor layer so the JARVIS surface talks to OpenClaw instead of the default `agentd` runtime.
+
+### JARVIS UX direction locked with the user
+
+- The new JARVIS surface should be a separate page in the dashboard, not a modal and not a second standalone frontend.
+- It should keep the main app nav, but suppress the dense inspector and behave like an immersive voice room.
+- Visual direction requested and confirmed:
+  - top-centered glowing orb
+  - live caption bubble under the orb
+  - centered visible audio spectrum
+  - bottom text + mic composer
+  - smaller transcript history as a secondary surface
+- The visual reference shared by the user is `jarvisUI.png` on the desktop and should be treated as the style anchor for the first pass.
+
+### JARVIS/OpenClaw behavior locked with the user
+
+- JARVIS should use a separate identity/session lane from Nexus.
+- JARVIS and OpenClaw should share the same cross-channel brain so the user can continue the same assistant relationship across:
+  - dashboard JARVIS voice UI
+  - dashboard JARVIS typed input
+  - WhatsApp
+  - Telegram and future channels
+- Conversation threading model is now locked:
+  - separate short-thread conversation state per channel/surface
+  - shared long-term memory across the JARVIS/OpenClaw brain
+- Typed input on the JARVIS page should go to the same OpenClaw-backed brain as voice input.
+- JARVIS should answer out loud by default for both typed and spoken turns.
+- The only exception is when voice mode is explicitly turned off, in which case responses can remain text-only.
+- The special call flow is in scope for day one:
+  - saying `Jarvis` or `Hey Jarvis` plus `what's up` should trigger the personalized briefing workflow
+- The briefing content requested by the user includes:
+  - weather via Open-Meteo
+  - headlines via Brave API
+  - calendar via Google Calendar
+  - current tasks / schedule
+  - resume-last-project context from memory
+- Demo data is acceptable for the first demo pass where live integrations are not ready.
+
+### Current planning state for the next agent
+
+- The separate JARVIS room UI was planned in detail:
+  - dedicated `/jarvis` route
+  - JARVIS-specific frontend wrappers over the existing voice endpoints for the UI-first slice
+  - separate JARVIS settings ownership instead of generic Nexus settings ownership
+  - transcript history derived from `last_utterance` and `last_response` until streaming transcript support exists
+- After the architecture correction, this plan should now be understood as incomplete unless paired with the OpenClaw runtime bridge.
+- The correct implementation order from here is:
+  - build the JARVIS/OpenClaw backend bridge and session ownership
+  - add JARVIS-specific API endpoints or wrappers
+  - then finish the dedicated JARVIS room UI against that lane
+
+### Partial implementation already started before the pivot was fully corrected
+
+- A draft frontend route and nav entry for `/jarvis` were already added:
+  - `dashboard/frontend/src/App.tsx`
+  - `dashboard/frontend/src/app/navigation.tsx`
+- Those changes only establish navigation scaffolding.
+- The actual JARVIS page component, settings move, OpenClaw bridge, and full UI surface have not been implemented yet.
+- Treat the current `/jarvis` route/nav work as an in-progress stub, not a completed feature.
+
+### Environment note
+
+- `openclaw` is not installed on this Windows machine right now, so direct local CLI interrogation such as `openclaw --help` and `openclaw status` was not available during this planning pass.
+- Backend conclusions above were derived from the checked-in ClawOS runtime/integration code rather than from a live local OpenClaw process.
+
+### 2026-04-13 Codex implementation - JARVIS OpenClaw voice room delivered
+
+- The JARVIS/OpenClaw pivot above is now implemented as a real product slice rather than remaining only a planning note.
+- This pass should be understood as the first integrated JARVIS/OpenClaw delivery:
+  - dedicated JARVIS backend service
+  - dedicated JARVIS dashboard API lane
+  - OpenClaw gateway adapter and config patching
+  - owner WhatsApp routing into JARVIS/OpenClaw
+  - dedicated `/jarvis` room UI
+  - generic Settings no longer owning the ElevenLabs activation flow
+
+### Backend implementation completed
+
+- Added `openclaw_integration/responses_api.py` as the JARVIS-side OpenClaw HTTP adapter.
+- The adapter now:
+  - patches `~/.openclaw/openclaw.json` so the responses endpoint is enabled
+  - ensures gateway auth token posture exists
+  - writes a reusable gateway token file
+  - auto-starts the managed OpenClaw gateway when installed but not already running
+  - sends JARVIS traffic to the managed OpenClaw `main` agent over HTTP
+- Added `services/jarvisd/service.py`.
+- `jarvisd` now owns:
+  - JARVIS session state
+  - transcript history
+  - typed chat
+  - push-to-talk
+  - TTS playback routing
+  - OpenClaw chat requests
+  - separate-thread / shared-memory behavior
+  - the `Jarvis` / `Hey Jarvis` + `what's up` briefing trigger
+- JARVIS state is persisted in `jarvis_state.json` with:
+  - a stable UI thread key of `jarvis-ui`
+  - per-thread response ids for OpenClaw continuity
+  - shared memory for items like `last_project`
+- Shared-memory extraction was tightened during testing so phrases like `working on project Atlas` now store `Atlas`, not `project Atlas`.
+
+### Dashboard and channel routing completed
+
+- `services/dashd/api.py` now exposes a dedicated authenticated JARVIS lane:
+  - `GET /api/jarvis/session`
+  - `GET /api/jarvis/health`
+  - `GET /api/jarvis/config`
+  - `POST /api/jarvis/config`
+  - `POST /api/jarvis/push-to-talk`
+  - `POST /api/jarvis/chat`
+  - `POST /api/jarvis/mode`
+- Dashboard websocket snapshots and live updates now include a dedicated `jarvis_session` event stream.
+- `services/gatewayd/service.py` now routes owner WhatsApp traffic through JARVIS/OpenClaw first, using:
+  - `thread_key = whatsapp:<jid>`
+  - `source = whatsapp`
+  - `speak_reply = False`
+- The owner WhatsApp lane now shares the JARVIS/OpenClaw memory namespace while keeping its own short conversation thread.
+- Morning briefing delivery in `gatewayd` was also updated to use the JARVIS path first, with fallback to the old manager path only if JARVIS/OpenClaw is unavailable.
+
+### Frontend JARVIS room completed
+
+- Finished the dedicated `/jarvis` route in the dashboard frontend.
+- Added the new page component at `dashboard/frontend/src/pages/JarvisVoice.tsx`.
+- `dashboard/frontend/src/app/AppShell.tsx` is now route-aware:
+  - `/jarvis` hides the normal inspector rail
+  - shell styling becomes immersive for the JARVIS room
+  - the topbar push-to-talk action uses JARVIS endpoints when the user is on `/jarvis`
+- Added JARVIS-specific frontend API wrappers in `dashboard/frontend/src/lib/commandCenterApi.ts`:
+  - `getJarvisSession`
+  - `getJarvisHealth`
+  - `getJarvisConfig`
+  - `setJarvisConfig`
+  - `pushToTalkJarvis`
+  - `sendJarvisChat`
+  - `setJarvisMode`
+- `dashboard/frontend/src/hooks/useCommandCenter.ts` now tracks JARVIS session state from snapshots, websocket events, and polling.
+- `dashboard/frontend/src/index.css` now includes the dedicated JARVIS visual system:
+  - immersive graphite/cyan chamber background
+  - top-centered glowing orb with layered rings
+  - animated stateful spectrum
+  - live caption bubble
+  - transcript panel
+  - bottom text + mic composer
+  - responsive mobile stacking
+- `dashboard/frontend/src/pages/Settings.tsx` no longer presents the old generic ElevenLabs activation form as the primary voice ownership surface.
+- Generic Settings now shows a compact JARVIS Voice handoff/status card that links the user into `/jarvis`.
+
+### Current briefing and voice behavior in this implementation
+
+- JARVIS uses OpenClaw for the actual chat/briefing brain when the managed OpenClaw gateway is available.
+- JARVIS replies out loud by default unless voice mode is explicitly off.
+- ElevenLabs remains the preferred JARVIS provider, with Piper kept as the fallback path.
+- The `what's up` briefing flow is implemented with best-available source resolution:
+  - weather via Open-Meteo when configured, otherwise demo data
+  - headlines via Brave API when configured, otherwise demo data
+  - calendar currently demo data
+  - tasks from live ClawOS mission state when available, otherwise demo data
+  - last project from shared JARVIS memory when available, otherwise demo data
+- Google Calendar is therefore still not live in this pass; it remains a known v1 demo-data placeholder.
+
+### Tests added or updated in this pass
+
+- Added `tests/system/test_jarvis_openclaw.py` covering:
+  - OpenClaw config patching for the responses endpoint
+  - OpenClaw gateway auto-start behavior
+  - JARVIS separate-thread / shared-memory behavior
+- Updated `tests/system/test_voice_pipeline.py` with dedicated JARVIS endpoint coverage for `dashd`.
+- Updated `tests/system/test_whatsapp_bridge.py` with owner-message routing coverage through JARVIS/OpenClaw.
+- Updated `dashboard/frontend/tests/visual/command-center.spec.ts` to cover:
+  - `/jarvis` rendering as a dedicated voice chamber
+  - Settings handing JARVIS voice ownership off to the dedicated chamber
+
+### Verification after JARVIS/OpenClaw implementation
+
+- `npm run typecheck` passed in `dashboard/frontend`.
+- `npm run build` passed in `dashboard/frontend`.
+- `npm run test:visual -- tests/visual/command-center.spec.ts` passed with `5 passed`.
+- `python -m pytest tests/system/test_voice_pipeline.py tests/system/test_whatsapp_bridge.py tests/system/test_jarvis_openclaw.py -q` passed with `10 passed`.
+- `python scripts/verify_repo.py` passed end to end after this implementation:
+  - `244 passed, 25 skipped`
+  - frontend CI lane passed inside the verifier as well
+
+### Known follow-up notes after this pass
+
+- OpenClaw is still not installed on this Windows machine, so the new adapter/runtime path was validated through repo integration, mocked/system tests, and the verifier rather than against a live local OpenClaw binary.
+- The Playwright run still emits harmless Vite proxy warnings for a few unstubbed ancillary endpoints during test teardown, but the visual suite itself passes and the verifier is green.
+- Frontend builds refreshed tracked generated assets under `services/dashd/static`, so those generated bundle diffs are expected in the local worktree.
+- The worktree also still contains unrelated `.claude`, docs, workflow-hardening, verifier, and earlier hardening changes from previous passes; they were left intact.
+
 ## Archived Pickup Point
 
 > The following was the previous Claude Pickup Point before the 2026-04-06 direction update.

@@ -1,4 +1,0 @@
----
-description: New
----
-New skill.

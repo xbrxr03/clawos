@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { type Key, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Badge, Card, PageHeader, PanelHeader } from '../components/ui.jsx'
-import { commandCenterApi, type DashboardHealth, type DesktopPosture, type GatewayHealth } from '../lib/commandCenterApi'
+import { commandCenterApi, type DashboardHealth, type DesktopPosture, type GatewayHealth, type JarvisConfig, type JarvisHealth } from '../lib/commandCenterApi'
 import { desktopBridge } from '../desktop/bridge'
 
 const JARVIS_VOICE_ID = 'nPczCjzI2devNBz1zQrb' // Brian — deep, cinematic
@@ -19,6 +19,8 @@ export function SettingsPage() {
   const [health, setHealth] = useState<DashboardHealth | null>(null)
   const [posture, setPosture] = useState<DesktopPosture | null>(null)
   const [gateway, setGateway] = useState<GatewayHealth | null>(null)
+  const [jarvisHealth, setJarvisHealth] = useState<JarvisHealth | null>(null)
+  const [jarvisConfig, setJarvisConfig] = useState<JarvisConfig | null>(null)
   const [bundlePath, setBundlePath] = useState('')
   const [shellMode, setShellMode] = useState(false)
   const [serviceMessage, setServiceMessage] = useState('')
@@ -28,9 +30,13 @@ export function SettingsPage() {
     commandCenterApi.getHealth().then(setHealth).catch(() => null)
     commandCenterApi.getDesktopPosture().then(setPosture).catch(() => null)
     commandCenterApi.getGatewayHealth().then(setGateway).catch(() => null)
+    commandCenterApi.getJarvisHealth().then(setJarvisHealth).catch(() => null)
+    commandCenterApi.getJarvisConfig().then(setJarvisConfig).catch(() => null)
     desktopBridge.isDesktopShell().then(setShellMode).catch(() => setShellMode(false))
     const id = window.setInterval(() => {
       commandCenterApi.getGatewayHealth().then(setGateway).catch(() => null)
+      commandCenterApi.getJarvisHealth().then(setJarvisHealth).catch(() => null)
+      commandCenterApi.getJarvisConfig().then(setJarvisConfig).catch(() => null)
     }, 15000)
     return () => window.clearInterval(id)
   }, [])
@@ -183,7 +189,7 @@ export function SettingsPage() {
             </div>
           </Card>
 
-          <ElevenLabsCard />
+          <JarvisVoiceCard health={jarvisHealth} config={jarvisConfig} />
 
           <Card style={{ padding: 18 }}>
             <PanelHeader
@@ -317,6 +323,56 @@ function runtimeDescription(label: string) {
   }
 
   return descriptions[label] || 'Current runtime setting.'
+}
+
+function JarvisVoiceCard({ health, config }: { health: JarvisHealth | null; config: JarvisConfig | null }) {
+  const activeProvider = health?.provider_status?.active || config?.tts_provider_preference || 'piper'
+  const briefingSources = Object.entries(health?.briefing_sources || {})
+  const liveCount = briefingSources.filter(([, status]) => status === 'live').length
+  const demoCount = briefingSources.filter(([, status]) => status === 'demo').length
+  const voiceMode = config?.voice_enabled === false ? 'voice off' : String(config?.input_mode || 'push_to_talk').replace(/_/g, ' ')
+
+  return (
+    <Card style={{ padding: 18 }}>
+      <PanelHeader
+        eyebrow="JARVIS Voice"
+        title="Voice settings now live in the JARVIS chamber"
+        description="JARVIS now owns OpenClaw routing, cinematic voice, and briefing posture. Manage provider selection, wake phrase, transcripts, and live voice state from the dedicated room."
+        aside={
+          <Badge color={health?.openclaw_running ? 'green' : 'orange'}>
+            {health?.openclaw_running ? 'OpenClaw live' : 'OpenClaw unavailable'}
+          </Badge>
+        }
+      />
+      <div className="setting-group">
+        <SettingRow
+          label="Brain routing"
+          description="JARVIS is separate from Nexus and routes through the shared OpenClaw main agent."
+          value={health?.openclaw_running ? 'OpenClaw main agent' : 'Waiting for OpenClaw'}
+        />
+        <SettingRow
+          label="Voice provider"
+          description="ElevenLabs is primary for JARVIS, with Piper staying available as the fallback lane."
+          value={health?.provider_status?.fallback ? `${activeProvider} (fallback)` : activeProvider}
+        />
+        <SettingRow
+          label="Voice mode"
+          description="Typed and spoken turns share the same JARVIS UI thread and answer out loud unless voice is turned off."
+          value={voiceMode}
+        />
+        <SettingRow
+          label="Briefing sources"
+          description="Weather, headlines, calendar, tasks, and last-project context can mix live and demo sources in v1."
+          value={briefingSources.length ? `${liveCount} live / ${demoCount} demo` : 'Loading status'}
+        />
+        <SettingActionRow
+          label="JARVIS chamber"
+          description="Open the dedicated voice room to configure ElevenLabs, Piper fallback, wake phrase, and the live transcript cockpit."
+          action={<a className="btn primary sm" href="/jarvis">Open JARVIS</a>}
+        />
+      </div>
+    </Card>
+  )
 }
 
 function ElevenLabsCard() {

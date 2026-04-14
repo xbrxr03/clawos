@@ -330,6 +330,62 @@ export type VoiceSession = {
   updated_at?: string
 }
 
+export type JarvisTurn = {
+  id?: string
+  role?: 'user' | 'assistant'
+  text?: string
+  source?: string
+  spoken?: boolean
+  created_at?: string
+}
+
+export type JarvisSession = {
+  thread_key?: string
+  mode?: string
+  state?: string
+  voice_enabled?: boolean
+  tts_provider?: string
+  openclaw_status?: string
+  last_utterance?: string
+  last_response?: string
+  live_caption?: string
+  recent_turns?: JarvisTurn[]
+  follow_up_open?: boolean
+  updated_at?: string
+}
+
+export type JarvisHealth = {
+  openclaw_installed?: boolean
+  openclaw_running?: boolean
+  gateway_port?: number
+  gateway_url?: string
+  stt_ok?: boolean
+  tts_ok?: boolean
+  wake_word_ok?: boolean
+  microphone_ok?: boolean
+  microphone_backend?: string
+  playback_backend?: string
+  device_label?: string
+  sample_rate_hz?: number
+  provider_status?: {
+    preferred?: string
+    active?: string
+    fallback?: boolean
+    elevenlabs_key_set?: boolean
+  }
+  briefing_sources?: Record<string, string>
+  config_path?: string
+}
+
+export type JarvisConfig = {
+  voice_enabled?: boolean
+  input_mode?: string
+  wake_phrase?: string
+  tts_provider_preference?: string
+  elevenlabs_voice_id?: string
+  elevenlabs_key_set?: boolean
+}
+
 export type VoiceHealth = {
   status?: string
   enabled?: boolean
@@ -569,6 +625,32 @@ export const commandCenterApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key, voice_id }),
+    }),
+  getJarvisSession: () => fetchJson<JarvisSession>('/api/jarvis/session'),
+  getJarvisHealth: () => fetchJson<JarvisHealth>('/api/jarvis/health'),
+  getJarvisConfig: () => fetchJson<JarvisConfig>('/api/jarvis/config'),
+  setJarvisConfig: (body: Record<string, unknown>) =>
+    fetchJson<{ ok?: boolean; config?: JarvisConfig; session?: JarvisSession }>('/api/jarvis/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  pushToTalkJarvis: () =>
+    fetchJson<{ ok?: boolean; trigger?: string; transcript?: string; reply?: string; spoken?: boolean; session?: JarvisSession; issues?: string[]; error?: string }>('/api/jarvis/push-to-talk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  sendJarvisChat: (message: string, thread_key = 'jarvis-ui', source = 'jarvis-ui:text') =>
+    fetchJson<{ reply?: string; spoken?: boolean; session?: JarvisSession; briefing_sources?: Record<string, string> }>('/api/jarvis/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, thread_key, source }),
+    }),
+  setJarvisMode: (mode: string) =>
+    fetchJson<JarvisSession>('/api/jarvis/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
     }),
   updateSetupPresence: (body: Record<string, unknown>) =>
     fetchJson<SetupState>('/api/setup/presence', {

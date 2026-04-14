@@ -28,6 +28,11 @@ ClawOS is a **local-first AI command center and install surface** for Ubuntu/Deb
 
 A dedicated security-audit path now lives in [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
 
+ClawOS now has two distinct assistant lanes:
+
+- **JARVIS** - the flagship voice room and cross-channel assistant surface, backed by OpenClaw, shared across the dashboard voice UI and messaging channels
+- **Nexus** - the native ClawOS assistant/runtime lane for local command-center operations, workflows, and platform surfaces
+
 The end goal is a **bootable ISO** - flash a USB, boot, your AI is ready. That's the last stage on the roadmap. We're building in public and shipping working software at each stage instead of waiting until it's perfect.
 
 If you want to follow along or contribute: [github.com/xbrxr03/clawos](https://github.com/xbrxr03/clawos)

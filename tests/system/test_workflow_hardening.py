@@ -75,6 +75,52 @@ def test_organize_downloads_dry_run_and_apply(workspace_tmp_dir):
     assert (workspace_tmp_dir / "Documents" / "notes.md").exists()
 
 
+def test_organize_downloads_ignores_hidden_and_system_files(workspace_tmp_dir):
+    from workflows.organize_downloads.workflow import run
+
+    (workspace_tmp_dir / ".DS_Store").write_text("cache", encoding="utf-8")
+    (workspace_tmp_dir / ".env").write_text("SECRET=1\n", encoding="utf-8")
+    (workspace_tmp_dir / "desktop.ini").write_text("[.ShellClassInfo]\n", encoding="utf-8")
+    (workspace_tmp_dir / "report.pdf").write_text("quarterly report", encoding="utf-8")
+
+    result = asyncio.run(run({"target_dir": str(workspace_tmp_dir), "dry_run": True}, None))
+
+    assert result.status.value == "ok"
+    assert result.metadata["files_planned"] == 1
+    assert result.metadata["files_skipped"] == 3
+    assert "**Ignored files:**" in result.output
+    skipped = {item["name"]: item["reason"] for item in result.metadata["skipped_files"]}
+    assert skipped[".DS_Store"] == "system"
+    assert skipped[".env"] == "hidden"
+    assert skipped["desktop.ini"] == "system"
+
+
+def test_organize_downloads_reports_failed_moves(monkeypatch, workspace_tmp_dir):
+    from workflows.organize_downloads.workflow import run
+
+    (workspace_tmp_dir / "photo.jpg").write_bytes(b"image-bytes")
+    (workspace_tmp_dir / "locked.txt").write_text("locked", encoding="utf-8")
+
+    def _failing_move(source: Path, destination: Path) -> None:
+        if source.name == "locked.txt":
+            raise PermissionError("file is in use")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source.rename(destination)
+
+    monkeypatch.setattr("workflows.organize_downloads.workflow._move_file", _failing_move)
+
+    result = asyncio.run(run({"target_dir": str(workspace_tmp_dir), "dry_run": False}, None))
+
+    assert result.status.value == "failed"
+    assert result.metadata["files_planned"] == 2
+    assert result.metadata["files_moved"] == 1
+    assert result.metadata["files_failed"] == 1
+    assert "Failed moves" in result.output
+    assert result.error == "1 file move failed during organization."
+    assert (workspace_tmp_dir / "Images" / "photo.jpg").exists()
+    assert (workspace_tmp_dir / "locked.txt").exists()
+
+
 def test_summarize_pdf_uses_extractable_text(monkeypatch, workspace_tmp_dir):
     from workflows.summarize_pdf.workflow import run
 
@@ -99,6 +145,42 @@ def test_summarize_pdf_uses_extractable_text(monkeypatch, workspace_tmp_dir):
     assert result.metadata["pages_used"] == 2
     assert result.metadata["read_minutes"] >= 1
     assert result.metadata["keywords"]
+
+
+def test_summarize_pdf_reports_image_only_or_encrypted_failure(monkeypatch, workspace_tmp_dir):
+    from workflows.summarize_pdf.workflow import run
+
+    pdf_path = workspace_tmp_dir / "scan.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 image-only")
+    monkeypatch.setattr(
+        "workflows.summarize_pdf.workflow.extract_pdf_text",
+        lambda path: ("", 0),
+    )
+
+    result = asyncio.run(run({"file": str(pdf_path)}, None))
+
+    assert result.status.value == "failed"
+    assert result.metadata["failure_reason"] == "no_extractable_text"
+    assert result.metadata["pages_used"] == 0
+    assert "image-only" in result.error
+
+
+def test_summarize_pdf_reports_extractor_failures_clearly(monkeypatch, workspace_tmp_dir):
+    from workflows.summarize_pdf.workflow import run
+
+    pdf_path = workspace_tmp_dir / "broken.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 broken")
+
+    def _raise(path):
+        raise RuntimeError("pypdf is required to summarize PDFs")
+
+    monkeypatch.setattr("workflows.summarize_pdf.workflow.extract_pdf_text", _raise)
+
+    result = asyncio.run(run({"file": str(pdf_path)}, None))
+
+    assert result.status.value == "failed"
+    assert result.metadata["failure_reason"] == "extract_unavailable"
+    assert "PDF text extraction is unavailable" in result.error
 
 
 def test_workflow_engine_emits_live_progress_events(workspace_tmp_dir):

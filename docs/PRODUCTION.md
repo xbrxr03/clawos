@@ -21,6 +21,12 @@ To use the browser dashboard:
 2. Open `http://127.0.0.1:7070`.
 3. Paste the dashboard token into the login prompt.
 
+The same dashboard auth gate also protects:
+
+- `/api/openapi.json`, `/api/docs`, and `/api/redoc`
+- `/api/evolution`
+- cookie-backed websocket feeds such as `/ws` and `/ws/brain`
+
 To expose the dashboard beyond localhost, keep auth enabled and set:
 
 ```yaml
@@ -51,8 +57,9 @@ Before calling a machine "production-ready", verify:
 1. `clawctl status` shows the expected services running.
 2. `http://127.0.0.1:7070/api/health` returns `status: ok`.
 3. The dashboard login works and websocket updates arrive after login.
-4. `a2ad` is either loopback-only or protected by a bearer token.
-5. CI is green on both `ubuntu-latest` and `macos-14`.
+4. Dashboard docs/schema are not publicly reachable without auth.
+5. `a2ad` is either loopback-only or protected by a bearer token.
+6. CI is green on both `ubuntu-latest` and `macos-14`.
 
 ## Tests
 

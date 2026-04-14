@@ -223,7 +223,7 @@ try:
         ("no api keys",          "mentions no API keys"),
         ("no monthly bill",      "mentions no monthly bill"),
         ("bootable iso",         "mentions bootable ISO destination"),
-        ("openclaw ecosystem",   "mentions OpenClaw ecosystem"),
+        ("full skill ecosystem", "mentions the full skill ecosystem"),
         ("macos 14+",            "mentions macOS support"),
         ("curl -fssl https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh", "shows installer command"),
     ]

@@ -12,6 +12,7 @@ type AppShellProps = PropsWithChildren<{
   approvals: any[]
   events: any[]
   voiceSession?: Record<string, any>
+  jarvisSession?: Record<string, any>
   inspector?: ReactNode
   theme: 'dark' | 'light'
   onToggleTheme: () => void
@@ -24,6 +25,7 @@ export function AppShell({
   approvals,
   events,
   voiceSession,
+  jarvisSession,
   inspector,
   theme,
   onToggleTheme,
@@ -35,12 +37,14 @@ export function AppShell({
   const [voiceBusy, setVoiceBusy] = useState(false)
   const [voiceMessage, setVoiceMessage] = useState('')
   const [desktopShell, setDesktopShell] = useState(false)
+  const isJarvisRoute = location.pathname.startsWith('/jarvis')
+
   const serviceEntries = Object.entries(services || {})
   const serviceList = serviceEntries.map(([, value]) => value)
   const upCount = serviceList.filter((item: any) => item.status === 'up' || item.status === 'running').length
   const activeItem = appNav.find((item) => item.to === location.pathname) ?? appNav[0]
-  const voiceMode = String(voiceSession?.mode || 'off').replace(/_/g, ' ')
-  const voiceState = String(voiceSession?.state || 'idle')
+  const activeVoiceSession = isJarvisRoute ? jarvisSession : voiceSession
+  const voiceState = String(activeVoiceSession?.state || 'idle')
   const voiceDot =
     voiceState === 'listening'
       ? 'green pulse'
@@ -49,7 +53,8 @@ export function AppShell({
         : voiceState === 'thinking'
           ? 'orange pulse'
           : 'gray'
-  const voiceEnabled = voiceSession?.mode !== 'off'
+  const voiceEnabled = isJarvisRoute ? activeVoiceSession?.voice_enabled !== false : activeVoiceSession?.mode !== 'off'
+
   const navSections = useMemo(() => {
     const grouped = new Map<string, typeof appNav>()
     appNav.forEach((item) => {
@@ -76,13 +81,17 @@ export function AppShell({
     setVoiceBusy(true)
     setVoiceMessage('Listening now...')
     try {
-      const result = await commandCenterApi.pushToTalk()
-      if (result.error) {
-        setVoiceMessage(result.error)
-      } else if (result.transcript) {
-        setVoiceMessage(`Heard: "${result.transcript}"`)
+      const result = isJarvisRoute ? await commandCenterApi.pushToTalkJarvis() : await commandCenterApi.pushToTalk()
+      const transcript = (result as any).transcript
+      const reply = (result as any).reply || (result as any).response
+      if ((result as any).error) {
+        setVoiceMessage((result as any).error)
+      } else if (transcript) {
+        setVoiceMessage(`Heard: "${transcript}"`)
+      } else if (reply) {
+        setVoiceMessage(`Reply: "${reply}"`)
       } else {
-        setVoiceMessage(result.issues?.[0] || 'No speech detected in that round.')
+        setVoiceMessage((result as any).issues?.[0] || 'No speech detected in that round.')
       }
     } catch (error: any) {
       setVoiceMessage(error.message || 'Push-to-talk failed.')
@@ -130,11 +139,12 @@ export function AppShell({
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [voiceBusy, voiceEnabled])
+  }, [voiceBusy, voiceEnabled, isJarvisRoute])
 
   useEffect(() => {
     setCommandQuery('')
     setCommandOpen(false)
+    setVoiceMessage('')
   }, [location.pathname])
 
   return (
@@ -216,7 +226,7 @@ export function AppShell({
           </div>
         </aside>
 
-        <section className={`shell-window${desktopShell ? ' desktop' : ''}`}>
+        <section className={`shell-window${desktopShell ? ' desktop' : ''}${isJarvisRoute ? ' jarvis-route' : ''}`}>
           {desktopShell ? (
             <div className="shell-window-topbar">
               <div className="shell-window-controls" aria-hidden="true">
@@ -229,8 +239,8 @@ export function AppShell({
             </div>
           ) : null}
 
-          <div className="shell-window-body">
-            <div className="shell-main">
+          <div className={`shell-window-body${isJarvisRoute ? ' shell-window-body-immersive' : ''}`}>
+            <div className={`shell-main${isJarvisRoute ? ' shell-main-immersive' : ''}`}>
               <header className="shell-header">
                 <div>
                   <div className="section-label">Now Viewing</div>
@@ -267,10 +277,10 @@ export function AppShell({
                 </div>
               </header>
 
-              <div className="shell-content">{children}</div>
+              <div className={`shell-content${isJarvisRoute ? ' shell-content-immersive' : ''}`}>{children}</div>
             </div>
 
-            {inspector ? <aside className="shell-inspector">{inspector}</aside> : null}
+            {!isJarvisRoute && inspector ? <aside className="shell-inspector">{inspector}</aside> : null}
           </div>
         </section>
       </div>

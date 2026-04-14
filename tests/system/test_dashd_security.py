@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 
 def test_dashboard_settings_force_loopback_without_auth():
@@ -61,7 +62,7 @@ def test_dashboard_requires_login_and_sends_snapshot(monkeypatch):
 
         assert client.post("/api/setup/repair", headers={"X-ClawOS-Setup": "1"}).status_code == 200
 
-        with client.websocket_connect("/ws") as websocket:
+        with client.websocket_connect("/ws", headers={"origin": "http://127.0.0.1:7070"}) as websocket:
             message = websocket.receive_json()
 
         assert message["type"] == "snapshot"
@@ -129,7 +130,7 @@ def test_dashboard_websocket_forwards_workflow_events(monkeypatch):
         login = client.post("/api/login", json={"token": "dash-token"})
         assert login.status_code == 200
 
-        with client.websocket_connect("/ws") as websocket:
+        with client.websocket_connect("/ws", headers={"origin": "http://127.0.0.1:7070"}) as websocket:
             snapshot = websocket.receive_json()
             assert snapshot["type"] == "snapshot"
 
@@ -143,6 +144,105 @@ def test_dashboard_websocket_forwards_workflow_events(monkeypatch):
         assert first["data"]["message"] == "Scanning the folder"
         assert second["data"]["status"] == "ok"
         assert second["data"]["output"] == "done"
+
+
+def test_dashboard_docs_and_evolution_require_auth(monkeypatch):
+    from services.dashd.api import create_app
+
+    class IncompleteSetupState:
+        completion_marker = False
+
+    monkeypatch.setattr("services.dashd.api._setup_state", lambda: IncompleteSetupState())
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    with TestClient(app) as client:
+        for path in ("/api/docs", "/api/redoc", "/api/openapi.json", "/api/evolution"):
+            assert client.get(path).status_code == 401
+
+        for path in ("/api/docs", "/api/redoc", "/api/openapi.json", "/api/evolution"):
+            assert client.get(path, headers={"Authorization": "Bearer dash-token"}).status_code == 200
+
+
+def test_dashboard_cookie_websocket_requires_trusted_origin(monkeypatch):
+    from services.dashd.api import create_app
+
+    class IncompleteSetupState:
+        completion_marker = False
+
+    monkeypatch.setattr("services.dashd.api._setup_state", lambda: IncompleteSetupState())
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    with TestClient(app) as client:
+        assert client.post("/api/login", json={"token": "dash-token"}).status_code == 200
+
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect("/ws", headers={"origin": "http://evil.test"}):
+                pass
+
+        with client.websocket_connect("/ws", headers={"origin": "http://127.0.0.1:7070"}) as websocket:
+            message = websocket.receive_json()
+
+        assert message["type"] == "snapshot"
+
+
+def test_brain_websocket_requires_auth_and_trusted_origin(monkeypatch):
+    from services.dashd.api import create_app
+
+    class IncompleteSetupState:
+        completion_marker = False
+
+    class FakeBrain:
+        def __init__(self):
+            self.callbacks = []
+
+        def register_ws_callback(self, callback):
+            self.callbacks.append(callback)
+
+        def unregister_ws_callback(self, callback):
+            if callback in self.callbacks:
+                self.callbacks.remove(callback)
+
+        def get_status(self):
+            return {"node_count": 7, "edge_count": 3, "ingesting": False}
+
+    monkeypatch.setattr("services.dashd.api._setup_state", lambda: IncompleteSetupState())
+    monkeypatch.setattr("services.braind.service.get_brain", lambda: FakeBrain())
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    with TestClient(app) as client:
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect("/ws/brain"):
+                pass
+
+        assert client.post("/api/login", json={"token": "dash-token"}).status_code == 200
+
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect("/ws/brain", headers={"origin": "http://evil.test"}):
+                pass
+
+        with client.websocket_connect("/ws/brain", headers={"origin": "http://127.0.0.1:7070"}) as websocket:
+            message = websocket.receive_json()
+
+        assert message["event"] == "status"
+        assert message["node_count"] == 7
 
 
 def test_setup_header_is_rejected_after_setup_completion(monkeypatch):

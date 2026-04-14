@@ -22,7 +22,7 @@ def _get_provider() -> str:
         return "piper"
 
 
-def speak(text: str) -> bytes:
+def speak(text: str, provider_preference: str = "", voice_id: str = "") -> bytes:
     """
     Route TTS request to the configured provider.
 
@@ -31,10 +31,10 @@ def speak(text: str) -> bytes:
     - elevenlabs: returns MP3 bytes (44100Hz, 128kbps)
     - On any failure: falls back to Piper silently.
     """
-    provider = _get_provider()
+    provider = (provider_preference or _get_provider()).lower().strip()
 
     if provider == "elevenlabs":
-        audio = _speak_elevenlabs(text)
+        audio = _speak_elevenlabs(text, voice_id=voice_id)
         if audio:
             return audio
         log.info("ElevenLabs unavailable — falling back to Piper")
@@ -43,12 +43,12 @@ def speak(text: str) -> bytes:
     return _speak_piper(text)
 
 
-def _speak_elevenlabs(text: str) -> bytes:
+def _speak_elevenlabs(text: str, voice_id: str = "") -> bytes:
     try:
         from adapters.audio.elevenlabs_adapter import speak as xi_speak, backend
         if backend() == "unavailable":
             return b""
-        return xi_speak(text)
+        return xi_speak(text, voice_id=voice_id)
     except Exception as e:
         log.warning(f"ElevenLabs TTS error: {e}")
         return b""
@@ -89,9 +89,9 @@ def _speak_piper(text: str) -> bytes:
         return b""
 
 
-def active_provider() -> str:
+def active_provider(provider_preference: str = "") -> str:
     """Return the active TTS provider name."""
-    provider = _get_provider()
+    provider = (provider_preference or _get_provider()).lower().strip()
     if provider == "elevenlabs":
         try:
             from adapters.audio.elevenlabs_adapter import backend

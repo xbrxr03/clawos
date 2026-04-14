@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -11,7 +14,11 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:visual": "playwright test",
-    "ci": "npm run typecheck && npm run build && npm run build-storybook && npm run test:visual"
+    "ci:typecheck": "npm run typecheck",
+    "ci:build": "npm run build",
+    "ci:storybook": "npm run build-storybook",
+    "ci:visual": "npm run test:visual",
+    "ci": "npm run ci:typecheck && npm run ci:build && npm run ci:storybook && npm run ci:visual"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0-rc.16",

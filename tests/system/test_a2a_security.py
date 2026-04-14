@@ -122,3 +122,46 @@ def test_a2a_rejects_untrusted_peers(monkeypatch):
             },
         )
         assert response.status_code == 403
+
+
+def test_a2a_rejects_blocked_peers(monkeypatch):
+    async def fake_handle_task(_task):
+        return "handled"
+
+    monkeypatch.setattr("services.a2ad.task_handler.handle_task", fake_handle_task)
+    monkeypatch.setattr(
+        "services.a2ad.peer_registry.get_registry",
+        lambda: type(
+            "Registry",
+            (),
+            {
+                "is_blocked": staticmethod(lambda url: url == "http://blocked-peer.test/a2a"),
+                "is_trusted_url": staticmethod(lambda url: True),
+            },
+        )(),
+    )
+
+    from services.a2ad.service import create_app
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_token": "secret-token",
+        "mdns_enabled": False,
+    })
+
+    body = {
+        "id": "task-1",
+        "message": {"parts": [{"type": "text", "text": "hello from peer"}]},
+        "metadata": {"workspace": "nexus_default"},
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/a2a/tasks/send",
+            json=body,
+            headers={
+                "Authorization": "Bearer secret-token",
+                "X-ClawOS-Peer-URL": "http://blocked-peer.test/a2a",
+            },
+        )
+        assert response.status_code == 403

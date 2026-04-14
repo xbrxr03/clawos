@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(gh pr:*)",
-      "Bash(where gh:*)"
+      "Bash(where gh:*)",
+      "Bash(ssh -i /tmp/clawos_deploy_key -o StrictHostKeyChecking=no abrar@192.168.0.18 ':*)",
+      "Bash(grep -n 'echo.*\"OK \\\\|echo.*OK  \\\\|${G}OK' install.sh)",
+      "Bash(del \"C:\\\\Users\\\\Abrxr Hxbib\\\\Downloads\\\\clawos_github_ready\\\\clawos_github\\\\.git\\\\index.lock\")",
+      "WebFetch(domain:www.reddit.com)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(python -c ':*)",
+      "Bash(pip install:*)",
+      "Bash(python -m playwright install chromium --with-deps)",
+      "WebFetch(domain:clawos-zeta.vercel.app)"
     ]
   }
 }

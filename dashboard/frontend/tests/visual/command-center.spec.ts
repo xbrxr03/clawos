@@ -80,6 +80,25 @@ async function stubCommandCenterData(page: Page) {
     services: {},
     tasks: { active: [], queued: [], failed: [], completed: [] },
     models: { models: [], default: 'gemma3:4b' },
+    voice: { mode: 'off', state: 'idle' },
+    jarvis: {
+      thread_key: 'jarvis-ui',
+      mode: 'push_to_talk',
+      state: 'idle',
+      voice_enabled: true,
+      live_caption: 'Hello Sir. JARVIS is standing by.',
+      last_response: 'Hello Sir. JARVIS is standing by.',
+      recent_turns: [
+        {
+          id: 'assistant-turn',
+          role: 'assistant',
+          text: 'Hello Sir. JARVIS is standing by.',
+          source: 'jarvis-ui:text',
+          spoken: true,
+          created_at: '2026-04-13T10:00:00Z',
+        },
+      ],
+    },
   })
 
   await stubSession(page, { auth_required: false, authenticated: true })
@@ -144,6 +163,146 @@ async function stubCommandCenterData(page: Page) {
           status: 'completed',
         },
       ]),
+    })
+  })
+
+  await page.route('**/api/voice/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ mode: 'off', state: 'idle' }),
+    })
+  })
+
+  await page.route('**/api/health', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'ok', auth_required: false, host: '127.0.0.1', port: 7070, local_only: true }),
+    })
+  })
+
+  await page.route('**/api/desktop/posture', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'win32',
+        autostart_kind: 'startup-shortcut',
+        launch_on_login_supported: true,
+        launch_on_login_enabled: true,
+        paths: {
+          logs: 'C:/tmp/logs',
+          config: 'C:/tmp/config',
+          workspace: 'C:/tmp/workspace',
+          support: 'C:/tmp/support',
+        },
+      }),
+    })
+  })
+
+  await page.route('**/api/gateway/health', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ whatsapp: 'linked', linked_phone: '+15551234567', routes_count: 1, approval_queue: 0 }),
+    })
+  })
+
+  await page.route('**/api/jarvis/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        thread_key: 'jarvis-ui',
+        mode: 'push_to_talk',
+        state: 'idle',
+        voice_enabled: true,
+        live_caption: 'Hello Sir. JARVIS is standing by.',
+        last_response: 'Hello Sir. JARVIS is standing by.',
+        recent_turns: [
+          {
+            id: 'assistant-turn',
+            role: 'assistant',
+            text: 'Hello Sir. JARVIS is standing by.',
+            source: 'jarvis-ui:text',
+            spoken: true,
+            created_at: '2026-04-13T10:00:00Z',
+          },
+        ],
+      }),
+    })
+  })
+
+  await page.route('**/api/jarvis/health', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        openclaw_installed: true,
+        openclaw_running: true,
+        gateway_port: 18789,
+        stt_ok: true,
+        tts_ok: true,
+        wake_word_ok: true,
+        microphone_ok: true,
+        microphone_backend: 'fake-recorder',
+        playback_backend: 'fake-player',
+        provider_status: {
+          preferred: 'elevenlabs',
+          active: 'elevenlabs',
+          fallback: false,
+          elevenlabs_key_set: true,
+        },
+        briefing_sources: {
+          weather: 'demo',
+          headlines: 'demo',
+          calendar: 'demo',
+          tasks: 'demo',
+          last_project: 'demo',
+        },
+      }),
+    })
+  })
+
+  await page.route('**/api/jarvis/config', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          config: {
+            voice_enabled: true,
+            input_mode: 'push_to_talk',
+            wake_phrase: 'Hey Jarvis',
+            tts_provider_preference: 'elevenlabs',
+            elevenlabs_voice_id: 'jarvis-voice',
+            elevenlabs_key_set: true,
+          },
+          session: {
+            thread_key: 'jarvis-ui',
+            mode: 'push_to_talk',
+            state: 'idle',
+            voice_enabled: true,
+            recent_turns: [],
+          },
+        }),
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        voice_enabled: true,
+        input_mode: 'push_to_talk',
+        wake_phrase: 'Hey Jarvis',
+        tts_provider_preference: 'elevenlabs',
+        elevenlabs_voice_id: 'jarvis-voice',
+        elevenlabs_key_set: true,
+      }),
     })
   })
 }
@@ -229,6 +388,27 @@ test('command center shell renders', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Workflows' })).toBeVisible()
   // Overview page has an "Open workflows" button (updated from "Browse workflows" in redesign)
   await expect(page.getByRole('button', { name: 'Open workflows' })).toBeVisible()
+})
+
+test('jarvis room renders as a dedicated voice chamber', async ({ page }) => {
+  await stubCommandCenterData(page)
+
+  await page.goto('/jarvis')
+
+  await expect(page.getByRole('heading', { name: 'JARVIS Command Chamber' })).toBeVisible()
+  await expect(page.getByText('Live Caption', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Activate JARVIS push to talk' })).toBeVisible()
+  await expect(page.locator('.shell-inspector')).toHaveCount(0)
+})
+
+test('settings page hands JARVIS voice off to the chamber', async ({ page }) => {
+  await stubCommandCenterData(page)
+
+  await page.goto('/settings')
+
+  await expect(page.getByText('Voice settings now live in the JARVIS chamber')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open JARVIS' })).toBeVisible()
+  await expect(page.getByText('ElevenLabs JARVIS voice')).toHaveCount(0)
 })
 
 test('setup flow renders machine posture and actions', async ({ page }) => {

@@ -20,6 +20,9 @@ That audit currently checks four things:
 ## Auth Posture
 
 - `services/dashd/api.py` uses a separate browser session secret for cookies; the cookie value is not the raw dashboard bearer token.
+- Cookie-backed dashboard websocket sessions require a trusted loopback browser origin, which reduces cross-site websocket hijack risk while preserving bearer/token auth for non-browser clients.
+- Dashboard docs/schema routes (`/api/openapi.json`, `/api/docs`, `/api/redoc`) are protected by the same dashboard auth gate as the rest of the private API.
+- `services/dashd/api.py` also protects `/api/evolution` and `/ws/brain` behind dashboard auth.
 - Setup-only dashboard routes accept `X-ClawOS-Setup: 1` only on loopback and only until setup completion is recorded.
 - Completing setup rotates the dashboard session secret to invalidate any setup-era browser session.
 - `services/a2ad/service.py` requires both bearer auth and an explicit trusted peer URL for remote task ingress.

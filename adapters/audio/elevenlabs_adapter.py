@@ -64,7 +64,15 @@ def _get_voice_id() -> str:
         return DEFAULT_VOICE_ID
 
 
-def speak(text: str) -> bytes:
+def get_api_key() -> str:
+    return _get_api_key()
+
+
+def get_voice_id() -> str:
+    return _get_voice_id()
+
+
+def speak(text: str, voice_id: str = "") -> bytes:
     """
     Convert text to speech using ElevenLabs streaming API.
     Returns raw MP3 bytes, or empty bytes on failure.
@@ -78,7 +86,7 @@ def speak(text: str) -> bytes:
     if not api_key:
         return b""
 
-    voice_id = _get_voice_id()
+    voice_id = voice_id or _get_voice_id()
     url = f"{_XI_API_BASE}/v1/text-to-speech/{voice_id}"
 
     payload = {

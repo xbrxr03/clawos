@@ -41,8 +41,11 @@ python scripts/verify_repo.py --python-bin python3.11 --npm-bin npm
 
 ## Notes
 
+- Use Node `24` for frontend verification. The repo root `.nvmrc` is the source of truth used by local tooling and GitHub Actions.
 - The verifier will run `npm ci` automatically if `dashboard/frontend/node_modules` is missing.
+- The verifier runs pytest and the direct phase scripts inside an isolated temp/cache sandbox so local runs do not pollute the repo with `.pytest_tmp` or `.pytest_cache` churn.
 - Packaging `.deb` tests are part of `pytest tests`, but they skip unless you provide `--deb /path/to/package.deb`.
 - Direct phase scripts are executed with `PYTHONUTF8=1` to keep output stable across platforms.
+- Git-backed verification uses safe-directory-aware git invocations so Windows checkouts with stricter ownership rules still verify cleanly.
 - CI also runs the main frontend and Python suites, but this script is the fastest way to reproduce the full local validation path before shipping.
 - The dedicated security audit is documented in `docs/SECURITY_AUDIT.md`.

@@ -7,6 +7,7 @@ import { Card, LoadingPanel, ShortcutKey } from './components/ui.jsx'
 import { useCommandCenter } from './hooks/useCommandCenter'
 
 const OverviewPage = lazy(() => import('./pages/Overview').then((mod) => ({ default: mod.Overview })))
+const JarvisVoicePage = lazy(() => import('./pages/JarvisVoice').then((mod) => ({ default: mod.JarvisVoicePage })))
 const TasksPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Tasks })))
 const ApprovalsPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Approvals })))
 const PacksPage = lazy(() => import('./pages/Packs').then((mod) => ({ default: mod.PacksPage })))
@@ -51,6 +52,7 @@ function ShellRoutes({
   runtimes,
   services,
   voiceSession,
+  jarvisSession,
 }: {
   tasks: any
   approvals: any[]
@@ -60,6 +62,7 @@ function ShellRoutes({
   runtimes: Record<string, any>
   services: Record<string, any>
   voiceSession: Record<string, any>
+  jarvisSession: Record<string, any>
 }) {
   return (
     <Suspense fallback={<RouteFallback message="Loading workspace..." compact />}>
@@ -78,6 +81,7 @@ function ShellRoutes({
             />
           }
         />
+        <Route path="/jarvis" element={<JarvisVoicePage jarvisSession={jarvisSession} />} />
         <Route path="/tasks" element={<TasksPage tasks={tasks} />} />
         <Route path="/approvals" element={<ApprovalsPage approvals={approvals} />} />
         <Route path="/packs" element={<PacksPage />} />
@@ -105,7 +109,7 @@ function ShellRoutes({
 }
 
 function AuthenticatedApp() {
-  const { connected, events, approvals, services, tasks, models, pullProgress, runtimes, voiceSession } = useCommandCenter()
+  const { connected, events, approvals, services, tasks, models, pullProgress, runtimes, voiceSession, jarvisSession } = useCommandCenter()
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (window.localStorage.getItem('clawos-theme') as 'dark' | 'light') || 'dark'
   })
@@ -135,6 +139,7 @@ function AuthenticatedApp() {
               approvals={approvals}
               events={events}
               voiceSession={voiceSession}
+              jarvisSession={jarvisSession}
               inspector={<InspectorRail approvals={approvals} services={services} events={events} />}
               theme={theme}
               onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
@@ -148,6 +153,7 @@ function AuthenticatedApp() {
                 runtimes={runtimes}
                 services={services}
                 voiceSession={voiceSession}
+                jarvisSession={jarvisSession}
               />
             </AppShell>
           }

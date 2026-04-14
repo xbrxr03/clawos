@@ -50,10 +50,20 @@ def _action_lines(text: str) -> list[str]:
     sentences = summarize_sentences(text, limit=2, min_words=8)
     if not sentences:
         return ["Review the original PDF for diagrams, tables, or appendix material that text extraction may miss."]
-    return [
-        f"Revisit this section: {sentence}"
-        for sentence in sentences[:2]
-    ]
+    return [f"Revisit this section: {sentence}" for sentence in sentences[:2]]
+
+
+def _failure_result(path: Path, error: str, reason: str, *, pages_used: int = 0) -> WorkflowResult:
+    return WorkflowResult(
+        status=WorkflowStatus.FAILED,
+        output="",
+        error=error,
+        metadata={
+            "file": str(path),
+            "pages_used": pages_used,
+            "failure_reason": reason,
+        },
+    )
 
 
 async def run(args: dict, agent) -> WorkflowResult:
@@ -82,12 +92,27 @@ async def run(args: dict, agent) -> WorkflowResult:
             phase="extract",
             progress=34,
         )
-        text, pages_used = extract_pdf_text(path)
+        try:
+            text, pages_used = extract_pdf_text(path)
+        except RuntimeError as exc:
+            return _failure_result(
+                path,
+                f"PDF text extraction is unavailable: {exc}",
+                "extract_unavailable",
+            )
+        except Exception as exc:
+            return _failure_result(
+                path,
+                f"Unable to read extractable text from {path.name}: {exc}",
+                "extract_failed",
+            )
+
         if not text:
-            return WorkflowResult(
-                status=WorkflowStatus.FAILED,
-                output="",
-                error="No extractable text was found in the PDF. It may be image-only or encrypted.",
+            return _failure_result(
+                path,
+                "No extractable text was found in the PDF. It may be image-only, encrypted, or require OCR first.",
+                "no_extractable_text",
+                pages_used=pages_used,
             )
 
         await emit_workflow_progress(
@@ -112,7 +137,7 @@ async def run(args: dict, agent) -> WorkflowResult:
 
         lines = [
             f"**Document:** {document_label}",
-            f"**Coverage:** {pages_used} text-rich pages • {word_count} words • {read_minutes} minute read",
+            f"**Coverage:** {pages_used} text-rich pages | {word_count} words | {read_minutes} minute read",
             f"**Executive summary:** {about}",
             "",
             "**Key points:**",
@@ -156,6 +181,7 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "keywords": keywords,
                 "highlights": bullets,
                 "follow_up": follow_up,
+                "failure_reason": None,
             },
         )
     except Exception as exc:

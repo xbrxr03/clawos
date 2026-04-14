@@ -171,3 +171,45 @@ def test_dashd_exposes_gateway_health_and_route_updates(monkeypatch):
         )
         assert update.status_code == 200
         assert update.json()["routes"]["19995550123@s.whatsapp.net"] == "sales_ops"
+
+
+def test_gateway_routes_owner_messages_through_jarvis(monkeypatch):
+    from services.gatewayd.service import GatewayService
+
+    bus = FakeBus()
+    wa = FakeWA()
+    router = FakeRouter()
+    service = GatewayService()
+    service._wa = wa
+    service._router = router
+
+    class FakeJarvis:
+        def __init__(self):
+            self.calls = []
+
+        async def chat(self, message: str, *, thread_key: str, source: str, speak_reply: bool | None = None):
+            self.calls.append((message, thread_key, source, speak_reply))
+            return {"reply": "At once, Sir."}
+
+    class FakeManager:
+        def __init__(self):
+            self.calls = []
+
+        async def chat_direct(self, message: str, workspace_id: str, channel: str, source: str):
+            self.calls.append((message, workspace_id, channel, source))
+            return "fallback"
+
+    jarvis = FakeJarvis()
+    manager = FakeManager()
+
+    monkeypatch.setattr("services.gatewayd.service.get_bus", lambda: bus)
+    monkeypatch.setattr("services.jarvisd.service.get_service", lambda: jarvis)
+    monkeypatch.setattr("services.agentd.service.get_manager", lambda: manager)
+
+    routed = asyncio.run(service.handle_inbound("15551234567@s.whatsapp.net", "Status on project Atlas"))
+
+    assert routed["status"] == "routed"
+    assert routed["workspace"] == "jarvis_openclaw"
+    assert jarvis.calls == [("Status on project Atlas", "whatsapp:15551234567@s.whatsapp.net", "whatsapp", False)]
+    assert manager.calls == []
+    assert wa.sent[-1] == ("15551234567@s.whatsapp.net", "At once, Sir.")

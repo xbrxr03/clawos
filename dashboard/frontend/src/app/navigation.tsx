@@ -11,6 +11,7 @@ export type AppNavItem = {
 
 export const appNav: AppNavItem[] = [
   { section: 'Overview', to: '/', label: 'Overview', description: 'Signal-rich snapshot of services, approvals, conversation, and today.', icon: <IconHome /> },
+  { section: 'Overview', to: '/jarvis', label: 'JARVIS', description: 'Flagship voice chamber with live transcription, spectrum, and cinematic status.', icon: <IconJarvis /> },
   { section: 'Operate', to: '/tasks', label: 'Tasks', description: 'Live queue for delegated work, missions, and execution history.', icon: <IconTasks /> },
   { section: 'Operate', to: '/approvals', label: 'Approvals', description: 'Human review for sensitive tool calls and irreversible actions.', icon: <IconShield /> },
   { section: 'Operate', to: '/workflows', label: 'Workflows', description: 'Run local-first automations with live progress and output.', icon: <IconWorkflow /> },
@@ -33,6 +34,10 @@ export const appNav: AppNavItem[] = [
 
 function IconHome() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.25 7.3 8 2.75l5.75 4.55v5.7a.75.75 0 0 1-.75.75h-2.9v-4h-4.2v4H3a.75.75 0 0 1-.75-.75V7.3Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+}
+
+function IconJarvis() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="4.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="8" cy="8" r="1.8" fill="currentColor" opacity=".7"/><path d="M8 1.75v1.8M8 12.45v1.8M1.75 8h1.8M12.45 8h1.8M3.2 3.2l1.25 1.25M11.55 11.55l1.25 1.25M12.8 3.2l-1.25 1.25M4.45 11.55 3.2 12.8" stroke="currentColor" strokeWidth="1.05" strokeLinecap="round"/></svg>
 }
 
 function IconTasks() {

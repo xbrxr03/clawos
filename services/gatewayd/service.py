@@ -108,12 +108,32 @@ class GatewayService:
             self._send_whatsapp_message(sender, reply)
             return {"status": "ignored", "workspace": workspace, "text": "", "reply": reply}
 
-        reply = await get_manager().chat_direct(
-            message,
-            workspace_id=workspace,
-            channel="whatsapp",
-            source=sender,
-        )
+        if is_owner:
+            from services.jarvisd.service import JARVIS_WORKSPACE, get_service as get_jarvis_service
+
+            workspace = JARVIS_WORKSPACE
+            try:
+                jarvis_result = await get_jarvis_service().chat(
+                    message,
+                    thread_key=f"whatsapp:{sender}",
+                    source="whatsapp",
+                    speak_reply=False,
+                )
+                reply = jarvis_result.get("reply", "")
+            except RuntimeError:
+                reply = await get_manager().chat_direct(
+                    message,
+                    workspace_id=workspace,
+                    channel="whatsapp",
+                    source=sender,
+                )
+        else:
+            reply = await get_manager().chat_direct(
+                message,
+                workspace_id=workspace,
+                channel="whatsapp",
+                source=sender,
+            )
         if reply:
             self._send_whatsapp_message(sender, reply)
 
@@ -180,36 +200,28 @@ class GatewayService:
             return False
 
         try:
-            from services.agentd.service import get_manager
+            from services.jarvisd.service import get_service as get_jarvis_service
 
-            # Build briefing including any Kizuna brain connections discovered overnight
-            brain_insight = ""
             try:
-                from services.braind.service import get_brain
-                brain = get_brain()
-                from clawos_core.ambient import _check_brain_connections
-                brain_event = _check_brain_connections()
-                if brain_event:
-                    brain_insight = f"\n\n🧠 *Kizuna noticed*: {brain_event.body}"
-            except Exception:
-                pass
+                result = await get_jarvis_service().chat(
+                    "Hey Jarvis, what's up?",
+                    thread_key="whatsapp:self",
+                    source="scheduler:whatsapp",
+                    speak_reply=False,
+                )
+                reply = result.get("reply", "")
+            except RuntimeError:
+                from services.agentd.service import get_manager
 
-            briefing_prompt = (
-                "Generate a concise morning briefing for the day. Include: "
-                "today's date, a quick weather note if available, any urgent tasks, "
-                "and 3 things to focus on today. Keep it under 200 words."
-                + brain_insight
-            )
-
-            reply = await get_manager().chat_direct(
-                briefing_prompt,
-                workspace_id=workspace_id,
-                channel="scheduler",
-                source="morning_briefing",
-            )
+                reply = await get_manager().chat_direct(
+                    "Generate a concise morning briefing for the day. Keep it under 200 words.",
+                    workspace_id=workspace_id,
+                    channel="scheduler",
+                    source="morning_briefing",
+                )
 
             if reply:
-                briefing_text = f"☀️ *Good morning — ClawOS Morning Briefing*\n\n{reply}"
+                briefing_text = f"*Good morning - JARVIS Briefing*\n\n{reply}"
                 self._send_self_message(briefing_text)
 
                 # Mark today's briefing as sent

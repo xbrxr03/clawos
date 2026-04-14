@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""clawctl status — show all service health, nicely."""
+"""clawctl status - show all service health, nicely."""
+
+import shutil
 import subprocess
 import urllib.request
 
@@ -17,20 +19,20 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 
-def _ok(s):
-    return f"{GREEN}✓{RESET}  {s}"
+def _ok(text):
+    return f"{GREEN}[ok]{RESET}  {text}"
 
 
-def _fail(s):
-    return f"{RED}✗{RESET}  {s}"
+def _fail(text):
+    return f"{RED}[x]{RESET}  {text}"
 
 
-def _warn(s):
-    return f"{AMBER}⚠{RESET}  {s}"
+def _warn(text):
+    return f"{AMBER}[!]{RESET}  {text}"
 
 
-def _dim(s):
-    return f"{DIM}{GREY}{s}{RESET}"
+def _dim(text):
+    return f"{DIM}{GREY}{text}{RESET}"
 
 
 def _http_ok(url):
@@ -42,12 +44,10 @@ def _http_ok(url):
 
 
 def run():
-    import shutil
-
     manager = service_manager_name()
     print()
-    print(f"  {PURPLE}{BOLD}CLAWOS{RESET}  {_dim('service status · ' + manager)}")
-    print(f"  {_dim('—' * 46)}")
+    print(f"  {PURPLE}{BOLD}CLAWOS{RESET}  {_dim('service status - ' + manager)}")
+    print(f"  {_dim('-' * 46)}")
     print()
 
     ollama_ok = _http_ok(f"{OLLAMA_HOST}/api/tags")
@@ -88,14 +88,14 @@ def run():
             print("  " + _warn(f"{PURPLE}{svc:<12}{RESET} inactive"))
 
     print()
-    print("  " + (_ok(f"dashboard    {_dim('http://localhost:7070')}") if dash_ok else _dim("·  dashboard    not running")))
+    print("  " + (_ok(f"dashboard    {_dim('http://localhost:7070')}") if dash_ok else _dim("-  dashboard    not running")))
 
     from clawos_core.constants import CONFIG_DIR
 
     wa_linked = (CONFIG_DIR / "whatsapp" / ".wa_linked").exists()
     oc_ok = shutil.which("openclaw") is not None
-    print("  " + (_ok("openclaw     installed") if oc_ok else _dim("·  openclaw     not installed  (clawctl openclaw install)")))
-    print("  " + (_ok("whatsapp     linked") if wa_linked else _dim("·  whatsapp     not linked  (clawctl openclaw whatsapp)")))
+    print("  " + (_ok("openclaw     installed") if oc_ok else _dim("-  openclaw     not installed  (clawctl openclaw install)")))
+    print("  " + (_ok("whatsapp     linked") if wa_linked else _dim("-  whatsapp     not linked  (clawctl openclaw whatsapp)")))
 
     if oc_ok:
         print()
@@ -113,7 +113,7 @@ def run():
             h_ins = headroom_installed()
             r_ins = rtk_installed()
 
-            print(f"  {_dim('Token compression')} {_dim('—' * 24)}")
+            print(f"  {_dim('Token compression')} {_dim('-' * 24)}")
 
             if h_run:
                 stats = headroom_stats()
@@ -124,7 +124,7 @@ def run():
             elif h_ins:
                 print("  " + _warn(f"headroom     installed, not running  {_dim('clawctl openclaw start')}"))
             else:
-                print("  " + _dim("·  headroom     not installed  (clawctl openclaw install)"))
+                print("  " + _dim("-  headroom     not installed  (clawctl openclaw install)"))
 
             if r_ins:
                 stats = rtk_stats()
@@ -135,12 +135,12 @@ def run():
                 detail = _dim(match.group(0)) if match else _dim("active")
                 print("  " + _ok(f"rtk          CLI compression  {detail}"))
             else:
-                print("  " + _dim("·  rtk          not installed  (clawctl openclaw install)"))
+                print("  " + _dim("-  rtk          not installed  (clawctl openclaw install)"))
         except Exception:
             pass
 
     print()
-    print(f"  {_dim('—' * 46)}")
-    print(f"  {_dim('clawctl start   — start all services')}")
-    print(f"  {_dim('clawctl chat    — start chatting')}")
+    print(f"  {_dim('-' * 46)}")
+    print(f"  {_dim('clawctl start   - start all services')}")
+    print(f"  {_dim('clawctl chat    - start chatting')}")
     print()

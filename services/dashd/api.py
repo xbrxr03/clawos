@@ -64,6 +64,8 @@ DASHBOARD_STATIC_INDEX = DASHBOARD_STATIC_DIR / "index.html"
 
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+    from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+    from fastapi.openapi.utils import get_openapi
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
     import uvicorn
@@ -73,6 +75,7 @@ except ImportError:
     FASTAPI_OK = False
     FastAPI = WebSocket = WebSocketDisconnect = HTTPException = None
     HTMLResponse = JSONResponse = None
+    get_openapi = get_redoc_html = get_swagger_ui_html = None
     Depends = None
     Request = Response = object
 
@@ -578,6 +581,12 @@ def _voice_service():
     return get_service()
 
 
+def _jarvis_service():
+    from services.jarvisd.service import get_service
+
+    return get_service()
+
+
 def _gateway_service():
     from services.gatewayd.service import get_service
 
@@ -673,6 +682,7 @@ def _build_snapshot(app: "FastAPI") -> dict:
         "tasks": [],
         "approvals": _approval_payloads(),
         "voice": get_voice_session(),
+        "jarvis": _jarvis_service().session(),
     }
 
 
@@ -690,14 +700,18 @@ def _websocket_authorized(websocket: WebSocket) -> bool:
         return True
     query_token = websocket.query_params.get("token", "")
     bearer_token = _extract_bearer_token(websocket.headers.get("authorization", ""))
+    if _token_matches(query_token, settings.token):
+        return True
+    if _token_matches(bearer_token, settings.token):
+        return True
+
     cookie_token = websocket.cookies.get(settings.cookie_name, "")
-    return any(
-        [
-            _token_matches(query_token, settings.token),
-            _token_matches(bearer_token, settings.token),
-            _token_matches(cookie_token, _load_dashboard_session_token(settings.auth_required)),
-        ]
-    )
+    if not _token_matches(cookie_token, _load_dashboard_session_token(settings.auth_required)):
+        return False
+
+    # Cookie-backed websocket sessions are intended for the bundled browser UI,
+    # so require a trusted local origin before allowing the connection.
+    return _origin_is_trusted(websocket.headers.get("origin", ""))
 
 
 def _setup_websocket_authorized(websocket: WebSocket) -> bool:
@@ -749,14 +763,22 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     async def _fan_out_voice_session(session: dict[str, Any]):
         await mgr.broadcast({"type": "voice_session", "data": session})
 
+    async def _fan_out_jarvis_session(session: dict[str, Any]):
+        await mgr.broadcast({"type": "jarvis_session", "data": session})
+
     @asynccontextmanager
     async def lifespan(app_obj: "FastAPI"):
         bus.subscribe(app_obj.state.bus_handler)
         app_obj.state.voice_listener = _fan_out_voice_session
+        app_obj.state.jarvis_listener = _fan_out_jarvis_session
         voice_service = _voice_service()
+        jarvis_service = _jarvis_service()
         add_listener = getattr(voice_service, "add_session_listener", None)
         if callable(add_listener):
             add_listener(app_obj.state.voice_listener)
+        add_jarvis_listener = getattr(jarvis_service, "add_session_listener", None)
+        if callable(add_jarvis_listener):
+            add_jarvis_listener(app_obj.state.jarvis_listener)
         app_obj.state.health_task = asyncio.create_task(_service_health_loop(app_obj))
         try:
             yield
@@ -765,6 +787,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             remove_listener = getattr(voice_service, "remove_session_listener", None)
             if callable(remove_listener):
                 remove_listener(app_obj.state.voice_listener)
+            remove_jarvis_listener = getattr(jarvis_service, "remove_session_listener", None)
+            if callable(remove_jarvis_listener):
+                remove_jarvis_listener(app_obj.state.jarvis_listener)
             task = app_obj.state.health_task
             if task:
                 task.cancel()
@@ -777,9 +802,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         title="ClawOS Dashboard API",
         description="ClawOS command center REST API — 100+ endpoints for agents, workflows, brain, voice, and more.",
         version="0.2.0",
-        docs_url="/api/docs",
-        redoc_url="/api/redoc",
-        openapi_url="/api/openapi.json",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
         lifespan=lifespan,
     )
     app.state.settings = load_dashboard_settings(settings)
@@ -788,6 +813,32 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     app.state.health_task = None
     app.state.bus_handler = _on_bus_event
     app.state.voice_listener = None
+    app.state.jarvis_listener = None
+    app.state.openapi_schema = None
+
+    def _build_openapi_schema() -> dict[str, Any]:
+        schema = app.state.openapi_schema
+        if schema is None:
+            schema = get_openapi(
+                title=app.title,
+                version=app.version,
+                description=app.description,
+                routes=app.routes,
+            )
+            app.state.openapi_schema = schema
+        return schema
+
+    @app.get("/api/openapi.json", dependencies=[Depends(require_auth)], include_in_schema=False)
+    async def openapi_schema():
+        return JSONResponse(_build_openapi_schema())
+
+    @app.get("/api/docs", dependencies=[Depends(require_auth)], include_in_schema=False)
+    async def swagger_ui():
+        return get_swagger_ui_html(openapi_url="/api/openapi.json", title=f"{app.title} Docs")
+
+    @app.get("/api/redoc", dependencies=[Depends(require_auth)], include_in_schema=False)
+    async def redoc_ui():
+        return get_redoc_html(openapi_url="/api/openapi.json", title=f"{app.title} ReDoc")
 
     @app.get("/", response_class=HTMLResponse)
     async def root():
@@ -1237,6 +1288,65 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             raise HTTPException(status_code=400, detail="ElevenLabs key saved but test synthesis failed — check your key")
 
         return {"ok": True, "tested": True, "voice_id": voice_id}
+
+    @app.get("/api/jarvis/session", dependencies=[Depends(require_auth)])
+    async def jarvis_session():
+        return _jarvis_service().session()
+
+    @app.get("/api/jarvis/health", dependencies=[Depends(require_auth)])
+    async def jarvis_health():
+        return _jarvis_service().health()
+
+    @app.get("/api/jarvis/config", dependencies=[Depends(require_auth)])
+    async def jarvis_config_get():
+        return _jarvis_service().config()
+
+    @app.post("/api/jarvis/config", dependencies=[Depends(require_auth)])
+    async def jarvis_config_set(body: dict | None = None):
+        config = _jarvis_service().set_config(body or {})
+        session = _jarvis_service().session()
+        await app.state.connections.broadcast({"type": "jarvis_session", "data": session})
+        return {"ok": True, "config": config, "session": session}
+
+    @app.post("/api/jarvis/push-to-talk", dependencies=[Depends(require_auth)])
+    async def jarvis_push_to_talk():
+        service = _jarvis_service()
+        try:
+            result = await service.push_to_talk()
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        await app.state.connections.broadcast({"type": "jarvis_session", "data": service.session()})
+        return result
+
+    @app.post("/api/jarvis/chat", dependencies=[Depends(require_auth)])
+    async def jarvis_chat(body: dict | None = None):
+        payload = body or {}
+        message = str(payload.get("message", "")).strip()
+        thread_key = str(payload.get("thread_key", "jarvis-ui")).strip() or "jarvis-ui"
+        source = str(payload.get("source", "jarvis-ui:text")).strip() or "jarvis-ui:text"
+        if not message:
+            raise HTTPException(status_code=400, detail="message required")
+        service = _jarvis_service()
+        try:
+            result = await service.chat(message, thread_key=thread_key, source=source)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        await app.state.connections.broadcast({"type": "jarvis_session", "data": result["session"]})
+        return result
+
+    @app.post("/api/jarvis/mode", dependencies=[Depends(require_auth)])
+    async def jarvis_mode(body: dict | None = None):
+        mode = str((body or {}).get("mode", "")).strip()
+        if not mode:
+            raise HTTPException(status_code=400, detail="mode required")
+        try:
+            session = await _jarvis_service().set_mode(mode)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        await app.state.connections.broadcast({"type": "jarvis_session", "data": session})
+        return session
 
     @app.get("/api/gateway/health", dependencies=[Depends(require_auth_or_setup_access)])
     async def gateway_health():
@@ -2030,9 +2140,12 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.websocket("/ws/brain")
-    async def brain_websocket(websocket):
+    async def brain_websocket(websocket: WebSocket):
         """WebSocket for real-time ingestion progress and neuron-firing events."""
         from fastapi.websockets import WebSocketDisconnect
+        if not _websocket_authorized(websocket):
+            await websocket.close(code=4401)
+            return
         await websocket.accept()
 
         try:
@@ -2201,7 +2314,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
     EVOLUTION_PATH = Path(__file__).parent.parent.parent / "EVOLUTION.md"
 
-    @app.get("/api/evolution")
+    @app.get("/api/evolution", dependencies=[Depends(require_auth)])
     async def get_evolution():
         """Return the EVOLUTION.md learning log as structured data."""
         if not EVOLUTION_PATH.exists():

@@ -107,7 +107,7 @@ try:
     root_install = read_text(ROOT / "install.sh")
     checks = [
         ('exec bash "$REPO_ROOT/install.sh" "$@"', "wrapper delegates to root installer"),
-        ("openclaw@latest",       "root installer installs OpenClaw"),
+        ("ollama launch openclaw", "root installer launches OpenClaw"),
         ("dashboard/frontend",    "root installer builds frontend"),
         ("clawos-setup",          "root installer installs GUI setup launcher"),
         ("launch_command_center.py", "root installer uses command-center launcher"),

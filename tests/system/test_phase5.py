@@ -469,8 +469,7 @@ try:
     assert "launch_command_center.py" in content, "command-center launcher missing"
     assert "--route /setup" in content, "setup route launcher missing"
     assert "clawos-setup" in content, "GUI setup command missing"
-    assert "setup.first_run.wizard" in content, "terminal fallback wizard missing"
-    ok("install.sh launches GUI setup first and keeps terminal wizard as fallback")
+    ok("install.sh launches the GUI setup flow through the command-center launcher")
 except Exception as e:
     fail("install.sh wizard call", str(e))
 

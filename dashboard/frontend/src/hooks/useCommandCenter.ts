@@ -19,6 +19,13 @@ export function useCommandCenter() {
   const [pullProgress, setPullProgress] = useState<Record<string, any>>({})
   const [runtimes, setRuntimes] = useState<Record<string, any>>({})
   const [voiceSession, setVoiceSession] = useState<Record<string, any>>({ mode: 'off', state: 'idle' })
+  const [jarvisSession, setJarvisSession] = useState<Record<string, any>>({
+    thread_key: 'jarvis-ui',
+    mode: 'push_to_talk',
+    state: 'idle',
+    voice_enabled: true,
+    recent_turns: [],
+  })
 
   const pushEvent = useCallback((event: any) => {
     setEvents((prev) => [event, ...prev].slice(0, 200))
@@ -80,6 +87,7 @@ export function useCommandCenter() {
           setTasks(normalizeTasks(message.data.tasks))
           setModels(message.data.models ?? { models: [], default: 'qwen2.5:7b' })
           setVoiceSession(message.data.voice ?? { mode: 'off', state: 'idle' })
+          setJarvisSession(message.data.jarvis ?? { thread_key: 'jarvis-ui', mode: 'push_to_talk', state: 'idle', voice_enabled: true, recent_turns: [] })
           break
         case 'service_health':
           setServices(message.data ?? {})
@@ -107,6 +115,9 @@ export function useCommandCenter() {
           break
         case 'voice_session':
           setVoiceSession(message.data ?? { mode: 'off', state: 'idle' })
+          break
+        case 'jarvis_session':
+          setJarvisSession(message.data ?? { thread_key: 'jarvis-ui', mode: 'push_to_talk', state: 'idle', voice_enabled: true, recent_turns: [] })
           break
       }
     }
@@ -157,6 +168,18 @@ export function useCommandCenter() {
     return () => window.clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    const fetchJarvisSession = async () => {
+      try {
+        const response = await fetch('/api/jarvis/session')
+        setJarvisSession(await response.json())
+      } catch {}
+    }
+    fetchJarvisSession()
+    const id = window.setInterval(fetchJarvisSession, 5000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const taskStats = useMemo(
     () => ({
       active: tasks.active.length,
@@ -167,5 +190,5 @@ export function useCommandCenter() {
     [tasks]
   )
 
-  return { connected, events, approvals, services, tasks, models, pullProgress, runtimes, voiceSession, taskStats }
+  return { connected, events, approvals, services, tasks, models, pullProgress, runtimes, voiceSession, jarvisSession, taskStats }
 }

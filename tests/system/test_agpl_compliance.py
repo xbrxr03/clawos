@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
+
+from clawos_core.util.git import git_check_output
 
 SOURCE_EXTENSIONS = {".py", ".sh", ".ts", ".tsx", ".js", ".jsx", ".css"}
 HEADER_TEXT = "SPDX-License-Identifier: AGPL-3.0-or-later"
@@ -19,7 +20,7 @@ SKIP_FILES = {
 
 
 def _tracked_files() -> list[str]:
-    output = subprocess.check_output(["git", "ls-files"], cwd=str(ROOT), text=True)
+    output = git_check_output(["ls-files"], repo=ROOT, cwd=ROOT)
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 

@@ -67,7 +67,7 @@ try:
     hw = probe()
     assert hw.ram_gb > 0
     assert hw.cpu_cores >= 1
-    assert hw.tier in ("A", "B", "C")
+    assert hw.tier in ("A", "B", "C", "D")
     assert hw.disk_free_gb > 0
     ok(f"probe() — tier={hw.tier} ram={hw.ram_gb}GB cpu={hw.cpu_cores}")
 except Exception as e:

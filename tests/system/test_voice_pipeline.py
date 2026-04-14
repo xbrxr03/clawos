@@ -127,6 +127,143 @@ class FakeVoiceService:
         }
 
 
+class FakeJarvisService:
+    def __init__(self):
+        self._config = {
+            "voice_enabled": True,
+            "input_mode": "push_to_talk",
+            "wake_phrase": "Hey Jarvis",
+            "tts_provider_preference": "elevenlabs",
+            "elevenlabs_voice_id": "jarvis-voice",
+            "elevenlabs_key_set": True,
+        }
+        self._session = {
+            "thread_key": "jarvis-ui",
+            "mode": "push_to_talk",
+            "state": "idle",
+            "voice_enabled": True,
+            "tts_provider": "elevenlabs",
+            "openclaw_status": "running",
+            "last_utterance": "",
+            "last_response": "",
+            "live_caption": "Hello Sir. JARVIS is standing by.",
+            "recent_turns": [],
+            "follow_up_open": False,
+        }
+        self._listeners = []
+        self.calls = []
+
+    def session(self, thread_key: str = "jarvis-ui"):
+        session = dict(self._session)
+        session["thread_key"] = thread_key
+        return session
+
+    def add_session_listener(self, listener):
+        self._listeners.append(listener)
+
+    def remove_session_listener(self, listener):
+        if listener in self._listeners:
+            self._listeners.remove(listener)
+
+    def _notify(self):
+        for listener in list(self._listeners):
+            result = listener(self.session())
+            if hasattr(result, "__await__"):
+                try:
+                    asyncio.get_running_loop().create_task(result)
+                except RuntimeError:
+                    asyncio.run(result)
+
+    def health(self):
+        return {
+            "openclaw_installed": True,
+            "openclaw_running": True,
+            "gateway_port": 18789,
+            "stt_ok": True,
+            "tts_ok": True,
+            "wake_word_ok": True,
+            "microphone_ok": True,
+            "microphone_backend": "fake-recorder",
+            "playback_backend": "fake-player",
+            "provider_status": {
+                "preferred": self._config["tts_provider_preference"],
+                "active": self._config["tts_provider_preference"],
+                "fallback": False,
+                "elevenlabs_key_set": self._config["elevenlabs_key_set"],
+            },
+            "briefing_sources": {
+                "weather": "demo",
+                "headlines": "demo",
+                "calendar": "demo",
+                "tasks": "demo",
+                "last_project": "demo",
+            },
+        }
+
+    def config(self):
+        return dict(self._config)
+
+    def set_config(self, updates):
+        self._config.update(updates)
+        self._session["voice_enabled"] = self._config["voice_enabled"]
+        self._session["mode"] = self._config["input_mode"] if self._config["voice_enabled"] else "off"
+        self._session["tts_provider"] = self._config["tts_provider_preference"]
+        self._notify()
+        return self.config()
+
+    async def chat(self, message: str, *, thread_key: str = "jarvis-ui", source: str = "jarvis-ui:text", speak_reply=None):
+        reply = f"JARVIS acknowledged: {message}"
+        self.calls.append({
+            "message": message,
+            "thread_key": thread_key,
+            "source": source,
+            "speak_reply": speak_reply,
+        })
+        self._session.update({
+            "thread_key": thread_key,
+            "state": "idle",
+            "last_utterance": message,
+            "last_response": reply,
+            "live_caption": reply,
+            "recent_turns": [
+                {"id": "user-turn", "role": "user", "text": message, "source": source, "spoken": False, "created_at": "2026-04-13T10:00:00Z"},
+                {"id": "assistant-turn", "role": "assistant", "text": reply, "source": source, "spoken": speak_reply is not False, "created_at": "2026-04-13T10:00:01Z"},
+            ],
+        })
+        self._notify()
+        return {
+            "reply": reply,
+            "spoken": speak_reply is not False,
+            "session": self.session(thread_key),
+            "briefing_sources": self.health()["briefing_sources"],
+        }
+
+    async def push_to_talk(self, thread_key: str = "jarvis-ui"):
+        reply = "At once, Sir."
+        self._session.update({
+            "thread_key": thread_key,
+            "state": "idle",
+            "last_utterance": "Jarvis status report",
+            "last_response": reply,
+            "live_caption": reply,
+        })
+        self._notify()
+        return {
+            "ok": True,
+            "trigger": "push_to_talk",
+            "transcript": "Jarvis status report",
+            "reply": reply,
+            "spoken": True,
+            "session": self.session(thread_key),
+        }
+
+    async def set_mode(self, mode: str):
+        self._session["mode"] = mode
+        self._session["voice_enabled"] = mode != "off"
+        self._notify()
+        return self.session()
+
+
 def test_setupd_voice_test_updates_state_and_diagnostics(monkeypatch):
     from services.setupd import service as setup_service
     from services.setupd.state import SetupState
@@ -242,3 +379,69 @@ def test_dashd_voice_endpoints_use_voice_service(monkeypatch):
         assert talk.status_code == 200
         assert talk.json()["ok"] is True
         assert talk.json()["transcript"] == "open the dashboard"
+
+
+def test_dashd_jarvis_endpoints_use_openclaw_service(monkeypatch):
+    from services.dashd.api import create_app
+    from services.setupd.state import SetupState
+
+    voice = FakeVoiceService()
+    jarvis = FakeJarvisService()
+    state = SetupState(
+        platform="linux",
+        architecture="x86_64",
+        service_manager="systemd",
+        voice_mode="push_to_talk",
+        voice_enabled=True,
+    )
+
+    monkeypatch.setattr("services.dashd.api._voice_service", lambda: voice)
+    monkeypatch.setattr("services.dashd.api._jarvis_service", lambda: jarvis)
+    monkeypatch.setattr("services.dashd.api._collect_models", lambda: [])
+    monkeypatch.setattr("services.dashd.api._approval_payloads", lambda: [])
+    monkeypatch.setattr("services.dashd.api._collect_service_health", lambda: {"dashd": {"status": "up", "latency_ms": 0}})
+    monkeypatch.setattr("services.setupd.state.SetupState.load", classmethod(lambda cls: state))
+    monkeypatch.setattr("services.setupd.state.SetupState.save", lambda self, path=None: None)
+    monkeypatch.setattr("services.dashd.api.sync_presence_from_setup", lambda *_args, **_kwargs: None)
+
+    app = create_app({"host": "127.0.0.1", "auth_required": True, "token": "dash-token", "cookie_name": "dash_session"})
+
+    with TestClient(app) as client:
+        assert client.post("/api/login", json={"token": "dash-token"}).status_code == 200
+
+        session = client.get("/api/jarvis/session")
+        assert session.status_code == 200
+        assert session.json()["thread_key"] == "jarvis-ui"
+        assert session.json()["openclaw_status"] == "running"
+
+        health = client.get("/api/jarvis/health")
+        assert health.status_code == 200
+        assert health.json()["openclaw_running"] is True
+        assert health.json()["provider_status"]["active"] == "elevenlabs"
+
+        config = client.get("/api/jarvis/config")
+        assert config.status_code == 200
+        assert config.json()["wake_phrase"] == "Hey Jarvis"
+
+        saved = client.post("/api/jarvis/config", json={"voice_enabled": False, "tts_provider_preference": "piper"})
+        assert saved.status_code == 200
+        assert saved.json()["config"]["voice_enabled"] is False
+        assert saved.json()["config"]["tts_provider_preference"] == "piper"
+
+        chat = client.post("/api/jarvis/chat", json={"message": "Hey Jarvis, what's up?"})
+        assert chat.status_code == 200
+        assert chat.json()["reply"] == "JARVIS acknowledged: Hey Jarvis, what's up?"
+        assert jarvis.calls[-1]["thread_key"] == "jarvis-ui"
+        assert jarvis.calls[-1]["source"] == "jarvis-ui:text"
+
+        talk = client.post("/api/jarvis/push-to-talk")
+        assert talk.status_code == 200
+        assert talk.json()["transcript"] == "Jarvis status report"
+
+        mode = client.post("/api/jarvis/mode", json={"mode": "off"})
+        assert mode.status_code == 200
+        assert mode.json()["mode"] == "off"
+        assert mode.json()["voice_enabled"] is False
+
+        empty = client.post("/api/jarvis/chat", json={"message": "   "})
+        assert empty.status_code == 400

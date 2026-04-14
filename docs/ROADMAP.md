@@ -17,7 +17,7 @@ Polish before features. Infrastructure before experience. Experience before plat
 
 - Phases 1-11 merged. `python -m pytest tests -q` now passes with `166 passed, 25 skipped`. Security audit green.
 - 29 workflow modules across 6 categories.
-- 19 services: agentd, policyd, memd, toolbridge, modeld, dashd, voiced, gatewayd, a2ad,
+- 21 services: agentd, policyd, memd, toolbridge, modeld, dashd, voiced, gatewayd, a2ad,
   capabilityd, metricd, picoclawd, ragd, scheduler, secretd, setupd, skilld, clawd + helpers.
 - Dashboard: Overview, Workflows, Packs, Providers, Registry, Traces, Settings, Setup.
 - Competitive platform primitives: UseCasePack, ProviderProfile, ExtensionManifest,
