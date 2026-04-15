@@ -1026,12 +1026,12 @@ play_jarvis_greeting() {
   fi
 }
 
-if [ -t 0 ] && [ -t 1 ]; then
+if [ -t 1 ] && command -v openclaw >/dev/null 2>&1; then
   play_jarvis_greeting
-  echo -e "  ${B}Launching OpenClaw + Kimi K2.5...${RESET}"
+  echo -e "  ${B}Opening OpenClaw TUI...${RESET}"
   echo ""
-  ollama launch openclaw --model kimi-k2.5:cloud
+  exec openclaw tui
 else
-  echo -e "  ${D}Run: ${RESET}${B}ollama launch openclaw --model kimi-k2.5:cloud${RESET}"
+  echo -e "  ${D}Run: ${RESET}${B}openclaw tui${RESET}"
   echo ""
 fi

@@ -89,6 +89,73 @@ Historical notes below are preserved for context, but they are not the current b
 
 ## Updates Done By Claude
 
+### 2026-04-15 - Claude (install bug fixes + LAN dashboard + auto TUI launch)
+
+#### Summary
+Full install validation on fresh Ubuntu (i7-9700K / 64GB RAM / no GPU). Two rounds: first run exposed
+multiple bugs, all fixed, second fresh install passed clean in ~661s. Machine nuked twice and re-validated.
+
+#### Changes shipped
+
+**`install.sh`**
+- **Tier models updated:** Tier B → `qwen3.5:4b`, Tier C/D → `qwen3.5:9b` (updated knowledge cutoff)
+- **OpenClaw on all tiers:** Removed optional framing — added `openclaw` to Tier A (`lowram`) runtimes. OpenClaw is the main thing, not an add-on.
+- **venv creation block added:** `python3 -m venv "${INSTALL_DIR}/venv"` before pip installs. All packages installed into venv. systemd units reference `%h/clawos/venv/bin/python3`.
+- **npm fallback:** Added `sudo apt-get install -y npm` after NodeSource install — Ubuntu's nodejs package doesn't bundle npm, causing "npm not found" failure.
+- **Bootstrap PYTHONPATH fix:** Wrapped bootstrap call with `cd "${INSTALL_DIR}" && PYTHONPATH="${INSTALL_DIR}"` so `clawos_core` is importable.
+- **Dashboard LAN config written post-bootstrap:** Appends `dashboard:\n  host: 0.0.0.0\n  port: 7070` to `config/clawos.yaml` if not already present.
+- **Dashboard URL in completion message:** Shows `http://localhost:7070` + LAN IP variant `http://<ip>:7070` at end of install.
+- **Auto-launch OpenClaw TUI:** Changed end-of-install block from `[ -t 0 ] && [ -t 1 ]` to `[ -t 1 ]` (stdin is a pipe in `curl | bash`, stdout is still a TTY). Replaced `ollama launch openclaw --model kimi-k2.5:cloud` with `exec openclaw tui`. User is now dropped straight into OpenClaw TUI after install — no manual step.
+
+**`services/dashd/api.py`**
+- `DashboardSettings.host` default: `"127.0.0.1"` → `"0.0.0.0"` (LAN accessible)
+- Cookie `SameSite`: `"strict"` → `"lax"` (fixes blank Workflows page when accessing via LAN IP)
+- WebSocket origin check: added LAN mode bypass — when bound to non-loopback, accept any `http/https` origin (fixes "Reconnecting to Nexus" from remote browser)
+
+**systemd unit files (9 files fixed)**
+- All 9 units pointed to `service.py` which has no `__main__`. Fixed to `main.py`:
+  - `clawos-agentd.service`, `clawos-clawd.service`, `clawos-memd.service`, `clawos-modeld.service`
+  - `clawos-policyd.service`, `clawos-toolbridge.service`, `clawos-voiced.service`, `clawos-scheduler.service`
+  - `clawos-agentd.service` also fixed ExecStart path to use full venv python path
+
+**`scripts/setup-systemd.sh`**
+- Added `clawos-scheduler.service` to `ALL_UNITS` array (was missing, never enabled)
+
+**`README.md`**
+- Hardware table: Tier B → `qwen3.5:4b`, Tier C → `qwen3.5:9b`
+- Added **Agent Runtimes** section with table: Nexus (all tiers), PicoClaw (Tier A ARM), OpenClaw (all tiers), Hermes Agent (coming soon)
+
+**`docs/PRODUCT_VISION.md`**
+- "Two Runtimes" section renamed to "Runtime Ecosystem"
+- Added PicoClaw entry (ARM auto-detect)
+- Added Hermes Agent entry (Nous Research, planned post-v0.1)
+
+#### Verification
+- Second fresh install (nuke → install) completed clean: ~661s total
+- Node v22 installed via NodeSource ✅
+- Frontend built ✅
+- All 9 systemd services active and staying running ✅
+- Dashboard accessible from LAN at `http://192.168.0.15:7070` ✅
+- WebSocket connects from remote browser ✅
+- Workflows page loads correctly over LAN ✅
+- OpenClaw TUI launches automatically at end of install ✅
+
+#### Test machine nuked again (2026-04-15 end of session)
+- Services stopped + disabled
+- `~/clawos` removed
+- Node/npm removed
+- Ollama binary + `~/.ollama` removed
+- systemd units cleared
+- Machine confirmed clean: node/npm/ollama all NOT FOUND
+
+#### Next steps (unchanged from previous session)
+- Priority 1: Run fresh install on now-clean machine, confirm OpenClaw TUI auto-launches
+- Priority 2: JARVIS voice validation (ElevenLabs + calendar ICS)
+- Priority 3: Demo asset recording (GIFs, screenshots)
+- Priority 4: Launch prep (Discord, Plausible, docs pass, tag v0.1.0)
+
+---
+
 ### 2026-04-14 - Claude (JARVIS briefing + install profiles + launch prep)
 
 #### New test hardware
