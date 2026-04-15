@@ -231,6 +231,12 @@ install_node() {
   refresh_shell_env
   command -v node >/dev/null 2>&1 || die "Node.js install finished but node is missing"
   ok "Node.js $(node --version)"
+
+  # Ensure npm is available — NodeSource includes it but Ubuntu apt node may not
+  if ! command -v npm >/dev/null 2>&1; then
+    run_with_spinner "Installing npm" \
+      sudo apt-get install -y npm || warn "npm install failed — frontend build may be skipped"
+  fi
 }
 
 # OpenClaw is installed by 'ollama launch openclaw' at the end of the install.
@@ -245,21 +251,21 @@ install_python_packages() {
     openwakeword cryptography icalendar
   )
 
-  if [ "$PLATFORM" = "macos" ]; then
-    run_with_spinner "Installing Python packages" \
-      python3 -m pip install -q "${PYTHON_PACKAGES[@]}" --user \
-      || warn "Some Python packages may have failed"
-  else
-    if run_with_spinner "Installing Python packages" \
-      python3 -m pip install -q "${PYTHON_PACKAGES[@]}" --break-system-packages; then
-      :
-    elif run_with_spinner "Retrying in user scope" \
-      python3 -m pip install -q "${PYTHON_PACKAGES[@]}" --user; then
-      :
-    else
-      warn "Some Python packages may have failed"
+  # Create a virtualenv so services have a clean, isolated Python environment
+  if [ ! -x "${INSTALL_DIR}/venv/bin/python3" ]; then
+    if [ "$PLATFORM" != "macos" ]; then
+      sudo apt-get install -y python3-venv >/dev/null 2>&1 || true
     fi
+    run_with_spinner "Creating Python virtualenv" \
+      python3 -m venv "${INSTALL_DIR}/venv" \
+      || die "Failed to create virtualenv at ${INSTALL_DIR}/venv"
   fi
+
+  VENV_PIP="${INSTALL_DIR}/venv/bin/pip"
+
+  run_with_spinner "Installing Python packages" \
+    "$VENV_PIP" install -q "${PYTHON_PACKAGES[@]}" \
+    || warn "Some Python packages may have failed"
 
   ok "pyyaml  fastapi  chromadb  ollama  pypdf  python-docx"
 }
@@ -906,9 +912,18 @@ if [ -t 0 ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
 fi
 
 run_with_spinner "Running bootstrap ($PROFILE profile)" \
-  python3 -m bootstrap.bootstrap --profile "$PROFILE" --yes \
+  "${INSTALL_DIR}/venv/bin/python3" -m bootstrap.bootstrap --profile "$PROFILE" --yes \
   || die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"
 ok "Bootstrap complete"
+
+# Write dashboard host config so the dashboard is accessible on the LAN
+CLAWOS_YAML="${INSTALL_DIR}/config/clawos.yaml"
+if [ -f "$CLAWOS_YAML" ] && ! grep -q "^dashboard:" "$CLAWOS_YAML" 2>/dev/null; then
+  printf '\ndashboard:\n  host: 0.0.0.0\n  port: 7070\n' >> "$CLAWOS_YAML"
+elif [ ! -f "$CLAWOS_YAML" ]; then
+  mkdir -p "${INSTALL_DIR}/config"
+  printf '_profile: %s\ndashboard:\n  host: 0.0.0.0\n  port: 7070\n' "$PROFILE" > "$CLAWOS_YAML"
+fi
 
 step "Pulling AI model"
 if [ "$SKIP_MODEL" = "true" ]; then

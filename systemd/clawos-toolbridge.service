@@ -7,7 +7,7 @@ Requires=clawos-policyd.service clawos-memd.service clawos-modeld.service
 [Service]
 Type=simple
 WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/toolbridge/service.py
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/toolbridge/main.py
 Restart=on-failure
 RestartSec=3
 StandardOutput=append:%h/clawos/logs/toolbridge.log

@@ -131,7 +131,7 @@ def _workbench_fetch(url: str, timeout: int = 12) -> dict:
 
 @dataclass(frozen=True)
 class DashboardSettings:
-    host: str = "127.0.0.1"
+    host: str = "0.0.0.0"
     port: int = PORT_DASHD
     auth_required: bool = True
     token: str = ""
@@ -890,7 +890,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             _load_dashboard_session_token(settings_obj.auth_required),
             httponly=True,
             secure=request.url.scheme == "https",
-            samesite="strict",
+            samesite="lax",
             max_age=86400,
         )
         return response

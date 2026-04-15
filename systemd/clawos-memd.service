@@ -7,7 +7,7 @@ Requires=clawos-policyd.service
 [Service]
 Type=simple
 WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/memd/service.py
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/memd/main.py
 Restart=on-failure
 RestartSec=3
 StandardOutput=append:%h/clawos/logs/memd.log

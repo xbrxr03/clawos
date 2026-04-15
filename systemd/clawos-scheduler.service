@@ -7,7 +7,7 @@ Requires=clawos-agentd.service
 [Service]
 Type=simple
 WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/scheduler/service.py
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/scheduler/main.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=append:%h/clawos/logs/scheduler.log
