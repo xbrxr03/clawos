@@ -912,7 +912,7 @@ if [ -t 0 ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
 fi
 
 run_with_spinner "Running bootstrap ($PROFILE profile)" \
-  "${INSTALL_DIR}/venv/bin/python3" -m bootstrap.bootstrap --profile "$PROFILE" --yes \
+  bash -c "cd \"${INSTALL_DIR}\" && PYTHONPATH=\"${INSTALL_DIR}\" \"${INSTALL_DIR}/venv/bin/python3\" -m bootstrap.bootstrap --profile \"$PROFILE\" --yes" \
   || die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"
 ok "Bootstrap complete"
 
