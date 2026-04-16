@@ -8,6 +8,12 @@
       "port": 7099
     },
     {
+      "name": "Website Preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "7100", "--directory", "website"],
+      "port": 7100
+    },
+    {
       "name": "Dashboard Frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

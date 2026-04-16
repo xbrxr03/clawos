@@ -524,6 +524,9 @@
   <a href="#who" title="Who it's for"></a>
   <a href="#savings" title="Savings"></a>
   <a href="#security" title="Security"></a>
+  <a href="#stack" title="The Stack"></a>
+  <a href="#cloud-compare" title="Cloud vs ClawOS"></a>
+  <a href="#faq" title="FAQ"></a>
   <a href="#premium" title="Premium"></a>
 </nav>
 
@@ -537,7 +540,7 @@
   <div class="hero-scan"></div>
   <div class="hero-eyebrow"><span class="jarvis-dot"></span> JARVIS ONLINE &nbsp;·&nbsp; Open Source · AGPL-3.0</div>
   <h1>The complete <em>JARVIS stack</em>.<br>One command.</h1>
-  <p class="hero-sub">ClawOS brings together everything the OpenClaw ecosystem needs to actually work — voice, memory, a 3D knowledge brain, 29 automations, and a command center dashboard. Curated, integrated, and running on your hardware.</p>
+  <p class="hero-sub">The OpenClaw ecosystem, fully assembled. Voice pipeline (Piper free, ElevenLabs premium), 14-layer memory, a 3D knowledge brain, 9 agent frameworks, 29 automations, and a command center dashboard. Curated, integrated, and running on your hardware.</p>
 
   <div class="install-block">
     <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash</code>
@@ -561,12 +564,12 @@
       <div class="stat-label">Automations</div>
     </div>
     <div class="stat">
-      <div class="stat-num">20</div>
-      <div class="stat-label">Services</div>
+      <div class="stat-num">9</div>
+      <div class="stat-label">Frameworks</div>
     </div>
     <div class="stat">
-      <div class="stat-num">4 min</div>
-      <div class="stat-label">To install</div>
+      <div class="stat-num">14</div>
+      <div class="stat-label">Memory Layers</div>
     </div>
     <div class="stat">
       <div class="stat-num">$0</div>
@@ -589,7 +592,7 @@
     <div class="compare-cell clawos"><span class="check">✓</span> Wake word voice pipeline, ready out of the box</div>
 
     <div class="compare-cell plain"><span class="cross">✗</span> ChromaDB + vector search (build yourself)</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> 4-layer memory — pinned, workflow, semantic, history</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 14-layer memory — temporal KG, retention decay, semantic + keyword fusion</div>
 
     <div class="compare-cell plain"><span class="cross">✗</span> Obsidian + plugins (separate app, no agent link)</div>
     <div class="compare-cell clawos"><span class="check">✓</span> Nexus Brain — 3D knowledge graph agents write to</div>
@@ -603,8 +606,14 @@
     <div class="compare-cell plain"><span class="cross">✗</span> No dashboard — terminal only</div>
     <div class="compare-cell clawos"><span class="check">✓</span> 17-page command center at :7070</div>
 
-    <div class="compare-cell plain"><span class="cross">✗</span> No safety layer — tools run unchecked</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> policyd — every action gated, human approval queue</div>
+    <div class="compare-cell plain"><span class="cross">✗</span> Cloud hosting: $16–133/month, data on their servers</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Your hardware — try free, own for $10 once</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> No premium voice — cloud TTS needs manual wiring</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Piper (free, offline) out of the box — paste ElevenLabs key for premium JARVIS voice</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> Locked to one framework — no switching</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Framework Store — 9 agent frameworks, switch in one click</div>
   </div>
 </section>
 
@@ -637,8 +646,8 @@
     </div>
     <div class="feature-card">
       <div class="feature-icon">🧠</div>
-      <div class="feature-title">4-Layer Persistent Memory</div>
-      <div class="feature-body">Pinned notes, workflow context, semantic vector search, and conversation history. Your JARVIS remembers across every session.</div>
+      <div class="feature-title">14-Layer Persistent Memory</div>
+      <div class="feature-body">Temporal knowledge graph, Ebbinghaus retention decay, RRF fusion search, secret redaction, intent-routed recall. Your JARVIS remembers everything — and forgets what it should.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🌐</div>
@@ -656,6 +665,16 @@
       <div class="feature-body">Services, workflows, memory, traces, MCP manager, agent federation, skills — one dashboard at :7070.</div>
     </div>
     <div class="feature-card">
+      <div class="feature-icon">🍎</div>
+      <div class="feature-title">Mac Bonus: OMI Integration</div>
+      <div class="feature-body">Running on macOS? Plug in the OMI app for ambient listening + wearable pendant support. Every conversation becomes searchable memory. Optional extra on top of the standard voice pipeline — Linux/Windows users get the full JARVIS without it.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔀</div>
+      <div class="feature-title">Framework Store</div>
+      <div class="feature-body">SmolAgents, AgentZero, PocketFlow, DSPy, CrewAI, AutoGen, LangGraph, Haystack, MetaGPT — 9 frameworks, switch in one click. Not locked to one.</div>
+    </div>
+    <div class="feature-card">
       <div class="feature-icon">🔌</div>
       <div class="feature-title">MCP + A2A Federation</div>
       <div class="feature-body">Connect any Model Context Protocol server. Link multiple ClawOS instances on your LAN. Claude, OpenClaw, your own agents — all wired.</div>
@@ -666,7 +685,7 @@
       <div class="feature-body">Andrej Karpathy doesn't use RAG. Drop sources into raw/, JARVIS builds wiki/ automatically, answers live in outputs/. Structure that compounds over time.</div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">🔀</div>
+      <div class="feature-icon">🛤️</div>
       <div class="feature-title">Smart Model Routing</div>
       <div class="feature-body">Exploration → DeepSeek (pennies). Hard reasoning → Claude. Local coding → Ollama (free). One workflow, every frontier model. Cuts API costs 80%.</div>
     </div>
@@ -787,7 +806,7 @@
       <div class="calc-item">
         <div class="calc-item-left">
           <input type="checkbox" class="calc-checkbox" data-cost="29" checked id="c3" />
-          <label class="calc-item-name" for="c3">Managed OpenClaw hosting <span style="color:var(--text-3);font-size:12px">(Elestio, RunMyClaw)</span></label>
+          <label class="calc-item-name" for="c3">Managed OpenClaw hosting <span style="color:var(--text-3);font-size:12px">(cloud hosting services)</span></label>
         </div>
         <div class="calc-item-price">$29/mo</div>
       </div>
@@ -825,12 +844,12 @@
   <div class="switch-card">
     <div class="switch-badge">For hosted OpenClaw customers</div>
     <div class="switch-title">Paying monthly for something that should be a one-time install?</div>
-    <p class="switch-body">Managed OpenClaw services charge $29–$59/mo because setup is genuinely hard — 15+ steps, broken dependencies, no voice, no dashboard, no automations. ClawOS solves the setup problem. One command handles everything Elestio and RunMyClaw charge you monthly to manage.</p>
+    <p class="switch-body">Managed cloud hosting services charge $16–133/mo because setup is genuinely hard — 15+ steps, broken dependencies, no voice, no dashboard, no automations. ClawOS solves the setup problem. One command handles everything those services charge you monthly to manage.</p>
     <div class="switch-list">
       <div class="switch-item"><span class="check">✓</span> Same OpenClaw ecosystem — no migration</div>
-      <div class="switch-item"><span class="check">✓</span> Runs on your hardware, not their VPS</div>
-      <div class="switch-item"><span class="check">✓</span> Adds voice, WhatsApp, workflows, and 3D brain that hosted plans don't have</div>
-      <div class="switch-item"><span class="check">✓</span> $10 once vs $29–$59 every month</div>
+      <div class="switch-item"><span class="check">✓</span> Runs on your hardware, not someone else's VPS</div>
+      <div class="switch-item"><span class="check">✓</span> Adds voice (Piper free / ElevenLabs premium), 14-layer memory, Framework Store, and 3D brain that cloud hosts don't have — plus OMI on Mac</div>
+      <div class="switch-item"><span class="check">✓</span> $10 once vs $16–133 every month</div>
     </div>
     <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="margin-top: 28px; display: inline-block;">Switch to ClawOS →</a>
   </div>
@@ -869,11 +888,169 @@
 <!-- Metrics -->
 <section style="padding: 0 24px;">
   <div class="metrics-bar">
-    <div class="metric"><div class="metric-num">20</div><div class="metric-label">Services</div></div>
+    <div class="metric"><div class="metric-num">22</div><div class="metric-label">Services</div></div>
     <div class="metric"><div class="metric-num">29</div><div class="metric-label">Workflows</div></div>
-    <div class="metric"><div class="metric-num">93</div><div class="metric-label">API endpoints</div></div>
-    <div class="metric"><div class="metric-num">166</div><div class="metric-label">Tests passing</div></div>
-    <div class="metric"><div class="metric-num">v0.1</div><div class="metric-label">Release</div></div>
+    <div class="metric"><div class="metric-num">9</div><div class="metric-label">Frameworks</div></div>
+    <div class="metric"><div class="metric-num">14</div><div class="metric-label">Memory Layers</div></div>
+    <div class="metric"><div class="metric-num">244</div><div class="metric-label">Tests passing</div></div>
+  </div>
+</section>
+
+<!-- The Stack — Architecture -->
+<section id="stack">
+  <div class="section-eyebrow">The architecture</div>
+  <div class="section-title">Three systems. One JARVIS.</div>
+  <p class="section-sub">Voice captures what you say. Nexus thinks and remembers. OpenClaw acts with 13,700+ skills. Together, they are JARVIS.</p>
+
+  <div style="
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 24px;
+    margin-top: 40px;
+    text-align: center;
+  ">
+    <div style="display: flex; justify-content: center; align-items: center; gap: 24px; flex-wrap: wrap; margin-bottom: 16px;">
+      <div style="
+        background: rgba(229,57,53,0.08);
+        border: 1px solid rgba(229,57,53,0.2);
+        border-radius: 12px;
+        padding: 18px 28px;
+        min-width: 170px;
+      ">
+        <div style="font-size: 15px; font-weight: 600; color: var(--text);">Voice Pipeline</div>
+        <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Piper (free) · ElevenLabs (premium)</div>
+      </div>
+      <div style="font-size: 20px; color: var(--text-3);">&#8596;</div>
+      <div style="
+        background: rgba(229,57,53,0.15);
+        border: 1px solid rgba(229,57,53,0.4);
+        border-radius: 12px;
+        padding: 18px 28px;
+        min-width: 170px;
+      ">
+        <div style="font-size: 15px; font-weight: 600; color: var(--text);">ClawOS Nexus</div>
+        <div style="font-size: 12px; color: var(--accent-2); margin-top: 2px;">Brain + 14-Layer Memory</div>
+      </div>
+      <div style="font-size: 20px; color: var(--text-3);">&#8596;</div>
+      <div style="
+        background: rgba(229,57,53,0.08);
+        border: 1px solid rgba(229,57,53,0.2);
+        border-radius: 12px;
+        padding: 18px 28px;
+        min-width: 170px;
+      ">
+        <div style="font-size: 15px; font-weight: 600; color: var(--text);">OpenClaw</div>
+        <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Hands (13,700+ tools)</div>
+      </div>
+    </div>
+    <p style="color: var(--text-3); font-size: 13px; margin-top: 20px;">All running on your machine. No tunnels. No cloud. No ngrok. Just localhost.<br>Voice: Piper (offline, free) or ElevenLabs (premium, bring your own key). On Mac, optionally plug in the OMI app for ambient listening + wearable pendant.</p>
+  </div>
+</section>
+
+<!-- Cloud Hosting Comparison -->
+<section id="cloud-compare" style="padding-top: 0;">
+  <div class="section-eyebrow">The honest comparison</div>
+  <div class="section-title">Why pay monthly for something you can own?</div>
+  <p class="section-sub">Managed cloud hosting for OpenClaw typically runs $16&ndash;133/month. Here's what you actually get.</p>
+
+  <div style="overflow-x: auto; margin-top: 40px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+      <thead>
+        <tr>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;"></th>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Cloud Hosting</th>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">ClawOS Core</th>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">ClawOS Premium</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Setup time</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">~30 seconds (managed)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">~4 minutes (one-line installer)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">~4 minutes</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Technical skill needed</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">None</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">None (copy-paste one line)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">None</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Monthly cost</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">$19 / $39 / $79 / $133+ per mo</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0/mo</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0/mo</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">One-time cost</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">&mdash;</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$10 once</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Cost after 1 year</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">$228 &ndash; $1,596+</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$10 total</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Your data</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Provider servers (their VPS)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Your hardware</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Your hardware</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Works offline</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Yes</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Yes</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Auto-updates</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Managed for you</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Built-in (nexus update)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Built-in</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Voice (JARVIS)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Not included</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Piper (free, offline)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">ElevenLabs wired (BYO key)</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Memory system</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Basic</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">14-layer (temporal KG + RRF)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">14-layer + CrossEncoder reranking</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Framework Store</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">9 frameworks</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">9 frameworks</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">3D Knowledge Brain</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Included</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Included</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">OMI (Mac bonus)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">&mdash;</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Optional</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Optional</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="color: var(--text-3); font-size: 12.5px; max-width: 620px; margin: 24px auto 0; text-align: center; line-height: 1.7;">
+    Managed cloud hosting for OpenClaw typically runs $16&ndash;133/month. ClawOS runs on your own hardware, adds OMI, voice, and 14-layer memory that cloud hosts don't offer, and the full ecosystem is a one-time $10. That's less than most services charge for a single month.
+  </p>
+  <p style="color: var(--text-3); font-size: 12px; text-align: center; margin-top: 10px;">
+    Cloud AI providers (Anthropic, OpenAI, etc.) require their own API keys if you choose to use them &mdash; same as any local AI setup. Ollama local models are always free.
+  </p>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="padding-top: 0;">
+  <div class="section-eyebrow">Questions people ask</div>
+  <div class="section-title">The short version.</div>
+  <p class="section-sub">Everything people email us about, answered up front.</p>
+
+  <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 16px;">
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Do I need to be technical to use this?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">No. The installer is one line — copy, paste, press enter. The dashboard runs at <code style="color:var(--accent-2);font-size:12.5px;">localhost:7070</code>. If you can click a button, you can use ClawOS. For voice, say "Hey Jarvis" — no config needed.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Does ClawOS store, share, or train on my data?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">No. Everything runs on your hardware. No telemetry. No analytics. Every line of code is AGPL-3.0 &mdash; audit it yourself on GitHub. Cloud AI models (if you enable them with your own API key) follow those providers' policies; local models (Ollama) never leave your machine.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        What hardware do I need?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Minimum: any PC, Mac, or Linux box with 8&nbsp;GB RAM (runs Ollama 3B/7B models, Piper voice, full dashboard). Recommended: 16&nbsp;GB+ for smooth larger-model inference. A spare laptop, old desktop, or mini PC works. No GPU required for basic use.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        What's the difference between free and $10 Premium?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;"><strong style="color:var(--text);">Free:</strong> Piper voice, 5 workflows, Nexus 3D brain, 14-layer memory, Framework Store, OpenClaude terminal, policy gatekeeper, 17-page dashboard &mdash; all of it, forever.<br><br><strong style="color:var(--text);">Premium ($10 once):</strong> all 29 workflows unlocked, cloud model profiles (Anthropic/OpenAI/Azure wired), ElevenLabs voice wiring (your API key), CrossEncoder reranking, premium skill packs, priority Discord.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Do I need OMI? What if I'm on Linux or Windows?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">OMI is an optional Mac bonus. The full JARVIS voice pipeline works on any OS without it &mdash; Whisper transcribes, Piper (or ElevenLabs) speaks, wake word listens. On macOS you can also plug in the OMI app or wearable pendant for ambient listening + passive conversation capture.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Can I get a refund?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Yes &mdash; 30-day money-back on Premium, no questions. Free tier is always free, so no risk trying it first. Core features (voice, memory, dashboard, 5 workflows) stay free forever whether you upgrade or not.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Why one-time $10 instead of a subscription?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Because software you run on your own hardware shouldn't have a meter attached to it. Cloud hosting services charge $19&ndash;$133/mo forever because they run the servers. You run the server. You paid for your hardware once. Why would the software be different?</p>
+    </details>
   </div>
 </section>
 
@@ -886,16 +1063,16 @@
     <p style="color: var(--text-2); font-size: 14px; margin-bottom: 32px;">One-time purchase. No subscription. No renewals. Yours forever.</p>
 
     <div class="premium-features">
-      <div class="premium-feature"><span class="check">✓</span> ClawOS Dispatch — weekly newsletter</div>
-      <div class="premium-feature"><span class="check">✓</span> Community Discord — power users</div>
-      <div class="premium-feature"><span class="check">✓</span> All 29 workflows (free: 5)</div>
-      <div class="premium-feature"><span class="check">✓</span> Research Wiki (raw/ → wiki/ → outputs/)</div>
-      <div class="premium-feature"><span class="check">✓</span> Smart model routing (DeepSeek / Claude / Ollama)</div>
+      <div class="premium-feature"><span class="check">✓</span> Cloud model profiles (Anthropic, OpenAI, Azure)</div>
       <div class="premium-feature"><span class="check">✓</span> ElevenLabs JARVIS voice (your key — we wire it)</div>
+      <div class="premium-feature"><span class="check">✓</span> All 29 workflows (free: 5)</div>
+      <div class="premium-feature"><span class="check">✓</span> Full OpenClaw ecosystem (13,700+ skills)</div>
+      <div class="premium-feature"><span class="check">✓</span> Smart model routing (DeepSeek / Claude / Ollama)</div>
+      <div class="premium-feature"><span class="check">✓</span> Premium skill packs from ClawHub</div>
       <div class="premium-feature"><span class="check">✓</span> Nexus Brain 3D knowledge graph</div>
       <div class="premium-feature"><span class="check">✓</span> Browser control + A2A federation</div>
-      <div class="premium-feature"><span class="check">✓</span> Advanced RAG + GraphRAG</div>
-      <div class="premium-feature"><span class="check">✓</span> Skill publishing to ClawHub</div>
+      <div class="premium-feature"><span class="check">✓</span> Research Wiki + Advanced RAG + CrossEncoder reranking</div>
+      <div class="premium-feature"><span class="check">✓</span> Priority community access + Discord</div>
     </div>
     <p style="color: var(--text-2); font-size: 12px; margin-bottom: 8px;">Free: Piper TTS — offline, private. Premium: paste your ElevenLabs key once, JARVIS sounds cinematic.</p>
     <p style="color: var(--text-2); font-size: 13px; margin-bottom: 24px; font-weight: 500;">Why not DIY? ~60 hours, 7 repos, $35/mo API costs vs $10 once.</p>
@@ -940,7 +1117,7 @@
   }
 
   // Side nav active state on scroll
-  const sections = ['hero', 'why', 'features', 'who', 'savings', 'security', 'premium'];
+  const sections = ['hero', 'why', 'features', 'who', 'savings', 'security', 'stack', 'cloud-compare', 'faq', 'premium'];
   const navLinks = document.querySelectorAll('.sidenav a');
   function updateNav() {
     const scrollY = window.scrollY || window.pageYOffset;
@@ -982,8 +1159,8 @@
   const statEls = document.querySelectorAll('.stat-num');
   const statData = [
     { target: 29, suffix: '+' },
-    { target: 20, suffix: '' },
-    { target: 4, suffix: ' min' },
+    { target: 9, suffix: '' },
+    { target: 14, suffix: '' },
     { target: 0, suffix: '' },
   ];
   let statsAnimated = false;

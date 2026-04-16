@@ -3,792 +3,1186 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClawOS — Your AI, on your machine</title>
-  <meta name="description" content="ClawOS is a local-first AI operating system. Boot into a full agent environment — voice, memory, WhatsApp, 27+ workflows — on consumer hardware, offline, free." />
-  <meta property="og:title" content="ClawOS — Your AI, on your machine" />
-  <meta property="og:description" content="Local-first AI OS. No cloud. No API keys. No monthly bill." />
-  <meta property="og:type" content="website" />
+  <title>ClawOS — Your Private JARVIS</title>
+  <meta name="description" content="The complete JARVIS stack built on the OpenClaw ecosystem — voice, memory, 3D knowledge brain, 29 automations, WhatsApp, and a command center dashboard." />
+  <meta property="og:title" content="ClawOS — Your Private JARVIS" />
+  <meta property="og:description" content="Take any spare PC and turn it into a private JARVIS. Voice, WhatsApp, 27+ automations — all local." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/xbrxr03/clawos/main/landing/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>" />
+  <link rel="icon" href="favicon.ico" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #09090f;
-      --bg2:      #0f0f1a;
-      --bg3:      #141420;
-      --border:   rgba(255,255,255,0.07);
-      --violet:   #7c6af5;
-      --violet2:  #9d8fff;
-      --violet-dim: rgba(124,106,245,0.15);
-      --text:     #e8e6f0;
-      --muted:    #7a7890;
-      --green:    #4ade80;
-      --amber:    #f59e0b;
-      --radius:   12px;
+      --bg: #0a0000;
+      --surface: #120606;
+      --surface-2: #1a0808;
+      --border: rgba(255,50,50,0.10);
+      --accent: #e53935;
+      --accent-2: #ff6b6b;
+      --text: #f5f0f0;
+      --text-2: #9a8888;
+      --text-3: #4a3a3a;
+      --green: #22c55e;
+      --glow: rgba(229,57,53,0.18);
     }
 
     html { scroll-behavior: smooth; }
-
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
-    /* ── NAV ── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 40px;
-      height: 60px;
-      background: rgba(9,9,15,0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
+    /* ── Audience banner ── */
+    .audience-banner {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: linear-gradient(90deg, rgba(229,57,53,0.18) 0%, rgba(255,107,107,0.08) 100%);
+      border-bottom: 1px solid rgba(229,57,53,0.25);
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text-2);
+      backdrop-filter: blur(8px);
     }
-    .nav-logo {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 17px; font-weight: 700; color: var(--text); text-decoration: none;
-    }
-    .nav-logo .claw { font-size: 22px; }
-    .nav-links { display: flex; align-items: center; gap: 32px; }
-    .nav-links a {
-      color: var(--muted); text-decoration: none; font-size: 14px;
-      transition: color .15s;
-    }
-    .nav-links a:hover { color: var(--text); }
-    .nav-cta {
-      background: var(--violet); color: #fff !important;
-      padding: 7px 18px; border-radius: 8px; font-weight: 600;
-      font-size: 13px !important; transition: opacity .15s !important;
-    }
-    .nav-cta:hover { opacity: .85; }
+    .audience-banner a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .audience-banner a:hover { text-decoration: underline; }
 
-    /* ── HERO ── */
+    /* ── Fixed side nav (PAPI pattern) ── */
+    .sidenav {
+      position: fixed;
+      left: 28px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 100;
+    }
+    .sidenav a {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-3);
+      display: block;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    .sidenav a.active, .sidenav a:hover {
+      background: var(--accent);
+      transform: scale(1.6);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    @media (max-width: 900px) { .sidenav { display: none; } }
+
+    /* ── Sections ── */
+    section { padding: 100px 24px; max-width: 1000px; margin: 0 auto; }
+
+    /* ── Hero ── */
     .hero {
       min-height: 100vh;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 120px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      position: relative; overflow: hidden;
+      position: relative;
+      padding: 60px 24px;
     }
-    .hero-glow {
-      position: absolute; top: -160px; left: 50%; transform: translateX(-50%);
-      width: 900px; height: 600px;
-      background: radial-gradient(ellipse at center, rgba(124,106,245,0.18) 0%, transparent 70%);
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 30%, rgba(229,57,53,0.14) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 70% 60%, rgba(255,107,107,0.06) 0%, transparent 60%);
       pointer-events: none;
     }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--violet-dim); border: 1px solid rgba(124,106,245,0.3);
-      color: var(--violet2); font-size: 12px; font-weight: 600;
-      padding: 5px 14px; border-radius: 100px; margin-bottom: 28px;
-      text-transform: uppercase; letter-spacing: .06em;
+    .hero-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+      font-weight: 600;
     }
-    .hero-badge .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--green); box-shadow: 0 0 6px var(--green);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-    h1 {
-      font-size: clamp(40px, 7vw, 76px);
-      font-weight: 800; line-height: 1.05;
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4.4rem);
+      font-weight: 800;
+      line-height: 1.1;
       letter-spacing: -0.03em;
-      max-width: 900px;
-      background: linear-gradient(160deg, #fff 40%, var(--violet2) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 24px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       background-clip: text;
     }
     .hero-sub {
-      margin-top: 24px;
-      font-size: clamp(16px, 2.5vw, 20px);
-      color: var(--muted); max-width: 580px;
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--text-2);
+      max-width: 560px;
+      margin: 0 auto 40px;
       line-height: 1.7;
     }
-    .hero-actions {
-      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-      justify-content: center; margin-top: 44px;
-    }
-    .btn-primary {
-      background: var(--violet); color: #fff;
-      padding: 14px 32px; border-radius: 10px;
-      font-size: 15px; font-weight: 700; text-decoration: none;
-      transition: opacity .15s, transform .15s;
-      box-shadow: 0 0 40px rgba(124,106,245,0.35);
-    }
-    .btn-primary:hover { opacity:.88; transform: translateY(-1px); }
-    .btn-secondary {
-      background: transparent; color: var(--text);
+    .install-block {
+      background: var(--surface);
       border: 1px solid var(--border);
-      padding: 14px 32px; border-radius: 10px;
-      font-size: 15px; font-weight: 600; text-decoration: none;
-      transition: border-color .15s, transform .15s;
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      max-width: 100%;
+      overflow: hidden;
     }
-    .btn-secondary:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
-
-    /* install command */
-    .install-cmd {
-      margin-top: 48px;
-      display: inline-flex; align-items: center; gap: 12px;
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 10px; padding: 12px 20px;
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-      font-size: 13px; color: var(--text);
+    .install-block code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: var(--accent-2);
+      white-space: nowrap;
     }
-    .install-cmd .prompt { color: var(--violet); user-select: none; }
     .copy-btn {
-      background: none; border: none; cursor: pointer;
-      color: var(--muted); padding: 2px 6px; border-radius: 4px;
-      font-size: 12px; transition: color .15s;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: var(--text-2);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    .copy-btn:hover { color: var(--text); }
-
-    /* hero stats */
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .hero-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: #c62828; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(229,57,53,0.35); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
     .hero-stats {
-      display: flex; gap: 40px; flex-wrap: wrap; justify-content: center;
-      margin-top: 64px;
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
     .stat { text-align: center; }
-    .stat-num { font-size: 28px; font-weight: 800; color: var(--violet2); }
-    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+    .stat-num { font-size: 1.8rem; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; }
 
-    /* ── SECTION COMMON ── */
-    section { padding: 96px 24px; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .section-label {
-      font-size: 11px; font-weight: 700; color: var(--violet);
-      text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px;
+    /* ── Section headers ── */
+    .section-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+      font-weight: 600;
     }
     .section-title {
-      font-size: clamp(28px, 4vw, 44px); font-weight: 800;
-      letter-spacing: -0.02em; line-height: 1.15;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      line-height: 1.2;
     }
     .section-sub {
-      margin-top: 16px; font-size: 17px; color: var(--muted); max-width: 560px;
+      color: var(--text-2);
+      font-size: 1.05rem;
+      max-width: 520px;
+      line-height: 1.7;
     }
 
-    /* ── FEATURE GRID ── */
-    .features { background: var(--bg); }
-    .feat-grid {
+    /* ── Why not just Ollama ── */
+    .compare-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1px;
-      background: var(--border);
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 12px;
       overflow: hidden;
-      margin-top: 56px;
+      margin-top: 40px;
     }
-    .feat-card {
-      background: var(--bg2);
-      padding: 32px;
-      transition: background .2s;
+    .compare-col { }
+    .compare-header {
+      padding: 16px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
     }
-    .feat-card:hover { background: var(--bg3); }
-    .feat-icon {
-      font-size: 28px; margin-bottom: 16px;
-      display: block;
+    .compare-header.plain { background: var(--surface); color: var(--text-2); }
+    .compare-header.clawos { background: rgba(229,57,53,0.12); color: var(--accent); }
+    .compare-row {
+      display: contents;
     }
-    .feat-title {
-      font-size: 16px; font-weight: 700; margin-bottom: 8px;
+    .compare-cell {
+      padding: 14px 24px;
+      font-size: 13.5px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .feat-body { font-size: 14px; color: var(--muted); line-height: 1.6; }
-    .feat-tag {
-      display: inline-block; margin-top: 12px;
-      font-size: 11px; font-weight: 600; padding: 3px 8px;
-      border-radius: 4px; background: var(--violet-dim);
-      color: var(--violet2);
-    }
+    .compare-cell.plain { background: var(--surface); color: var(--text-2); }
+    .compare-cell.clawos { background: var(--surface-2); color: var(--text); }
+    .compare-cell:last-of-type { border-bottom: none; }
+    .check { color: var(--green); font-size: 15px; }
+    .cross { color: var(--text-3); font-size: 15px; }
 
-    /* ── HOW IT WORKS ── */
-    .how { background: var(--bg2); }
-    .steps {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 32px; margin-top: 56px;
+    /* ── Feature grid ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
     }
-    .step { position: relative; }
-    .step-num {
-      font-size: 48px; font-weight: 900;
-      color: rgba(124,106,245,0.15);
-      line-height: 1;
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { border-color: rgba(229,57,53,0.35); transform: translateY(-2px); }
+    .feature-icon { font-size: 24px; margin-bottom: 12px; }
+    .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .feature-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+
+    /* ── Savings calculator ── */
+    .calc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin-top: 48px;
+    }
+    .calc-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; }
+    .calc-sub { color: var(--text-2); font-size: 13.5px; margin-bottom: 32px; }
+    .calc-items { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
+    .calc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .calc-item-left { display: flex; align-items: center; gap: 12px; }
+    .calc-checkbox {
+      width: 18px; height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .calc-item-name { font-size: 14px; }
+    .calc-item-price { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+    .calc-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    .calc-result {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .calc-total-label { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
+    .calc-total-num { font-size: 2rem; font-weight: 700; color: var(--text); }
+    .calc-total-num span { color: var(--text-2); font-size: 1rem; font-weight: 400; margin-left: 8px; }
+    .calc-cta { text-align: right; }
+    .calc-cta-label { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+
+    /* ── Security story ── */
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+    .security-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .security-badge {
+      display: inline-block;
+      background: rgba(34,197,94,0.12);
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
       margin-bottom: 12px;
     }
-    .step-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-    .step-body { font-size: 14px; color: var(--muted); }
+    .security-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .security-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
 
-    /* ── TERMINAL DEMO ── */
-    .terminal-wrap {
-      margin-top: 56px;
-      background: #0a0a12;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .terminal-bar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px;
-      background: var(--bg3);
+    /* ── Metrics bar ── */
+    .metrics-bar {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 48px 0;
+      border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
+      margin-top: 48px;
     }
-    .dot-r { width:12px;height:12px;border-radius:50%;background:#ff5f57; }
-    .dot-y { width:12px;height:12px;border-radius:50%;background:#ffbd2e; }
-    .dot-g { width:12px;height:12px;border-radius:50%;background:#28ca41; }
-    .terminal-title { margin-left: auto; margin-right: auto; font-size: 12px; color: var(--muted); }
-    .terminal-body {
-      padding: 24px 28px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 13px; line-height: 1.9;
-    }
-    .t-prompt { color: var(--violet); }
-    .t-cmd { color: var(--text); }
-    .t-out { color: var(--muted); }
-    .t-success { color: var(--green); }
-    .t-amber { color: var(--amber); }
-    .t-violet { color: var(--violet2); }
+    .metric { text-align: center; }
+    .metric-num { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .metric-label { font-size: 12px; color: var(--text-3); margin-top: 4px; }
 
-    /* ── HARDWARE TIERS ── */
-    .hw-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px; margin-top: 56px;
+    /* ── Premium CTA ── */
+    .premium-card {
+      background: linear-gradient(135deg, rgba(229,57,53,0.10) 0%, rgba(255,107,107,0.05) 100%);
+      border: 1px solid rgba(229,57,53,0.30);
+      border-radius: 20px;
+      padding: 60px 40px;
+      text-align: center;
     }
-    .hw-card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 28px;
-      position: relative; overflow: hidden;
+    .premium-price {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin: 16px 0 8px;
+      letter-spacing: -0.04em;
     }
-    .hw-card.featured { border-color: var(--violet); }
-    .hw-card.featured::before {
-      content: 'RECOMMENDED';
-      position: absolute; top: 16px; right: -28px;
-      background: var(--violet); color: #fff;
-      font-size: 10px; font-weight: 700; padding: 3px 36px;
-      transform: rotate(35deg); letter-spacing:.08em;
+    .premium-price sup { font-size: 1.5rem; vertical-align: super; }
+    .premium-tag {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 24px;
     }
-    .hw-tier { font-size: 11px; font-weight: 700; color: var(--violet); text-transform: uppercase; letter-spacing: .08em; }
-    .hw-device { font-size: 18px; font-weight: 800; margin: 6px 0; }
-    .hw-specs { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
-    .hw-feature {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 13px; margin-bottom: 6px;
+    /* ── Switch card ── */
+    .switch-card {
+      background: var(--surface);
+      border: 1px solid rgba(229,57,53,0.25);
+      border-radius: 16px;
+      padding: 48px;
+      max-width: 760px;
+      margin: 0 auto;
     }
-    .hw-feature .check { color: var(--green); }
-    .hw-feature .cross { color: #555; }
+    .switch-badge {
+      display: inline-block;
+      background: rgba(229,57,53,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(229,57,53,0.25);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      margin-bottom: 20px;
+    }
+    .switch-title { font-size: 1.6rem; font-weight: 700; line-height: 1.25; margin-bottom: 16px; }
+    .switch-body { color: var(--text-2); font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
+    .switch-list { display: flex; flex-direction: column; gap: 10px; }
+    .switch-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14.5px; color: var(--text-2); }
 
-    /* ── PRICING ── */
-    .pricing-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px; margin-top: 56px;
+    .premium-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      text-align: left;
+      margin: 32px 0;
     }
-    .price-card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 32px;
+    .premium-feature {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      color: var(--text-2);
     }
-    .price-card.featured { border-color: var(--violet); background: linear-gradient(160deg, var(--bg2) 0%, rgba(124,106,245,0.06) 100%); }
-    .price-tier { font-size: 12px; font-weight: 700; color: var(--violet); text-transform: uppercase; letter-spacing: .08em; }
-    .price-amount { font-size: 40px; font-weight: 900; margin: 8px 0 4px; }
-    .price-amount span { font-size: 16px; font-weight: 400; color: var(--muted); }
-    .price-desc { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
-    .price-feature { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; margin-bottom: 10px; }
-    .price-feature .icon { color: var(--green); flex-shrink: 0; margin-top: 2px; }
-    .price-btn {
-      display: block; text-align: center; margin-top: 28px;
-      padding: 12px; border-radius: 8px; font-weight: 700; font-size: 14px;
-      text-decoration: none; transition: opacity .15s;
-    }
-    .price-btn-primary { background: var(--violet); color: #fff; }
-    .price-btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
-    .price-btn:hover { opacity: .8; }
+    .premium-feature .check { font-size: 13px; }
 
-    /* ── FAQ ── */
-    .faq { background: var(--bg2); }
-    .faq-list { margin-top: 48px; }
-    .faq-item {
-      border-bottom: 1px solid var(--border);
-      padding: 24px 0;
-    }
-    .faq-q { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
-    .faq-a { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 680px; }
-
-    /* ── CTA ── */
-    .cta-section {
-      text-align: center; padding: 120px 24px;
-      background: var(--bg);
-      position: relative; overflow: hidden;
-    }
-    .cta-glow {
-      position: absolute; bottom: -200px; left: 50%; transform: translateX(-50%);
-      width: 800px; height: 500px;
-      background: radial-gradient(ellipse, rgba(124,106,245,0.15) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .cta-section h2 {
-      font-size: clamp(32px, 5vw, 56px); font-weight: 800;
-      letter-spacing: -0.03em; margin-bottom: 16px;
-    }
-    .cta-section p { font-size: 18px; color: var(--muted); margin-bottom: 40px; }
-
-    /* ── FOOTER ── */
+    /* ── Footer ── */
     footer {
       border-top: 1px solid var(--border);
-      padding: 40px 24px;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 13px;
     }
-    .footer-logo { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
-    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .15s; }
-    .footer-links a:hover { color: var(--text); }
-    .footer-legal { font-size: 12px; color: var(--muted); }
+    footer a { color: var(--text-2); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+    .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 640px) {
-      nav { padding: 0 20px; }
-      .nav-links a:not(.nav-cta) { display: none; }
-      .hero-stats { gap: 24px; }
-      footer { flex-direction: column; align-items: flex-start; }
+    /* ── JARVIS animations ── */
+    @keyframes glow-pulse { 0%,100%{opacity:0.8} 50%{opacity:1.3} }
+    .hero::before { animation: glow-pulse 4s ease-in-out infinite; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    #install-cmd::after { content:'█'; animation:blink 1s step-end infinite; color:var(--accent); font-size:0.85em; margin-left:2px; }
+
+    @keyframes scan { 0%{top:0%} 100%{top:100%} }
+    .hero-scan {
+      position:absolute; left:0; right:0; height:1px;
+      background:linear-gradient(90deg,transparent,rgba(229,57,53,0.35),transparent);
+      animation:scan 6s linear infinite; pointer-events:none;
     }
+
+    @keyframes ping { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.5} }
+    .jarvis-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); animation:ping 2s ease-in-out infinite; margin-right:6px; vertical-align:middle; }
+
+    .feature-card { position:relative; }
+    .feature-card::before, .feature-card::after {
+      content:''; position:absolute; width:12px; height:12px;
+      border-color:var(--accent); border-style:solid; opacity:0; transition:opacity 0.3s;
+    }
+    .feature-card::before { top:8px; left:8px; border-width:1px 0 0 1px; }
+    .feature-card::after  { bottom:8px; right:8px; border-width:0 1px 1px 0; }
+    .feature-card:hover::before, .feature-card:hover::after { opacity:1; }
+
+    @keyframes slide-up { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:none} }
+    .persona-card { animation:slide-up 0.5s ease both; }
+    .persona-card:nth-child(2){animation-delay:0.08s}
+    .persona-card:nth-child(3){animation-delay:0.16s}
+    .persona-card:nth-child(4){animation-delay:0.24s}
+    .persona-card:nth-child(5){animation-delay:0.32s}
+
+    /* ── Persona section ── */
+    .persona-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+      gap:16px;
+      margin-top:48px;
+    }
+    .persona-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-left:3px solid var(--accent);
+      border-radius:12px;
+      padding:24px;
+      transition:border-color 0.2s, transform 0.2s;
+    }
+    .persona-card:hover { border-color:rgba(229,57,53,0.5); transform:translateY(-2px); }
+    .persona-icon { font-size:28px; margin-bottom:10px; }
+    .persona-title { font-size:16px; font-weight:700; margin-bottom:6px; }
+    .persona-hook { font-size:13px; color:var(--accent-2); margin-bottom:14px; font-style:italic; line-height:1.5; }
+    .persona-list { list-style:none; display:flex; flex-direction:column; gap:7px; margin-bottom:16px; }
+    .persona-list li { font-size:13px; color:var(--text-2); padding-left:14px; position:relative; line-height:1.5; }
+    .persona-list li::before { content:'·'; position:absolute; left:0; color:var(--accent); }
+    .persona-cmd { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-family:'SF Mono','Fira Code',monospace; font-size:11.5px; color:var(--text-2); }
+
+    /* ── Waitlist form ── */
+    .waitlist-form { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:32px; }
+    .waitlist-form input[type=email] {
+      background:var(--surface); border:1px solid rgba(229,57,53,0.3); border-radius:8px;
+      padding:10px 16px; color:var(--text); font-size:14px; outline:none;
+      transition:border-color 0.2s; width:240px; max-width:100%;
+    }
+    .waitlist-form input[type=email]:focus { border-color:var(--accent); }
+    .waitlist-form input::placeholder { color:var(--text-3); }
+    .waitlist-form button { background:transparent; border:1px solid var(--border); border-radius:8px; padding:10px 20px; color:var(--text-2); font-size:13px; cursor:pointer; transition:all 0.2s; }
+    .waitlist-form button:hover { border-color:var(--accent); color:var(--accent); }
   </style>
 </head>
 <body>
 
-<!-- ── NAV ── -->
-<nav>
-  <a href="/" class="nav-logo">
-    <span class="claw">🐾</span> ClawOS
-  </a>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#how">How it works</a>
-    <a href="#hardware">Hardware</a>
-    <a href="#pricing">Pricing</a>
-    <a href="https://github.com/xbrxr03/clawos" target="_blank">GitHub</a>
-    <a href="#get-started" class="nav-cta">Get Early Access</a>
-  </div>
+<!-- Fixed side nav -->
+<nav class="sidenav" id="sidenav">
+  <a href="#hero" class="active" title="Home"></a>
+  <a href="#why" title="Why not Ollama"></a>
+  <a href="#features" title="Features"></a>
+  <a href="#who" title="Who it's for"></a>
+  <a href="#savings" title="Savings"></a>
+  <a href="#security" title="Security"></a>
+  <a href="#stack" title="The Stack"></a>
+  <a href="#cloud-compare" title="Cloud vs ClawOS"></a>
+  <a href="#faq" title="FAQ"></a>
+  <a href="#premium" title="Premium"></a>
 </nav>
 
-<!-- ── HERO ── -->
-<section class="hero">
-  <div class="hero-glow"></div>
-  <div class="hero-badge">
-    <span class="dot"></span> v0.1.0 prototype — early access open
+<!-- Hosted OpenClaw audience banner -->
+<div class="audience-banner">
+  💸 Paying $29–$59/mo for managed OpenClaw hosting?&nbsp; <a href="#savings">ClawOS sets it up in 4 minutes for $10 once. →</a>
+</div>
+
+<!-- Hero -->
+<section class="hero" id="hero">
+  <div class="hero-scan"></div>
+  <div class="hero-eyebrow"><span class="jarvis-dot"></span> JARVIS ONLINE &nbsp;·&nbsp; Open Source · AGPL-3.0</div>
+  <h1>The complete <em>JARVIS stack</em>.<br>One command.</h1>
+  <p class="hero-sub">The OpenClaw ecosystem, fully assembled. Voice pipeline (Piper free, ElevenLabs premium), 14-layer memory, a 3D knowledge brain, 9 agent frameworks, 29 automations, and a command center dashboard. Curated, integrated, and running on your hardware.</p>
+
+  <div class="install-block">
+    <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash</code>
+    <button class="copy-btn" onclick="copyInstall()">Copy</button>
   </div>
-  <h1>Your AI.<br/>On your machine.<br/>Answering to no one.</h1>
-  <p class="hero-sub">
-    ClawOS boots into a full agent environment — memory, voice, WhatsApp, 27+ workflows, a living knowledge graph — on consumer hardware. Offline. Free.
-  </p>
-  <div class="hero-actions">
-    <a href="#get-started" class="btn-primary">Get Early Access</a>
-    <a href="https://github.com/xbrxr03/clawos" class="btn-secondary" target="_blank">View on GitHub →</a>
+
+  <!-- Waitlist form — replace REPLACE_ME with your Formspree form ID -->
+  <form class="waitlist-form" action="https://formspree.io/f/mojpggob" method="POST">
+    <input type="email" name="email" placeholder="your@email.com" required />
+    <button type="submit">Join waitlist</button>
+  </form>
+
+  <div class="hero-cta-row">
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary">★ Star on GitHub →</a>
+    <a href="#why" class="btn-ghost">See how it works ↓</a>
   </div>
-  <div class="install-cmd">
-    <span class="prompt">$</span>
-    <span id="cmd-text">curl -fsSL https://clawos.ai/install.sh | bash</span>
-    <button class="copy-btn" onclick="copyInstall()" title="Copy">⎘ copy</button>
-  </div>
+
   <div class="hero-stats">
-    <div class="stat"><div class="stat-num">8 GB</div><div class="stat-label">Min RAM</div></div>
-    <div class="stat"><div class="stat-num">27+</div><div class="stat-label">Built-in Workflows</div></div>
-    <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Local & Private</div></div>
-    <div class="stat"><div class="stat-num">0</div><div class="stat-label">API Keys Needed</div></div>
-  </div>
-</section>
-
-<!-- ── FEATURES ── -->
-<section class="features" id="features">
-  <div class="container">
-    <div class="section-label">What's inside</div>
-    <h2 class="section-title">Everything you'd pay for.<br/>Running locally. For free.</h2>
-    <p class="section-sub">ClawOS ships a complete AI stack preconfigured and working out of the box.</p>
-    <div class="feat-grid">
-
-      <div class="feat-card">
-        <span class="feat-icon">🧠</span>
-        <div class="feat-title">Kizuna (絆) — Living Knowledge Graph</div>
-        <div class="feat-body">Every file you drop, every chat you have, every task you run — ClawOS builds a 3D knowledge graph of your world. Context travels with every request.</div>
-        <span class="feat-tag">GraphRAG</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">📱</span>
-        <div class="feat-title">WhatsApp Command Center</div>
-        <div class="feat-body">Message your AI from your phone. "Summarise my downloads", "what's on today", "buy oat milk". Approve tool calls by replying "yes". Works offline on LAN.</div>
-        <span class="feat-tag">No Cloud</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">🎙️</span>
-        <div class="feat-title">Offline Voice</div>
-        <div class="feat-body">Whisper STT + Piper TTS. Fully local, zero latency, no streaming subscription. Wake word, push-to-talk, or always-on. Pluggable via ElevenLabs if you want quality.</div>
-        <span class="feat-tag">Whisper + Piper</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">⚙️</span>
-        <div class="feat-title">27+ Automation Workflows</div>
-        <div class="feat-body">Organise Downloads, summarise PDFs, batch-rename photos, daily briefing, GitHub PR review, invoice scanner, meal planner — and counting. Each runs in one click.</div>
-        <span class="feat-tag">Phase 11</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">🛡️</span>
-        <div class="feat-title">Policy-Gated Tools</div>
-        <div class="feat-body">Every shell command, browser action, or file write goes through policyd. You define allow/deny rules. The AI can't do anything you haven't explicitly permitted.</div>
-        <span class="feat-tag">policyd</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">📡</span>
-        <div class="feat-title">Proactive Ambient Intelligence</div>
-        <div class="feat-body">ClawOS watches quietly in the background. Low disk? It tells you. Downloads cluttered? It suggests. Morning briefing at 7am via WhatsApp — automatically.</div>
-        <span class="feat-tag">Phase 8</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">🌐</span>
-        <div class="feat-title">Browser Agent</div>
-        <div class="feat-body">Playwright-powered browser automation. Research, fill forms, scrape, screenshot — all inside a sandboxed session. Tracks every action in the audit log.</div>
-        <span class="feat-tag">Playwright</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">🔌</span>
-        <div class="feat-title">Skills Marketplace</div>
-        <div class="feat-body">Install community skills from ClawHub — one command, sandboxed, signed. Build your own. OpenClaw-compatible. Verified, Community, or Local trust tiers.</div>
-        <span class="feat-tag">ClawHub</span>
-      </div>
-
-      <div class="feat-card">
-        <span class="feat-icon">🖥️</span>
-        <div class="feat-title">Operations Dashboard</div>
-        <div class="feat-body">Full-screen ops console at :7070. Live agent traces, memory browser, workflow history, settings, voice control, Kizuna graph — everything in one dark interface.</div>
-        <span class="feat-tag">PWA-ready</span>
-      </div>
-
+    <div class="stat">
+      <div class="stat-num">29+</div>
+      <div class="stat-label">Automations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">9</div>
+      <div class="stat-label">Frameworks</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">14</div>
+      <div class="stat-label">Memory Layers</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">$0</div>
+      <div class="stat-label">To get started</div>
     </div>
   </div>
 </section>
 
-<!-- ── HOW IT WORKS ── -->
-<section class="how" id="how">
-  <div class="container">
-    <div class="section-label">Setup</div>
-    <h2 class="section-title">Zero to agent OS<br/>in under 10 minutes.</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01</div>
-        <div class="step-title">Boot or install</div>
-        <div class="step-body">Flash the ClawOS ISO to a USB — boots on any x86 machine. Or run the install script on Ubuntu 24.04.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <div class="step-title">First-run wizard</div>
-        <div class="step-body">Pick your runtime (Claw Core or OpenClaw), scan a WhatsApp QR, and set a dashboard PIN. Done.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <div class="step-title">Models pull automatically</div>
-        <div class="step-body">Ollama downloads gemma3:4b (or qwen2.5:7b for OpenClaw) on first boot. Works CPU-only.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">04</div>
-        <div class="step-title">Start talking</div>
-        <div class="step-body">Message via WhatsApp, use the dashboard, or speak. Your AI is live. All data stays on the machine.</div>
-      </div>
+<!-- Why not Ollama -->
+<section id="why">
+  <div class="section-eyebrow">The curated stack</div>
+  <div class="section-title">Everything people stitch together from 7 different repos — integrated.</div>
+  <p class="section-sub">OpenClaw is powerful. But raw OpenClaw still needs a voice pipeline, a memory system, a knowledge graph, a dashboard, and an automation engine. People normally spend days assembling these from separate projects. ClawOS ships them as one coherent stack.</p>
+
+  <div class="compare-grid">
+    <div class="compare-header plain">DIY / OpenClaw alone</div>
+    <div class="compare-header clawos">ClawOS</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> whisper + piper + openwakeword (manual wiring)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Wake word voice pipeline, ready out of the box</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> ChromaDB + vector search (build yourself)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 14-layer memory — temporal KG, retention decay, semantic + keyword fusion</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> Obsidian + plugins (separate app, no agent link)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Nexus Brain — 3D knowledge graph agents write to</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> n8n or Zapier (another subscription)</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 29 built-in automations, no config required</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> No safety layer — agents run tools unchecked</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> policyd — every call risk-scored, sensitive ops need approval</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> No dashboard — terminal only</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> 17-page command center at :7070</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> Cloud hosting: $16–133/month, data on their servers</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Your hardware — try free, own for $10 once</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> No premium voice — cloud TTS needs manual wiring</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Piper (free, offline) out of the box — paste ElevenLabs key for premium JARVIS voice</div>
+
+    <div class="compare-cell plain"><span class="cross">✗</span> Locked to one framework — no switching</div>
+    <div class="compare-cell clawos"><span class="check">✓</span> Framework Store — 9 agent frameworks, switch in one click</div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-eyebrow">What's in the stack</div>
+  <div class="section-title">The OpenClaw ecosystem, fully assembled.</div>
+  <p class="section-sub">Each piece is best-in-class. Together they form something nobody else ships as a single install.</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🎙️</div>
+      <div class="feature-title">Wake Word Voice Pipeline</div>
+      <div class="feature-body">Say "Hey Jarvis" — Whisper transcribes, your LLM thinks, Piper speaks. Local by default, cloud quality on demand.</div>
     </div>
-    <div class="terminal-wrap">
-      <div class="terminal-bar">
-        <div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div>
-        <div class="terminal-title">clawos install</div>
-      </div>
-      <div class="terminal-body">
-        <div><span class="t-prompt">$</span> <span class="t-cmd">curl -fsSL https://clawos.ai/install.sh | bash</span></div>
-        <div class="t-out"> </div>
-        <div><span class="t-violet">ClawOS v0.1.0 installer</span></div>
-        <div class="t-out">▸ Detecting hardware… ROG Ally (16 GB RAM, AMD Ryzen Z1)</div>
-        <div class="t-out">▸ Installing Ollama…</div>
-        <div class="t-out">▸ Pulling gemma3:4b (2.4 GB)…</div>
-        <div class="t-amber">? Choose runtime: [1] Claw Core  [2] OpenClaw  [3] Both</div>
-        <div class="t-out">  → 1</div>
-        <div class="t-out">▸ Starting services: agentd, dashd, gatewayd, braind, voiced…</div>
-        <div class="t-out">▸ Scan WhatsApp QR to link your phone:</div>
-        <div class="t-out">  ████ ▀▀▀▀ ████</div>
-        <div class="t-out">  ▀▀▀▀ ████ ▀▀▀▀</div>
-        <div class="t-out"> </div>
-        <div><span class="t-success">✓ ClawOS ready.</span> <span class="t-out">Dashboard → http://localhost:7070</span></div>
-      </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔮</div>
+      <div class="feature-title">Nexus Brain — 3D Knowledge Graph</div>
+      <div class="feature-body">Drop a folder of notes. ClawOS builds a living knowledge graph your agents can query, expand, and surface connections in — visualised in 3D.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👁️</div>
+      <div class="feature-title">JARVIS Notices Things</div>
+      <div class="feature-body">Disk 82% full. PR open 5 days. Brain found a connection you missed. ClawOS watches in the background and surfaces what matters — before you think to ask.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">29 Built-in Automations</div>
+      <div class="feature-body">Organise downloads, summarise PDFs, review PRs, write READMEs, morning news brief — all pre-wired, one command to run.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <div class="feature-title">14-Layer Persistent Memory</div>
+      <div class="feature-body">Temporal knowledge graph, Ebbinghaus retention decay, RRF fusion search, secret redaction, intent-routed recall. Your JARVIS remembers everything — and forgets what it should.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌐</div>
+      <div class="feature-title">Browser Control</div>
+      <div class="feature-body">"Look up GPU prices and tell me if my 1060 is worth upgrading." Playwright-powered, policy-gated.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">Policy Gatekeeper</div>
+      <div class="feature-body">Every tool call logged. Sensitive actions need your approval. Tamper-evident audit trail. You have the kill switch — always.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🖥️</div>
+      <div class="feature-title">17-Page Command Center</div>
+      <div class="feature-body">Services, workflows, memory, traces, MCP manager, agent federation, skills — one dashboard at :7070.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🍎</div>
+      <div class="feature-title">Mac Bonus: OMI Integration</div>
+      <div class="feature-body">Running on macOS? Plug in the OMI app for ambient listening + wearable pendant support. Every conversation becomes searchable memory. Optional extra on top of the standard voice pipeline — Linux/Windows users get the full JARVIS without it.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔀</div>
+      <div class="feature-title">Framework Store</div>
+      <div class="feature-body">SmolAgents, AgentZero, PocketFlow, DSPy, CrewAI, AutoGen, LangGraph, Haystack, MetaGPT — 9 frameworks, switch in one click. Not locked to one.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔌</div>
+      <div class="feature-title">MCP + A2A Federation</div>
+      <div class="feature-body">Connect any Model Context Protocol server. Link multiple ClawOS instances on your LAN. Claude, OpenClaw, your own agents — all wired.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📚</div>
+      <div class="feature-title">Research Wiki</div>
+      <div class="feature-body">Andrej Karpathy doesn't use RAG. Drop sources into raw/, JARVIS builds wiki/ automatically, answers live in outputs/. Structure that compounds over time.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛤️</div>
+      <div class="feature-title">Smart Model Routing</div>
+      <div class="feature-body">Exploration → DeepSeek (pennies). Hard reasoning → Claude. Local coding → Ollama (free). One workflow, every frontier model. Cuts API costs 80%.</div>
     </div>
   </div>
 </section>
 
-<!-- ── SAVINGS CALCULATOR ── -->
-<section id="savings" style="background: var(--bg2);">
-  <div class="container" style="max-width:760px;">
-    <div class="section-label">Savings Calculator</div>
-    <h2 class="section-title">What does your AI stack cost?</h2>
-    <p class="section-sub" style="max-width:100%;">Toggle what you pay for today. ClawOS replaces all of it — locally, for free.</p>
-    <div id="calc-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:40px;">
-      <div class="calc-item" data-cost="20" onclick="toggleCalc(this)">
-        <div class="calc-icon">🤖</div>
-        <div class="calc-name">ChatGPT Plus</div>
-        <div class="calc-price">$20/mo</div>
-      </div>
-      <div class="calc-item" data-cost="5" onclick="toggleCalc(this)">
-        <div class="calc-icon">🎙️</div>
-        <div class="calc-name">ElevenLabs</div>
-        <div class="calc-price">$5/mo</div>
-      </div>
-      <div class="calc-item" data-cost="10" onclick="toggleCalc(this)">
-        <div class="calc-icon">📝</div>
-        <div class="calc-name">Notion AI</div>
-        <div class="calc-price">$10/mo</div>
-      </div>
-      <div class="calc-item" data-cost="20" onclick="toggleCalc(this)">
-        <div class="calc-icon">⚡</div>
-        <div class="calc-name">Zapier (AI plan)</div>
-        <div class="calc-price">$20/mo</div>
-      </div>
-      <div class="calc-item" data-cost="10" onclick="toggleCalc(this)">
-        <div class="calc-icon">🎤</div>
-        <div class="calc-name">Speech API</div>
-        <div class="calc-price">$10/mo</div>
-      </div>
-      <div class="calc-item" data-cost="15" onclick="toggleCalc(this)">
-        <div class="calc-icon">🔍</div>
-        <div class="calc-name">Perplexity Pro</div>
-        <div class="calc-price">$15/mo</div>
-      </div>
+<!-- Who it's for -->
+<section id="who">
+  <div class="section-eyebrow">For every kind of person</div>
+  <div class="section-title">You don't need to know what OpenClaw is.</div>
+  <p class="section-sub">You just need one of these to sound familiar.</p>
+
+  <div class="persona-grid">
+    <div class="persona-card">
+      <div class="persona-icon">👨‍💻</div>
+      <div class="persona-title">Developer</div>
+      <div class="persona-hook">OpenClaude pre-installed. Claude Code's interface. Your hardware. Zero API bill.</div>
+      <ul class="persona-list">
+        <li>Run <code style="font-size:11px;color:var(--accent-2)">openclaude</code> in terminal — no subscription</li>
+        <li>PR reviews, README gen, repo summaries out of the box</li>
+        <li>DeepSeek for cheap tasks, Claude for hard ones</li>
+        <li>qwen2.5-coder:7b wired to local Ollama</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run pr-review</div>
     </div>
-    <div id="calc-result" style="margin-top:32px;padding:28px 32px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-        <div>
-          <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Current monthly spend</div>
-          <div id="calc-total" style="font-size:42px;font-weight:800;color:#f87171;margin-top:4px;">$0/mo</div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🎬</div>
+      <div class="persona-title">Content Creator</div>
+      <div class="persona-hook">Never run out of ideas. Batch-generate a week of content in an hour.</div>
+      <ul class="persona-list">
+        <li>Daily niche trend briefing via voice every morning</li>
+        <li>10 content ideas from one keyword</li>
+        <li>Repurpose blog → threads, scripts, captions</li>
+        <li>Batch caption your entire image library</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run daily-digest</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">💼</div>
+      <div class="persona-title">Business Owner</div>
+      <div class="persona-hook">An AI operator that never sleeps and costs nothing per query.</div>
+      <ul class="persona-list">
+        <li>Lead research + market analysis workflows</li>
+        <li>Cold outreach and follow-up draft generation</li>
+        <li>Daily briefing: pipeline status, priority tasks</li>
+        <li>Competitor reports, CSV to readable summary</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run csv-to-report</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🎒</div>
+      <div class="persona-title">Student</div>
+      <div class="persona-hook">Summarise any lecture. Proofread privately — nothing leaves your laptop.</div>
+      <ul class="persona-list">
+        <li>PDF + lecture notes → concise study summaries</li>
+        <li>Personal study wiki that grows with your course</li>
+        <li>Private essay proofreading (local, not cloud)</li>
+        <li>Deadline briefing every morning</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run summarize-pdf</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🎓</div>
+      <div class="persona-title">Teacher</div>
+      <div class="persona-hook">Research any topic, build lesson wikis, never lose a document.</div>
+      <ul class="persona-list">
+        <li>Summarise research papers and textbooks</li>
+        <li>Build a living wiki of your subject matter</li>
+        <li>Draft lesson plans from curriculum guidelines</li>
+        <li>Morning briefing: today's schedule and priorities</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run batch-summarize</div>
+    </div>
+
+    <div class="persona-card">
+      <div class="persona-icon">🧑‍💻</div>
+      <div class="persona-title">Freelancer</div>
+      <div class="persona-hook">Proposals drafted, clients researched, follow-ups written. An operator that works while you sleep.</div>
+      <ul class="persona-list">
+        <li>Client research + competitor analysis in one run</li>
+        <li>Proposal and scope-of-work generation from notes</li>
+        <li>Weekly invoice summary and overdue chase drafts</li>
+        <li>Daily briefing: deadlines, open threads, priorities</li>
+      </ul>
+      <div class="persona-cmd">nexus workflow run daily-digest</div>
+    </div>
+  </div>
+</section>
+
+<!-- Savings Calculator -->
+<section id="savings">
+  <div class="section-eyebrow">The math is simple</div>
+  <div class="section-title">What you'd spend running OpenClaw without ClawOS.</div>
+  <p class="section-sub">These are the real costs people pay when they assemble this themselves. Select all that apply.</p>
+
+  <div class="calc-card">
+    <div class="calc-title">What would you pay without ClawOS?</div>
+    <div class="calc-sub">OpenClaw-specific costs only. ClawOS eliminates every one of these.</div>
+    <div class="calc-items" id="calc-items">
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="20" checked id="c1" />
+          <label class="calc-item-name" for="c1">Claude Code subscription <span style="color:var(--text-3);font-size:12px">(OpenClaude via ClawOS = free)</span></label>
         </div>
-        <div style="font-size:32px;color:var(--muted);">→</div>
-        <div>
-          <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">With ClawOS</div>
-          <div style="font-size:42px;font-weight:800;color:var(--green);margin-top:4px;">$0/mo</div>
-          <div style="font-size:12px;color:var(--muted);">Free forever. Own your stack.</div>
+        <div class="calc-item-price">$20/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="35" checked id="c2" />
+          <label class="calc-item-name" for="c2">Claude / GPT-4o API for agent workflows</label>
         </div>
+        <div class="calc-item-price">$35/mo</div>
       </div>
-      <div id="calc-savings-msg" style="margin-top:20px;padding:14px 20px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:8px;font-size:14px;color:var(--green);"></div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="29" checked id="c3" />
+          <label class="calc-item-name" for="c3">Managed OpenClaw hosting <span style="color:var(--text-3);font-size:12px">(cloud hosting services)</span></label>
+        </div>
+        <div class="calc-item-price">$29/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="10" checked id="c4" />
+          <label class="calc-item-name" for="c4">Personal knowledge base <span style="color:var(--text-3);font-size:12px">(Notion AI / Mem.ai)</span></label>
+        </div>
+        <div class="calc-item-price">$10/mo</div>
+      </div>
+      <div class="calc-item">
+        <div class="calc-item-left">
+          <input type="checkbox" class="calc-checkbox" data-cost="15" checked id="c5" />
+          <label class="calc-item-name" for="c5">OpenRouter for frontier model access</label>
+        </div>
+        <div class="calc-item-price">$15/mo</div>
+      </div>
     </div>
-  </div>
-</section>
-<style>
-  .calc-item {
-    background: var(--bg3); border: 2px solid var(--border); border-radius: 10px;
-    padding: 20px 16px; cursor: pointer; text-align: center;
-    transition: border-color .15s, background .15s, transform .15s;
-    user-select: none;
-  }
-  .calc-item:hover { border-color: rgba(124,106,245,0.4); transform: translateY(-2px); }
-  .calc-item.active { border-color: var(--violet); background: var(--violet-dim); }
-  .calc-icon { font-size: 28px; margin-bottom: 8px; }
-  .calc-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .calc-price { font-size: 12px; color: var(--muted); }
-  .calc-item.active .calc-price { color: var(--violet2); }
-</style>
-<script>
-  function toggleCalc(el) {
-    el.classList.toggle('active');
-    var total = 0;
-    document.querySelectorAll('.calc-item.active').forEach(function(c) {
-      total += parseInt(c.dataset.cost, 10);
-    });
-    var result = document.getElementById('calc-result');
-    if (total > 0) {
-      result.style.display = 'block';
-      document.getElementById('calc-total').textContent = '$' + total + '/mo';
-      var annual = total * 12;
-      document.getElementById('calc-savings-msg').textContent =
-        'That\'s $' + annual + '/year going to SaaS subscriptions. ClawOS replaces every one of these — running locally, offline, free.';
-    } else {
-      result.style.display = 'none';
-    }
-  }
-</script>
-
-<!-- ── HARDWARE ── -->
-<section id="hardware" style="background: var(--bg);">
-  <div class="container">
-    <div class="section-label">Hardware</div>
-    <h2 class="section-title">Runs on what you already own.</h2>
-    <p class="section-sub">CPU-first by design. No GPU required. Scales up if you have the RAM.</p>
-    <div class="hw-grid">
-      <div class="hw-card">
-        <div class="hw-tier">Tier A — Minimal</div>
-        <div class="hw-device">8 GB mini PC / NUC</div>
-        <div class="hw-specs">8 GB RAM · Any x86 CPU · 40 GB disk</div>
-        <div class="hw-feature"><span class="check">✓</span> Claw Core (gemma3:4b)</div>
-        <div class="hw-feature"><span class="check">✓</span> Voice, WhatsApp, workflows</div>
-        <div class="hw-feature"><span class="cross">—</span> OpenClaw (too heavy)</div>
-        <div class="hw-feature"><span class="cross">—</span> Browser agent (slow)</div>
+    <div class="calc-divider"></div>
+    <div class="calc-result">
+      <div>
+        <div class="calc-total-label">Equivalent toolchain costs</div>
+        <div class="calc-total-num" id="calc-total">$109<span id="calc-annual">&nbsp;≈ $1,308/yr</span></div>
       </div>
-      <div class="hw-card featured">
-        <div class="hw-tier">Tier B — Balanced</div>
-        <div class="hw-device">ROG Ally / 16 GB Laptop</div>
-        <div class="hw-specs">16 GB RAM · Ryzen Z1/5 · 256 GB SSD</div>
-        <div class="hw-feature"><span class="check">✓</span> Claw Core (default)</div>
-        <div class="hw-feature"><span class="check">✓</span> OpenClaw (optional)</div>
-        <div class="hw-feature"><span class="check">✓</span> Full browser agent</div>
-        <div class="hw-feature"><span class="check">✓</span> Kizuna graph at scale</div>
-      </div>
-      <div class="hw-card">
-        <div class="hw-tier">Tier C — Full Power</div>
-        <div class="hw-device">32 GB+ Workstation</div>
-        <div class="hw-specs">32 GB+ RAM · Any CPU · GPU optional</div>
-        <div class="hw-feature"><span class="check">✓</span> Both runtimes simultaneously</div>
-        <div class="hw-feature"><span class="check">✓</span> qwen2.5:32b or better</div>
-        <div class="hw-feature"><span class="check">✓</span> GPU acceleration (if present)</div>
-        <div class="hw-feature"><span class="check">✓</span> Federation (multi-node)</div>
+      <div class="calc-cta">
+        <div class="calc-cta-label">ClawOS replaces all of it for</div>
+        <a href="https://github.com/xbrxr03/clawos" class="btn-primary">$10 once →</a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── PRICING ── -->
-<section id="pricing" style="background: var(--bg2);">
-  <div class="container">
-    <div class="section-label">Pricing</div>
-    <h2 class="section-title">Open core. Forever free<br/>where it matters.</h2>
-    <p class="section-sub">The full local agent OS is free and open source. Pay only if you want cloud sync, priority support, or team features.</p>
-    <div class="pricing-grid">
-      <div class="price-card">
-        <div class="price-tier">Free</div>
-        <div class="price-amount">£0 <span>/ forever</span></div>
-        <div class="price-desc">Everything you need for a personal AI OS. No credit card. No account.</div>
-        <div class="price-feature"><span class="icon">✓</span> Full Claw Core runtime</div>
-        <div class="price-feature"><span class="icon">✓</span> Kizuna knowledge graph</div>
-        <div class="price-feature"><span class="icon">✓</span> 27+ workflows</div>
-        <div class="price-feature"><span class="icon">✓</span> Voice + WhatsApp</div>
-        <div class="price-feature"><span class="icon">✓</span> Skills marketplace</div>
-        <div class="price-feature"><span class="icon">✓</span> AGPL-3.0 open source</div>
-        <a href="https://github.com/xbrxr03/clawos" class="price-btn price-btn-secondary" target="_blank">Download Free →</a>
-      </div>
-      <div class="price-card featured">
-        <div class="price-tier">Pro</div>
-        <div class="price-amount">£9 <span>/ month</span></div>
-        <div class="price-desc">For power users who want sync, support, and extra packs.</div>
-        <div class="price-feature"><span class="icon">✓</span> Everything in Free</div>
-        <div class="price-feature"><span class="icon">✓</span> Encrypted cloud backup</div>
-        <div class="price-feature"><span class="icon">✓</span> Priority ClawHub packs</div>
-        <div class="price-feature"><span class="icon">✓</span> ElevenLabs voice quality</div>
-        <div class="price-feature"><span class="icon">✓</span> Priority support</div>
-        <div class="price-feature"><span class="icon">✓</span> Early feature access</div>
-        <a href="#get-started" class="price-btn price-btn-primary">Get Early Access</a>
-      </div>
-      <div class="price-card">
-        <div class="price-tier">Team</div>
-        <div class="price-amount">£29 <span>/ seat/mo</span></div>
-        <div class="price-desc">Shared workspace, federated nodes, admin controls.</div>
-        <div class="price-feature"><span class="icon">✓</span> Everything in Pro</div>
-        <div class="price-feature"><span class="icon">✓</span> Multi-node federation</div>
-        <div class="price-feature"><span class="icon">✓</span> Shared Kizuna graph</div>
-        <div class="price-feature"><span class="icon">✓</span> SSO / admin dashboard</div>
-        <div class="price-feature"><span class="icon">✓</span> Audit log export</div>
-        <div class="price-feature"><span class="icon">✓</span> SLA + dedicated support</div>
-        <a href="mailto:hello@clawos.ai" class="price-btn price-btn-secondary">Contact Us</a>
-      </div>
+<!-- Switching from hosted OpenClaw -->
+<section id="switch" style="padding-top: 0;">
+  <div class="switch-card">
+    <div class="switch-badge">For hosted OpenClaw customers</div>
+    <div class="switch-title">Paying monthly for something that should be a one-time install?</div>
+    <p class="switch-body">Managed cloud hosting services charge $16–133/mo because setup is genuinely hard — 15+ steps, broken dependencies, no voice, no dashboard, no automations. ClawOS solves the setup problem. One command handles everything those services charge you monthly to manage.</p>
+    <div class="switch-list">
+      <div class="switch-item"><span class="check">✓</span> Same OpenClaw ecosystem — no migration</div>
+      <div class="switch-item"><span class="check">✓</span> Runs on your hardware, not someone else's VPS</div>
+      <div class="switch-item"><span class="check">✓</span> Adds voice (Piper free / ElevenLabs premium), 14-layer memory, Framework Store, and 3D brain that cloud hosts don't have — plus OMI on Mac</div>
+      <div class="switch-item"><span class="check">✓</span> $10 once vs $16–133 every month</div>
+    </div>
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="margin-top: 28px; display: inline-block;">Switch to ClawOS →</a>
+  </div>
+</section>
+
+<!-- Security -->
+<section id="security">
+  <div class="section-eyebrow">Your machine, your rules</div>
+  <div class="section-title">Built for the privacy-obsessed.</div>
+  <p class="section-sub">No telemetry. No forced cloud. Local by default, cloud when you want it — you choose. Your data never leaves without your permission.</p>
+
+  <div class="security-grid">
+    <div class="security-card">
+      <div class="security-badge">You choose</div>
+      <div class="security-title">Local or cloud, on your terms</div>
+      <div class="security-body">Run Ollama locally for privacy, or connect OpenRouter / Anthropic API for better quality. Switch any time — no lock-in.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">Policy-gated</div>
+      <div class="security-title">Human approval queue</div>
+      <div class="security-body">Every sensitive action — file writes, shell commands, browser — requires your explicit approval before executing.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">Signed skills</div>
+      <div class="security-title">Ed25519 skill signing</div>
+      <div class="security-body">OpenClaw's skill store had 341 malicious packages. ClawOS signs every skill. Unsigned code cannot install.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">AGPL-3.0</div>
+      <div class="security-title">Fully open source</div>
+      <div class="security-body">Every line of code is public. No hidden telemetry, no black boxes. Audit it yourself.</div>
     </div>
   </div>
 </section>
 
-<!-- ── FAQ ── -->
-<section class="faq">
-  <div class="container">
-    <div class="section-label">FAQ</div>
-    <h2 class="section-title">Common questions</h2>
-    <div class="faq-list">
-      <div class="faq-item">
-        <div class="faq-q">Does it actually run without internet?</div>
-        <div class="faq-a">Yes. Claw Core is 100% offline. Ollama runs the LLM locally, Whisper/Piper handle voice locally, and WhatsApp works over LAN. The only time it phones home is to pull model weights on first install and (optionally) sync Pro backups.</div>
+<!-- Metrics -->
+<section style="padding: 0 24px;">
+  <div class="metrics-bar">
+    <div class="metric"><div class="metric-num">22</div><div class="metric-label">Services</div></div>
+    <div class="metric"><div class="metric-num">29</div><div class="metric-label">Workflows</div></div>
+    <div class="metric"><div class="metric-num">9</div><div class="metric-label">Frameworks</div></div>
+    <div class="metric"><div class="metric-num">14</div><div class="metric-label">Memory Layers</div></div>
+    <div class="metric"><div class="metric-num">244</div><div class="metric-label">Tests passing</div></div>
+  </div>
+</section>
+
+<!-- The Stack — Architecture -->
+<section id="stack">
+  <div class="section-eyebrow">The architecture</div>
+  <div class="section-title">Three systems. One JARVIS.</div>
+  <p class="section-sub">Voice captures what you say. Nexus thinks and remembers. OpenClaw acts with 13,700+ skills. Together, they are JARVIS.</p>
+
+  <div style="
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 24px;
+    margin-top: 40px;
+    text-align: center;
+  ">
+    <div style="display: flex; justify-content: center; align-items: center; gap: 24px; flex-wrap: wrap; margin-bottom: 16px;">
+      <div style="
+        background: rgba(229,57,53,0.08);
+        border: 1px solid rgba(229,57,53,0.2);
+        border-radius: 12px;
+        padding: 18px 28px;
+        min-width: 170px;
+      ">
+        <div style="font-size: 15px; font-weight: 600; color: var(--text);">Voice Pipeline</div>
+        <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Piper (free) · ElevenLabs (premium)</div>
       </div>
-      <div class="faq-item">
-        <div class="faq-q">What's the difference between Claw Core and OpenClaw?</div>
-        <div class="faq-a">Claw Core is our native Python ReAct agent — fast, low RAM (works on 8 GB), CPU-only. OpenClaw is the open-source version of Claude's full tool ecosystem (430K lines, 13K+ skills) pre-configured for Ollama — needs 16 GB+ and a stronger model like qwen2.5:7b.</div>
+      <div style="font-size: 20px; color: var(--text-3);">&#8596;</div>
+      <div style="
+        background: rgba(229,57,53,0.15);
+        border: 1px solid rgba(229,57,53,0.4);
+        border-radius: 12px;
+        padding: 18px 28px;
+        min-width: 170px;
+      ">
+        <div style="font-size: 15px; font-weight: 600; color: var(--text);">ClawOS Nexus</div>
+        <div style="font-size: 12px; color: var(--accent-2); margin-top: 2px;">Brain + 14-Layer Memory</div>
       </div>
-      <div class="faq-item">
-        <div class="faq-q">Is my data sent anywhere?</div>
-        <div class="faq-a">Never, unless you explicitly enable Pro cloud backup (E2E encrypted). All LLM inference, voice, memory, and tool execution happens on your machine. No telemetry, no analytics, no tracking.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q">Can I run it on macOS?</div>
-        <div class="faq-a">The dashboard and most services run on macOS. The full OS image (ISO) is Linux (Ubuntu 24.04). macOS users can run ClawOS as a stack via the install script — all features work except the bootable ISO.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q">What models does it use?</div>
-        <div class="faq-a">Default: gemma3:4b (great on 8 GB, CPU-only). OpenClaw mode needs qwen2.5:7b or better for tool calling. You can swap to any Ollama-compatible model in Settings → Model. Mistral, Llama 3, Phi-3 — all work.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q">How is this different from just running Ollama + Open WebUI?</div>
-        <div class="faq-a">ClawOS is an agent OS, not a chat UI. It has: policy-gated tool execution, a 4-layer memory system, a living knowledge graph, 27+ automation workflows, WhatsApp integration, proactive ambient intelligence, a browser agent, and a skills marketplace — all wired together and working on first boot.</div>
+      <div style="font-size: 20px; color: var(--text-3);">&#8596;</div>
+      <div style="
+        background: rgba(229,57,53,0.08);
+        border: 1px solid rgba(229,57,53,0.2);
+        border-radius: 12px;
+        padding: 18px 28px;
+        min-width: 170px;
+      ">
+        <div style="font-size: 15px; font-weight: 600; color: var(--text);">OpenClaw</div>
+        <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Hands (13,700+ tools)</div>
       </div>
     </div>
+    <p style="color: var(--text-3); font-size: 13px; margin-top: 20px;">All running on your machine. No tunnels. No cloud. No ngrok. Just localhost.<br>Voice: Piper (offline, free) or ElevenLabs (premium, bring your own key). On Mac, optionally plug in the OMI app for ambient listening + wearable pendant.</p>
   </div>
 </section>
 
-<!-- ── CTA ── -->
-<section class="cta-section" id="get-started">
-  <div class="cta-glow"></div>
-  <div class="container">
-    <h2>Your machine.<br/>Your AI.<br/>Your rules.</h2>
-    <p>Join the early access list and get the ISO + install script when v0.1.0 ships.</p>
-    <form id="waitlist-form" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;max-width:480px;margin:0 auto;" onsubmit="handleSubmit(event)">
-      <input
-        type="email"
-        placeholder="your@email.com"
-        required
-        style="
-          flex:1; min-width:200px;
-          background:var(--bg2); border:1px solid var(--border);
-          color:var(--text); padding:14px 18px; border-radius:10px;
-          font-size:15px; outline:none;
-        "
-      />
-      <button type="submit" class="btn-primary" style="border:none;cursor:pointer;">
-        Get Early Access
-      </button>
-    </form>
-    <p id="waitlist-thanks" style="display:none;color:var(--green);margin-top:16px;font-weight:600;">
-      ✓ You're on the list. We'll be in touch.
-    </p>
-    <p style="margin-top:16px;font-size:13px;color:var(--muted);">No spam. Unsubscribe any time. Or just <a href="https://github.com/xbrxr03/clawos" style="color:var(--violet);">grab it from GitHub</a> now.</p>
+<!-- Cloud Hosting Comparison -->
+<section id="cloud-compare" style="padding-top: 0;">
+  <div class="section-eyebrow">The honest comparison</div>
+  <div class="section-title">Why pay monthly for something you can own?</div>
+  <p class="section-sub">Managed cloud hosting for OpenClaw typically runs $16&ndash;133/month. Here's what you actually get.</p>
+
+  <div style="overflow-x: auto; margin-top: 40px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+      <thead>
+        <tr>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;"></th>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Cloud Hosting</th>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">ClawOS Core</th>
+          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">ClawOS Premium</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Setup time</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">~30 seconds (managed)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">~4 minutes (one-line installer)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">~4 minutes</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Technical skill needed</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">None</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">None (copy-paste one line)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">None</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Monthly cost</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">$19 / $39 / $79 / $133+ per mo</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0/mo</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0/mo</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">One-time cost</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">&mdash;</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$10 once</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Cost after 1 year</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">$228 &ndash; $1,596+</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$10 total</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Your data</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Provider servers (their VPS)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Your hardware</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Your hardware</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Works offline</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Yes</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Yes</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Auto-updates</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Managed for you</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Built-in (nexus update)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Built-in</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Voice (JARVIS)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Not included</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Piper (free, offline)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">ElevenLabs wired (BYO key)</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Memory system</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Basic</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">14-layer (temporal KG + RRF)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">14-layer + CrossEncoder reranking</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Framework Store</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">9 frameworks</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">9 frameworks</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">3D Knowledge Brain</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Included</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Included</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">OMI (Mac bonus)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">&mdash;</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Optional</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Optional</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="color: var(--text-3); font-size: 12.5px; max-width: 620px; margin: 24px auto 0; text-align: center; line-height: 1.7;">
+    Managed cloud hosting for OpenClaw typically runs $16&ndash;133/month. ClawOS runs on your own hardware, adds OMI, voice, and 14-layer memory that cloud hosts don't offer, and the full ecosystem is a one-time $10. That's less than most services charge for a single month.
+  </p>
+  <p style="color: var(--text-3); font-size: 12px; text-align: center; margin-top: 10px;">
+    Cloud AI providers (Anthropic, OpenAI, etc.) require their own API keys if you choose to use them &mdash; same as any local AI setup. Ollama local models are always free.
+  </p>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="padding-top: 0;">
+  <div class="section-eyebrow">Questions people ask</div>
+  <div class="section-title">The short version.</div>
+  <p class="section-sub">Everything people email us about, answered up front.</p>
+
+  <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 16px;">
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Do I need to be technical to use this?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">No. The installer is one line — copy, paste, press enter. The dashboard runs at <code style="color:var(--accent-2);font-size:12.5px;">localhost:7070</code>. If you can click a button, you can use ClawOS. For voice, say "Hey Jarvis" — no config needed.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Does ClawOS store, share, or train on my data?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">No. Everything runs on your hardware. No telemetry. No analytics. Every line of code is AGPL-3.0 &mdash; audit it yourself on GitHub. Cloud AI models (if you enable them with your own API key) follow those providers' policies; local models (Ollama) never leave your machine.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        What hardware do I need?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Minimum: any PC, Mac, or Linux box with 8&nbsp;GB RAM (runs Ollama 3B/7B models, Piper voice, full dashboard). Recommended: 16&nbsp;GB+ for smooth larger-model inference. A spare laptop, old desktop, or mini PC works. No GPU required for basic use.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        What's the difference between free and $10 Premium?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;"><strong style="color:var(--text);">Free:</strong> Piper voice, 5 workflows, Nexus 3D brain, 14-layer memory, Framework Store, OpenClaude terminal, policy gatekeeper, 17-page dashboard &mdash; all of it, forever.<br><br><strong style="color:var(--text);">Premium ($10 once):</strong> all 29 workflows unlocked, cloud model profiles (Anthropic/OpenAI/Azure wired), ElevenLabs voice wiring (your API key), CrossEncoder reranking, premium skill packs, priority Discord.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Do I need OMI? What if I'm on Linux or Windows?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">OMI is an optional Mac bonus. The full JARVIS voice pipeline works on any OS without it &mdash; Whisper transcribes, Piper (or ElevenLabs) speaks, wake word listens. On macOS you can also plug in the OMI app or wearable pendant for ambient listening + passive conversation capture.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Can I get a refund?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Yes &mdash; 30-day money-back on Premium, no questions. Free tier is always free, so no risk trying it first. Core features (voice, memory, dashboard, 5 workflows) stay free forever whether you upgrade or not.</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        Why one-time $10 instead of a subscription?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Because software you run on your own hardware shouldn't have a meter attached to it. Cloud hosting services charge $19&ndash;$133/mo forever because they run the servers. You run the server. You paid for your hardware once. Why would the software be different?</p>
+    </details>
   </div>
 </section>
 
-<!-- ── FOOTER ── -->
+<!-- Premium -->
+<section id="premium">
+  <div class="premium-card">
+    <div class="premium-tag">Premium</div>
+    <div class="section-title" style="margin-bottom: 0;">Pay once. Own it forever.</div>
+    <div class="premium-price"><sup>$</sup>10</div>
+    <p style="color: var(--text-2); font-size: 14px; margin-bottom: 32px;">One-time purchase. No subscription. No renewals. Yours forever.</p>
+
+    <div class="premium-features">
+      <div class="premium-feature"><span class="check">✓</span> Cloud model profiles (Anthropic, OpenAI, Azure)</div>
+      <div class="premium-feature"><span class="check">✓</span> ElevenLabs JARVIS voice (your key — we wire it)</div>
+      <div class="premium-feature"><span class="check">✓</span> All 29 workflows (free: 5)</div>
+      <div class="premium-feature"><span class="check">✓</span> Full OpenClaw ecosystem (13,700+ skills)</div>
+      <div class="premium-feature"><span class="check">✓</span> Smart model routing (DeepSeek / Claude / Ollama)</div>
+      <div class="premium-feature"><span class="check">✓</span> Premium skill packs from ClawHub</div>
+      <div class="premium-feature"><span class="check">✓</span> Nexus Brain 3D knowledge graph</div>
+      <div class="premium-feature"><span class="check">✓</span> Browser control + A2A federation</div>
+      <div class="premium-feature"><span class="check">✓</span> Research Wiki + Advanced RAG + CrossEncoder reranking</div>
+      <div class="premium-feature"><span class="check">✓</span> Priority community access + Discord</div>
+    </div>
+    <p style="color: var(--text-2); font-size: 12px; margin-bottom: 8px;">Free: Piper TTS — offline, private. Premium: paste your ElevenLabs key once, JARVIS sounds cinematic.</p>
+    <p style="color: var(--text-2); font-size: 13px; margin-bottom: 24px; font-weight: 500;">Why not DIY? ~60 hours, 7 repos, $35/mo API costs vs $10 once.</p>
+
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="font-size: 15px; padding: 14px 36px;">Get ClawOS Premium — $10 →</a>
+    <p style="color: var(--text-3); font-size: 12px; margin-top: 16px;">Free tier always available. No credit card needed to start.</p>
+  </div>
+</section>
+
+<!-- Footer -->
 <footer>
-  <div class="footer-logo">🐾 ClawOS</div>
   <div class="footer-links">
-    <a href="https://github.com/xbrxr03/clawos" target="_blank">GitHub</a>
-    <a href="https://github.com/xbrxr03/clawos/blob/main/docs/SUPABASE_SETUP.md">Docs</a>
-    <a href="mailto:hello@clawos.ai">Contact</a>
+    <a href="https://github.com/xbrxr03/clawos">GitHub</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/docs/ARCHITECTURE_CURRENT.md">Docs</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/SECURITY_AUDIT.md">Security</a>
     <a href="https://github.com/xbrxr03/clawos/blob/main/LICENSE">AGPL-3.0</a>
   </div>
-  <div class="footer-legal">© 2026 ClawOS. Built in public.</div>
+  <div>ClawOS — Built for people who want Iron Man's JARVIS, not another chatbot.</div>
 </footer>
 
 <script>
+  // Savings calculator
+  function updateCalc() {
+    let total = 0;
+    document.querySelectorAll('.calc-checkbox:checked').forEach(el => {
+      total += parseInt(el.dataset.cost) || 0;
+    });
+    document.getElementById('calc-total').childNodes[0].textContent = '$' + total;
+    document.getElementById('calc-annual').textContent = total > 0 ? '\u00a0\u2248 $' + (total * 12).toLocaleString() + '/yr' : '';
+  }
+  document.querySelectorAll('.calc-checkbox').forEach(el => el.addEventListener('change', updateCalc));
+  updateCalc();
+
+  // Copy install command
   function copyInstall() {
-    const text = document.getElementById('cmd-text').textContent;
-    navigator.clipboard.writeText(text).then(() => {
+    const cmd = document.getElementById('install-cmd').textContent;
+    navigator.clipboard.writeText(cmd).then(() => {
       const btn = document.querySelector('.copy-btn');
-      btn.textContent = '✓ copied';
-      setTimeout(() => { btn.textContent = '⎘ copy'; }, 2000);
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
     });
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    // TODO: wire to your email service (Resend, Loops, etc.)
-    document.getElementById('waitlist-form').style.display = 'none';
-    document.getElementById('waitlist-thanks').style.display = 'block';
+  // Side nav active state on scroll
+  const sections = ['hero', 'why', 'features', 'who', 'savings', 'security', 'stack', 'cloud-compare', 'faq', 'premium'];
+  const navLinks = document.querySelectorAll('.sidenav a');
+  function updateNav() {
+    const scrollY = window.scrollY || window.pageYOffset;
+    let current = 'hero';
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.offsetTop - 100 <= scrollY) current = id;
+    });
+    navLinks.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
   }
-</script>
+  window.addEventListener('scroll', updateNav, { passive: true });
+  updateNav();
 
+  // Sidenav click → smooth scroll
+  navLinks.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Stats count-up on scroll
+  function animateCounter(el, target, suffix) {
+    let start = null;
+    const duration = 1200;
+    const step = ts => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const val = Math.floor(progress * target);
+      el.textContent = (val === target ? target : val) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const statEls = document.querySelectorAll('.stat-num');
+  const statData = [
+    { target: 29, suffix: '+' },
+    { target: 9, suffix: '' },
+    { target: 14, suffix: '' },
+    { target: 0, suffix: '' },
+  ];
+  let statsAnimated = false;
+  const statsObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !statsAnimated) {
+      statsAnimated = true;
+      statEls.forEach((el, i) => {
+        if (statData[i] && statData[i].target > 0) animateCounter(el, statData[i].target, statData[i].suffix);
+      });
+    }
+  }, { threshold: 0.5 });
+  const statsSection = document.querySelector('.hero-stats');
+  if (statsSection) statsObserver.observe(statsSection);
+
+  // Persona cards entrance animation on scroll
+  const personaObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.style.opacity = '1'; });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.persona-card').forEach(c => {
+    c.style.opacity = '0';
+    personaObserver.observe(c);
+  });
+</script>
 </body>
 </html>
