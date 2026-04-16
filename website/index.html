@@ -540,7 +540,7 @@
   <div class="hero-scan"></div>
   <div class="hero-eyebrow"><span class="jarvis-dot"></span> JARVIS ONLINE &nbsp;·&nbsp; Open Source · AGPL-3.0</div>
   <h1>The complete <em>JARVIS stack</em>.<br>One command.</h1>
-  <p class="hero-sub">The OpenClaw ecosystem, fully assembled. Voice pipeline (Piper free, ElevenLabs premium), 14-layer memory, a 3D knowledge brain, 9 agent frameworks, 29 automations, and a command center dashboard. Curated, integrated, and running on your hardware.</p>
+  <p class="hero-sub">OpenClaw agents forget. ClawOS doesn't. 14-layer memory with temporal knowledge graph, retention decay, and semantic fusion — so your JARVIS actually remembers what matters. Voice, brain, 29 automations, 9 frameworks. One command.</p>
 
   <div class="install-block">
     <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash</code>
@@ -672,7 +672,7 @@
     <div class="feature-card">
       <div class="feature-icon">🔀</div>
       <div class="feature-title">Framework Store</div>
-      <div class="feature-body">SmolAgents, AgentZero, PocketFlow, DSPy, CrewAI, AutoGen, LangGraph, Haystack, MetaGPT — 9 frameworks, switch in one click. Not locked to one.</div>
+      <div class="feature-body">SmolAgents, AgentZero, PocketFlow, DSPy, CrewAI, AutoGen, LangGraph, Haystack, MetaGPT — 9 frameworks, switch in one click. Hermes Agent coming soon. Not locked to one.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🔌</div>
@@ -944,7 +944,7 @@
         <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Hands (13,700+ tools)</div>
       </div>
     </div>
-    <p style="color: var(--text-3); font-size: 13px; margin-top: 20px;">All running on your machine. No tunnels. No cloud. No ngrok. Just localhost.<br>Voice: Piper (offline, free) or ElevenLabs (premium, bring your own key). On Mac, optionally plug in the OMI app for ambient listening + wearable pendant.</p>
+    <p style="color: var(--text-3); font-size: 13px; margin-top: 20px;">All running on your machine. No tunnels. No cloud. No ngrok. Just localhost.<br>Voice: Piper (offline, free) or ElevenLabs (premium, bring your own key). On Mac, optionally plug in the OMI app for ambient listening + wearable pendant.<br>Agent core: pi-mono (MIT) — the same lean 4-tool engine under OpenClaw. ClawOS adds 14-layer memory + orchestration on top.</p>
   </div>
 </section>
 
@@ -1050,6 +1050,14 @@
         <span style="color: var(--accent); font-size: 18px;">+</span>
       </summary>
       <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Because software you run on your own hardware shouldn't have a meter attached to it. Cloud hosting services charge $19&ndash;$133/mo forever because they run the servers. You run the server. You paid for your hardware once. Why would the software be different?</p>
+    </details>
+
+    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
+      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+        What if ClawOS does something unexpected?
+        <span style="color: var(--accent); font-size: 18px;">+</span>
+      </summary>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Every tool call runs through policyd's risk-scoring layer. High-risk actions — shell commands, file writes, browser navigation — pause for your approval in the dashboard before they execute. You can review, approve, or cancel any pending action. One click stops any running workflow. The blast radius is limited to exactly what you've explicitly given ClawOS access to — nothing else.</p>
     </details>
   </div>
 </section>
