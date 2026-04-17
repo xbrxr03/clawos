@@ -80,11 +80,73 @@ class AgentRuntime:
                 parts.append(f"## Your Character (SOUL)\n{soul.strip()}")
             if agents:
                 parts.append(f"## Operating Instructions (AGENTS)\n{agents.strip()}")
+            # IDENTITY.md — third personality tier (public name, channel voice, persona boundary)
+            identity = self._read_identity()
+            if identity:
+                parts.append(f"## Identity & Channel Persona (IDENTITY)\n{identity.strip()}")
         if self.bridge:
             tool_list = self.bridge.get_tool_list_for_prompt()
             if tool_list:
                 parts.append(tool_list)
         return "\n\n".join(parts)
+
+    def _read_identity(self) -> str:
+        """Read IDENTITY.md — third personality tier."""
+        try:
+            from clawos_core.util.paths import memory_path
+            p = memory_path(self.workspace_id) / "IDENTITY.md"
+            if p.exists():
+                return p.read_text(encoding="utf-8")
+        except Exception:
+            pass
+        return ""
+
+    def _build_morning_briefing(self) -> str:
+        """Build a session-start briefing from last session state + pending queue + LEARNED.md."""
+        try:
+            if not self.memory:
+                return ""
+            state = self.memory.load_session_state(self.workspace_id)
+            if not state:
+                return ""
+            pending = self.memory.get_pending_queue(self.workspace_id)
+            learned = self._get_learned_context()
+
+            lines = ["[Session Resume]"]
+            last_work = state.get("last_work", "")
+            if last_work:
+                lines.append(f"Last session: {last_work}")
+            ended_at = state.get("ended_at", "")
+            if ended_at:
+                lines.append(f"Ended at: {ended_at}")
+            if pending:
+                lines.append(f"Pending tasks: {'; '.join(pending[:3])}")
+            if learned:
+                # Last 3 LEARNED.md entries
+                entries = [l for l in learned.splitlines() if l.strip().startswith("[")]
+                if entries:
+                    lines.append("Recent learnings: " + " | ".join(entries[-3:]))
+            if len(lines) <= 1:
+                return ""
+            return "\n".join(lines)
+        except Exception:
+            return ""
+
+    async def _save_session_end(self, last_answer: str = "") -> None:
+        """Persist session state on graceful shutdown."""
+        try:
+            if not self.memory:
+                return
+            from clawos_core.util.time import now_iso as _now_iso
+            state = {
+                "session_id": self.session.session_id,
+                "last_work": last_answer[:120] if last_answer else "",
+                "context_state": {"turn": self._turn},
+                "ended_at": _now_iso(),
+            }
+            self.memory.save_session_state(self.workspace_id, state)
+        except Exception:
+            pass
 
     def _is_trivial(self, user_input: str) -> bool:
         """True for greetings/acks that should skip recall and skill scoring."""
@@ -188,6 +250,9 @@ class AgentRuntime:
                         self.memory.remember_async(f"Nexus: {answer}",
                                                    self.workspace_id, source="agent")
                     )
+                # ACE: extract learnings for non-trivial tasks
+                if not self._is_trivial(user_input) and len(answer) > 80:
+                    asyncio.create_task(self._run_ace(f"Task: {user_input}\nAnswer: {answer}"))
                 return answer
 
             if "parse_error" in parsed:
@@ -262,6 +327,8 @@ class AgentRuntime:
                         self.memory.remember_async(f"Nexus: {answer}",
                                                    self.workspace_id, source="agent")
                     )
+                if not self._is_trivial(user_input) and len(answer) > 80:
+                    asyncio.create_task(self._run_ace(f"Task: {user_input}\nAnswer: {answer}"))
                 return {"reply": answer, "tool_steps": tool_steps}
 
             if "parse_error" in parsed:

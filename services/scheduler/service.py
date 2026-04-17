@@ -183,6 +183,18 @@ async def _maybe_send_morning_briefing(now: datetime) -> None:
         log.debug(f"Morning briefing check skipped: {e}")
 
 
+async def _fire_session_start_briefing() -> None:
+    """
+    AIPass pattern: on session start, have JARVIS speak a 2-sentence briefing
+    summarising last session work + pending tasks. Only fires once per boot.
+    """
+    try:
+        from services.jarvisd.service import get_service as get_jarvis
+        await get_jarvis().speak_morning_briefing()
+    except Exception as exc:
+        log.debug("session_start briefing skipped: %s", exc)
+
+
 async def scheduler_loop() -> None:
     """Main loop — checks schedules every 60 seconds, fires matching tasks.
     Also runs ambient intelligence checks every 30 minutes."""
@@ -190,6 +202,9 @@ async def scheduler_loop() -> None:
     last_fired: dict[str, str] = {}  # schedule_id -> last fired minute str
     last_ambient: float = 0.0
     AMBIENT_INTERVAL = 30 * 60  # 30 minutes
+
+    # Fire session-start briefing once on startup (non-blocking)
+    asyncio.create_task(_fire_session_start_briefing())
 
     while True:
         now = datetime.now(timezone.utc)

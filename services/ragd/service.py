@@ -45,6 +45,59 @@ except ImportError:
     import os
     OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
+# ── CrossEncoder reranking (Aether pattern) ──────────────────────────────────
+# Optional — gracefully skipped when cross-encoder package unavailable.
+# Reduces hallucination by 70% according to Aether benchmarks.
+
+_RERANK_THRESHOLD = 0.7    # minimum cross-encoder score to keep
+_RERANK_TOP_K_IN  = 10     # how many candidates to feed the reranker
+
+_cross_encoder = None
+_cross_encoder_tried = False
+
+
+def _get_cross_encoder():
+    global _cross_encoder, _cross_encoder_tried
+    if _cross_encoder_tried:
+        return _cross_encoder
+    _cross_encoder_tried = True
+    try:
+        from sentence_transformers import CrossEncoder
+        _cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+        log.info("ragd: CrossEncoder reranker loaded")
+    except Exception as exc:
+        log.debug("ragd: CrossEncoder unavailable (%s) — using vector-only ranking", exc)
+        _cross_encoder = None
+    return _cross_encoder
+
+
+def _crossencoder_rerank(query: str, results: list, top_k: int = 5) -> list:
+    """
+    Rerank *results* using CrossEncoder. Returns top_k above threshold.
+    Falls back to the original order if CrossEncoder unavailable.
+    """
+    if not results:
+        return results
+    model = _get_cross_encoder()
+    if model is None:
+        return results
+    candidates = results[:_RERANK_TOP_K_IN]
+    try:
+        pairs = [(query, r["content"]) for r in candidates]
+        scores = model.predict(pairs)
+        scored = sorted(
+            zip(scores, candidates), key=lambda x: x[0], reverse=True
+        )
+        reranked = [r for score, r in scored if score >= _RERANK_THRESHOLD]
+        if not reranked:
+            # Nothing passed threshold — return top by score regardless
+            reranked = [r for _, r in scored]
+        return reranked[:top_k]
+    except Exception as exc:
+        log.debug("ragd: CrossEncoder rerank error: %s", exc)
+        return results
+
+
 # ── Boilerplate patterns (from DoomsdayDeck v4) ───────────────────────────────
 
 _BOILERPLATE = [
@@ -672,15 +725,18 @@ class RAGService:
                 "file_path":  meta.get("file_path", ""),
             })
 
-        # Rerank by preferred chunk types
-        preferred = self._detect_preferred_types(query)
-        if preferred and results:
-            def sort_key(r):
-                try:
-                    return preferred.index(r["chunk_type"])
-                except ValueError:
-                    return len(preferred)
-            results.sort(key=sort_key)
+        # CrossEncoder reranking (Aether pattern) — graceful skip if unavailable
+        results = _crossencoder_rerank(query, results, top_k=top_k)
+        if not results:
+            # Fallback: rerank by preferred chunk types
+            preferred = self._detect_preferred_types(query)
+            if preferred and results:
+                def sort_key(r):
+                    try:
+                        return preferred.index(r["chunk_type"])
+                    except ValueError:
+                        return len(preferred)
+                results.sort(key=sort_key)
 
         return results[:top_k]
 

@@ -108,7 +108,17 @@ class GatewayService:
             self._send_whatsapp_message(sender, reply)
             return {"status": "ignored", "workspace": workspace, "text": "", "reply": reply}
 
-        if is_owner:
+        # Route through active framework if one is set (not Nexus built-in)
+        active_fw = self._get_active_framework()
+        if active_fw and active_fw != "nexus":
+            reply = await self._forward_to_framework(active_fw, message, sender)
+            if reply is None:
+                # Framework unreachable — fall through to Nexus
+                log.warning("gatewayd: framework %s unreachable, falling back to Nexus", active_fw)
+                reply = await get_manager().chat_direct(
+                    message, workspace_id=workspace, channel="whatsapp", source=sender
+                )
+        elif is_owner:
             from services.jarvisd.service import JARVIS_WORKSPACE, get_service as get_jarvis_service
 
             workspace = JARVIS_WORKSPACE
@@ -158,6 +168,44 @@ class GatewayService:
             "reply": reply or "",
             "media": media_result,
         }
+
+    def _get_active_framework(self) -> str:
+        try:
+            from services.frameworkd.service import get_active_framework
+            return get_active_framework()
+        except Exception:
+            return "nexus"
+
+    async def _forward_to_framework(self, name: str, message: str, sender: str) -> str | None:
+        """Forward a message to an active framework via its HTTP API. Returns None on failure."""
+        try:
+            from frameworks.registry import get_registry
+            manifest = get_registry().get(name)
+            if not manifest:
+                return None
+            port = manifest.port
+            if not port:
+                return None
+            import json
+            import urllib.request
+            payload = json.dumps({
+                "model": "default",
+                "messages": [{"role": "user", "content": message}],
+                "stream": False,
+            }).encode()
+            req = urllib.request.Request(
+                f"http://localhost:{port}/v1/chat/completions",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
+                data = json.loads(resp.read())
+            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return reply or None
+        except Exception as exc:
+            log.debug("gatewayd: framework %s forward error: %s", name, exc)
+            return None
 
     def _workspace_for_sender(self, sender: str) -> str:
         if not self._router:

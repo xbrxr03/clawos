@@ -739,6 +739,48 @@ class JarvisService:
             "session": result["session"],
         }
 
+    async def speak_morning_briefing(self, workspace_id: str | None = None) -> dict[str, Any]:
+        """
+        AIPass pattern: speak a 2-sentence morning briefing on session start.
+        Reads last session state + pending queue from memd.
+        Only fires if voice is enabled and there's meaningful content.
+        """
+        try:
+            from services.memd.service import MemoryService
+            from clawos_core.constants import DEFAULT_WORKSPACE
+            ws = workspace_id or DEFAULT_WORKSPACE
+            mem = MemoryService()
+            state = mem.load_session_state(ws)
+            pending = mem.get_pending_queue(ws)
+        except Exception:
+            return {"ok": False, "spoken": False, "reason": "memd unavailable"}
+
+        if not state and not pending:
+            return {"ok": False, "spoken": False, "reason": "no session state"}
+
+        # Build 2-sentence briefing
+        last_work = state.get("last_work", "")
+        ended_at = state.get("ended_at", "")
+        parts: list[str] = []
+        if last_work:
+            parts.append(f"Welcome back. Last session you were working on: {last_work}.")
+        if pending:
+            pending_str = ", ".join(pending[:2])
+            parts.append(f"You have {len(pending)} pending task{'s' if len(pending) > 1 else ''}: {pending_str}.")
+        elif not parts:
+            return {"ok": False, "spoken": False, "reason": "nothing to brief"}
+
+        briefing_text = " ".join(parts[:2])
+        config = self.config()
+        spoken = False
+        if config.get("voice_enabled"):
+            try:
+                spoken = await self.speak(briefing_text)
+            except Exception:
+                pass
+        self._update_thread(JARVIS_UI_THREAD, last_response=briefing_text, live_caption=briefing_text)
+        return {"ok": True, "spoken": spoken, "briefing": briefing_text}
+
     async def set_mode(self, mode: str) -> dict[str, Any]:
         if mode not in {"off", "push_to_talk", "wake_word"}:
             raise ValueError(f"Unsupported JARVIS mode: {mode}")
