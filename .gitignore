@@ -1,28 +1,58 @@
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
-.env
 *.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.pytest_tmp/
+pytest-cache-files-*/
+.codex_status_pytest_tmp/
+
+# ── Node / frontend ───────────────────────────────────────────────────────────
+node_modules/
+dashboard/frontend/node_modules/
+dashboard/frontend/storybook-static/
+dashboard/frontend/test-results/
+dashboard/frontend/playwright-report/
+dashboard/frontend/.vite/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
 dist/
+/dist/
 build/
-.DS_Store
-*.db
-*.jsonl
+*.iso
+*.zip
+
+# ── Runtime state ─────────────────────────────────────────────────────────────
 /memory/
 /logs/
 /config/
 /workspace/
 /voice/*.onnx
 /voice/*.json
-*.iso
-/dist/
-dashboard/frontend/node_modules/
-dashboard/frontend/storybook-static/
-dashboard/frontend/test-results/
-dashboard/frontend/playwright-report/
-dashboard/frontend/.vite/
-.pytest_cache/
-.pytest_tmp/
 run/
-*.zip
+.tmp_clawos_home/
+
+# ── Secrets & env ─────────────────────────────────────────────────────────────
+.env
+*.db
+*.jsonl
+*.log
+
+# ── Claude Code harness (tool, not project code) ──────────────────────────────
+.claude/settings.local.json
+.claude/worktrees/
+
+# ── Editors / OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.*.swp
+.*.swo
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
 services/__init__.py
