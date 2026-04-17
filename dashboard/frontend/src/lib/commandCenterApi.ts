@@ -827,4 +827,17 @@ export const commandCenterApi = {
   listApprovals: () => fetchJson<any[]>('/api/approvals'),
   getTask: (taskId: string) =>
     fetchJson<{ task_id: string; status: string; result?: string; error?: string }>(`/api/tasks/${taskId}`),
+  listWorkspaces: () =>
+    fetchJson<{ workspaces: Array<{ name: string; has_pinned: boolean; memory_count: number; history_count: number }> }>(
+      '/api/workspaces',
+    ),
+  getMemorySummary: (workspace: string) =>
+    fetchJson<{
+      workspace: string
+      pinned_lines: number
+      workflow_lines: number
+      chroma_count: number
+      fts_count: number
+      entries: Array<{ kind?: string; content?: string; ts?: string; source?: string }>
+    }>(`/api/memory/${encodeURIComponent(workspace)}`),
 }

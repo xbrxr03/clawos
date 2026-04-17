@@ -12,7 +12,6 @@ const TasksPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ defaul
 const ApprovalsPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Approvals })))
 const PacksPage = lazy(() => import('./pages/Packs').then((mod) => ({ default: mod.PacksPage })))
 const ModelsPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Models })))
-const MemoryPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Memory })))
 const AuditPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Audit })))
 const AgentsPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.Agents })))
 const NexusCommandPage = lazy(() => import('./pages/pages.jsx').then((mod) => ({ default: mod.NexusCommand })))
@@ -23,10 +22,12 @@ const WorkflowsPage = lazy(() => import('./pages/Workflows').then((mod) => ({ de
 const WorkbenchPage = lazy(() => import('./pages/Workbench').then((mod) => ({ default: mod.WorkbenchPage })))
 const ResearchPage = lazy(() => import('./pages/Research').then((mod) => ({ default: mod.ResearchPage })))
 const MCPManagerPage = lazy(() => import('./pages/MCPManager').then((mod) => ({ default: mod.MCPManagerPage })))
-const FederationPage = lazy(() => import('./pages/Federation').then((mod) => ({ default: mod.FederationPage })))
+// Federation page hidden until a2ad endpoints are exposed through dashd — tracked post-v0.1.
+// const FederationPage = lazy(() => import('./pages/Federation').then((mod) => ({ default: mod.FederationPage })))
 const StudioPage = lazy(() => import('./pages/Studio').then((mod) => ({ default: mod.StudioPage })))
 const SettingsPage = lazy(() => import('./pages/Settings').then((mod) => ({ default: mod.SettingsPage })))
 const BrainPage = lazy(() => import('./pages/Brain').then((mod) => ({ default: mod.BrainPage })))
+const MemoryPage = lazy(() => import('./pages/Memory').then((mod) => ({ default: mod.MemoryPage })))
 const SkillsPage = lazy(() => import('./pages/Skills').then((mod) => ({ default: mod.SkillsPage })))
 const LicensePage = lazy(() => import('./pages/License').then((mod) => ({ default: mod.LicensePage })))
 const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => ({ default: mod.SetupPage })))
@@ -97,7 +98,6 @@ function ShellRoutes({
         <Route path="/workbench" element={<WorkbenchPage />} />
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/mcp" element={<MCPManagerPage />} />
-        <Route path="/federation" element={<FederationPage />} />
         <Route path="/studio" element={<StudioPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/brain" element={<BrainPage />} />
