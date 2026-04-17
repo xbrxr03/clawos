@@ -16,6 +16,8 @@
 import React, {
   useCallback, useEffect, useRef, useState, lazy, Suspense,
 } from 'react'
+// @ts-ignore — JSX component, no type declarations
+import StructuredMessage from '../components/StructuredMessage.jsx'
 
 // Lazy-load the heavy 3D graph (only loads on Brain page)
 const ForceGraph3D = lazy(() => import('react-force-graph-3d'))
@@ -667,7 +669,7 @@ export function BrainPage() {
             {chatAnswer && (
               <div className="mt-3 bg-violet-900/20 border border-violet-500/20 rounded-lg p-3
                               text-white/70 text-xs leading-relaxed overflow-y-auto max-h-48">
-                {chatAnswer}
+                <StructuredMessage text={chatAnswer} />
               </div>
             )}
           </div>

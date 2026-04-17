@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useEffect, useState } from 'react'
 import { Card, Row, StatusDot, Badge, SectionLabel, Ts, Btn, Empty } from '../components/ui.jsx'
+import StructuredMessage from '../components/StructuredMessage.jsx'
 import { api } from '../lib/api.js'
 
 const TABS = ['active', 'queued', 'failed', 'completed']
@@ -555,7 +556,9 @@ export function NexusCommand() {
                     </div>
                   ) : null}
                   <div className={`conversation-bubble${message.role === 'user' ? ' user' : ''}`} style={{ maxWidth: '75%' }}>
-                    {message.text}
+                    {message.role === 'user' ? message.text : (
+                      <StructuredMessage text={message.text} onFollowUp={(q) => { setInput(q) }} />
+                    )}
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>
                     {message.role === 'user' ? 'you' : 'nexus'} - {new Date(message.ts).toLocaleTimeString()}
