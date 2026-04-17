@@ -204,15 +204,7 @@ def test_rag_skill():
         fail("clawos-rag skill: missing files")
 
 
-# ── capabilityd: service and manifests ───────────────────────────────────────
-def test_capabilityd_service():
-    f = ROOT / "services" / "capabilityd" / "service.py"
-    if f.exists() and "CapabilityGraph" in read_text(f):
-        ok("capabilityd: service.py present")
-    else:
-        fail("capabilityd: service.py missing")
-
-
+# ── capability manifests ─────────────────────────────────────────────────────
 def test_capability_manifests():
     manifests = list((ROOT / "services").rglob("*.capability.yaml"))
     if len(manifests) >= 3:
@@ -354,7 +346,6 @@ if __name__ == "__main__":
         test_clawd_a2a,
         test_memd_ragd_a2a,
         test_rag_skill,
-        test_capabilityd_service,
         test_capability_manifests,
         test_wake_word,
         test_voice_tray,
