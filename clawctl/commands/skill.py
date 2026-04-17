@@ -54,6 +54,32 @@ def run_install(skill_id: str, force: bool = False, allow_community: bool = True
             allow_community=allow_community,
             progress_cb=lambda msg: print(f"  → {msg}"),
         )
+    except ValueError as e:
+        err = str(e)
+        if "TYPOSQUAT_WARNING:" in err:
+            warning = err.replace("TYPOSQUAT_WARNING:", "").strip()
+            print(f"\n  {warning}\n")
+            try:
+                import click
+                if not click.confirm("Install anyway?", default=False):
+                    print("Aborted.")
+                    return
+            except ImportError:
+                ans = input("Install anyway? [y/N] ").strip().lower()
+                if ans != "y":
+                    print("Aborted.")
+                    return
+            # Retry with typosquat check bypassed (user confirmed)
+            from skills.marketplace.installer import install_skill as _install_skill
+            result = _install_skill(
+                skill_id=skill_id, force=force,
+                allow_community=allow_community,
+                progress_cb=lambda msg: print(f"  → {msg}"),
+                bypass_typosquat_check=True,
+            )
+        else:
+            print(f"  ✗ Install error: {e}", file=sys.stderr)
+            return
     except Exception as e:
         print(f"  ✗ Install error: {e}", file=sys.stderr)
         return

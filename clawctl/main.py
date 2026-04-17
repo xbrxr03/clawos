@@ -520,7 +520,121 @@ if CLICK_OK:
         from clawctl.commands.license import run_deactivate; run_deactivate()
 
 
+# ── framework store ───────────────────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def framework():
+        """Browse and manage AI agent frameworks from the Framework Store."""
+        pass
+
+    @framework.command("list")
+    def framework_list():
+        """List all available frameworks with install status."""
+        from clawctl.commands.framework import run_list; run_list()
+
+    @framework.command("install")
+    @click.argument("name")
+    def framework_install(name):
+        """Install a framework from the store."""
+        from clawctl.commands.framework import run_install; run_install(name)
+
+    @framework.command("remove")
+    @click.argument("name")
+    def framework_remove(name):
+        """Remove an installed framework."""
+        from clawctl.commands.framework import run_remove; run_remove(name)
+
+    @framework.command("start")
+    @click.argument("name")
+    def framework_start(name):
+        """Start an installed framework's systemd service."""
+        from clawctl.commands.framework import run_start; run_start(name)
+
+    @framework.command("stop")
+    @click.argument("name")
+    def framework_stop(name):
+        """Stop a running framework."""
+        from clawctl.commands.framework import run_stop; run_stop(name)
+
+    @framework.command("use")
+    @click.argument("name")
+    def framework_use(name):
+        """Set the active framework (gatewayd routes messages here)."""
+        from clawctl.commands.framework import run_use; run_use(name)
+
+    @framework.command("status")
+    def framework_status():
+        """Show status of all installed frameworks."""
+        from clawctl.commands.framework import run_status; run_status()
+
+# ── omi (ambient AI integration) ──────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def omi():
+        """OMI ambient AI integration (BasedHardware)."""
+        pass
+
+    @omi.command("status")
+    def omi_status():
+        """Show webhook URL, last event, conversation count."""
+        from clawctl.commands.omi import run_status; run_status()
+
+    @omi.command("history")
+    @click.option("-n", "--limit", default=20, help="Number of conversations to show")
+    def omi_history(limit):
+        """List recent OMI conversations from archive."""
+        from clawctl.commands.omi import run_history; run_history(limit)
+
+    @omi.command("show")
+    @click.argument("conv_id")
+    def omi_show(conv_id):
+        """Show full conversation detail."""
+        from clawctl.commands.omi import run_show; run_show(conv_id)
+
+    @omi.command("setup")
+    def omi_setup():
+        """Print webhook URLs to paste into OMI app settings."""
+        from clawctl.commands.omi import run_setup; run_setup()
+
+
+# ── ace (self-improving loop) ──────────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def ace():
+        """Inspect and control the ACE self-improving loop (LEARNED.md)."""
+        pass
+
+    @ace.command("status")
+    @click.option("--workspace", default="nexus_default")
+    def ace_status(workspace):
+        """Show LEARNED.md size, entry count, last write timestamp."""
+        from clawctl.commands.ace import run_status; run_status(workspace)
+
+    @ace.command("show")
+    @click.option("--workspace", default="nexus_default")
+    def ace_show(workspace):
+        """Print current LEARNED.md content."""
+        from clawctl.commands.ace import run_show; run_show(workspace)
+
+    @ace.command("clear")
+    @click.option("--workspace", default="nexus_default")
+    @click.option("--yes", is_flag=True, help="Skip confirmation")
+    def ace_clear(workspace, yes):
+        """Truncate LEARNED.md (irreversible)."""
+        from clawctl.commands.ace import run_clear; run_clear(workspace, confirm=not yes)
+
+    @ace.command("pause")
+    @click.option("--workspace", default="nexus_default")
+    def ace_pause(workspace):
+        """Stop writing new entries to LEARNED.md."""
+        from clawctl.commands.ace import run_pause; run_pause(workspace)
+
+    @ace.command("resume")
+    @click.option("--workspace", default="nexus_default")
+    def ace_resume(workspace):
+        """Resume writing entries to LEARNED.md."""
+        from clawctl.commands.ace import run_resume; run_resume(workspace)
+
+
 if __name__ == "__main__":
     main()
-
-# ── project ───────────────────────────────────────────────────────────────────

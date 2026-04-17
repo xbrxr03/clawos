@@ -126,3 +126,64 @@ def check_trust_tier(skill_id: str, signature: Optional[str]) -> str:
     if signature:
         return "clawos_verified"  # Will be validated during install
     return "community"
+
+
+# ── Typosquatting detection (supply chain protection) ─────────────────────────
+
+# Known-safe skill names / namespaces — exact matches are always allowed
+_KNOWN_SAFE: set[str] = {
+    "clawos-rag", "clawos-search", "clawos-voice", "clawos-calendar",
+    "clawos-files", "clawos-shell", "clawos-web", "clawos-memory",
+    "nexus-core", "nexus-tools", "nexus-voice", "nexus-search",
+    "jarvis-wake", "openclaw-skills", "openclaw-mcp",
+}
+
+
+def _levenshtein(a: str, b: str) -> int:
+    """Compute Levenshtein edit distance between two strings."""
+    if a == b:
+        return 0
+    if len(a) < len(b):
+        a, b = b, a
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        curr = [i]
+        for j, cb in enumerate(b, 1):
+            curr.append(min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = curr
+    return prev[-1]
+
+
+def check_typosquatting(skill_name: str) -> tuple[bool, str]:
+    """
+    Check if *skill_name* looks like a typosquat of a known-safe skill.
+
+    Returns (is_suspicious, warning_message).
+    If suspicious: installer must require explicit confirmation before proceeding.
+
+    Logic: Levenshtein distance ≤ 2 to any known-safe name = suspicious.
+    Exact matches are always safe.
+    """
+    name = skill_name.strip().lower()
+
+    # Exact known-safe name — always fine
+    if name in _KNOWN_SAFE:
+        return False, ""
+
+    # Check distance against every known-safe name
+    closest_name = ""
+    closest_dist = 999
+    for safe in _KNOWN_SAFE:
+        dist = _levenshtein(name, safe)
+        if dist < closest_dist:
+            closest_dist = dist
+            closest_name = safe
+
+    if closest_dist <= 2:
+        return True, (
+            f"⚠️  '{skill_name}' looks similar to known skill '{closest_name}' "
+            f"(edit distance: {closest_dist}). This may be a typosquatted package. "
+            "Verify the source before installing."
+        )
+
+    return False, ""

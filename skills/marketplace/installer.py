@@ -35,6 +35,7 @@ def install_skill(
     force: bool = False,
     allow_community: bool = True,
     progress_cb: Optional[Callable[[str], None]] = None,
+    bypass_typosquat_check: bool = False,
 ) -> dict:
     """
     Install a skill from ClawHub.
@@ -43,12 +44,23 @@ def install_skill(
     from skills.marketplace.registry import (
         get_skill_detail, register_installed, _is_installed
     )
-    from skills.marketplace.verifier import verify_skill_yaml, verify_signature, check_trust_tier
+    from skills.marketplace.verifier import (
+        verify_skill_yaml, verify_signature, check_trust_tier,
+        check_typosquatting,
+    )
 
     def _progress(msg: str):
         log.info(f"[install:{skill_id}] {msg}")
         if progress_cb:
             progress_cb(msg)
+
+    # ── 0. Typosquatting check ───────────────────────────────────────────────
+    if not bypass_typosquat_check:
+        is_suspicious, warning = check_typosquatting(skill_id)
+        if is_suspicious:
+            _progress(warning)
+            # Raise so callers (clawctl + dashboard) can prompt for confirmation
+            raise ValueError(f"TYPOSQUAT_WARNING: {warning}")
 
     # ── 1. Check already installed ───────────────────────────────────────────
     if _is_installed(skill_id) and not force:
