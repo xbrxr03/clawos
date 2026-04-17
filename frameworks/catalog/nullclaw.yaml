@@ -1,0 +1,16 @@
+name: nullclaw
+version: "0.1.0"
+description: "Stateless agent — no persistent state, pure function execution, ephemeral by design. Useful for deterministic pipelines."
+category: framework
+install_method: pip
+package: nullclaw
+entry_point: nullclaw.server
+port: 18813
+compatible_tiers: [arm-cpu-4gb, arm-cpu-8gb, arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
+incompatible_tiers: []
+requires_ollama: true
+requires_node: false
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/nullclaw/nullclaw"
+tags: [framework, stateless, ephemeral, minimal]

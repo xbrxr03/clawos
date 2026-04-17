@@ -1,0 +1,17 @@
+name: openai_agents
+version: "0.1.0"
+description: "Provider-agnostic multi-agent framework with tracing, guardrails, and 100+ LLM support via LiteLLM routing."
+category: framework
+install_method: pip
+package: openai-agents
+entry_point: agents.server
+port: 18817
+compatible_tiers: [arm-cpu-8gb, arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
+incompatible_tiers: [arm-cpu-4gb]
+requires_ollama: true
+requires_node: false
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/openai/openai-agents-python"
+  docs: "https://openai.github.io/openai-agents-python/"
+tags: [framework, multi-agent, guardrails, tracing, provider-agnostic]

@@ -1,0 +1,17 @@
+name: smolagents
+version: "1.14.0"
+description: "HuggingFace code-based agent framework — 30% fewer LLM calls than JSON tool calling. Agents write and execute Python code directly."
+category: framework
+install_method: pip
+package: smolagents[litellm]
+entry_point: smolagents.cli
+port: 18810
+compatible_tiers: [arm-cpu-8gb, arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
+incompatible_tiers: []
+requires_ollama: true
+requires_node: false
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/huggingface/smolagents"
+  docs: "https://huggingface.co/docs/smolagents"
+tags: [framework, code-agent, huggingface, python]

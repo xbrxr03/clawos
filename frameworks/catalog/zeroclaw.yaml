@@ -1,0 +1,17 @@
+name: zeroclaw
+version: "1.0.0"
+description: "Rust implementation — 99% memory reduction vs Python equivalents. Ultra-lightweight, blazing fast startup, minimal footprint."
+category: framework
+install_method: cargo
+package: zeroclaw
+entry_point: zeroclaw
+port: 18814
+compatible_tiers: [arm-cpu-4gb, arm-cpu-8gb, arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
+incompatible_tiers: []
+requires_ollama: true
+requires_node: false
+requires_rust: true
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/zeroclaw/zeroclaw"
+tags: [framework, rust, lightweight, fast]

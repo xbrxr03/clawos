@@ -1,0 +1,17 @@
+name: pocketflow
+version: "0.0.13"
+description: "100-line LLM framework with zero dependencies. Graph-based agent pipelines with native MCP support. Minimal footprint."
+category: framework
+install_method: pip
+package: pocketflow
+entry_point: pocketflow.server
+port: 18812
+compatible_tiers: [arm-cpu-4gb, arm-cpu-8gb, arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
+incompatible_tiers: []
+requires_ollama: true
+requires_node: false
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/The-Pocket/PocketFlow"
+  docs: "https://github.com/The-Pocket/PocketFlow/blob/main/README.md"
+tags: [framework, minimal, mcp, graph, zero-deps]

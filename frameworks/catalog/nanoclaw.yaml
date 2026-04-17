@@ -1,0 +1,16 @@
+name: nanoclaw
+version: "1.0.0"
+description: "~500 TypeScript lines. Proves agents don't need hundreds of MB of RAM. Ultra-lightweight node-based agent runtime."
+category: framework
+install_method: npm
+package: nanoclaw
+entry_point: nanoclaw
+port: 18815
+compatible_tiers: [arm-cpu-4gb, arm-cpu-8gb, arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
+incompatible_tiers: []
+requires_ollama: true
+requires_node: true
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/nanoclaw/nanoclaw"
+tags: [framework, typescript, minimal, lightweight]

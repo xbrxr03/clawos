@@ -1,0 +1,17 @@
+name: langroid
+version: "0.30.0"
+description: "Multi-agent message-passing framework with built-in vector store and local LLM support. Agents as first-class citizens."
+category: framework
+install_method: pip
+package: langroid
+entry_point: langroid.server
+port: 18816
+compatible_tiers: [arm-cpu-8gb, arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
+incompatible_tiers: [arm-cpu-4gb]
+requires_ollama: true
+requires_node: false
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/langroid/langroid"
+  docs: "https://langroid.github.io/langroid/"
+tags: [framework, multi-agent, message-passing, vector-store]

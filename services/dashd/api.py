@@ -1866,6 +1866,106 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
 
+    # ── Framework Store ───────────────────────────────────────────────────────
+
+    @app.get("/api/frameworks", dependencies=[Depends(require_auth)])
+    async def frameworks_list():
+        from services.frameworkd.service import list_frameworks, get_active_framework
+        try:
+            from bootstrap.hardware_probe import load_saved
+            hw = load_saved()
+            profile_id = hw.profile_id
+        except Exception:
+            profile_id = "x86-cpu-16gb"
+        rows = list_frameworks(profile_id)
+        active = get_active_framework()
+        return {"frameworks": rows, "active": active, "profile_id": profile_id}
+
+    @app.post("/api/frameworks/{name}/install", dependencies=[Depends(require_auth)])
+    async def frameworks_install(name: str):
+        from services.frameworkd.service import install_framework
+        name = name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="name required")
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, install_framework, name
+        )
+        if not result["ok"]:
+            raise HTTPException(status_code=500, detail=result["message"])
+        return result
+
+    @app.delete("/api/frameworks/{name}", dependencies=[Depends(require_auth)])
+    async def frameworks_remove(name: str):
+        from services.frameworkd.service import remove_framework
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, remove_framework, name
+        )
+        if not result["ok"]:
+            raise HTTPException(status_code=500, detail=result["message"])
+        return result
+
+    @app.post("/api/frameworks/{name}/start", dependencies=[Depends(require_auth)])
+    async def frameworks_start(name: str):
+        from services.frameworkd.service import start_framework
+        result = start_framework(name)
+        if not result["ok"]:
+            raise HTTPException(status_code=500, detail=f"Could not start {name}")
+        return result
+
+    @app.post("/api/frameworks/{name}/stop", dependencies=[Depends(require_auth)])
+    async def frameworks_stop(name: str):
+        from services.frameworkd.service import stop_framework
+        return stop_framework(name)
+
+    @app.get("/api/frameworks/active", dependencies=[Depends(require_auth)])
+    async def frameworks_get_active():
+        from services.frameworkd.service import get_active_framework
+        return {"active": get_active_framework()}
+
+    @app.put("/api/frameworks/active", dependencies=[Depends(require_auth)])
+    async def frameworks_set_active(body: dict | None = None):
+        name = str((body or {}).get("name", "")).strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="name required")
+        from services.frameworkd.service import set_active_framework
+        result = set_active_framework(name)
+        if not result["ok"]:
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed"))
+        return result
+
+    # ── OMI ambient AI integration ──────────────────────────────────────────
+
+    @app.post("/api/omi/transcript")
+    async def omi_transcript(request: Request):
+        """Real-time transcript webhook from OMI macOS app. No auth — OMI sends unsigned."""
+        uid = request.query_params.get("uid", "default")
+        body = await request.json()
+        segments = body.get("segments", [])
+        from services.omid.service import get_service
+        reply = get_service().handle_transcript(uid, segments)
+        return {"message": reply}
+
+    @app.post("/api/omi/conversation")
+    async def omi_conversation(request: Request):
+        """Conversation-end webhook from OMI macOS app. No auth — OMI sends unsigned."""
+        uid = request.query_params.get("uid", "default")
+        body = await request.json()
+        from services.omid.service import get_service
+        reply = await get_service().handle_conversation(uid, body)
+        return {"message": reply}
+
+    @app.get("/api/omi/status", dependencies=[Depends(require_auth)])
+    async def omi_status():
+        """OMI integration stats + webhook URLs."""
+        from services.omid.service import get_service
+        return get_service().get_stats()
+
+    @app.get("/api/omi/conversations", dependencies=[Depends(require_auth)])
+    async def omi_conversations(limit: int = 20):
+        """List recent OMI conversations stored in memory."""
+        from services.omid.service import get_service
+        return {"conversations": get_service().list_conversations(limit)}
+
     # ── A2A federation peer management ────────────────────────────────────────
 
     @app.get("/api/a2a/peers", dependencies=[Depends(require_auth)])

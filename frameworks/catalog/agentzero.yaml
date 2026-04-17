@@ -1,0 +1,17 @@
+name: agentzero
+version: "0.8.0"
+description: "Autonomous AI agent with self-correcting workflows, dynamic tool creation, and computer control (mouse/keyboard/screen)."
+category: framework
+install_method: git
+repo: "https://github.com/frdel/agent-zero"
+entry_point: run_ui.py
+port: 18811
+compatible_tiers: [arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb]
+incompatible_tiers: [arm-cpu-4gb, arm-cpu-8gb]
+requires_ollama: true
+requires_node: false
+api_base: "http://localhost:11500/v1"
+links:
+  github: "https://github.com/frdel/agent-zero"
+  docs: "https://github.com/frdel/agent-zero/blob/main/README.md"
+tags: [framework, autonomous, computer-use, self-correcting]
