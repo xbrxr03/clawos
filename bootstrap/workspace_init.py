@@ -7,7 +7,7 @@ from pathlib import Path
 from clawos_core.constants import CLAWOS_DIR
 from clawos_core.util.paths import (
     workspace_path, memory_path,
-    pinned_path, soul_path, agents_path, heartbeat_path
+    pinned_path, soul_path, agents_path, heartbeat_path, identity_path
 )
 
 PRESETS = Path(__file__).parent.parent / "data" / "presets" / "workspaces" / "default"
@@ -29,6 +29,7 @@ def init_workspace(workspace_id: str = "nexus_default") -> Path:
     _copy_if_missing(PRESETS / "SOUL.md",      soul_path(workspace_id))
     _copy_if_missing(PRESETS / "AGENTS.md",    agents_path(workspace_id))
     _copy_if_missing(PRESETS / "HEARTBEAT.md", heartbeat_path(workspace_id))
+    _copy_if_missing(PRESETS / "IDENTITY.md",  identity_path(workspace_id))
 
     # PINNED.md — blank if not present
     p = pinned_path(workspace_id)

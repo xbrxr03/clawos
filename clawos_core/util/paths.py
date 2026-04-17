@@ -27,6 +27,7 @@ def history_path(workspace_id: str)   -> Path: return memory_path(workspace_id) 
 def soul_path(workspace_id: str)      -> Path: return memory_path(workspace_id) / "SOUL.md"
 def agents_path(workspace_id: str)    -> Path: return memory_path(workspace_id) / "AGENTS.md"
 def heartbeat_path(workspace_id: str) -> Path: return memory_path(workspace_id) / "HEARTBEAT.md"
+def identity_path(workspace_id: str)  -> Path: return memory_path(workspace_id) / "IDENTITY.md"
 
 def log_path(name: str) -> Path:
     p = _root() / "logs"

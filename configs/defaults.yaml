@@ -107,3 +107,27 @@ picoclaw:
   github_repo: "sipeed/picoclaw"
   version: "v0.2.4"
   http_timeout: 300
+
+# ── OMI — ambient AI integration (BasedHardware) ──────────────────────────────
+omi:
+  enabled: true
+  webhook_base_url: "http://localhost:7070"  # used in setup instructions
+  passive_capture: true      # store all conversations in memory
+  active_response: true      # speak replies for detected commands
+  command_prefix: "nexus"    # "nexus, <command>" triggers active response
+  store_full_transcript: true
+
+# ── RAG — document retrieval ───────────────────────────────────────────────────
+rag:
+  rerank_threshold: 0.7    # CrossEncoder minimum score (Aether pattern)
+  top_k_before_rerank: 10  # candidates fed to reranker
+  reranker_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+# ── llmd — LiteLLM proxy ──────────────────────────────────────────────────────
+llm_proxy:
+  port: 11500
+  enabled: true
+  master_key: ""           # auto-generated on first start if empty
+  backends:
+    - type: ollama
+      host: "http://localhost:11434"
