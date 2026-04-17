@@ -29,6 +29,19 @@ from clawos_core.util.paths import (
 
 log = logging.getLogger("memd")
 
+# ── taosmd backends ───────────────────────────────────────────────────────────
+try:
+    from services.memd.taosmd.secret_filter import redact_secrets as _redact_secrets
+    from services.memd.taosmd.archive import ArchiveStore as _ArchiveStore
+    from services.memd.taosmd.knowledge_graph import TemporalKnowledgeGraph as _TemporalKG
+    from services.memd.taosmd.intent_classifier import classify_intent as _classify_intent, route_to_backends as _route_to_backends
+    from services.memd.taosmd.vector_memory import VectorMemory as _VectorMemory
+    _TAOSMD_OK = True
+except ImportError as _e:
+    log.debug("taosmd modules not loaded: %s", _e)
+    _TAOSMD_OK = False
+    def _redact_secrets(t): return t, []  # type: ignore[misc]
+
 # ── ChromaDB (optional) ───────────────────────────────────────────────────────
 try:
     import chromadb
@@ -41,6 +54,35 @@ except Exception as e:
 
 # ── SQLite FTS5 ───────────────────────────────────────────────────────────────
 _FTS_DB_PATH = MEMORY_DIR / "fts.db"
+
+# ── taosmd singletons (initialized lazily on first use) ───────────────────────
+_taosmd_archive: "object | None" = None
+_taosmd_tkg: "object | None" = None
+_taosmd_vector: "object | None" = None
+
+
+def _get_archive():
+    global _taosmd_archive
+    if _TAOSMD_OK and _taosmd_archive is None:
+        _taosmd_archive = _ArchiveStore(MEMORY_DIR / "archive")
+    return _taosmd_archive
+
+
+def _get_tkg():
+    global _taosmd_tkg
+    if _TAOSMD_OK and _taosmd_tkg is None:
+        _taosmd_tkg = _TemporalKG(MEMORY_DIR / "tkg.db")
+    return _taosmd_tkg
+
+
+def _get_vector():
+    global _taosmd_vector
+    if _TAOSMD_OK and _taosmd_vector is None:
+        _taosmd_vector = _VectorMemory(
+            MEMORY_DIR / "vm_fts.db",
+            chroma_path=MEMORY_DIR / "chroma",
+        )
+    return _taosmd_vector
 
 def _open_fts() -> sqlite3.Connection:
     """New connection per call — safe for thread pool use."""
@@ -132,6 +174,10 @@ class MemoryService:
                  force_add: bool = False) -> str:
         if not text or not text.strip():
             return ""
+
+        # Secret filter — never persist credentials
+        text, _redacted = _redact_secrets(text)
+
         memory_id = str(uuid.uuid4())[:12]
         created   = now_iso()
 
@@ -154,6 +200,18 @@ class MemoryService:
         finally:
             db.close()
         self.append_history(workspace_id, f"[ADD] {text[:80]}")
+
+        # taosmd: archive + vector store
+        try:
+            archive = _get_archive()
+            if archive:
+                archive.record("memory_add", {"content": text, "workspace": workspace_id}, agent_name=source)
+            vector = _get_vector()
+            if vector:
+                vector.add(text, memory_id=memory_id, metadata={"workspace": workspace_id, "source": source})
+        except Exception as _e:
+            log.debug("taosmd write error (non-fatal): %s", _e)
+
         return memory_id
 
     async def remember_async(self, text: str, workspace_id: str,
@@ -168,6 +226,31 @@ class MemoryService:
     def recall(self, query: str, workspace_id: str, n: int = 5) -> list[str]:
         """Hybrid 4-layer recall. Always includes PINNED + WORKFLOW."""
         results = []
+
+        # taosmd: intent-routed prefetch (non-blocking, additive)
+        if _TAOSMD_OK:
+            try:
+                intent = _classify_intent(query)
+                backends = _route_to_backends(intent)
+                if "archive" in backends[:1]:
+                    archive = _get_archive()
+                    if archive:
+                        hits = archive.search(query, limit=3)
+                        for h in hits:
+                            snippet = h.get("snippet", "")
+                            if snippet:
+                                results.append(f"[RECENT] {snippet[:200]}")
+                if "kg" in backends[:1]:
+                    tkg = _get_tkg()
+                    if tkg:
+                        # Extract likely entity from first few words
+                        entity = query.split()[0] if query.strip() else ""
+                        if entity:
+                            kg_text = tkg.format_for_context(entity)
+                            if kg_text:
+                                results.append(kg_text)
+            except Exception as _e:
+                log.debug("taosmd intent recall error (non-fatal): %s", _e)
 
         # Layer 1: PINNED.md
         pinned = self.read_pinned(workspace_id)
@@ -333,6 +416,66 @@ class MemoryService:
                     metadatas=[{"source": source, "workspace": workspace_id}])
         except Exception as e:
             log.debug(f"ChromaDB async write: {e}")
+
+    # ── Session continuity (AIPass pattern) ───────────────────────────────────
+
+    def save_session_state(self, workspace_id: str, state: dict) -> None:
+        """Persist current session state so JARVIS can resume on next wake."""
+        import json
+        from clawos_core.constants import WORKSPACE_DIR
+        session_dir = WORKSPACE_DIR / workspace_id / ".session"
+        session_dir.mkdir(parents=True, exist_ok=True)
+        (session_dir / "local.json").write_text(
+            json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    def load_session_state(self, workspace_id: str) -> dict:
+        """Load last session state. Returns {} if none exists."""
+        import json
+        from clawos_core.constants import WORKSPACE_DIR
+        p = WORKSPACE_DIR / workspace_id / ".session" / "local.json"
+        if not p.exists():
+            return {}
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def push_pending(self, workspace_id: str, task: str) -> None:
+        """Add a task to the pending queue for next session."""
+        import json
+        from clawos_core.constants import WORKSPACE_DIR
+        session_dir = WORKSPACE_DIR / workspace_id / ".session"
+        session_dir.mkdir(parents=True, exist_ok=True)
+        q_path = session_dir / "pending_queue.json"
+        queue: list[str] = []
+        if q_path.exists():
+            try:
+                queue = json.loads(q_path.read_text(encoding="utf-8"))
+            except Exception:
+                queue = []
+        if task not in queue:
+            queue.append(task)
+        q_path.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def get_pending_queue(self, workspace_id: str) -> list[str]:
+        """Return the pending task queue for this workspace."""
+        import json
+        from clawos_core.constants import WORKSPACE_DIR
+        q_path = WORKSPACE_DIR / workspace_id / ".session" / "pending_queue.json"
+        if not q_path.exists():
+            return []
+        try:
+            return json.loads(q_path.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+
+    def clear_pending_queue(self, workspace_id: str) -> None:
+        """Clear the pending queue (called after briefing delivered)."""
+        from clawos_core.constants import WORKSPACE_DIR
+        q_path = WORKSPACE_DIR / workspace_id / ".session" / "pending_queue.json"
+        if q_path.exists():
+            q_path.write_text("[]", encoding="utf-8")
 
 
 # ── RAGd A2A server ───────────────────────────────────────────────────────────
