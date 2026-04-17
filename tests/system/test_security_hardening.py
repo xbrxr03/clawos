@@ -99,9 +99,3 @@ def test_security_sensitive_modules_avoid_shell_true_in_hardened_paths():
         assert "shell=True" not in text
 
 
-def test_legacy_entrypoints_avoid_exec_open_and_mktemp():
-    legacy_factory = (ROOT / "content_factory_skill" / "factory" / "factory.py").read_text(encoding="utf-8")
-    preflight = (ROOT / "content_factory_skill" / "factory" / "preflight.py").read_text(encoding="utf-8")
-
-    assert "exec(open(" not in legacy_factory
-    assert "tempfile.mktemp" not in preflight

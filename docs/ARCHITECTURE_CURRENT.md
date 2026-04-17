@@ -62,7 +62,6 @@ input/channel -> agentd -> AgentRuntime -> policyd -> toolbridge -> local system
 - `clients/`: user-facing interfaces and daemon entrypoints.
 - `workflows/`: prebuilt jobs and helper-backed workflows.
 - `configs/`, `systemd/`, `setup/`, `bootstrap/`, `scripts/`: install and runtime support.
-- `content_factory_skill/`: separate sidecar project, not part of the core runtime path.
 
 ## Immediate Cleanups Still Needed
 
