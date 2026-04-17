@@ -137,8 +137,9 @@ ClawOS ships with a full agent runtime ecosystem and a store to install more.
 | **NanoClaw** | ~500 TypeScript lines, minimal footprint |
 | **Langroid** | Multi-agent message-passing, built-in local LLM support |
 | **OpenAI Agents SDK** | Provider-agnostic, 100+ LLM support |
+| **Hermes Agent** | Nous Research self-improving agent — persistent cross-session memory, MCP integration, autonomous skill loops. _Coming post-v0.1._ |
 
-Every framework routes through a shared LiteLLM proxy — one Ollama backend, any framework on top.
+Every framework routes through a shared LiteLLM proxy — one Ollama backend, any framework on top. OpenClaw itself is built on [pi-mono](https://github.com/badlogic/pi-mono) (MIT) — when it's the active framework, pi's 4-tool core (read/bash/edit/write) drives the agent loop.
 
 ---
 

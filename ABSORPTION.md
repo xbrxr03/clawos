@@ -27,6 +27,7 @@ shoulders of dozens of open-source projects. This document tracks all of them.
 |---------|------|---------|------|-------------------------|
 | **Ollama** | Integrated | MIT | [ollama/ollama](https://github.com/ollama/ollama) | Local LLM inference server. ClawOS auto-installs and manages it. Every local model runs through Ollama. |
 | **OpenClaw** | Integrated | Custom | [openclaw/openclaw](https://github.com/openclaw/openclaw) | Optional advanced agent runtime with 13,700+ community skills. ClawOS pre-configures it for offline use and routes JARVIS voice through it. |
+| **pi-mono** | Transitive (via OpenClaw) | MIT | [badlogic/pi-mono](https://github.com/badlogic/pi-mono) | OpenClaw is built on pi-mono's agent SDK (`@mariozechner/pi-agent-core`, `pi-ai`, `pi-coding-agent`, `pi-tui` v0.66.1). Its 4 base tools — read, bash, edit, write — come from pi. When ClawOS runs OpenClaw as the active framework, pi is the underlying agent loop. |
 | **LiteLLM** | Integrated | MIT | [BerriAI/litellm](https://github.com/BerriAI/litellm) | Unified API gateway (`services/llmd/`). Routes requests to Ollama, Anthropic, OpenAI, Azure through one endpoint. Port 11500. |
 
 ## Voice & Audio Pipeline
