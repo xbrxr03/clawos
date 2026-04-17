@@ -8,17 +8,69 @@
 curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 ```
 
-One command. Your spare PC becomes a private JARVIS — voice assistant, automation engine, and personal AI. No subscriptions. No cloud. No API keys required.
+One command. Your spare PC becomes a private AI assistant — voice, automation engine, and personal knowledge base. No subscriptions. No cloud. No API keys required.
+
+---
+
+## What ClawOS is — and isn't
+
+ClawOS is a **curated installation and orchestration layer**. We built the glue, the install experience, and several original services. We did not build everything.
+
+| Component | Built by | Notes |
+|-----------|---------|-------|
+| **Nexus** agent loop | ✅ ClawOS | Our native ReAct runtime |
+| **Jarvis** voice layer | ✅ ClawOS | Wake word, STT/TTS wiring, personality |
+| Dashboard + workflow engine | ✅ ClawOS | 17-page React UI, 29 workflows |
+| Memory system (memd) | ✅ ClawOS | 14-layer persistent memory (taosmd) |
+| Policy engine (policyd) | ✅ ClawOS | Merkle audit, approval queue |
+| OMI integration (omid) | ✅ ClawOS | Ambient AI capture + command detection |
+| Framework Store (frameworkd) | ✅ ClawOS | 9 agent frameworks, one-click install |
+| Scheduler, toolbridge, A2A | ✅ ClawOS | Original services |
+| **Ollama** (model server) | [Ollama project](https://ollama.com) | Not ours — MIT licensed |
+| **OpenClaw** (optional runtime) | [OpenClaw](https://openclaw.ai) | Not ours — we pre-configure it for offline use |
+| **OMI** (ambient AI) | [BasedHardware](https://github.com/BasedHardware/omi) | Not ours — optional macOS app or wearable |
+| Whisper STT | [OpenAI](https://github.com/openai/whisper) | Speech-to-text (MIT) |
+| Piper TTS | [Rhasspy project](https://github.com/rhasspy/piper) | Text-to-speech (MIT) |
+| ChromaDB | [Chroma](https://www.trychroma.com) | Vector memory (Apache 2.0) |
+| CrossEncoder reranking | [sentence-transformers](https://github.com/UKPLab/sentence-transformers) | MS MARCO MiniLM-L-6-v2 (Apache 2.0) |
+
+OpenClaw is an optional component you can install *through* ClawOS. If you already run OpenClaw yourself, ClawOS is a curated setup layer on top of that — not a competing product.
+
+> **Full absorption log**: See [ABSORPTION.md](ABSORPTION.md) for every external project,
+> repo, algorithm, and research pattern that ClawOS integrates — with links, licenses, and
+> what each one does.
+
+---
+
+## Honest performance expectations
+
+> **Before you install**: Local models on consumer hardware are meaningfully slower and less capable than cloud APIs. A `qwen2.5:3b` on 16GB RAM will not match GPT-4 on complex multi-step agentic tasks. You will get worse results on hard reasoning problems and longer chains.
+>
+> ClawOS trades performance for privacy and zero ongoing cost. For many use cases that tradeoff is correct. For others it isn't. Know which one you are.
+
+**What works well locally:** chat, summaries, file organisation, voice reminders, daily briefings, simple automations, document Q&A.
+
+**What struggles locally:** complex multi-tool chains, code generation for large projects, nuanced reasoning, tasks that need a 70B+ model to succeed reliably.
+
+---
+
+## Per-device capability guide
+
+| Device | RAM | Recommended model | What works | What won't |
+|--------|-----|-------------------|-----------|-----------|
+| Raspberry Pi 5 / ARM 8GB | 8GB | `qwen2.5:1.5b` | Q&A, voice, reminders | Agentic chains, code gen |
+| ROG Ally / laptop 16GB | 16GB | `qwen2.5:3b` | Chat, voice, simple tasks | Complex multi-step pipelines |
+| Mini PC / MacBook 16GB | 16GB | `qwen2.5:7b` | Most tasks, good quality | Very long context tasks |
+| Workstation 32GB+ | 32GB+ | `qwen2.5:14b+` | Full agentic use | Nothing (this is the target) |
+| GPU rig (RTX 3080+) | Any+10GB VRAM | `qwen2.5:7b` GPU | Fast, solid quality | Large context (32k+) |
 
 ---
 
 ## Why this exists
 
-OpenClaw hit 280,000 GitHub stars in six weeks. Most people who tried it gave up.
+Most people who try to run a local AI assistant give up. The setup takes hours. The defaults are wrong. The models are poorly matched to the hardware. Nothing talks to each other.
 
-The setup takes hours. It requires API keys. It costs $300–750/month in tokens. CVE-2026-25253 lets anyone steal your keys in one click.
-
-ClawOS fixes all of that. It runs OpenClaw on your hardware, with your models, for the cost of electricity.
+ClawOS is a single installer that detects your hardware, picks the right model, wires up voice, memory, workflows, and a dashboard, and hands you a working system.
 
 ---
 
@@ -48,72 +100,58 @@ Developers get **OpenClaude** pre-wired to Ollama — Claude Code's interface, y
 
 - **JARVIS voice** — wake word ("Hey Claw"), Whisper STT, Piper TTS offline. Plug in your ElevenLabs key once for cinematic voice.
 - **OpenClaude** — open-source Claude Code, pre-configured for offline Ollama. Dev profile only. No subscription.
+- **Framework Store** — install any AI agent framework from a store UI: SmolAgents, AgentZero, PocketFlow, NullClaw, Langroid, and more.
 - **Nexus Brain** — 3D knowledge graph. Drop a ZIP of notes, watch your personal knowledge base build itself.
 - **29 one-command workflows** — organize downloads, summarize PDFs, review PRs, disk reports, daily digest, and more.
 - **Proactive ambient intelligence** — ClawOS watches in the background. "82% disk full." "Brain found a new connection." Surfaces what matters before you ask.
+- **Session continuity** — wake up your device and JARVIS briefs you on where you left off. No re-explaining context.
 - **policyd** — every tool call gated, audited, and logged before it runs. Human approval queue for sensitive ops.
 - **Dashboard** — 17-page React UI at `:7070`. Tasks, approvals, models, memory, audit log, workflows, brain graph.
-- **Smart model routing** — DeepSeek for cheap tasks, Claude for hard ones, Ollama (free) for local coding.
+- **Smart model routing** — lightweight models for simple tasks, full models for complex ones.
 - **MCP Manager** — connect any Model Context Protocol server, visual UI.
 - **A2A Federation** — link multiple ClawOS instances on your network.
 
 ---
 
-## Why not just run Ollama?
+## Agent Runtimes & Framework Store
 
-Ollama runs models. ClawOS is what you build *with* Ollama.
+ClawOS ships with a full agent runtime ecosystem and a store to install more.
 
-| Just Ollama | ClawOS |
-|---|---|
-| Chat in terminal | Wake word + voice replies |
-| One conversation at a time | 29+ background automations |
-| No memory | 4-layer persistent memory |
-| No dashboard | Full ops console at `:7070` |
-| No schedules | Morning briefing at 7am |
-| No safety layer | policyd — every call risk-scored, sensitive ops need approval |
-| Model only | Model + brain + workflows + voice |
-
-**Ollama is the engine. ClawOS is the car.**
-
----
-
-## Requirements
-
-- Ubuntu 24.04, Debian 12, Raspberry Pi OS, or macOS 14+ (Apple Silicon first, Intel best-effort)
-- 8GB RAM minimum
-- 10GB free disk space
-- Internet on first run only (pulls models, then fully offline)
-
-The installer automatically detects your hardware and picks the right model:
-
-| Hardware | RAM | Model | Speed |
-|---|---|---|---|
-| Raspberry Pi 5 / ARM | 8GB | `qwen3.5:4b` | ~3–5 tok/s CPU |
-| x86 laptop / mini PC | 8–16GB | `qwen3.5:4b` | ~8–20 tok/s CPU |
-| x86 workstation with GPU | 16–32GB | `qwen3.5:4b` | ~40–80 tok/s GPU |
-| Gaming rig / workstation | 32GB+ + GPU | `qwen3.5:9b` | ~80+ tok/s GPU |
-
-GPU optional. NVIDIA CUDA and AMD ROCm both supported via Ollama.
-
-## Agent Runtimes
-
-ClawOS ships with a full agent runtime ecosystem — not just one model interface.
+**Built-in runtimes:**
 
 | Runtime | Tiers | What it is |
 |---|---|---|
 | **Nexus** | All | Native Python ReAct agent. Always-on, CPU-capable, 4-layer persistent memory, skill loader, A2A federation. |
 | **PicoClaw** | Tier A (ARM) | Lightweight runtime from [Sipeed](https://github.com/sipeed/picoclaw). Auto-activated on Raspberry Pi and ARM hardware — no configuration required. |
-| **OpenClaw** | All | 13,700+ community skills. The main agent ecosystem. Activate with `clawctl openclaw install`. |
-| **Hermes Agent** | Coming soon | Self-improving agent from [Nous Research](https://github.com/nousresearch/hermes-agent). Persistent cross-session memory, MCP integration, autonomous skill building. |
+
+**Install any framework from the store:**
+
+| Framework | Description |
+|---|---|
+| **OpenClaw** | 13,700+ community skills, multi-channel. `clawctl framework install openclaw` |
+| **SmolAgents** | HuggingFace code-based agent, 30% fewer LLM calls |
+| **AgentZero** | Self-correcting, tool creation, computer use |
+| **PocketFlow** | 100-line LLM framework, zero deps, MCP support |
+| **NullClaw** | Stateless, ephemeral, pure function execution |
+| **ZeroClaw** | Rust implementation, ultra-lightweight |
+| **NanoClaw** | ~500 TypeScript lines, minimal footprint |
+| **Langroid** | Multi-agent message-passing, built-in local LLM support |
+| **OpenAI Agents SDK** | Provider-agnostic, 100+ LLM support |
+
+Every framework routes through a shared LiteLLM proxy — one Ollama backend, any framework on top.
 
 ---
 
 ## How it works
 
 ```
-You (Terminal / Voice / Dashboard)
+You (Terminal / Voice / Dashboard / WhatsApp)
          |
       agentd   ← task queue + session manager
+         |
+    frameworkd  ← active framework routing (Nexus / OpenClaw / SmolAgents / ...)
+         |
+      llmd     ← LiteLLM proxy — unified OpenAI-compatible endpoint
          |
       Ollama   ← local inference, no cloud, no API keys
          |
@@ -121,7 +159,7 @@ You (Terminal / Voice / Dashboard)
          |
    toolbridge  ← files, web, shell, memory
          |
-       memd    ← 4-layer memory: PINNED + WORKFLOW + ChromaDB + FTS5
+       memd    ← temporal knowledge graph + hybrid RRF memory
 ```
 
 Every action goes through `policyd`. Sensitive operations pause for your approval. Nothing talks to the internet unless you explicitly allow it. A tamper-evident Merkle-chained audit log records every action taken on your machine.
@@ -130,35 +168,44 @@ Every action goes through `policyd`. Sensitive operations pause for your approva
 
 ## Security
 
-ClawOS meets 6 of 7 enterprise security requirements. No other open-source agent project meets more than 3.
-
 | Requirement | Status |
 |---|---|
-| Agent-level RBAC with scoped permissions | Yes |
-| Runtime permission check before every tool call | Yes |
-| Immutable Merkle-chained audit trail | Yes |
-| Human-in-loop approval for sensitive actions | Yes |
-| Kill switch — terminate agent actions in real time | Yes |
-| Credential isolation — no API keys in agent context | Yes |
+| Agent-level RBAC with scoped permissions | ✅ |
+| Runtime permission check before every tool call | ✅ |
+| Immutable Merkle-chained audit trail | ✅ |
+| Human-in-loop approval for sensitive actions | ✅ |
+| Kill switch — terminate agent actions in real time | ✅ |
+| Credential isolation — no API keys in agent context | ✅ |
+| Skill supply-chain: name similarity check on install | ✅ |
 
 ---
 
-## vs. everything else
+## vs. other local AI setups
 
-| | OpenClaw | Leon | khoj | Open WebUI | ClawOS |
-|---|---|---|---|---|---|
-| One-command install | No | No | No | Partial | **Yes** |
-| Fully offline, no API keys | No | No | No | Yes | **Yes** |
-| Profile-based setup | No | No | No | No | **Yes** |
-| Dashboard UI (17 pages) | No | No | No | Yes | **Yes** |
-| 29 built-in workflows | No | Partial | No | No | **Yes** |
-| Proactive ambient alerts | No | No | No | No | **Yes** |
-| 3D knowledge brain | No | No | No | No | **Yes** |
-| Human approval queue | No | No | No | No | **Yes** |
-| No safety layer | — | — | — | — | policyd ✓ |
-| Signed skill marketplace | Unsafe | No | No | No | **Yes** |
-| Voice pipeline (offline) | No | Partial | No | No | **Yes** |
-| Zero monthly cost | No | Yes | Partial | Yes | **Yes** |
+| | Just Ollama | Open WebUI | Leon | ClawOS |
+|---|---|---|---|---|
+| One-command install | No | Partial | No | **Yes** |
+| Voice pipeline (offline) | No | No | Partial | **Yes** |
+| Dashboard UI | No | Yes | No | **Yes** |
+| Built-in workflows | No | No | Partial | **Yes (29)** |
+| Persistent memory | No | No | No | **Yes** |
+| Proactive ambient alerts | No | No | No | **Yes** |
+| Knowledge brain + graph | No | No | No | **Yes** |
+| Human approval queue | No | No | No | **Yes** |
+| Session continuity (morning briefing) | No | No | No | **Yes** |
+| Framework store (install any agent runtime) | No | No | No | **Yes** |
+| Signed skill marketplace | No | No | No | **Yes** |
+
+*Note: OpenClaw is not in this comparison because ClawOS includes OpenClaw as an optional installable component.*
+
+---
+
+## Requirements
+
+- Ubuntu 24.04, Debian 12, Raspberry Pi OS, or macOS 14+ (Apple Silicon first, Intel best-effort)
+- 8GB RAM minimum (16GB recommended for useful agentic tasks)
+- 10GB free disk space
+- Internet on first run only (pulls models, then fully offline)
 
 ---
 
@@ -211,6 +258,10 @@ Useful for low-power devices like Raspberry Pi 5.
 - [x] policyd — runtime permission checks, Merkle audit log, kill switch
 - [x] Skill Marketplace — Ed25519 signing, sandbox, trust tiers
 - [x] PWA — installable on desktop and mobile
+- [x] Framework Store — install any AI agent framework from dashboard UI
+- [x] LiteLLM proxy — unified model endpoint for all frameworks
+- [x] Session continuity — JARVIS picks up where you left off
+- [x] Temporal memory — knowledge graph + hybrid RRF retrieval
 - [ ] **Bootable ISO** — flash and boot, no install needed (v0.1.1)
 
 ---
@@ -219,8 +270,8 @@ Useful for low-power devices like Raspberry Pi 5.
 
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
 
-ClawOS is not affiliated with OpenClaw or Anthropic. OpenClaw and Ollama remain MIT-licensed upstream projects.
+ClawOS is not affiliated with OpenClaw or Anthropic. OpenClaw and Ollama remain their own independently licensed upstream projects. Links to original projects are provided throughout this README.
 
 ---
 
-*Built for people who wanted OpenClaw to actually work. [github.com/xbrxr03/clawos](https://github.com/xbrxr03/clawos)*
+*Built for people who wanted a local AI assistant that actually works. [github.com/xbrxr03/clawos](https://github.com/xbrxr03/clawos)*

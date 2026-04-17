@@ -89,6 +89,112 @@ Historical notes below are preserved for context, but they are not the current b
 
 ## Updates Done By Claude
 
+### 2026-04-16 - Claude (5-repo absorption + OMI integration + landing page)
+
+#### Summary
+Two-session megabuild: absorbed features from 5 competitor/research repos into ClawOS,
+then built OMI ambient AI integration, OpenUI dashboard polish, and marketing landing page.
+
+#### Session 1 — 5-Repo Absorption (15 features)
+
+**README.md** — Added transparency section listing all absorbed repos with links and AGPL compliance note.
+
+**bootstrap/hardware_probe.py** — Added GPU memory detection for LiteLLM model routing.
+
+**services/llmd/** (NEW) — LiteLLM proxy service. Unified API gateway for Ollama + cloud providers.
+Port 11500, master key auto-generation, backend config in defaults.yaml.
+
+**frameworks/** (NEW) — Framework Store with 9 agent frameworks:
+SmolAgents, AgentZero, PocketFlow, DSPy, CrewAI, AutoGen, LangGraph, Haystack, MetaGPT.
+Each has registry.yaml with install commands, OpenAI-compat ports, and tier compatibility.
+
+**services/frameworkd/** (NEW) — Framework lifecycle service. Install/remove/start/stop/activate.
+Tracks active framework in state file. REST API via dashd.
+
+**clawctl/commands/framework.py** (NEW) — CLI: `clawctl framework list|install|remove|start|stop|use|status`.
+
+**services/dashd/api.py** — Added `/api/frameworks`, `/api/frameworks/{name}/install`,
+`/api/frameworks/{name}/remove`, `/api/frameworks/active` (GET/PUT) routes.
+
+**services/gatewayd/service.py** — Added framework routing: `_get_active_framework()` +
+`_forward_to_framework()`. Messages forward to active framework's OpenAI-compat port,
+fall back to Nexus on failure.
+
+**services/memd/taosmd/** (NEW) — 14-layer memory system:
+- `secret_filter.py` — 17 regex patterns, redacts secrets before storage
+- `archive.py` — Daily JSONL + FTS5 SQLite index, gzip compression for old files
+- `retention.py` — Ebbinghaus decay (`R = e^(-elapsed/stability)`), 4 retention tiers
+- `knowledge_graph.py` — Temporal KG with validity windows, contradiction detection for exclusive predicates
+- `intent_classifier.py` — 7 QueryIntent types, pattern-matched routing to backends
+- `vector_memory.py` — RRF fusion (semantic + keyword), Jaccard dedup at 0.8
+
+**services/memd/service.py** — Integrated all taosmd backends: secret redaction on write,
+archive + vector recording, intent-routed recall, session state persistence (save/load/pending queue).
+
+**data/presets/workspaces/default/IDENTITY.md** (NEW) — Third personality tier.
+Channel voice table (voice/whatsapp/dashboard/workbench), persona boundary.
+
+**bootstrap/workspace_init.py** + **clawos_core/util/paths.py** — Added `identity_path()`,
+seeds IDENTITY.md from presets on workspace init.
+
+**runtimes/agent/runtime.py** — IDENTITY.md injection in system prompt, ACE write side
+(triggers after non-trivial answers > 80 chars), morning briefing builder, session end persistence.
+
+**services/jarvisd/service.py** — Added `speak_morning_briefing()`: reads session state + pending queue,
+speaks 2-sentence briefing via TTS on session start.
+
+**services/scheduler/service.py** — Added `_fire_session_start_briefing()` hook, fires once at startup.
+
+**skills/marketplace/verifier.py** — Typosquatting protection: Levenshtein distance ≤ 2 vs 18 known-safe
+names triggers confirmation prompt before install.
+
+**skills/marketplace/installer.py** + **clawctl/commands/skill.py** — Wired typosquat check with
+`bypass_typosquat_check` parameter and user confirmation flow.
+
+**services/ragd/service.py** — CrossEncoder reranking (`ms-marco-MiniLM-L-6-v2`), threshold 0.7,
+graceful fallback if model unavailable.
+
+**configs/defaults.yaml** — Added `rag:` section (rerank config) and `llm_proxy:` section (port 11500).
+
+**clawctl/commands/ace.py** (NEW) — CLI: `clawctl ace status|show|clear|pause|resume` for LEARNED.md.
+
+#### Session 2 — OMI Integration + OpenUI Dashboard + Landing Page
+
+**services/omid/** (NEW) — OMI ambient AI integration:
+- `parser.py` — `segments_to_text()`, `extract_command()` (detects "nexus, ..." prefix),
+  `segments_to_kg_triples()` (extracts triples from action items + structured title)
+- `service.py` — `OmiService` with two modes:
+  - Passive capture: all conversations stored in taosmd archive + KG + vector memory
+  - Active response: "nexus, ..." prefix triggers Nexus reply, OMI speaks it back
+  - `handle_transcript(uid, segments)` — real-time webhook handler (10s timeout)
+  - `handle_conversation(uid, conversation)` — conversation-end handler (30s timeout)
+  - `get_stats()` — last event time, total conversations, webhook URL
+
+**services/dashd/api.py** — Added OMI routes:
+- `POST /api/omi/transcript` — real-time transcript webhook
+- `POST /api/omi/conversation` — conversation-end webhook
+- `GET /api/omi/status` — stats + webhook URL
+- `GET /api/omi/conversations` — list recent OMI conversations
+
+**clawctl/commands/omi.py** (NEW) — CLI: `clawctl omi status|history|show|setup`.
+
+**clawctl/main.py** — Added `omi` command group.
+
+**configs/defaults.yaml** — Added `omi:` section (webhook URL, passive/active modes, command prefix).
+
+**site/index.html** (NEW) — Marketing landing page:
+- Hero with "OMI + OpenClaw + Everything else = JARVIS" hook
+- Social proof bar (public OpenClaw tweets, 134k+ stars)
+- Without/With ClawOS comparison section
+- 8 capability cards
+- How It Works (3 steps)
+- Architecture diagram (OMI ↔ ClawOS ↔ OpenClaw)
+- Pricing: Core free + Full Ecosystem $10 once vs generic "cloud hosting" $16-133/mo
+- FAQ addressing cloud hosting objections
+- No competitor names — all comparisons use generic "cloud hosting services" category
+
+---
+
 ### 2026-04-15 - Claude (install bug fixes + LAN dashboard + auto TUI launch)
 
 #### Summary
