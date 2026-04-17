@@ -269,7 +269,7 @@ Useful for low-power devices like Raspberry Pi 5.
 
 ## License
 
-AGPL-3.0-or-later. See [LICENSE](LICENSE).
+ClawOS is licensed under the **GNU Affero General Public License v3 or later (AGPL-3.0-or-later)**. See [LICENSE](LICENSE) for the full text.
 
 ClawOS is not affiliated with OpenClaw or Anthropic. OpenClaw and Ollama remain their own independently licensed upstream projects. Links to original projects are provided throughout this README.
 
