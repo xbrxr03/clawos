@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { commandCenterApi } from '../../../lib/commandCenterApi'
 import { Footer, Orb, ProgressBar } from '../atoms'
@@ -46,6 +46,18 @@ export function SummaryScreen(props: ScreenProps) {
     busy,
   } = props
   const navigate = useNavigate()
+  const [copied, setCopied] = useState(false)
+
+  const openClawCmd = 'ollama launch openclaw --model kimi-k2.5:cloud'
+  const copyOpenClawCmd = async () => {
+    try {
+      await navigator.clipboard.writeText(openClawCmd)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch {
+      /* clipboard blocked — silent, the command is still visible on-screen */
+    }
+  }
 
   // Kick off plan generation as soon as user lands on summary
   useEffect(() => {
@@ -130,6 +142,89 @@ export function SummaryScreen(props: ScreenProps) {
           >
             Take the tour
           </button>
+        </div>
+
+        {/* ── NEXT · Start OpenClaw (JARVIS, your AI Butler) ────────────────
+            One command drops the user into the OpenClaw TUI with kimi-k2.5
+            running on Ollama Cloud. Free credits cover casual use; the
+            same binary accepts BYO keys for heavy lifting. */}
+        <div
+          className="panel hud"
+          style={{
+            marginTop: 32,
+            padding: 22,
+            maxWidth: 560,
+            width: '100%',
+            textAlign: 'left',
+          }}
+        >
+          <div className="eyebrow" style={{ marginBottom: 10 }}>
+            NEXT · START OPENCLAW
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              color: 'var(--ink-2)',
+              marginBottom: 14,
+              lineHeight: 1.5,
+            }}
+          >
+            JARVIS, your AI Butler. Copy this command in a terminal to bring
+            your agent online:
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '12px 14px',
+              borderRadius: 8,
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--panel-br)',
+              fontFamily: 'var(--mono)',
+              fontSize: 13,
+            }}
+          >
+            <span style={{ flex: 1, color: 'var(--ink-1)', userSelect: 'all' }}>
+              {openClawCmd}
+            </span>
+            <button
+              type="button"
+              className="wiz-btn"
+              style={{ padding: '4px 12px', fontSize: 11, minWidth: 78 }}
+              onClick={copyOpenClawCmd}
+            >
+              {copied ? 'Copied ✓' : 'Copy ⧉'}
+            </button>
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: 'var(--ink-3)',
+              marginTop: 14,
+              lineHeight: 1.6,
+            }}
+          >
+            Ollama&rsquo;s free tier covers most daily use. Need more?
+          </div>
+          <ul
+            style={{
+              margin: '6px 0 0 0',
+              paddingLeft: 18,
+              fontSize: 12,
+              color: 'var(--ink-2)',
+              lineHeight: 1.75,
+            }}
+          >
+            <li>
+              <strong style={{ color: 'var(--ink-1)' }}>Ollama Pro</strong> —
+              same command, higher limits.
+            </li>
+            <li>
+              <strong style={{ color: 'var(--ink-1)' }}>Bring your own key</strong>{' '}
+              — Anthropic, OpenAI, or OpenRouter from the dashboard.
+            </li>
+          </ul>
         </div>
 
         <div className="hint" style={{ marginTop: 24 }}>
