@@ -218,6 +218,12 @@ class SetupService:
             state.assistant_identity = assistant_identity
             profile_updates["assistant_identity"] = assistant_identity
 
+        owner_name = str(payload.get("owner_name", "")).strip()
+        if owner_name:
+            # Capped at 40 chars to keep greeting templates sane ("Welcome home, Alexander").
+            state.owner_name = owner_name[:40]
+            profile_updates["owner_name"] = state.owner_name
+
         voice_mode = str(payload.get("voice_mode", "")).strip()
         if voice_mode:
             state.voice_mode = voice_mode
@@ -258,6 +264,11 @@ class SetupService:
         if isinstance(selected_runtimes, list) and selected_runtimes:
             state.selected_runtimes = [str(item).strip() for item in selected_runtimes if str(item).strip()]
 
+        # Framework picker — single choice, empty string clears selection.
+        if "selected_framework" in payload:
+            fw = payload.get("selected_framework")
+            state.selected_framework = str(fw or "").strip()
+
         launch_on_login = payload.get("launch_on_login")
         if isinstance(launch_on_login, bool):
             state.launch_on_login = launch_on_login
@@ -282,6 +293,75 @@ class SetupService:
         self._log("Setup preferences updated")
         self._persist()
         sync_presence_from_setup(state)
+        return self.to_dict()
+
+    def record_install_milestone(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """
+        Append or update an install milestone.
+
+        Called by install.sh (via dashd's /api/setup/install-milestone) as each
+        installation phase progresses. Each milestone is upserted by id, so
+        install.sh can emit the same id twice with status=running then status=done
+        and the UI will reflect the current state.
+
+        Expected payload shape:
+            {
+              "id":         "model",                 # stable id, required
+              "status":     "running" | "done" | "error",
+              "label":      "Installing AI model",   # human-readable
+              "detail":     "qwen2.5:7b",            # optional subtext
+              "duration_ms": 41230                    # optional, set on done
+            }
+        """
+        from datetime import datetime, timezone
+
+        payload = payload or {}
+        milestone_id = str(payload.get("id", "")).strip()
+        if not milestone_id:
+            raise ValueError("milestone id required")
+
+        status = str(payload.get("status", "done")).strip().lower()
+        if status not in {"pending", "running", "done", "error"}:
+            raise ValueError(f"invalid milestone status: {status}")
+
+        state = self._state
+        now = datetime.now(timezone.utc).isoformat()
+        if not state.install_started_ts:
+            state.install_started_ts = now
+
+        entry = {
+            "id": milestone_id,
+            "label": str(payload.get("label", milestone_id)),
+            "status": status,
+            "detail": str(payload.get("detail", "")),
+            "ts": now,
+            "duration_ms": int(payload.get("duration_ms", 0)) or None,
+        }
+
+        # Upsert by id so a milestone can transition running → done without duplicating.
+        updated = False
+        for idx, existing in enumerate(state.install_milestones):
+            if existing.get("id") == milestone_id:
+                state.install_milestones[idx] = entry
+                updated = True
+                break
+        if not updated:
+            state.install_milestones.append(entry)
+
+        if milestone_id == "ready" and status == "done":
+            state.install_complete = True
+
+        self._log(f"install milestone: {milestone_id} {status}")
+        self._persist()
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.broadcast())
+        except RuntimeError:
+            # Called from a sync path outside an event loop — state is persisted;
+            # next ws/setup connect will pick it up from to_dict().
+            pass
+
         return self.to_dict()
 
     def update_autonomy(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -446,6 +526,117 @@ class SetupService:
             await self.broadcast()
             return self.to_dict()
 
+    # ─── Identity + greeting (1d) ────────────────────────────────────────
+    async def speak_greeting(self, line: str = "") -> dict[str, Any]:
+        """
+        Fire a one-shot Piper greeting through voiced (non-blocking from the
+        caller's POV — returns as soon as audio playback is dispatched).
+        Used by the Summary "Open dashboard →" handoff so JARVIS greets the
+        user by name as the dashboard loads.
+        """
+        state = self._state
+        assistant = (state.assistant_identity or "Jarvis").strip() or "Jarvis"
+        owner = (state.owner_name or "").strip()
+        if not line.strip():
+            line = (
+                f"Welcome home, {owner}. {assistant} is online."
+                if owner
+                else f"{assistant} is online. Welcome home."
+            )
+        try:
+            from services.voiced.service import get_service as get_voice_service
+
+            voice_service = get_voice_service()
+            ok = await voice_service.speak(line)
+            return {"ok": bool(ok), "line": line, "assistant": assistant, "owner": owner}
+        except Exception as exc:
+            self._log(f"Greeting playback skipped: {exc}")
+            return {"ok": False, "line": line, "error": str(exc)}
+
+    def _write_user_json(self) -> None:
+        """Persist the human-facing identity at ~/clawos/config/user.json so
+        other daemons don't have to reach into setup_state.json."""
+        import json
+        from datetime import datetime, timezone
+        from clawos_core.constants import CONFIG_DIR
+
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        path = CONFIG_DIR / "user.json"
+        payload = {
+            "owner_name": self._state.owner_name or "",
+            "assistant_name": self._state.assistant_identity or "Jarvis",
+            "workspace": self._state.workspace or DEFAULT_WORKSPACE,
+            "first_run_ts": datetime.now(timezone.utc).isoformat(),
+            "voice_mode": self._state.voice_mode or "push_to_talk",
+        }
+        # Merge with existing file — first_run_ts only set on first write.
+        if path.exists():
+            try:
+                existing = json.loads(path.read_text(encoding="utf-8"))
+                if existing.get("first_run_ts"):
+                    payload["first_run_ts"] = existing["first_run_ts"]
+            except Exception:
+                pass
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def _pin_identity_memory(self) -> None:
+        """Pin the identity into PINNED.md so Jarvis always has it in context
+        (Layer 1 is always injected into every prompt). Best-effort — if memd
+        can't be instantiated we log and move on.
+
+        Idempotent: any previous identity block (between the two <!-- SETUP_IDENTITY -->
+        markers) is replaced, not appended, so re-runs with a different name
+        don't stack up stale entries.
+        """
+        owner = (self._state.owner_name or "").strip()
+        assistant = (self._state.assistant_identity or "Jarvis").strip() or "Jarvis"
+        if not owner and assistant == "Jarvis":
+            return  # Nothing worth pinning — default assistant, no owner.
+
+        try:
+            from services.memd.service import MemoryService
+        except Exception:
+            return
+        try:
+            memd = MemoryService()
+        except Exception:
+            return
+
+        ws = self._state.workspace or DEFAULT_WORKSPACE
+        facts = []
+        if owner:
+            facts.append(f"- The owner of this system prefers to be called **{owner}**.")
+        facts.append(f"- The assistant's name is **{assistant}**.")
+        if self._state.voice_mode and self._state.voice_mode != "off":
+            facts.append(f"- Preferred voice interaction mode: {self._state.voice_mode}.")
+
+        block = (
+            "<!-- SETUP_IDENTITY_START -->\n"
+            "## Identity (pinned by first-run setup)\n"
+            + "\n".join(facts)
+            + "\n<!-- SETUP_IDENTITY_END -->"
+        )
+
+        try:
+            existing = memd.read_pinned(ws) or ""
+        except Exception:
+            existing = ""
+
+        # Strip any previous identity block so we can replace it cleanly.
+        import re as _re
+        scrubbed = _re.sub(
+            r"<!-- SETUP_IDENTITY_START -->.*?<!-- SETUP_IDENTITY_END -->",
+            "",
+            existing,
+            flags=_re.DOTALL,
+        ).rstrip()
+
+        merged = (scrubbed + "\n\n" + block + "\n") if scrubbed else (block + "\n")
+        try:
+            memd.write_pinned(ws, merged)
+        except Exception:
+            return
+
     async def _apply(self):
         from bootstrap.bootstrap import run as bootstrap_run
 
@@ -485,6 +676,20 @@ class SetupService:
                 self._log("Nexus presence synchronized")
             except Exception as exc:
                 self._log(f"Nexus presence sync skipped: {exc}")
+
+            # Persist the owner + assistant identity so every daemon (gatewayd,
+            # agentd, voiced) can read them without re-querying setupd.
+            try:
+                await asyncio.to_thread(self._write_user_json)
+                self._log("Wrote owner identity to ~/clawos/config/user.json")
+            except Exception as exc:
+                self._log(f"user.json write skipped: {exc}")
+
+            try:
+                await asyncio.to_thread(self._pin_identity_memory)
+                self._log("Pinned owner identity to memory")
+            except Exception as exc:
+                self._log(f"Identity memory pin skipped: {exc}")
 
             if state.voice_enabled:
                 self._log(f"Voice pipeline prepared in {state.voice_mode} mode")
@@ -790,6 +995,14 @@ def create_app() -> "FastAPI":
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
+    @app.post("/api/setup/install-milestone")
+    async def setup_install_milestone(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        try:
+            return service.record_install_milestone(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
     @app.post("/api/setup/import/openclaw")
     async def import_openclaw(request: Request, body: dict | None = None):
         _require_setup_access(request)
@@ -809,6 +1022,12 @@ def create_app() -> "FastAPI":
         _require_setup_access(request)
         sample_text = str((body or {}).get("sample_text", "")).strip()
         return await service.run_voice_test(sample_text=sample_text)
+
+    @app.post("/api/setup/voice-greet")
+    async def voice_greet(request: Request, body: dict | None = None):
+        _require_setup_access(request)
+        line = str((body or {}).get("line", "")).strip()
+        return await service.speak_greeting(line=line)
 
     @app.post("/api/setup/apply")
     async def apply(request: Request):
@@ -839,6 +1058,30 @@ def create_app() -> "FastAPI":
     async def diagnostics(request: Request):
         _require_setup_access(request)
         return service.diagnostics()
+
+    @app.get("/api/setup/frameworks")
+    async def frameworks(request: Request):
+        """List catalog frameworks enriched with tier compatibility.
+
+        profile_id query param overrides the default (derived from detected hw).
+        Falls back to empty list if the framework catalog is unavailable, so
+        the FrameworkScreen degrades gracefully.
+        """
+        _require_setup_access(request)
+        qp = request.query_params
+        profile_id = str(qp.get("profile_id", "")).strip()
+        if not profile_id:
+            hw = service.get_state().detected_hardware or {}
+            # Synthesize a best-effort profile_id from the detected hardware
+            # so the endpoint still returns useful compatibility info when
+            # hardware_probe.profile_id wasn't persisted to state.
+            profile_id = str(hw.get("profile_id", "")).strip()
+        try:
+            from frameworks.registry import get_registry
+            items = get_registry().list_for_tier(profile_id or "unknown")
+        except Exception:
+            items = []
+        return {"profile_id": profile_id, "frameworks": items}
 
     @app.websocket("/ws/setup")
     async def setup_ws(websocket: WebSocket):

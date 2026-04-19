@@ -2,6 +2,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge, Card, PageHeader, PanelHeader, SectionLabel, StatusDot, Ts } from '../components/ui.jsx'
+import { GettingStartedCard } from '../components/GettingStartedCard'
 import {
   commandCenterApi,
   type AttentionEvent,
@@ -267,6 +268,8 @@ export function Overview({
           }
         />
       </div>
+
+      <GettingStartedCard />
 
       <div style={{ padding: '0 20px 16px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
         <OverviewStat label="Healthy Services" value={`${healthyServices}/${serviceEntries.length || 0}`} meta="local runtime posture" tone="green" progress={serviceCoverage} />

@@ -33,7 +33,13 @@ class SetupState:
     secondary_packs: list[str] = field(default_factory=lambda: ["coding-autopilot"])
     installed_extensions: list[str] = field(default_factory=lambda: ["mcp-manager"])
     workspace: str = DEFAULT_WORKSPACE
+    # The human owner's name — used by JARVIS greeting ("Welcome, {owner_name}").
+    # Captured on VoiceScreen during first-run. Pinned to memory + user.json on apply.
+    owner_name: str = ""
     assistant_identity: str = "Nexus"
+    # Optional agent framework from the framework picker (smolagents, agentzero, etc.).
+    # Empty string = built-in only, no extra framework installed. Chosen on FrameworkScreen.
+    selected_framework: str = ""
     presence_profile: dict[str, Any] = field(default_factory=lambda: default_presence_profile().to_dict())
     autonomy_policy: dict[str, Any] = field(default_factory=lambda: default_autonomy_policy().to_dict())
     quiet_hours: dict[str, str] = field(default_factory=lambda: {"start": "22:00", "end": "07:00"})
@@ -54,6 +60,12 @@ class SetupState:
     last_error: str = ""
     plan_steps: list[str] = field(default_factory=list)
     imported_openclaw: dict[str, Any] = field(default_factory=dict)
+    # ─── Live install streaming (emitted by install.sh via /api/setup/install-milestone) ───
+    # Each milestone: {id, label, status, detail, ts, duration_ms}
+    # status is one of: pending, running, done, error
+    install_milestones: list[dict] = field(default_factory=list)
+    install_started_ts: str = ""
+    install_complete: bool = False
 
     def save(self, path: Path | None = None):
         path = path or SETUP_STATE_JSON
@@ -85,6 +97,9 @@ class SetupState:
                 "gpu_name": hw.gpu_name,
                 "gpu_vram_gb": hw.gpu_vram_gb,
                 "tier": hw.tier,
+                # taOS-style profile_id ("x86-cpu-16gb", "arm-cuda-12gb", …) —
+                # used by the framework picker to tier-filter the catalog.
+                "profile_id": hw.profile_id,
                 "cpu_cores": hw.cpu_cores,
                 "has_mic": hw.has_mic,
                 "ollama_ok": hw.ollama_ok,

@@ -1493,6 +1493,17 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
+    @app.post("/api/setup/install-milestone", dependencies=[Depends(require_setup_access)])
+    async def setup_install_milestone(body: dict | None = None):
+        # install.sh POSTs here as each install phase runs. Upsert-by-id, so
+        # a phase can transition running → done without duplicating.
+        from services.setupd.service import get_service
+
+        try:
+            return get_service().record_install_milestone(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
     @app.post("/api/setup/import/openclaw", dependencies=[Depends(require_setup_access)])
     async def setup_import_openclaw(body: dict | None = None):
         from services.setupd.service import get_service
@@ -1521,6 +1532,16 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
         sample_text = str((body or {}).get("sample_text", "")).strip()
         return await get_service().run_voice_test(sample_text=sample_text)
+
+    @app.post("/api/setup/voice-greet", dependencies=[Depends(require_setup_access)])
+    async def setup_voice_greet(body: dict | None = None):
+        """Fire-and-forget JARVIS TTS greeting for the Summary → Dashboard handoff.
+        The Summary screen calls this immediately before navigating to '/' so the
+        user hears Piper say their name as the dashboard paints."""
+        from services.setupd.service import get_service
+
+        line = str((body or {}).get("line", "")).strip()
+        return await get_service().speak_greeting(line=line)
 
     @app.post("/api/setup/apply", dependencies=[Depends(require_setup_access)])
     async def setup_apply():
@@ -1557,6 +1578,27 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         from services.setupd.service import get_service
 
         return get_service().diagnostics()
+
+    @app.get("/api/setup/frameworks", dependencies=[Depends(require_setup_access)])
+    async def setup_frameworks(profile_id: str = ""):
+        """Framework catalog enriched with tier compatibility for the
+        FrameworkScreen. Falls back to profile_id derived from current
+        state.detected_hardware when the query param is omitted.
+        """
+        from services.setupd.service import get_service
+
+        svc = get_service()
+        pid = (profile_id or "").strip()
+        if not pid:
+            hw = svc.get_state().detected_hardware or {}
+            pid = str(hw.get("profile_id", "")).strip()
+        try:
+            from frameworks.registry import get_registry
+
+            items = get_registry().list_for_tier(pid or "unknown")
+        except Exception:
+            items = []
+        return {"profile_id": pid, "frameworks": items}
 
     @app.post("/api/support/bundle", dependencies=[Depends(require_setup_access)])
     async def support_bundle():

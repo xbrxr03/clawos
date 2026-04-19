@@ -354,10 +354,27 @@ else:
 
     # ── wizard + chat ─────────────────────────────────────────────────────────
     @main.command()
-    @click.option("--reset", is_flag=True)
+    @click.option("--reset", is_flag=True, help="Clear persisted wizard state before opening")
     def wizard(reset):
-        """Run first-run setup wizard."""
-        from setup.first_run.wizard import run; run(reset=reset)
+        """Open the browser-based first-run setup wizard.
+        The legacy TUI wizard was removed — setup now lives in the Command Center
+        at http://localhost:7070/setup (launched automatically by install.sh).
+        """
+        import webbrowser
+        if reset:
+            try:
+                from clawos_core.constants import SETUP_STATE_JSON
+                if SETUP_STATE_JSON.exists():
+                    SETUP_STATE_JSON.unlink()
+                    click.echo(f"Cleared {SETUP_STATE_JSON}")
+            except Exception as exc:
+                click.echo(f"Could not clear setup state: {exc}", err=True)
+        url = "http://localhost:7070/setup"
+        click.echo(f"Opening {url} — make sure dashd is running (bash scripts/dev_boot.sh).")
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
 
     @main.command()
     @click.argument("workspace", default="nexus_default")

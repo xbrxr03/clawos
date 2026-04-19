@@ -125,14 +125,14 @@ def test_wizard_state_runtimes():
 
 def test_runtime_choice_screen_tiers():
     """Tier A shows Nexus+PicoClaw default; Tier C shows all three."""
-    from setup.first_run.screens.runtime_choice import _recommended_runtimes
+    from bootstrap.profile_selector import recommended_runtimes
 
-    tier_a = _recommended_runtimes("A")
+    tier_a = recommended_runtimes("A")
     assert "nexus" in tier_a
     assert "picoclaw" in tier_a
     assert "openclaw" not in tier_a
 
-    tier_c = _recommended_runtimes("C")
+    tier_c = recommended_runtimes("C")
     assert "nexus" in tier_c
     assert "picoclaw" in tier_c
     assert "openclaw" in tier_c

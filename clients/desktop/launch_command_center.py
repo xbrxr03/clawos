@@ -16,7 +16,6 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
-from pathlib import Path
 
 from clawos_core.constants import PORT_DASHD
 from services.dashd.api import load_dashboard_settings
@@ -95,23 +94,11 @@ def launch(route: str = "/", timeout: float = 90.0, require_gui: bool = True) ->
     return True, url
 
 
-def launch_gtk_fallback() -> bool:
-    gtk_wizard = Path(__file__).resolve().parents[2] / "setup" / "first_run" / "gtk_wizard.py"
-    if not gtk_wizard.exists():
-        return False
-    try:
-        subprocess.Popen([sys.executable, str(gtk_wizard)])
-        return True
-    except Exception:
-        return False
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Launch the ClawOS Command Center")
     parser.add_argument("--route", default="/", help="Local route to open, for example /setup")
     parser.add_argument("--timeout", type=float, default=90.0, help="Seconds to wait for dashd")
     parser.add_argument("--allow-headless", action="store_true", help="Skip GUI session checks")
-    parser.add_argument("--fallback-gtk", action="store_true", help="Launch the legacy GTK setup flow if browser launch fails")
     return parser.parse_args()
 
 
@@ -123,9 +110,6 @@ def main() -> int:
         return 0
 
     print(detail, file=sys.stderr)
-    if args.fallback_gtk and gui_available() and launch_gtk_fallback():
-        print("Fell back to the legacy GTK setup flow.")
-        return 0
     return 1
 
 

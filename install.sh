@@ -306,6 +306,56 @@ except Exception as e:
   fi
 }
 
+install_piper_voice() {
+  # Bundles the Piper Lessac (medium) voice so Jarvis can speak out of the box.
+  # Without this, voiced.speak() silently degrades — tts_ok reports false and
+  # the first-run handoff greeting is muted. Model source: HuggingFace rhasspy/piper-voices.
+  local VOICE_DIR="${HOME}/clawos/voice"
+  local MODEL_FILE="${VOICE_DIR}/en_US-lessac-medium.onnx"
+  local MODEL_CFG="${VOICE_DIR}/en_US-lessac-medium.onnx.json"
+  local BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium"
+  mkdir -p "$VOICE_DIR"
+
+  if [ -s "$MODEL_FILE" ] && [ -s "$MODEL_CFG" ]; then
+    ok "Piper voice model ready (Lessac medium)"
+    return 0
+  fi
+
+  step "Downloading Piper voice model (Lessac · 63 MB)"
+
+  # Prefer curl, fall back to wget. Silently continues if neither works — voice will
+  # degrade to text-only but install doesn't fail (mirrors install_wake_word_model).
+  local dl=""
+  if command -v curl >/dev/null 2>&1; then
+    dl="curl -fsSL --retry 2 --connect-timeout 10"
+  elif command -v wget >/dev/null 2>&1; then
+    dl="wget -qO-"
+  else
+    warn "Neither curl nor wget is available — Piper voice unavailable, Jarvis will be silent"
+    return 0
+  fi
+
+  if $dl "${BASE}/en_US-lessac-medium.onnx" > "${MODEL_FILE}.part" 2>/dev/null \
+     && [ -s "${MODEL_FILE}.part" ]; then
+    mv "${MODEL_FILE}.part" "$MODEL_FILE"
+  else
+    rm -f "${MODEL_FILE}.part"
+    warn "Piper voice model download failed — Jarvis will degrade to text-only"
+    return 0
+  fi
+
+  if $dl "${BASE}/en_US-lessac-medium.onnx.json" > "${MODEL_CFG}.part" 2>/dev/null \
+     && [ -s "${MODEL_CFG}.part" ]; then
+    mv "${MODEL_CFG}.part" "$MODEL_CFG"
+  else
+    rm -f "${MODEL_CFG}.part"
+    warn "Piper voice config download failed — Jarvis will degrade to text-only"
+    return 0
+  fi
+
+  ok "Piper voice model ready (Lessac medium)"
+}
+
 install_playwright() {
   if [ "$IS_ARM" = "true" ]; then
     return 0
@@ -729,6 +779,80 @@ MODEL_NOTE=""
 BREW_BIN=""
 CHECK_ONLY=false
 
+# ── Live install streaming ───────────────────────────────────────────────────
+# emit_milestone appends to a local JSONL buffer (durable) and also tries to
+# POST the milestone to dashd. Dashd is not up until enable_autostart later
+# in the script, so pre-dashd milestones are simply queued in the buffer —
+# drain_install_buffer replays them via POST once dashd is alive, so the
+# browser's /setup page shows the full install history in its BootLog.
+CLAWOS_STATE_DIR="${INSTALL_DIR}/logs"
+CLAWOS_INSTALL_BUFFER="${CLAWOS_STATE_DIR}/install-milestones.buffer.jsonl"
+
+# Escape a string for safe inclusion inside a JSON string literal.
+_json_escape() {
+  # shellcheck disable=SC2001
+  echo -n "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\t/\\t/g' -e 's/\r/\\r/g' -e 's/\n/\\n/g'
+}
+
+# emit_milestone <id> <status> <label> [detail] [duration_ms]
+#   id:        stable phase key (preflight, deps, core, bootstrap, model,
+#              memory, voice, services, verify, ready)
+#   status:    pending | running | done | error
+#   label:     human-readable text shown in the browser BootLog
+#   detail:    optional sub-text (e.g. model name, tier)
+#   duration_ms: optional timing info
+emit_milestone() {
+  local id="$1"
+  local status="$2"
+  local label="$3"
+  local detail="${4:-}"
+  local duration_ms="${5:-0}"
+
+  mkdir -p "$CLAWOS_STATE_DIR" 2>/dev/null || true
+
+  local ts
+  ts="$(date -u +%Y-%m-%dT%H:%M:%S.000Z 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  local e_label e_detail
+  e_label="$(_json_escape "$label")"
+  e_detail="$(_json_escape "$detail")"
+
+  local json
+  json=$(printf '{"id":"%s","status":"%s","label":"%s","detail":"%s","duration_ms":%s,"ts":"%s"}' \
+    "$id" "$status" "$e_label" "$e_detail" "${duration_ms:-0}" "$ts")
+
+  # Durable local record
+  echo "$json" >> "$CLAWOS_INSTALL_BUFFER" 2>/dev/null || true
+
+  # Best-effort live POST — dashd may not be up yet; silent on failure.
+  if command -v curl >/dev/null 2>&1; then
+    curl -sf -m 2 \
+      -H "Content-Type: application/json" \
+      -H "x-clawos-setup: 1" \
+      -X POST \
+      -d "$json" \
+      "http://127.0.0.1:7070/api/setup/install-milestone" \
+      >/dev/null 2>&1 || true
+  fi
+}
+
+# drain_install_buffer — replay all queued milestones via POST. Called once
+# dashd is up so accumulated pre-dashd milestones are visible to the browser.
+drain_install_buffer() {
+  [ -f "$CLAWOS_INSTALL_BUFFER" ] || return 0
+  command -v curl >/dev/null 2>&1 || return 0
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    curl -sf -m 2 \
+      -H "Content-Type: application/json" \
+      -H "x-clawos-setup: 1" \
+      -X POST \
+      -d "$line" \
+      "http://127.0.0.1:7070/api/setup/install-milestone" \
+      >/dev/null 2>&1 || true
+  done < "$CLAWOS_INSTALL_BUFFER"
+}
+
 # ── Parse flags ───────────────────────────────────────────────────────────────
 for _arg in "$@"; do
   case "$_arg" in
@@ -753,6 +877,7 @@ case "$OS_NAME" in
 esac
 
 step "Checking your system"
+emit_milestone preflight running "Checking your system" "CPU · RAM · disk"
 
 if [ "$PLATFORM" = "linux" ] && [ -f /etc/os-release ]; then
   . /etc/os-release
@@ -806,28 +931,36 @@ if [ "$IS_ARM" = "true" ] && [ "$PROFILE" != "lowram" ]; then
   warn "ARM CPU detected - using lightweight local defaults"
 fi
 ok "Hardware: $TIER"
+emit_milestone preflight done "System checked" "$TIER · ${RAM_GB}GB RAM"
 select_profile
 
+# Staying on qwen2.5 — qwen3 / qwen3.5 tool-calling is broken on Ollama as of 2026-04.
+# Ollama's registry ships qwen3.5 with the Qwen3 Hermes JSON parser template, but the
+# model was trained to emit Qwen3-Coder XML, so tool calls come out as plain text
+# (often inside unclosed <think> blocks) instead of executing. Tracking upstream:
+#   Ollama #14745, #14493 · llama.cpp #20837 · QwenLM/Qwen3.5 #12
+# The rest of the codebase (setupd defaults, ModelScreen catalog, README, tests) is
+# already on qwen2.5 — keep this file in sync. Revisit once Ollama ships the fix.
 case "$PROFILE" in
   lowram)
-    MODEL="qwen3.5:4b"
-    MODEL_SIZE="~3.4GB"
-    MODEL_NOTE="best CPU-only model, 256K context, runs on 8GB RAM"
+    MODEL="qwen2.5:3b"
+    MODEL_SIZE="~2.0GB"
+    MODEL_NOTE="fast CPU-only model, optimised for 8GB RAM"
     ;;
   balanced)
-    MODEL="qwen3.5:4b"
-    MODEL_SIZE="~3.4GB"
-    MODEL_NOTE="updated knowledge, 256K context, 16GB RAM recommended"
+    MODEL="qwen2.5:7b"
+    MODEL_SIZE="~4.7GB"
+    MODEL_NOTE="strong reasoning model, 16GB RAM recommended"
     ;;
   performance|gaming)
-    MODEL="qwen3.5:9b"
-    MODEL_SIZE="~6.5GB"
-    MODEL_NOTE="updated knowledge, 256K context, GPU recommended"
+    MODEL="qwen2.5:7b"
+    MODEL_SIZE="~4.7GB"
+    MODEL_NOTE="full local capability, GPU recommended"
     ;;
   *)
-    MODEL="qwen3.5:4b"
-    MODEL_SIZE="~3.4GB"
-    MODEL_NOTE="best CPU-only model, 256K context, runs on 8GB RAM"
+    MODEL="qwen2.5:3b"
+    MODEL_SIZE="~2.0GB"
+    MODEL_NOTE="fast CPU-only model, optimised for 8GB RAM"
     ;;
 esac
 
@@ -869,6 +1002,7 @@ if [ "$CHECK_ONLY" = "true" ]; then
   exit 0
 fi
 
+emit_milestone deps running "Installing system packages" "Python · Ollama · Node"
 install_system_packages
 require_cmd python3
 PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
@@ -876,8 +1010,10 @@ ok "Python $PY_VER"
 
 install_ollama
 install_node
+emit_milestone deps done "Dependencies installed" "Python $PY_VER · Ollama · Node"
 
 step "Installing Nexus"
+emit_milestone core running "Installing Nexus" "cloning clawos + python deps"
 if [ -d "$INSTALL_DIR/clawos_core" ]; then
   ok "ClawOS already present at $INSTALL_DIR"
 elif [ -d "$INSTALL_DIR/.git" ]; then
@@ -895,11 +1031,16 @@ export PYTHONPATH="$INSTALL_DIR"
 
 install_python_packages
 apply_profile
+emit_milestone voice running "Provisioning voice pipeline" "Whisper + Piper + wake word"
 install_wake_word_model
+install_piper_voice
 install_playwright
+emit_milestone voice done "Voice pipeline ready" "offline STT/TTS"
 build_command_center
+emit_milestone core done "Nexus installed" "clawos + dashboard built"
 
 step "Bootstrapping Nexus"
+emit_milestone bootstrap running "Bootstrapping Nexus" "profile: $PROFILE"
 if [ -t 0 ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
   echo ""
   echo -e "  ${D}Optional: add an OpenRouter key for cloud models. Press Enter to skip.${RESET}"
@@ -913,8 +1054,9 @@ fi
 
 run_with_spinner "Running bootstrap ($PROFILE profile)" \
   bash -c "cd \"${INSTALL_DIR}\" && PYTHONPATH=\"${INSTALL_DIR}\" \"${INSTALL_DIR}/venv/bin/python3\" -m bootstrap.bootstrap --profile \"$PROFILE\" --yes" \
-  || die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"
+  || { emit_milestone bootstrap error "Bootstrap failed" "see terminal"; die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"; }
 ok "Bootstrap complete"
+emit_milestone bootstrap done "Nexus bootstrap complete" "profile: $PROFILE"
 
 # Write dashboard host config so the dashboard is accessible on the LAN
 CLAWOS_YAML="${INSTALL_DIR}/config/clawos.yaml"
@@ -926,14 +1068,17 @@ elif [ ! -f "$CLAWOS_YAML" ]; then
 fi
 
 step "Pulling AI model"
+emit_milestone model running "Downloading AI model" "$MODEL ($MODEL_SIZE)"
 if [ "$SKIP_MODEL" = "true" ]; then
   warn "Skipping model pull (SKIP_MODEL=true)"
+  emit_milestone model done "Model pull skipped" "SKIP_MODEL=true"
 else
   OLLAMA_URL="${OLLAMA_HOST:-http://127.0.0.1:11434}"
   if [ "$OLLAMA_URL" != "http://localhost:11434" ] && [ "$OLLAMA_URL" != "http://127.0.0.1:11434" ]; then
     info "Remote Ollama detected: $OLLAMA_URL"
     info "Run on remote: ollama pull $MODEL"
     ok "Remote Ollama configured"
+    emit_milestone model done "Remote Ollama configured" "$OLLAMA_URL"
   else
     info "Pulling $MODEL ($MODEL_SIZE) - $MODEL_NOTE"
     "$OLLAMA_BIN" pull "$MODEL" || warn "Model pull failed"
@@ -941,29 +1086,49 @@ else
       info "Pulling qwen2.5-coder:7b for developer profile (~4.7GB)"
       "$OLLAMA_BIN" pull qwen2.5-coder:7b || warn "qwen2.5-coder:7b pull failed"
     fi
+    emit_milestone model done "AI model ready" "$MODEL"
   fi
 fi
 
 step "Pulling embedding model"
+emit_milestone memory running "Loading 14-layer memory" "nomic-embed-text"
 if [ "$SKIP_MODEL" = "true" ]; then
   warn "Skipping embedding model pull (SKIP_MODEL=true)"
+  emit_milestone memory done "Embedding pull skipped" "SKIP_MODEL=true"
 else
   EMBED_MODEL="nomic-embed-text"
   OLLAMA_URL="${OLLAMA_HOST:-http://127.0.0.1:11434}"
   if [ "$OLLAMA_URL" != "http://localhost:11434" ] && [ "$OLLAMA_URL" != "http://127.0.0.1:11434" ]; then
     info "Remote Ollama detected - run on remote: ollama pull $EMBED_MODEL"
+    emit_milestone memory done "Remote embedding configured" "$OLLAMA_URL"
   elif ! curl -sf "$OLLAMA_URL/api/tags" 2>/dev/null | grep -q '"name":"nomic-embed-text'; then
     "$OLLAMA_BIN" pull "$EMBED_MODEL" || warn "Embedding model pull failed"
+    emit_milestone memory done "Memory layer ready" "$EMBED_MODEL"
   else
     ok "Embedding model already present"
+    emit_milestone memory done "Memory layer ready (cached)" "$EMBED_MODEL"
   fi
 fi
 
+emit_milestone services running "Enabling daemons" "nexus · memd · policyd · dashd"
 install_wrapper_commands
 install_picoclaw_if_needed
 install_openclaude
 enable_autostart
+# Now that dashd is up (or starting), drain any buffered milestones so the
+# browser's /setup page can show the full install history in its BootLog.
+# We give dashd a moment to accept connections before draining.
+for _i in 1 2 3 4 5; do
+  if curl -sf -m 1 "http://127.0.0.1:7070/api/health" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+drain_install_buffer
+emit_milestone services done "Daemons enabled" "autostart configured"
+emit_milestone verify running "Verifying install" "health + config"
 verify_install
+emit_milestone verify done "Install verified" "all checks passed"
 
 ELAPSED=$((SECONDS - START_TIME))
 echo ""
@@ -1010,28 +1175,56 @@ if [ -f "$_TOKEN_FILE" ]; then
   echo ""
 fi
 
-play_jarvis_greeting() {
-  local TEXT="Hello sir. All systems are online."
-  if command -v piper >/dev/null 2>&1 && [ -f "$HOME/.local/share/piper/en_US-lessac-medium.onnx" ]; then
-    echo "$TEXT" | piper --model "$HOME/.local/share/piper/en_US-lessac-medium.onnx" --output_raw 2>/dev/null | \
-      aplay -r 22050 -f S16_LE -c 1 2>/dev/null || true
-    return
+# ─── Browser handoff ─────────────────────────────────────────────────────
+# The Command Center is the primary UI. Power users can still run
+# `openclaw tui` at any time; the default flow opens the browser wizard.
+
+open_url() {
+  local url="$1"
+  if command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url" >/dev/null 2>&1 &
+  elif command -v open >/dev/null 2>&1; then
+    open "$url" >/dev/null 2>&1 &
+  elif command -v wslview >/dev/null 2>&1; then
+    wslview "$url" >/dev/null 2>&1 &
+  elif command -v cmd.exe >/dev/null 2>&1; then
+    cmd.exe /c start "" "$url" >/dev/null 2>&1 &
+  else
+    return 1
   fi
-  if command -v say >/dev/null 2>&1; then
-    say -v "Samantha" "$TEXT" 2>/dev/null || true
-    return
-  fi
-  if command -v espeak >/dev/null 2>&1; then
-    espeak "$TEXT" 2>/dev/null || true
-  fi
+  return 0
 }
 
-if [ -t 1 ] && command -v openclaw >/dev/null 2>&1; then
-  play_jarvis_greeting
-  echo -e "  ${B}Opening OpenClaw TUI...${RESET}"
-  echo ""
-  exec openclaw tui
+CLAWOS_URL="http://localhost:7070/setup"
+echo -e "  ${D}Waiting for dashboard to come online...${RESET}"
+
+# Poll /api/health for up to 30 seconds — dashd is started via
+# clawos.service earlier, so this is usually ready within ~5s.
+READY=0
+for i in $(seq 1 30); do
+  if curl -sf "http://localhost:7070/api/health" >/dev/null 2>&1; then
+    READY=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$READY" = "1" ]; then
+  emit_milestone ready done "ClawOS online" "dashboard @ :7070 · ${ELAPSED}s total"
+  if [ "${NO_BROWSER:-0}" = "1" ] || [ ! -t 1 ]; then
+    # Headless / CI / piped install — just print the URL.
+    echo -e "  ${G}Command Center ready:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  elif open_url "${CLAWOS_URL}"; then
+    echo -e "  ${G}Command Center opening in your browser...${RESET}"
+    echo -e "  ${D}If the browser doesn't open, visit:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  else
+    echo -e "  ${Y}Could not auto-open your browser.${RESET}"
+    echo -e "  ${D}Open this URL manually:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  fi
 else
-  echo -e "  ${D}Run: ${RESET}${B}openclaw tui${RESET}"
-  echo ""
+  emit_milestone ready error "Dashboard did not start" "timed out after 30s"
+  warn "Dashboard did not come online within 30s"
+  echo -e "  ${D}Once the service is up, open:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  echo -e "  ${D}Or run manually:${RESET} ${B}openclaw tui${RESET}"
 fi
+echo ""

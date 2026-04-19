@@ -520,8 +520,6 @@ try:
         "tools.shell.do.cli",
         "bootstrap.profile_selector",
         "setup.first_run.state",
-        "setup.first_run.screens.hardware_profile",
-        "setup.first_run.screens.summary",
         "clients.cli.repl",
     ]
     for mod in modules:

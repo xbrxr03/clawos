@@ -255,20 +255,9 @@ def test_plan_mode_repl():
         fail("repl: /plan missing")
 
 
-# ── GTK4 wizard ──────────────────────────────────────────────────────────────
-def test_gtk_wizard():
-    f = ROOT / "setup" / "first_run" / "gtk_wizard.py"
-    if f.exists():
-        content = read_text(f)
-        screens = ["welcome", "hardware", "edition", "model",
-                   "workspace", "voice", "openclaw", "review", "install", "complete"]
-        missing = [s for s in screens if f"_screen_{s}" not in content]
-        if not missing:
-            ok("gtk_wizard: all 10 screens present")
-        else:
-            fail("gtk_wizard: screens missing", str(missing))
-    else:
-        fail("gtk_wizard: file missing")
+# ── GTK4 wizard: intentionally removed in the web-setup migration ──────────
+# The legacy GTK wizard and its 10 screens were deleted; the browser-based
+# setup flow at http://localhost:7070/setup replaces it.
 
 
 # ── Nexus Command ─────────────────────────────────────────────────────────────
@@ -352,7 +341,6 @@ if __name__ == "__main__":
         test_talk_mode,
         test_plan_mode_cli,
         test_plan_mode_repl,
-        test_gtk_wizard,
         test_nexus_command,
         test_nexus_command_cli,
         test_iso_chroot,
