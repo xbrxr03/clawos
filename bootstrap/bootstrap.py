@@ -88,10 +88,8 @@ def run(profile: str = None, yes: bool = False, workspace: str = "nexus_default"
   Next steps:
     nexus                            — start chatting
     bash scripts/dev_boot.sh          — start all services
-    http://localhost:7070             — dashboard (after dev_boot)
-
-  Or run the first-run wizard:
-    python3 -m setup.first_run.wizard
+    http://localhost:7070/setup       — first-run setup (browser wizard)
+    http://localhost:7070             — dashboard (after setup)
   ─────────────────────────────────────────────
     """)
 

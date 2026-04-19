@@ -241,17 +241,11 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
                 import subprocess
                 root = Path(__file__).parent.parent.parent
                 launcher = root / "clients" / "desktop" / "launch_command_center.py"
-                wizard = root / "setup" / "first_run" / "wizard.py"
                 if launcher.exists():
-                    print("  Opening ClawOS Setup...\n")
-                    result = subprocess.run(["python3", str(launcher), "--route", "/setup", "--timeout", "180"])
-                    if result.returncode == 0:
-                        continue
-                    print("  GUI launch failed - falling back to terminal setup.\n")
-                if wizard.exists():
-                    subprocess.run(["python3", str(wizard), "--reset"])
+                    print("  Opening ClawOS Setup in your browser...\n")
+                    subprocess.run(["python3", str(launcher), "--route", "/setup", "--timeout", "180"])
                 else:
-                    print(f"  {_d('Setup flow not found at')} {wizard}\n")
+                    print(f"  {_d('Open http://localhost:7070/setup manually (launcher not found).')}\n")
 
             elif cmd == "/workspace":
                 if arg:

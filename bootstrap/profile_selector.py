@@ -17,20 +17,24 @@ def select(hw: HardwareProfile) -> str:
         return "lowram"
 
 
+def recommended_runtimes(tier: str) -> list[str]:
+    """Return the recommended runtime list for a given hardware tier.
+    Tier A keeps the lightweight stack (Nexus + PicoClaw); everything B+ gets
+    the full stack including OpenClaw for its skill library.
+    """
+    if tier == "A":
+        return ["nexus", "picoclaw"]
+    return ["nexus", "picoclaw", "openclaw"]
+
+
 def select_with_bundle(hw: HardwareProfile) -> dict:
     """
     Return {"profile": str, "runtimes": list, "tier": str}.
-    Used by install.sh and hardware_profile wizard screen.
+    Used by install.sh and the web setup flow.
     """
     profile = select(hw)
     tier    = hw.tier
-    if tier in ("C", "D"):
-        runtimes = ["nexus", "picoclaw", "openclaw"]
-    elif tier == "B":
-        runtimes = ["nexus", "picoclaw", "openclaw"]
-    else:  # A
-        runtimes = ["nexus", "picoclaw"]
-    return {"profile": profile, "runtimes": runtimes, "tier": tier}
+    return {"profile": profile, "runtimes": recommended_runtimes(tier), "tier": tier}
 
 
 def openclaw_feasible(hw: HardwareProfile) -> bool:

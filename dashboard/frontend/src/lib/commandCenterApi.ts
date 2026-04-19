@@ -4,7 +4,20 @@ export type SetupState = {
   platform?: string
   architecture?: string
   service_manager?: string
-  detected_hardware?: { summary?: string; ram_gb?: number; gpu_name?: string; tier?: string }
+  detected_hardware?: {
+    summary?: string
+    ram_gb?: number
+    cpu_cores?: number
+    gpu_name?: string
+    gpu_vram_gb?: number
+    tier?: string
+    /** taOS-style hardware profile ("x86-cpu-16gb"). Used to tier-filter frameworks. */
+    profile_id?: string
+    has_mic?: boolean
+    has_speaker?: boolean
+    ollama_ok?: boolean
+    [extra: string]: unknown
+  }
   recommended_profile?: string
   selected_runtimes?: string[]
   selected_models?: string[]
@@ -13,7 +26,11 @@ export type SetupState = {
   secondary_packs?: string[]
   installed_extensions?: string[]
   workspace?: string
+  /** Captured on VoiceScreen — used for the JARVIS greeting. */
+  owner_name?: string
   assistant_identity?: string
+  /** Chosen on FrameworkScreen — catalog id or '' for built-in only. */
+  selected_framework?: string
   presence_profile?: PresenceProfile
   autonomy_policy?: AutonomyPolicy
   quiet_hours?: Record<string, string>
@@ -53,11 +70,46 @@ export type SetupState = {
   last_error?: string
   plan_steps?: string[]
   imported_openclaw?: Record<string, unknown>
+  // ─── Live install streaming (populated by install.sh via /api/setup/install-milestone) ──
+  install_milestones?: InstallMilestone[]
+  install_started_ts?: string
+  install_complete?: boolean
+}
+
+export type InstallMilestoneStatus = 'pending' | 'running' | 'done' | 'error'
+
+export type InstallMilestone = {
+  id: string
+  label: string
+  status: InstallMilestoneStatus
+  detail?: string
+  ts?: string
+  duration_ms?: number | null
 }
 
 export type SetupPlan = {
   summary?: string
   steps?: string[]
+}
+
+/** Enriched framework catalog entry — shape returned by frameworks.registry.list_for_tier(). */
+export type FrameworkCatalogEntry = {
+  name: string
+  version?: string
+  description?: string
+  category?: string
+  /** 'available' | 'installing' | 'installed' | 'running' | 'error' | 'removing' */
+  state?: string
+  compatible?: boolean
+  incompatible_reason?: string
+  tags?: string[]
+  links?: Record<string, string>
+  port?: number
+}
+
+export type SetupFrameworksPayload = {
+  profile_id?: string
+  frameworks: FrameworkCatalogEntry[]
 }
 
 export type SetupDiagnostics = {
@@ -561,6 +613,12 @@ export const commandCenterApi = {
       headers: setupHeaders(),
     }),
   getSetupDiagnostics: () => fetchJson<SetupDiagnostics>('/api/setup/diagnostics', { headers: setupHeaders() }),
+  listSetupFrameworks: (profile_id = '') => {
+    const qs = profile_id ? `?profile_id=${encodeURIComponent(profile_id)}` : ''
+    return fetchJson<SetupFrameworksPayload>(`/api/setup/frameworks${qs}`, {
+      headers: setupHeaders(),
+    })
+  },
   selectSetupPack: (pack_id: string, secondary_packs: string[] = [], provider_profile = '') =>
     fetchJson<SetupState>('/api/setup/select-pack', {
       method: 'POST',
@@ -683,6 +741,15 @@ export const commandCenterApi = {
       headers: { 'Content-Type': 'application/json', ...setupHeaders() },
       body: JSON.stringify({ sample_text }),
     }),
+  speakSetupGreeting: (line = '') =>
+    fetchJson<{ ok?: boolean; line?: string; assistant?: string; owner?: string; error?: string }>(
+      '/api/setup/voice-greet',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...setupHeaders() },
+        body: JSON.stringify({ line }),
+      },
+    ),
   listPacks: () => fetchJson<UseCasePack[]>('/api/packs', { headers: maybeSetupHeaders() }),
   installPack: (pack_id: string, primary = false, provider_profile = '') =>
     fetchJson<{ ok?: boolean; pack?: UseCasePack; state?: SetupState }>('/api/packs/install', {

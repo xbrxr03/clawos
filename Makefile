@@ -29,7 +29,7 @@ chat:
 	$(PYTHON) -m clients.cli.repl
 
 wizard:
-	$(PYTHON) -m setup.first_run.wizard
+	$(PYTHON) -m clawctl.main wizard
 
 test:
 	$(PYTHON) tests/system/test_phase1.py

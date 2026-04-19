@@ -83,31 +83,11 @@ except Exception as e:
 
 
 # ── 3. Wizard screens rename ──────────────────────────────────────────────────
-section("3. Wizard screens — Nexus")
-
-try:
-    text = (ROOT / "setup/first_run/screens/runtime_choice.py").read_text()
-    assert "Nexus" in text
-    assert "Claw Core" not in text
-    ok("runtime_choice.py uses Nexus")
-except Exception as e:
-    fail("runtime_choice.py", str(e))
-
-try:
-    text = (ROOT / "setup/first_run/screens/whatsapp_setup.py").read_text()
-    assert "Nexus" in text
-    assert "Jarvis" not in text
-    ok("whatsapp_setup.py uses Nexus")
-except Exception as e:
-    fail("whatsapp_setup.py", str(e))
-
-try:
-    text = (ROOT / "setup/first_run/screens/workspace_setup.py").read_text()
-    assert "nexus_default" in text
-    assert "jarvis_default" not in text
-    ok("workspace_setup.py uses nexus_default")
-except Exception as e:
-    fail("workspace_setup.py", str(e))
+# The Nexus rename pass on the TUI wizard screens is obsolete — those screens
+# were deleted in the web-setup migration. Identity is now verified by the
+# React setup flow's own fixtures. We only keep the WizardState check because
+# setupd still loads legacy state for migration.
+section("3. Wizard state — Nexus")
 
 try:
     from setup.first_run.state import WizardState
@@ -265,9 +245,6 @@ try:
         "runtimes/agent/prompts.py",
         "data/presets/workspaces/default/SOUL.md",
         "data/presets/workspaces/default/AGENTS.md",
-        "setup/first_run/screens/runtime_choice.py",
-        "setup/first_run/screens/workspace_setup.py",
-        "setup/first_run/screens/whatsapp_setup.py",
         "setup/first_run/state.py",
         "clawos_core/constants.py",
         "configs/defaults.yaml",

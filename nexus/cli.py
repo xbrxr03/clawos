@@ -273,9 +273,13 @@ def cmd_deny(request_id: str):
 
 # ── setup ─────────────────────────────────────────────────────────────────────
 def cmd_setup():
+    """Open the browser-based first-run setup (the legacy TUI wizard was removed)."""
     import subprocess
-    wizard = _ROOT / "setup" / "first_run" / "wizard.py"
-    subprocess.run([sys.executable, str(wizard), "--reset"])
+    launcher = _ROOT / "clients" / "desktop" / "launch_command_center.py"
+    if launcher.exists():
+        subprocess.run([sys.executable, str(launcher), "--route", "/setup", "--timeout", "180"])
+    else:
+        print("  Open http://localhost:7070/setup manually (launcher not found).")
 
 
 # ── use-kimi ──────────────────────────────────────────────────────────────────
