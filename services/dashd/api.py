@@ -814,6 +814,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     app.state.bus_handler = _on_bus_event
     app.state.voice_listener = None
     app.state.jarvis_listener = None
+    from services.dashd import pty_ws
+
+    pty_ws.register(app)
     app.state.openapi_schema = None
 
     def _build_openapi_schema() -> dict[str, Any]:
@@ -840,7 +843,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     async def redoc_ui():
         return get_redoc_html(openapi_url="/api/openapi.json", title=f"{app.title} ReDoc")
 
-    @app.get("/", response_class=HTMLResponse)
+    @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
     async def root():
         if DASHBOARD_STATIC_INDEX.exists():
             return FileResponse(str(DASHBOARD_STATIC_INDEX))

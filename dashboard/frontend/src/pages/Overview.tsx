@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge, Card, PageHeader, PanelHeader, SectionLabel, StatusDot, Ts } from '../components/ui.jsx'
 import { GettingStartedCard } from '../components/GettingStartedCard'
+import { LaunchJarvisButton } from '../components/LaunchJarvisButton'
 import {
   commandCenterApi,
   type AttentionEvent,
@@ -267,6 +268,32 @@ export function Overview({
             </>
           }
         />
+      </div>
+
+      <div style={{ padding: '0 20px 16px' }}>
+        <Card
+          style={{
+            padding: 20,
+            display: 'grid',
+            gap: 14,
+            background:
+              'linear-gradient(180deg, rgba(90, 200, 250, 0.12), rgba(90, 200, 250, 0.03) 48%, var(--surface-1))',
+            border: '1px solid rgba(90, 200, 250, 0.18)',
+          }}
+        >
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-3)' }}>
+              Zero-Terminal Launch
+            </div>
+            <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.05em' }}>
+              Bring up JARVIS without leaving the dashboard.
+            </div>
+            <div style={{ maxWidth: 720, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+              Launch the real OpenClaw TUI in-place, keep OAuth links clickable, and tear the PTY down automatically when the modal closes.
+            </div>
+          </div>
+          <LaunchJarvisButton />
+        </Card>
       </div>
 
       <GettingStartedCard />
