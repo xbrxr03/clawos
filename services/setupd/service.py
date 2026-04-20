@@ -31,6 +31,8 @@ from clawos_core.constants import (
 from clawos_core.desktop_integration import autostart_supported, desktop_posture, enable_launch_on_login
 from clawos_core.presence import set_voice_mode, sync_presence_from_setup, update_autonomy_policy, update_presence_profile
 from clawos_core.service_manager import service_manager_name, start as start_service
+from services.setupd.personas import get_setup_persona, list_setup_personas
+from services.setupd.provision import install_openclaude, install_picoclaw
 from services.setupd.state import SetupState
 
 log = logging.getLogger("setupd")
@@ -87,10 +89,12 @@ class SetupService:
         state = self._state
         pack = get_pack(state.primary_pack)
         provider = get_provider_profile(state.selected_provider_profile)
+        persona = get_setup_persona(state.selected_persona or "general")
         state.progress_stage = "planned"
         state.plan_steps = [
             "Inspect hardware and service manager",
             f"Prepare workspace {state.workspace or DEFAULT_WORKSPACE}",
+            f"Apply persona: {persona.title if persona else (state.selected_persona or 'General')}",
             f"Activate primary pack: {pack.name if pack else state.primary_pack}",
             f"Configure Nexus presence: {state.presence_profile.get('tone', 'crisp-executive') if isinstance(state.presence_profile, dict) else 'crisp-executive'}",
             f"Apply autonomy posture: {state.autonomy_policy.get('mode', 'mostly-autonomous') if isinstance(state.autonomy_policy, dict) else 'mostly-autonomous'}",
@@ -127,7 +131,8 @@ class SetupService:
         )
         return {
             "summary": (
-                f"Apply {state.recommended_profile} profile on {state.platform} for "
+                f"Apply {persona.title if persona else (state.selected_persona or 'General')} persona on "
+                f"{state.platform} with the {state.recommended_profile} hardware profile for "
                 f"{pack.name if pack else state.primary_pack} using {provider.name if provider else state.selected_provider_profile}"
             ),
             "steps": state.plan_steps,
@@ -255,6 +260,18 @@ class SetupService:
     def update_options(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = payload or {}
         state = self._state
+
+        if "selected_persona" in payload:
+            persona_id = str(payload.get("selected_persona", "")).strip().lower()
+            if persona_id and not get_setup_persona(persona_id):
+                raise ValueError(f"Unknown persona: {persona_id}")
+            state.selected_persona = persona_id
+
+        primary_goals = payload.get("primary_goals")
+        if isinstance(primary_goals, list):
+            cleaned_goals = [str(item).strip() for item in primary_goals if str(item).strip()]
+            if cleaned_goals:
+                state.primary_goals = cleaned_goals
 
         selected_models = payload.get("selected_models")
         if isinstance(selected_models, list) and selected_models:
@@ -385,7 +402,7 @@ class SetupService:
         sync_presence_from_setup(state)
         return self.to_dict()
 
-    async def _prepare_model(self, model: str):
+    async def _prepare_model(self, model: str) -> bool:
         state = self._state
         state.progress_stage = "model-pull"
         state.last_error = ""
@@ -410,7 +427,7 @@ class SetupService:
             self._persist()
             await self.broadcast()
             self._model_task = None
-            return
+            return True
 
         loop = asyncio.get_running_loop()
 
@@ -439,6 +456,7 @@ class SetupService:
             self._log(f"Model ready: {model}")
             self._persist()
             await self.broadcast()
+            return True
         except Exception as exc:
             state.progress_stage = "error"
             state.last_error = str(exc)
@@ -451,6 +469,7 @@ class SetupService:
             self._log(f"Model preparation failed: {exc}")
             self._persist()
             await self.broadcast()
+            return False
         finally:
             self._model_task = None
 
@@ -639,8 +658,12 @@ class SetupService:
 
     async def _apply(self):
         from bootstrap.bootstrap import run as bootstrap_run
+        from bootstrap.model_provision import ensure_model
+        from clawos_core.constants import DEFAULT_EMBED_MODEL
 
         state = self._state
+        persona = get_setup_persona(state.selected_persona or "general")
+        selected_model = state.selected_models[0] if state.selected_models else ""
         state.progress_stage = "applying"
         state.last_error = ""
         state.retry_state = ""
@@ -654,8 +677,48 @@ class SetupService:
                 profile=state.recommended_profile,
                 yes=True,
                 workspace=state.workspace or DEFAULT_WORKSPACE,
+                provision_model=False,
             )
             await self.broadcast()
+
+            if selected_model:
+                self._log(f"Preparing primary model {selected_model}")
+                ok = await self._prepare_model(selected_model)
+                if not ok:
+                    raise RuntimeError(f"Failed to prepare model {selected_model}")
+                state.progress_stage = "applying"
+                await self.broadcast()
+
+            self._log(f"Preparing memory model {DEFAULT_EMBED_MODEL}")
+            embed_ready = await asyncio.to_thread(ensure_model, DEFAULT_EMBED_MODEL, False)
+            if embed_ready:
+                self._log(f"Memory model ready: {DEFAULT_EMBED_MODEL}")
+            else:
+                self._log(f"Memory model pull skipped or failed: {DEFAULT_EMBED_MODEL}")
+
+            if persona:
+                for extra_model in persona.extra_models:
+                    if extra_model == selected_model:
+                        continue
+                    self._log(f"Preparing support model {extra_model}")
+                    extra_ready = await asyncio.to_thread(ensure_model, extra_model, False)
+                    self._log(
+                        f"Support model ready: {extra_model}"
+                        if extra_ready
+                        else f"Support model pull skipped or failed: {extra_model}"
+                    )
+
+                if persona.install_openclaude:
+                    self._log("Installing OpenClaude for the developer persona")
+                    installed, detail = await asyncio.to_thread(install_openclaude)
+                    self._log(detail)
+                    if installed:
+                        self._log("Developer shell bridge is ready")
+
+            if "picoclaw" in state.selected_runtimes:
+                self._log("Provisioning PicoClaw runtime")
+                installed, detail = await asyncio.to_thread(install_picoclaw)
+                self._log(detail)
 
             self._log("Attempting to start ClawOS user service")
             try:
@@ -899,6 +962,9 @@ class SetupService:
             "completion_marker": self._state.completion_marker,
         }
 
+    def list_personas(self) -> list[dict[str, object]]:
+        return list_setup_personas()
+
 
 _SERVICE: SetupService | None = None
 
@@ -940,6 +1006,11 @@ def create_app() -> "FastAPI":
     async def state(request: Request):
         _require_setup_access(request)
         return service.to_dict()
+
+    @app.get("/api/setup/personas")
+    async def personas(request: Request):
+        _require_setup_access(request)
+        return service.list_personas()
 
     @app.post("/api/setup/inspect")
     async def inspect(request: Request):

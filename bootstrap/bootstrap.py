@@ -19,7 +19,13 @@ def _step(name: str):
     print(f"\n  [{name}]")
 
 
-def run(profile: str = None, yes: bool = False, workspace: str = "nexus_default"):
+def run(
+    profile: str = None,
+    yes: bool = False,
+    workspace: str = "nexus_default",
+    model: str | None = None,
+    provision_model: bool = True,
+):
 
     # Step 1: Hardware probe
     _step("1/6 Hardware detection")
@@ -72,13 +78,16 @@ def run(profile: str = None, yes: bool = False, workspace: str = "nexus_default"
     # Step 6: Model provisioning
     _step("6/6 Model provisioning")
     from bootstrap.profile_selector import recommended_model
-    model = recommended_model(hw)
-    if hw.ollama_ok:
-        from bootstrap.model_provision import pull
-        pull(model)
+    selected_model = model or recommended_model(hw)
+    if provision_model:
+        if hw.ollama_ok:
+            from bootstrap.model_provision import pull
+            pull(selected_model)
+        else:
+            print(f"  Ollama not running — skipping pull of {selected_model}")
+            print(f"  Start Ollama later: ollama serve && ollama pull {selected_model}")
     else:
-        print(f"  Ollama not running — skipping pull of {model}")
-        print(f"  Start Ollama later: ollama serve && ollama pull {model}")
+        print(f"  Deferred to setup flow — selected model: {selected_model}")
 
     # Done
     print("""
@@ -93,7 +102,7 @@ def run(profile: str = None, yes: bool = False, workspace: str = "nexus_default"
   ─────────────────────────────────────────────
     """)
 
-    return {"profile": profile, "workspace": workspace, "hw_tier": hw.tier}
+    return {"profile": profile, "workspace": workspace, "hw_tier": hw.tier, "model": selected_model}
 
 
 def main():
@@ -102,10 +111,20 @@ def main():
                         help="Force a profile instead of auto-detecting")
     parser.add_argument("--workspace", default="nexus_default",
                         help="Workspace name to initialise")
+    parser.add_argument("--model", default="",
+                        help="Override the model name used during provisioning")
+    parser.add_argument("--skip-model", action="store_true",
+                        help="Prepare the machine foundation without pulling a model")
     parser.add_argument("--yes", action="store_true",
                         help="Non-interactive mode")
     args = parser.parse_args()
-    run(profile=args.profile, yes=args.yes, workspace=args.workspace)
+    run(
+        profile=args.profile,
+        yes=args.yes,
+        workspace=args.workspace,
+        model=args.model or None,
+        provision_model=not args.skip_model,
+    )
 
 
 if __name__ == "__main__":

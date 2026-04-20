@@ -76,7 +76,7 @@ ClawOS is a single installer that detects your hardware, picks the right model, 
 
 ## Who it's for
 
-The installer asks you one question:
+The one-line installer provisions the machine, opens the browser, and the setup wizard asks you one question there:
 
 ```
 Who is ClawOS for?
@@ -90,9 +90,9 @@ Who is ClawOS for?
   7) Freelancer   — Proposals, client research, outreach, invoicing
 ```
 
-Pick your profile. ClawOS pre-configures the right workflows and models for you.
+Pick your persona in the setup wizard. ClawOS pre-configures the right workflows and the final model provisioning for you.
 
-Developers get **OpenClaude** pre-wired to Ollama — Claude Code's interface, your hardware, zero API bill.
+The **Developer** persona gets **OpenClaude** pre-wired to Ollama — Claude Code's interface, your hardware, zero API bill.
 
 ---
 
@@ -276,3 +276,4 @@ ClawOS is not affiliated with OpenClaw or Anthropic. OpenClaw and Ollama remain 
 ---
 
 *Built for people who wanted a local AI assistant that actually works. [github.com/xbrxr03/clawos](https://github.com/xbrxr03/clawos)*
+

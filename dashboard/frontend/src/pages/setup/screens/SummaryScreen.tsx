@@ -36,6 +36,7 @@ function launchStageLabel(pct: number, stage: string | undefined): string {
 export function SummaryScreen(props: ScreenProps) {
   const {
     state,
+    personas,
     onBack,
     stepIndex,
     totalSteps,
@@ -65,7 +66,8 @@ export function SummaryScreen(props: ScreenProps) {
   }, [planSetup, state.plan_steps?.length])
 
   const runtimes = (state.selected_runtimes || ['nexus']).join(' + ')
-  const persona = PROFILE_PERSONAS.find((p) => p.id === ui.user_profile)
+  const personaCatalog = personas.length ? personas : PROFILE_PERSONAS
+  const persona = personaCatalog.find((p) => p.id === (state.selected_persona || ui.user_profile))
   const modelName = state.selected_models?.[0] || 'qwen2.5:7b'
   const policyCount = useMemo(() => {
     const ap = (state.autonomy_policy as unknown as Record<string, boolean>) || {}
@@ -75,8 +77,11 @@ export function SummaryScreen(props: ScreenProps) {
 
   const launchProgress = Number(state.model_pull_progress?.percent || 0)
   const stage = state.progress_stage || ''
-  const launching = busy === 'apply' || stage === 'applying'
   const done = !!state.completion_marker
+  const launching =
+    !done &&
+    stage !== 'error' &&
+    (busy === 'apply' || !!ui.launch_requested || ['applying', 'model-pull', 'model-ready'].includes(stage))
 
   // Track launch_requested in ui so refresh doesn't drop the in-progress state
   const pct = done ? 100 : launching ? Math.max(12, launchProgress) : 0
@@ -249,7 +254,7 @@ export function SummaryScreen(props: ScreenProps) {
         <div className="summary-grid" style={{ marginTop: 26 }}>
           <div className="sum-item">
             <div className="sum-k">Profile</div>
-            <div className="sum-v">{cap(persona?.id || ui.user_profile || 'general')}</div>
+            <div className="sum-v">{persona?.title || cap(state.selected_persona || ui.user_profile || 'general')}</div>
           </div>
           <div className="sum-item">
             <div className="sum-k">Hardware tier</div>

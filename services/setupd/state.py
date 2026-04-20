@@ -26,6 +26,7 @@ class SetupState:
     service_manager: str = field(default_factory=service_manager_name)
     detected_hardware: dict[str, Any] = field(default_factory=dict)
     recommended_profile: str = "balanced"
+    selected_persona: str = ""
     selected_runtimes: list[str] = field(default_factory=lambda: ["nexus", "picoclaw"])
     selected_models: list[str] = field(default_factory=lambda: ["qwen2.5:7b"])
     selected_provider_profile: str = "local-ollama"
@@ -106,6 +107,7 @@ class SetupState:
                 "node_ok": hw.node_ok,
             },
             recommended_profile=bundle["profile"],
+            selected_persona="",
             selected_runtimes=bundle["runtimes"],
             selected_models=[recommended_model(hw)],
             selected_provider_profile="local-ollama",
@@ -131,6 +133,7 @@ class SetupState:
             legacy = WizardState.load()
             state = cls.from_machine()
             state.recommended_profile = legacy.profile or state.recommended_profile
+            state.selected_persona = ""
             state.selected_runtimes = list(legacy.runtimes or state.selected_runtimes)
             state.selected_models = [legacy.model] if legacy.model else state.selected_models
             state.workspace = legacy.workspace_id or state.workspace

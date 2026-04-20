@@ -2,6 +2,7 @@
 import type {
   OpenClawImportManifest,
   ProviderProfile,
+  SetupPersona,
   SetupDiagnostics,
   SetupState,
   UseCasePack,
@@ -25,6 +26,7 @@ export interface ScreenProps {
   diagnostics: SetupDiagnostics | null
   packs: UseCasePack[]
   providers: ProviderProfile[]
+  personas: SetupPersona[]
   importManifest: OpenClawImportManifest | null
   busy: Busy
   error: string

@@ -9,6 +9,7 @@ import {
   commandCenterApi,
   type OpenClawImportManifest,
   type ProviderProfile,
+  type SetupPersona,
   type SetupDiagnostics,
   type SetupState,
   type UseCasePack,
@@ -97,6 +98,7 @@ export function SetupPage() {
   const [diagnostics, setDiagnostics] = useState<SetupDiagnostics | null>(null)
   const [packs, setPacks] = useState<UseCasePack[]>([])
   const [providers, setProviders] = useState<ProviderProfile[]>([])
+  const [personas, setPersonas] = useState<SetupPersona[]>([])
   const [importManifest, setImportManifest] = useState<OpenClawImportManifest | null>(null)
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState('')
@@ -157,12 +159,14 @@ export function SetupPage() {
 
   const loadCatalog = useCallback(async () => {
     try {
-      const [packData, providerData] = await Promise.all([
+      const [packData, providerData, personaData] = await Promise.all([
         commandCenterApi.listPacks(),
         commandCenterApi.listProviders(),
+        commandCenterApi.listSetupPersonas(),
       ])
       setPacks(Array.isArray(packData) ? packData : [])
       setProviders(Array.isArray(providerData) ? providerData : [])
+      setPersonas(Array.isArray(personaData) ? personaData : [])
     } catch {
       /* optional */
     }
@@ -173,6 +177,18 @@ export function SetupPage() {
     loadDiagnostics()
     loadCatalog()
   }, [loadState, loadDiagnostics, loadCatalog])
+
+  useEffect(() => {
+    if (!state) return
+    if (state.selected_persona) {
+      if (ui.user_profile === state.selected_persona) return
+      setUiRaw((prev) => ({ ...prev, user_profile: state.selected_persona || prev.user_profile }))
+      return
+    }
+    if (ui.user_profile) {
+      setUiRaw((prev) => ({ ...prev, user_profile: '' }))
+    }
+  }, [state?.selected_persona, ui.user_profile])
 
   /* ── WS: stream setup state ────────────────────────────────────────── */
   useEffect(() => {
@@ -404,6 +420,7 @@ export function SetupPage() {
     diagnostics,
     packs,
     providers,
+    personas,
     importManifest,
     busy,
     error,
