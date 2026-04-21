@@ -952,5 +952,72 @@ echo ""
 echo -e "  ${B}openclaw tui${RESET}"
 echo -e "  ${D}OpenClaw TUI with Kimi K2.5 on port ${OPENCLAW_GATEWAY_PORT}${RESET}"
 echo ""
+if [ "$PLATFORM" = "macos" ]; then
+  echo -e "  ${D}Reload shell if needed:${RESET} ${B}source ~/.zprofile${RESET}"
+else
+  echo -e "  ${D}Reload shell if needed:${RESET} ${B}source ~/.bashrc${RESET}"
+fi
+echo -e "  ${D}Service manager:${RESET} ${B}$(platform_name)${RESET} (${D}$([ "$PLATFORM" = "macos" ] && echo launchd || echo systemd)${RESET}${B})${RESET}"
+echo -e "  ${D}Open setup:${RESET} ${B}clawos-setup${RESET}"
+echo -e "  ${D}Open home:${RESET} ${B}clawos-command-center${RESET}"
+echo ""
+echo -e "  ${W}Dashboard:${RESET}        ${B}http://localhost:7070${RESET}"
+if [ "$PLATFORM" = "linux" ]; then
+  echo -e "  ${D}(or from another device: http://$(hostname -I | awk '{print $1}'):7070)${RESET}"
+fi
+echo ""
+
+_TOKEN_FILE="${INSTALL_DIR}/config/dashboard.token"
+if [ -f "$_TOKEN_FILE" ]; then
+  echo -e "  ${Y}Dashboard token:${RESET} ${B}$(cat "$_TOKEN_FILE")${RESET}"
+  echo -e "  ${D}(saved at ${_TOKEN_FILE})${RESET}"
+  echo ""
+fi
+
+open_url() {
+  local url="$1"
+  if command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url" >/dev/null 2>&1 &
+  elif command -v open >/dev/null 2>&1; then
+    open "$url" >/dev/null 2>&1 &
+  elif command -v wslview >/dev/null 2>&1; then
+    wslview "$url" >/dev/null 2>&1 &
+  elif command -v cmd.exe >/dev/null 2>&1; then
+    cmd.exe /c start "" "$url" >/dev/null 2>&1 &
+  else
+    return 1
+  fi
+  return 0
+}
+
+CLAWOS_URL="http://localhost:7070/setup"
+echo -e "  ${D}Waiting for dashboard to come online...${RESET}"
+
+READY=0
+for i in $(seq 1 30); do
+  if curl -sf "http://localhost:7070/api/health" >/dev/null 2>&1; then
+    READY=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$READY" = "1" ]; then
+  emit_milestone ready done "ClawOS online" "dashboard @ :7070 · ${ELAPSED}s total"
+  if [ "${NO_BROWSER:-0}" = "1" ] || [ ! -t 1 ]; then
+    echo -e "  ${G}Command Center ready:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  elif open_url "${CLAWOS_URL}"; then
+    echo -e "  ${G}Command Center opening in your browser...${RESET}"
+    echo -e "  ${D}If the browser doesn't open, visit:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  else
+    echo -e "  ${Y}Could not auto-open your browser.${RESET}"
+    echo -e "  ${D}Open this URL manually:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  fi
+else
+  emit_milestone ready error "Dashboard did not start" "timed out after 30s"
+  warn "Dashboard did not come online within 30s"
+  echo -e "  ${D}Once the service is up, open:${RESET} ${B}${CLAWOS_URL}${RESET}"
+  echo -e "  ${D}Or run manually:${RESET} ${B}openclaw tui${RESET}"
+fi
 echo ""
 
