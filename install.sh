@@ -248,7 +248,7 @@ install_python_packages() {
     pyyaml aiohttp fastapi "uvicorn[standard]"
     ollama click chromadb json_repair
     pypdf python-docx aiofiles httpx gitpython rich openai-whisper
-    openwakeword cryptography icalendar
+    openwakeword cryptography icalendar ptyprocess
   )
 
   # Create a virtualenv so services have a clean, isolated Python environment

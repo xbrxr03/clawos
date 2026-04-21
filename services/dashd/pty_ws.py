@@ -7,10 +7,21 @@ import subprocess
 import sys
 import time
 
+PtyProcess = None
+PTY_IMPORT_ERROR = None
+
 if sys.platform == "win32":
-    from winpty import PtyProcess  # pywinpty
+    try:
+        from winpty import PtyProcess as _PtyProcess  # pywinpty
+        PtyProcess = _PtyProcess
+    except ImportError as exc:
+        PTY_IMPORT_ERROR = exc
 else:
-    from ptyprocess import PtyProcessUnicode as PtyProcess
+    try:
+        from ptyprocess import PtyProcessUnicode as _PtyProcess
+        PtyProcess = _PtyProcess
+    except ImportError as exc:
+        PTY_IMPORT_ERROR = exc
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
@@ -161,6 +172,10 @@ async def _close_websocket(websocket: WebSocket) -> None:
 
 
 def register(app: FastAPI) -> None:
+    if PTY_IMPORT_ERROR is not None or PtyProcess is None:
+        log.warning("JARVIS PTY websocket unavailable: %s", PTY_IMPORT_ERROR)
+        return
+
     from services.dashd.api import _websocket_authorized
 
     @app.websocket("/ws/jarvis")
