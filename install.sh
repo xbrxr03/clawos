@@ -642,7 +642,7 @@ CHECK_ONLY=false
 # in the script, so pre-dashd milestones are simply queued in the buffer —
 # drain_install_buffer replays them via POST once dashd is alive, so the
 # browser's /setup page shows the full install history in its BootLog.
-CLAWOS_STATE_DIR="${INSTALL_DIR}/logs"
+CLAWOS_STATE_DIR="${CLAWOS_STATE_DIR:-$HOME/.clawos/install}"
 CLAWOS_INSTALL_BUFFER="${CLAWOS_STATE_DIR}/install-milestones.buffer.jsonl"
 
 # Escape a string for safe inclusion inside a JSON string literal.
