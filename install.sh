@@ -905,13 +905,20 @@ run_with_spinner "Running bootstrap foundation (${BOOTSTRAP_PROFILE} hardware pr
 ok "Machine foundation ready"
 emit_milestone bootstrap done "Machine foundation ready" "finish setup in the browser wizard"
 
-# Write dashboard host config so the dashboard is accessible on the LAN
+# Keep dashd loopback-only during first-run setup. The setup wizard's
+# unauthenticated access path is intentionally restricted to trusted local
+# browser sessions, so binding 0.0.0.0 here can strand the UI on the
+# "Warming up the wizard" shell.
 CLAWOS_YAML="${INSTALL_DIR}/config/clawos.yaml"
-if [ -f "$CLAWOS_YAML" ] && ! grep -q "^dashboard:" "$CLAWOS_YAML" 2>/dev/null; then
-  printf '\ndashboard:\n  host: 0.0.0.0\n  port: 7070\n' >> "$CLAWOS_YAML"
-elif [ ! -f "$CLAWOS_YAML" ]; then
+if [ -f "$CLAWOS_YAML" ]; then
+  if grep -q "^dashboard:" "$CLAWOS_YAML" 2>/dev/null; then
+    sed -i 's/^\([[:space:]]*host:[[:space:]]*\)0\.0\.0\.0$/\1127.0.0.1/' "$CLAWOS_YAML" 2>/dev/null || true
+  else
+    printf '\ndashboard:\n  host: 127.0.0.1\n  port: 7070\n' >> "$CLAWOS_YAML"
+  fi
+else
   mkdir -p "${INSTALL_DIR}/config"
-  printf '_profile: %s\ndashboard:\n  host: 0.0.0.0\n  port: 7070\n' "$BOOTSTRAP_PROFILE" > "$CLAWOS_YAML"
+  printf '_profile: %s\ndashboard:\n  host: 127.0.0.1\n  port: 7070\n' "$BOOTSTRAP_PROFILE" > "$CLAWOS_YAML"
 fi
 
 
@@ -963,9 +970,6 @@ echo -e "  ${D}Open setup:${RESET} ${B}clawos-setup${RESET}"
 echo -e "  ${D}Open home:${RESET} ${B}clawos-command-center${RESET}"
 echo ""
 echo -e "  ${W}Dashboard:${RESET}        ${B}http://localhost:7070${RESET}"
-if [ "$PLATFORM" = "linux" ]; then
-  echo -e "  ${D}(or from another device: http://$(hostname -I | awk '{print $1}'):7070)${RESET}"
-fi
 echo ""
 
 _TOKEN_FILE="${INSTALL_DIR}/config/dashboard.token"
