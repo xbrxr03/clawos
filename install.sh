@@ -462,35 +462,36 @@ install_wrapper_commands() {
   step "Installing command wrappers"
 
   mkdir -p "$HOME/.local/bin"
+  local py_bin="${INSTALL_DIR}/venv/bin/python3"
 
   write_file_if_changed "$HOME/.local/bin/nexus" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/nexus/cli.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/nexus/cli.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawos" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clients/cli/repl.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/clients/cli/repl.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawctl" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clawctl/main.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/clawctl/main.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawos-command-center" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clients/desktop/launch_command_center.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawos-setup" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route /setup "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route /setup "\$@"
 EOF
 
   ensure_path_line "$HOME/.bashrc"
@@ -509,7 +510,7 @@ enable_autostart() {
     OPENCLAW_BIN="$(command -v openclaw 2>/dev/null || true)"
     CLAWOS_HOME="$INSTALL_DIR" \
     CLAWOS_WORKSPACE="nexus_default" \
-    PYTHON_BIN="$(command -v python3)" \
+    PYTHON_BIN="${INSTALL_DIR}/venv/bin/python3" \
     OLLAMA_BIN="$OLLAMA_BIN" \
     OPENCLAW_BIN="$OPENCLAW_BIN" \
     OPENCLAW_GATEWAY_PORT="$OPENCLAW_GATEWAY_PORT" \

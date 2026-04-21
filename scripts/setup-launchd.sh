@@ -9,7 +9,10 @@ CLAWOS_HOME="${CLAWOS_HOME:-$HOME/clawos}"
 WORKSPACE="${CLAWOS_WORKSPACE:-nexus_default}"
 AGENT_DIR="${HOME}/Library/LaunchAgents"
 LOG_DIR="${CLAWOS_HOME}/logs"
-PYTHON_BIN="${PYTHON_BIN:-$(command -v python3)}"
+PYTHON_BIN="${PYTHON_BIN:-${CLAWOS_HOME}/venv/bin/python3}"
+if [ ! -x "$PYTHON_BIN" ]; then
+  PYTHON_BIN="$(command -v python3)"
+fi
 OLLAMA_BIN="${OLLAMA_BIN:-$(command -v ollama || true)}"
 OPENCLAW_BIN="${OPENCLAW_BIN:-$(command -v openclaw || true)}"
 OPENCLAW_GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
