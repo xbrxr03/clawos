@@ -186,6 +186,26 @@ def _origin_is_trusted(origin: str) -> bool:
     return parsed.scheme in {"http", "https"} and _is_loopback_host(parsed.hostname or "")
 
 
+def _request_targets_loopback(request: Request) -> bool:
+    try:
+        if _is_loopback_host(request.url.hostname or ""):
+            return True
+    except Exception:
+        pass
+    client = getattr(request, "client", None)
+    return _is_loopback_host(getattr(client, "host", ""))
+
+
+def _websocket_targets_loopback(websocket: WebSocket) -> bool:
+    try:
+        if _is_loopback_host(websocket.url.hostname or ""):
+            return True
+    except Exception:
+        pass
+    client = getattr(websocket, "client", None)
+    return _is_loopback_host(getattr(client, "host", ""))
+
+
 def _has_setup_access(request: Request) -> bool:
     header_value = request.headers.get(SETUP_ACCESS_HEADER, "").strip()
     if header_value != SETUP_ACCESS_VALUE:
@@ -594,7 +614,7 @@ def _gateway_service():
 
 
 def _setup_bypass_allowed(settings: DashboardSettings, request: Request) -> bool:
-    if not _is_loopback_host(settings.host):
+    if not _request_targets_loopback(request):
         return False
     state = _setup_state()
     if getattr(state, "completion_marker", False):
@@ -720,7 +740,7 @@ def _setup_websocket_authorized(websocket: WebSocket) -> bool:
     state = _setup_state()
     if (
         not getattr(state, "completion_marker", False)
-        and _is_loopback_host(settings.host)
+        and _websocket_targets_loopback(websocket)
         and setup_signal
         and _origin_is_trusted(websocket.headers.get("origin", ""))
     ):

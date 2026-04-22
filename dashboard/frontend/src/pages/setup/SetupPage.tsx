@@ -393,16 +393,38 @@ export function SetupPage() {
               <div className="stage">
                 <div className="stage-inner" style={{ paddingTop: 80 }}>
                   <div className="eyebrow">FIRST RUN</div>
-                  <h1 className="wiz-title">Warming up the wizard…</h1>
+                  <h1 className="wiz-title">{error ? 'Setup state is blocked' : 'Warming up the wizard…'}</h1>
                   <p className="wiz-subtitle">
-                    Restoring setup state, detecting hardware and checking local services.
+                    {error
+                      ? error
+                      : 'Restoring setup state, detecting hardware and checking local services.'}
                   </p>
-                  <div className="boot-log" style={{ marginTop: 28 }}>
-                    <span className="ln">
-                      <span className="dim">[0000ms]</span> <span className="lab">setupd</span>{' '}
-                      loading state snapshot… <span className="lab">[ … ]</span>
-                    </span>
-                  </div>
+                  {error ? (
+                    <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <button
+                        className="wiz-btn wiz-btn-primary"
+                        type="button"
+                        onClick={() => {
+                          setError('')
+                          loadState()
+                          loadDiagnostics()
+                          loadCatalog()
+                        }}
+                      >
+                        Retry
+                      </button>
+                      <a className="wiz-btn wiz-btn-ghost" href="/">
+                        Open Dashboard Login
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="boot-log" style={{ marginTop: 28 }}>
+                      <span className="ln">
+                        <span className="dim">[0000ms]</span> <span className="lab">setupd</span>{' '}
+                        loading state snapshot… <span className="lab">[ … ]</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
