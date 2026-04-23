@@ -32,7 +32,7 @@ from clawos_core.desktop_integration import autostart_supported, desktop_posture
 from clawos_core.presence import set_voice_mode, sync_presence_from_setup, update_autonomy_policy, update_presence_profile
 from clawos_core.service_manager import service_manager_name, start as start_service
 from services.setupd.personas import get_setup_persona, list_setup_personas
-from services.setupd.provision import install_openclaude, install_picoclaw
+from services.setupd.provision import install_openclaw, install_openclaude, install_picoclaw
 from services.setupd.state import SetupState
 
 log = logging.getLogger("setupd")
@@ -714,6 +714,13 @@ class SetupService:
                     self._log(detail)
                     if installed:
                         self._log("Developer shell bridge is ready")
+
+            if state.enable_openclaw or "openclaw" in state.selected_runtimes:
+                self._log("Provisioning OpenClaw runtime")
+                installed, detail = await asyncio.to_thread(install_openclaw)
+                self._log(detail)
+                if installed:
+                    self._log("OpenClaw runtime ready")
 
             if "picoclaw" in state.selected_runtimes:
                 self._log("Provisioning PicoClaw runtime")

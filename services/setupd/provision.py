@@ -5,6 +5,7 @@ Idempotent setup-time provisioning helpers owned by setupd.
 from __future__ import annotations
 
 import json
+import os
 import platform as py_platform
 import shutil
 import subprocess
@@ -15,6 +16,66 @@ import urllib.request
 from pathlib import Path
 
 from clawos_core.constants import PICOCLAW_GITHUB, PICOCLAW_HTTP_TIMEOUT, PICOCLAW_VERSION
+
+
+def install_openclaw() -> tuple[bool, str]:
+    if sys.platform == "win32":
+        return False, "OpenClaw install is skipped on Windows during setup"
+
+    npm = shutil.which("npm")
+    if not npm:
+        return False, "npm not found - skipping OpenClaw"
+
+    prefix = Path.home() / ".local"
+    bin_dir = prefix / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+
+    env = os.environ.copy()
+    env["PATH"] = str(bin_dir) + os.pathsep + env.get("PATH", "")
+
+    try:
+        subprocess.run(
+            [npm, "config", "set", "prefix", str(prefix)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=env,
+        )
+    except Exception:
+        pass
+
+    existing = shutil.which("openclaw", path=env["PATH"])
+    if existing:
+        _ensure_local_bin_export()
+        return True, f"OpenClaw already installed at {existing}"
+
+    try:
+        subprocess.run(
+            [npm, "install", "-g", "openclaw@latest"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=900,
+            env=env,
+        )
+    except subprocess.CalledProcessError as exc:
+        detail = exc.stderr.strip() or exc.stdout.strip() or str(exc)
+        return False, f"OpenClaw install failed: {detail}"
+    except Exception as exc:
+        return False, f"OpenClaw install failed: {exc}"
+
+    installed = shutil.which("openclaw", path=env["PATH"])
+    if installed:
+        _ensure_local_bin_export()
+        return True, "OpenClaw installed - run: openclaw tui"
+
+    local_binary = bin_dir / "openclaw"
+    if local_binary.exists():
+        _ensure_local_bin_export()
+        return True, f"OpenClaw installed to {local_binary}"
+
+    return False, "OpenClaw install finished but the binary was not found"
 
 
 def install_openclaude() -> tuple[bool, str]:
@@ -133,6 +194,20 @@ def _write_picoclaw_config():
     )
 
 
+def _ensure_local_bin_export():
+    line = 'export PATH="$HOME/.local/bin:$PATH"'
+    for rc_name in (".bashrc", ".zshrc", ".profile", ".zprofile"):
+        rc_path = Path.home() / rc_name
+        try:
+            existing = rc_path.read_text(encoding="utf-8") if rc_path.exists() else ""
+        except OSError:
+            existing = ""
+        if line in existing:
+            continue
+        prefix = "\n" if existing and not existing.endswith("\n") else ""
+        rc_path.write_text(existing + prefix + line + "\n", encoding="utf-8")
+
+
 def _picoclaw_arch(machine: str) -> str:
     value = (machine or "").lower()
     if value in {"armv7l", "armv8l", "armhf"}:
@@ -142,4 +217,3 @@ def _picoclaw_arch(machine: str) -> str:
     if value == "riscv64":
         return "riscv64"
     return "x86_64"
-

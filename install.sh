@@ -76,6 +76,21 @@ ensure_path_line() {
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$file"
 }
 
+link_into_system_bin() {
+  local source=$1
+  local name=${2:-$(basename "$source")}
+  local sys_bin="/usr/local/bin"
+  [ -n "$source" ] || return 0
+  [ -e "$source" ] || return 0
+  if [ -d "$sys_bin" ]; then
+    if [ -w "$sys_bin" ]; then
+      ln -sf "$source" "$sys_bin/$name" >/dev/null 2>&1 || true
+    elif command -v sudo >/dev/null 2>&1; then
+      sudo ln -sf "$source" "$sys_bin/$name" >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
 systemd_user_ready() {
   command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1
 }
@@ -239,7 +254,43 @@ install_node() {
   fi
 }
 
-# OpenClaw is installed by 'ollama launch openclaw' at the end of the install.
+install_openclaw_cli() {
+  step "Installing OpenClaw"
+
+  if ! command -v npm >/dev/null 2>&1; then
+    warn "npm not found - skipping OpenClaw"
+    return 0
+  fi
+
+  npm config set prefix "$HOME/.local" >/dev/null 2>&1 || true
+  export PATH="$HOME/.local/bin:$PATH"
+  hash -r 2>/dev/null || true
+
+  if command -v openclaw >/dev/null 2>&1; then
+    link_into_system_bin "$(command -v openclaw)" "openclaw"
+    ok "OpenClaw already installed"
+    return 0
+  fi
+
+  if run_with_spinner "Installing OpenClaw via npm" npm install -g openclaw@latest --quiet; then
+    :
+  else
+    warn "OpenClaw install failed - retry later with: clawctl openclaw install"
+    return 0
+  fi
+
+  hash -r 2>/dev/null || true
+
+  if command -v openclaw >/dev/null 2>&1 && openclaw --version >/dev/null 2>&1; then
+    link_into_system_bin "$(command -v openclaw)" "openclaw"
+    ok "OpenClaw installed"
+  elif [ -x "$HOME/.local/bin/openclaw" ]; then
+    link_into_system_bin "$HOME/.local/bin/openclaw" "openclaw"
+    ok "OpenClaw installed"
+  else
+    warn "OpenClaw binary not found after install"
+  fi
+}
 
 install_python_packages() {
   step "Installing Python packages"
@@ -409,8 +460,6 @@ configure_openclaw() {
 
   OPENCLAW_MODEL="kimi-k2.5:cloud"
 
-  # Config is written now; openclaw binary is installed later by 'ollama launch'
-
   mkdir -p "$HOME/.openclaw" "$HOME/.openclaw/agents/main/sessions"
 
   write_file_if_changed "$HOME/.openclaw/openclaw.json" 600 <<EOF
@@ -495,16 +544,9 @@ route="/setup?fresh=\$(date +%s)"
 exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route "\${route}" "\$@"
 EOF
 
-  local sys_bin="/usr/local/bin"
-  if [ -d "$sys_bin" ]; then
-    for _cmd in nexus clawos clawctl clawos-command-center clawos-setup; do
-      if [ -w "$sys_bin" ]; then
-        ln -sf "$HOME/.local/bin/$_cmd" "$sys_bin/$_cmd" >/dev/null 2>&1 || true
-      elif command -v sudo >/dev/null 2>&1; then
-        sudo ln -sf "$HOME/.local/bin/$_cmd" "$sys_bin/$_cmd" >/dev/null 2>&1 || true
-      fi
-    done
-  fi
+  for _cmd in nexus clawos clawctl clawos-command-center clawos-setup; do
+    link_into_system_bin "$HOME/.local/bin/$_cmd" "$_cmd"
+  done
 
   ensure_path_line "$HOME/.bashrc"
   ensure_path_line "$HOME/.zshrc"
@@ -602,7 +644,9 @@ verify_install() {
 
   command -v clawos >/dev/null 2>&1 && ok "clawos command available"
   command -v clawctl >/dev/null 2>&1 && ok "clawctl command available"
-  command -v openclaw >/dev/null 2>&1 && ok "openclaw command available" || true
+  command -v openclaw >/dev/null 2>&1 \
+    && ok "openclaw command available" \
+    || warn "openclaw command not available"
 
   curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 \
     && ok "Ollama API reachable" \
@@ -906,6 +950,8 @@ install_playwright
 emit_milestone voice done "Voice pipeline ready" "offline STT/TTS"
 build_command_center
 emit_milestone core done "Nexus installed" "clawos + dashboard built"
+install_openclaw_cli
+configure_openclaw
 
 step "Preparing machine foundation"
 emit_milestone bootstrap running "Preparing machine foundation" "hardware: $PROFILE"

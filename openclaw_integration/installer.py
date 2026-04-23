@@ -112,6 +112,10 @@ def ensure_node() -> bool:
 
 
 def install_openclaw(force: bool = False) -> bool:
+    local_prefix = Path.home() / ".local"
+    local_bin = local_prefix / "bin"
+    os.environ["PATH"] = str(local_bin) + ":" + os.environ.get("PATH", "")
+
     if shutil.which("openclaw") and not force:
         try:
             result = _run(["openclaw", "--version"])
@@ -119,6 +123,16 @@ def install_openclaw(force: bool = False) -> bool:
         except Exception:
             print("  ✓  OpenClaw already installed")
         return True
+
+    try:
+        subprocess.run(
+            ["npm", "config", "set", "prefix", str(local_prefix)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except Exception:
+        pass
 
     print("  Installing OpenClaw via npm (~2 min) ...")
     result = subprocess.run(["npm", "install", "-g", "openclaw@latest"], timeout=300)
