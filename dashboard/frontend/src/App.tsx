@@ -102,7 +102,7 @@ class SetupRouteBoundary extends Component<{ children: ReactNode }, { error: Err
             Reload page
           </button>
           <a className="btn" href="/">
-            Open dashboard login
+            Open dashboard
           </a>
         </div>
       </div>
@@ -239,7 +239,6 @@ export default function CommandCenterApp() {
   const [ready, setReady] = useState(false)
   const [authRequired, setAuthRequired] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
-  const [token, setToken] = useState('')
   const [error, setError] = useState('')
   const isSetupRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/setup')
 
@@ -270,10 +269,10 @@ export default function CommandCenterApp() {
     const response = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({}),
     })
     if (!response.ok) {
-      setError('That token was rejected.')
+      setError('Local browser session could not be established.')
       return
     }
     setAuthenticated(true)
@@ -307,14 +306,14 @@ export default function CommandCenterApp() {
         <div className="auth-screen-panel">
           <div className="auth-screen-copy">
             <div className="page-eyebrow">Dashboard Access</div>
-            <div className="page-title">Unlock ClawOS</div>
+            <div className="page-title">Continue To ClawOS</div>
             <div className="page-description">
-              Your command center is local-first and private by default. Enter the dashboard token from your ClawOS config to continue.
+              ClawOS now uses a loopback-only browser session for the local dashboard. Continue to create a private session on this machine.
             </div>
             <div className="auth-screen-tips">
               <div className="auth-tip">
                 <span>Privacy-first</span>
-                <span>Local session cookie after login</span>
+                <span>Loopback-only browser session</span>
               </div>
               <div className="auth-tip">
                 <span>Quick actions</span>
@@ -329,21 +328,14 @@ export default function CommandCenterApp() {
 
           <form onSubmit={login}>
             <Card className="auth-card" style={{ padding: 24, background: 'var(--panel-solid)' }}>
-              <div className="section-label">Local Token</div>
-              <div className="panel-title">Dashboard token</div>
+              <div className="section-label">Local Browser Session</div>
+              <div className="panel-title">Start dashboard session</div>
               <div className="panel-description">
-                Paste the token exactly as it appears in your local ClawOS config.
+                This keeps the dashboard private to this machine without asking you to paste a token during setup.
               </div>
-              <input
-                type="password"
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="Dashboard token"
-                style={{ width: '100%', marginTop: 18 }}
-              />
               {error ? <div style={{ marginTop: 12, color: 'var(--red)', fontSize: 12 }}>{error}</div> : null}
               <button type="submit" className="btn primary" style={{ width: '100%', marginTop: 18 }}>
-                Unlock Command Center
+                Continue locally
               </button>
             </Card>
           </form>

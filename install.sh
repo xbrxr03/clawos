@@ -495,6 +495,17 @@ route="/setup?fresh=\$(date +%s)"
 exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route "\${route}" "\$@"
 EOF
 
+  local sys_bin="/usr/local/bin"
+  if [ -d "$sys_bin" ]; then
+    for _cmd in nexus clawos clawctl clawos-command-center clawos-setup; do
+      if [ -w "$sys_bin" ]; then
+        ln -sf "$HOME/.local/bin/$_cmd" "$sys_bin/$_cmd" >/dev/null 2>&1 || true
+      elif command -v sudo >/dev/null 2>&1; then
+        sudo ln -sf "$HOME/.local/bin/$_cmd" "$sys_bin/$_cmd" >/dev/null 2>&1 || true
+      fi
+    done
+  fi
+
   ensure_path_line "$HOME/.bashrc"
   ensure_path_line "$HOME/.zshrc"
   ensure_path_line "$HOME/.zprofile"
@@ -972,31 +983,8 @@ echo -e "  ${D}Open home:${RESET} ${B}clawos-command-center${RESET}"
 echo ""
 echo -e "  ${W}Dashboard:${RESET}        ${B}http://localhost:7070${RESET}"
 echo ""
-
-_TOKEN_FILE="${INSTALL_DIR}/config/dashboard.token"
-if [ -f "$_TOKEN_FILE" ]; then
-  echo -e "  ${Y}Dashboard token:${RESET} ${B}$(cat "$_TOKEN_FILE")${RESET}"
-  echo -e "  ${D}(saved at ${_TOKEN_FILE})${RESET}"
-  echo ""
-fi
-
-open_url() {
-  local url="$1"
-  if command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$url" >/dev/null 2>&1 &
-  elif command -v open >/dev/null 2>&1; then
-    open "$url" >/dev/null 2>&1 &
-  elif command -v wslview >/dev/null 2>&1; then
-    wslview "$url" >/dev/null 2>&1 &
-  elif command -v cmd.exe >/dev/null 2>&1; then
-    cmd.exe /c start "" "$url" >/dev/null 2>&1 &
-  else
-    return 1
-  fi
-  return 0
-}
-
-CLAWOS_URL="http://localhost:7070/setup?fresh=$(date +%s)"
+CLAWOS_ROUTE="/setup?fresh=$(date +%s)"
+CLAWOS_URL="http://localhost:7070${CLAWOS_ROUTE}"
 echo -e "  ${D}Waiting for dashboard to come online...${RESET}"
 
 READY=0
@@ -1012,7 +1000,7 @@ if [ "$READY" = "1" ]; then
   emit_milestone ready done "ClawOS online" "dashboard @ :7070 · ${ELAPSED}s total"
   if [ "${NO_BROWSER:-0}" = "1" ] || [ ! -t 1 ]; then
     echo -e "  ${G}Command Center ready:${RESET} ${B}${CLAWOS_URL}${RESET}"
-  elif open_url "${CLAWOS_URL}"; then
+  elif "${INSTALL_DIR}/venv/bin/python3" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route "${CLAWOS_ROUTE}" --timeout 5 >/dev/null 2>&1; then
     echo -e "  ${G}Command Center opening in your browser...${RESET}"
     echo -e "  ${D}If the browser doesn't open, visit:${RESET} ${B}${CLAWOS_URL}${RESET}"
   else

@@ -221,14 +221,49 @@ def _dashboard_session_token_file() -> Path:
     return CONFIG_DIR / "dashboard.session"
 
 
-def _dashboard_index_response() -> FileResponse:
-    return FileResponse(
+def _set_dashboard_session_cookie(
+    response: Response,
+    request: Request,
+    settings: Optional[DashboardSettings] = None,
+) -> None:
+    settings = settings or request.app.state.settings
+    if not settings.auth_required:
+        return
+    response.set_cookie(
+        settings.cookie_name,
+        _load_dashboard_session_token(settings.auth_required),
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="strict",
+        max_age=86400,
+        path="/",
+    )
+
+
+def _can_auto_bootstrap_local_session(request: Request) -> bool:
+    settings: DashboardSettings = request.app.state.settings
+    if not settings.auth_required:
+        return False
+    if not _request_targets_loopback(request):
+        return False
+    if not _origin_is_trusted(request.headers.get("origin", "")):
+        return False
+    if not _origin_is_trusted(request.headers.get("referer", "")):
+        return False
+    return True
+
+
+def _dashboard_index_response(request: Request) -> FileResponse:
+    response = FileResponse(
         str(DASHBOARD_STATIC_INDEX),
         headers={
             "Cache-Control": "no-store, max-age=0",
             "Pragma": "no-cache",
         },
     )
+    if _can_auto_bootstrap_local_session(request):
+        _set_dashboard_session_cookie(response, request)
+    return response
 
 
 def _load_or_create_secret(path: Path) -> str:
@@ -259,9 +294,7 @@ def _load_dashboard_token(auth_required: bool) -> str:
     env_token = os.environ.get("CLAWOS_DASHBOARD_TOKEN", "").strip()
     if env_token:
         return env_token
-    if not auth_required:
-        return ""
-    return _load_or_create_secret(_dashboard_token_file())
+    return ""
 
 
 def _load_dashboard_session_token(auth_required: bool) -> str:
@@ -874,9 +907,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         return get_redoc_html(openapi_url="/api/openapi.json", title=f"{app.title} ReDoc")
 
     @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
-    async def root():
+    async def root(request: Request):
         if DASHBOARD_STATIC_INDEX.exists():
-            return _dashboard_index_response()
+            return _dashboard_index_response(request)
         return HTMLResponse(
             "<h1>ClawOS Dashboard</h1><p>Built frontend not found in services/dashd/static.</p>",
             status_code=503,
@@ -898,10 +931,19 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     @app.get("/api/session")
     async def session(request: Request):
         settings_obj: DashboardSettings = request.app.state.settings
-        return {
+        authenticated = _is_request_authorized(request)
+        bootstrapped = False
+        if not authenticated and _can_auto_bootstrap_local_session(request):
+            authenticated = True
+            bootstrapped = True
+
+        response = JSONResponse({
             "auth_required": settings_obj.auth_required,
-            "authenticated": _is_request_authorized(request),
-        }
+            "authenticated": authenticated,
+        })
+        if bootstrapped:
+            _set_dashboard_session_cookie(response, request, settings_obj)
+        return response
 
     @app.post("/api/login")
     async def login(body: dict, request: Request):
@@ -909,8 +951,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         if not settings_obj.auth_required:
             return JSONResponse({"ok": True, "auth_required": False})
 
-        token = str((body or {}).get("token", "")).strip()
-        if not _token_matches(token, settings_obj.token):
+        if not _can_auto_bootstrap_local_session(request):
             raise HTTPException(
                 status_code=401,
                 detail="Unauthorized",
@@ -918,21 +959,14 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             )
 
         response = JSONResponse({"ok": True, "auth_required": True})
-        response.set_cookie(
-            settings_obj.cookie_name,
-            _load_dashboard_session_token(settings_obj.auth_required),
-            httponly=True,
-            secure=request.url.scheme == "https",
-            samesite="lax",
-            max_age=86400,
-        )
+        _set_dashboard_session_cookie(response, request, settings_obj)
         return response
 
     @app.post("/api/logout")
     async def logout(request: Request):
         settings_obj: DashboardSettings = request.app.state.settings
         response = JSONResponse({"ok": True})
-        response.delete_cookie(settings_obj.cookie_name)
+        response.delete_cookie(settings_obj.cookie_name, path="/")
         return response
 
     @app.get("/api/tasks", dependencies=[Depends(require_auth)])
@@ -2576,14 +2610,14 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
         @app.get("/{full_path:path}", include_in_schema=False)
-        async def spa_fallback(full_path: str):
+        async def spa_fallback(full_path: str, request: Request):
             if not full_path or full_path.startswith("api") or full_path.startswith("ws"):
                 raise HTTPException(status_code=404, detail="Not found")
             asset = DASHBOARD_STATIC_DIR / full_path
             if asset.exists() and asset.is_file():
                 return FileResponse(str(asset))
             if DASHBOARD_STATIC_INDEX.exists():
-                return _dashboard_index_response()
+                return _dashboard_index_response(request)
             raise HTTPException(status_code=404, detail="Not found")
 
     return app

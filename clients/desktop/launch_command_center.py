@@ -66,19 +66,33 @@ def open_in_browser(url: str) -> bool:
     except Exception:
         pass
 
+    if shutil.which("gio"):
+        try:
+            subprocess.Popen(["gio", "open", url])
+            return True
+        except Exception:
+            pass
+
     if sys.platform == "darwin" and shutil.which("open"):
         try:
             subprocess.Popen(["open", url])
             return True
         except Exception:
-            return False
+            pass
 
     if shutil.which("xdg-open"):
         try:
             subprocess.Popen(["xdg-open", url])
             return True
         except Exception:
-            return False
+            pass
+
+    if shutil.which("sensible-browser"):
+        try:
+            subprocess.Popen(["sensible-browser", url])
+            return True
+        except Exception:
+            pass
 
     return False
 

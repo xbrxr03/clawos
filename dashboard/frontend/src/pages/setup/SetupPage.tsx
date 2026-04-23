@@ -4,7 +4,7 @@
  * (user decision 1). Locks forward navigation — rail click only goes to steps
  * already completed (user decision 2).
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   commandCenterApi,
   type OpenClawImportManifest,
@@ -403,6 +403,12 @@ export function SetupPage() {
   }, [])
 
   /* ── loading shell ─────────────────────────────────────────────────── */
+  const clockStr = `${clock.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })} · ${clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+
   if (!state) {
     return (
       <div className="clawos-setup-root" ref={rootRef} data-theme={tweaks.theme}>
@@ -440,7 +446,7 @@ export function SetupPage() {
                         Retry
                       </button>
                       <a className="wiz-btn wiz-btn-ghost" href="/">
-                        Open Dashboard Login
+                        Open Dashboard
                       </a>
                     </div>
                   ) : (
@@ -491,11 +497,6 @@ export function SetupPage() {
     applySetup,
   }
 
-  const clockStr = useMemo(
-    () =>
-      `${clock.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
-    [clock],
-  )
   const ramLabel = state.detected_hardware?.ram_gb
     ? `◐ ${state.detected_hardware.ram_gb}GB`
     : '◐ local'
