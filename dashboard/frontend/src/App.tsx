@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { FormEvent, Suspense, lazy, useEffect, useState } from 'react'
+import { Component, FormEvent, ReactNode, Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './app/AppShell'
 import { InspectorRail } from './app/InspectorRail'
@@ -32,6 +32,21 @@ const SkillsPage = lazy(() => import('./pages/Skills').then((mod) => ({ default:
 const LicensePage = lazy(() => import('./pages/License').then((mod) => ({ default: mod.LicensePage })))
 const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => ({ default: mod.SetupPage })))
 
+const SETUP_STORAGE_KEYS = [
+  'clawos_setup_step_v2',
+  'clawos_setup_furthest_v2',
+  'clawos_setup_ui_v2',
+  'clawos_setup_tweaks_v2',
+]
+
+function clearSetupDraftStorage() {
+  try {
+    SETUP_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key))
+  } catch {
+    /* ignore storage failures */
+  }
+}
+
 function RouteFallback({ message, compact = false }: { message: string; compact?: boolean }) {
   return (
     <div style={{ minHeight: compact ? 420 : '100vh', padding: compact ? 28 : 36 }}>
@@ -41,6 +56,67 @@ function RouteFallback({ message, compact = false }: { message: string; compact?
         body="ClawOS is composing the current surface, restoring live state, and warming up the command center."
       />
     </div>
+  )
+}
+
+class SetupRouteBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Setup route crashed', error)
+  }
+
+  reset = () => {
+    clearSetupDraftStorage()
+    this.setState({ error: null }, () => window.location.assign('/setup'))
+  }
+
+  hardReload = () => {
+    this.setState({ error: null }, () => window.location.reload())
+  }
+
+  render() {
+    if (!this.state.error) {
+      return this.props.children
+    }
+
+    return (
+      <div style={{ minHeight: '100vh', padding: 36 }}>
+        <LoadingPanel
+          eyebrow="Setup"
+          title="The wizard crashed before it could render"
+          body={this.state.error.message || 'The setup route hit an unexpected frontend error.'}
+        />
+        <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
+          <button type="button" className="btn primary" onClick={this.reset}>
+            Reset setup cache
+          </button>
+          <button type="button" className="btn" onClick={this.hardReload}>
+            Reload page
+          </button>
+          <a className="btn" href="/">
+            Open dashboard login
+          </a>
+        </div>
+      </div>
+    )
+  }
+}
+
+function SetupRouteShell() {
+  return (
+    <SetupRouteBoundary>
+      <Suspense fallback={<RouteFallback message="Loading setup..." />}>
+        <SetupScreen />
+      </Suspense>
+    </SetupRouteBoundary>
   )
 }
 
@@ -124,11 +200,7 @@ function AuthenticatedApp() {
       <Routes>
         <Route
           path="/setup"
-          element={
-            <Suspense fallback={<RouteFallback message="Loading setup..." />}>
-              <SetupScreen />
-            </Suspense>
-          }
+          element={<SetupRouteShell />}
         />
         <Route
           path="*"
@@ -222,11 +294,9 @@ export default function CommandCenterApp() {
   if (isSetupRoute) {
     return (
       <BrowserRouter>
-        <Suspense fallback={<RouteFallback message="Loading setup..." />}>
-          <Routes>
-            <Route path="*" element={<SetupScreen />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route path="*" element={<SetupRouteShell />} />
+        </Routes>
       </BrowserRouter>
     )
   }

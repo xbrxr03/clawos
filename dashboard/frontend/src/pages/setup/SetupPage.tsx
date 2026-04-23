@@ -72,6 +72,18 @@ const THEME_LABELS: Record<Theme, string> = {
   light: 'Morning',
 }
 
+function clampIndex(value: unknown, fallback = 0): number {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(num)) return fallback
+  return Math.max(0, Math.min(STEPS.length - 1, Math.trunc(num)))
+}
+
+function readLSObject<T extends object>(key: string): Partial<T> {
+  const value = readLS<unknown>(key, {})
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Partial<T>
+}
+
 function readLS<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
   try {
@@ -103,12 +115,15 @@ export function SetupPage() {
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState('')
 
-  const [stepIndex, setStepIndex] = useState<number>(() => readLS(LS_STEP, 0))
-  const [furthest, setFurthest] = useState<number>(() => readLS(LS_FURTHEST, 0))
-  const [ui, setUiRaw] = useState<WizardUI>(() => ({ ...DEFAULT_UI, ...readLS(LS_UI, {}) }))
+  const [stepIndex, setStepIndex] = useState<number>(() => clampIndex(readLS<unknown>(LS_STEP, 0)))
+  const [furthest, setFurthest] = useState<number>(() => clampIndex(readLS<unknown>(LS_FURTHEST, 0)))
+  const [ui, setUiRaw] = useState<WizardUI>(() => ({
+    ...DEFAULT_UI,
+    ...readLSObject<WizardUI>(LS_UI),
+  }))
   const [tweaks, setTweaks] = useState<Tweaks>(() => ({
     ...DEFAULT_TWEAKS,
-    ...readLS<Partial<Tweaks>>(LS_TWEAKS, {}),
+    ...readLSObject<Tweaks>(LS_TWEAKS),
   }))
   const [tweaksOpen, setTweaksOpen] = useState(false)
   const [clock, setClock] = useState<Date>(() => new Date())
@@ -116,8 +131,19 @@ export function SetupPage() {
   // fires, so subsequent re-renders don't re-mount it while milestones linger.
   const [installDismissed, setInstallDismissed] = useState(false)
 
-  useEffect(() => writeLS(LS_STEP, stepIndex), [stepIndex])
-  useEffect(() => writeLS(LS_FURTHEST, furthest), [furthest])
+  const safeStepIndex = clampIndex(stepIndex)
+  const safeFurthest = Math.max(safeStepIndex, clampIndex(furthest, safeStepIndex))
+
+  useEffect(() => {
+    if (stepIndex !== safeStepIndex) setStepIndex(safeStepIndex)
+  }, [safeStepIndex, stepIndex])
+
+  useEffect(() => {
+    if (furthest !== safeFurthest) setFurthest(safeFurthest)
+  }, [furthest, safeFurthest])
+
+  useEffect(() => writeLS(LS_STEP, safeStepIndex), [safeStepIndex])
+  useEffect(() => writeLS(LS_FURTHEST, safeFurthest), [safeFurthest])
   useEffect(() => writeLS(LS_UI, ui), [ui])
   useEffect(() => writeLS(LS_TWEAKS, tweaks), [tweaks])
 
@@ -221,18 +247,18 @@ export function SetupPage() {
     [setStepIndex, setFurthest],
   )
 
-  const onBack = stepIndex > 0 ? () => goto(stepIndex - 1) : null
+  const onBack = safeStepIndex > 0 ? () => goto(safeStepIndex - 1) : null
 
   const onNext = useCallback(() => {
-    goto(stepIndex + 1)
-  }, [goto, stepIndex])
+    goto(safeStepIndex + 1)
+  }, [goto, safeStepIndex])
 
   // Rail click: lock forward — only go to steps already reached
   const onRailClick = useCallback(
     (idx: number) => {
-      if (idx <= furthest) goto(idx)
+      if (idx <= safeFurthest) goto(idx)
     },
-    [goto, furthest],
+    [goto, safeFurthest],
   )
 
   /* ── keyboard: Enter advances, Esc goes back ───────────────────────── */
@@ -244,14 +270,14 @@ export function SetupPage() {
       if (e.key === 'Enter' && !busy) {
         e.preventDefault()
         onNext()
-      } else if (e.key === 'Escape' && stepIndex > 0) {
+      } else if (e.key === 'Escape' && safeStepIndex > 0) {
         e.preventDefault()
-        goto(stepIndex - 1)
+        goto(safeStepIndex - 1)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [busy, goto, onNext, stepIndex])
+  }, [busy, goto, onNext, safeStepIndex])
 
   /* ── completion marker → jump to summary ───────────────────────────── */
   useEffect(() => {
@@ -434,7 +460,7 @@ export function SetupPage() {
     )
   }
 
-  const step = STEPS[stepIndex]
+  const step = STEPS[safeStepIndex]
   const Comp = step.Component
 
   const screenProps: ScreenProps = {
@@ -448,7 +474,7 @@ export function SetupPage() {
     error,
     ui,
     setUi,
-    stepIndex,
+    stepIndex: safeStepIndex,
     totalSteps: STEPS.length,
     onBack,
     onNext,
@@ -514,13 +540,13 @@ export function SetupPage() {
               </div>
               <div className="rail-title">Setup</div>
               {STEPS.map((s, i) => {
-                const reached = i <= furthest
-                const isDone = i < stepIndex || (i === STEPS.length - 1 && !!state.completion_marker)
+                const reached = i <= safeFurthest
+                const isDone = i < safeStepIndex || (i === STEPS.length - 1 && !!state.completion_marker)
                 return (
                   <button
                     type="button"
                     key={s.id}
-                    className={`step ${i === stepIndex ? 'active' : ''} ${isDone ? 'done' : ''}`}
+                    className={`step ${i === safeStepIndex ? 'active' : ''} ${isDone ? 'done' : ''}`}
                     onClick={() => onRailClick(i)}
                     disabled={!reached}
                     title={reached ? `Go to ${s.label}` : 'Locked — finish earlier steps first'}

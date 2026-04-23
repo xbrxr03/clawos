@@ -221,6 +221,16 @@ def _dashboard_session_token_file() -> Path:
     return CONFIG_DIR / "dashboard.session"
 
 
+def _dashboard_index_response() -> FileResponse:
+    return FileResponse(
+        str(DASHBOARD_STATIC_INDEX),
+        headers={
+            "Cache-Control": "no-store, max-age=0",
+            "Pragma": "no-cache",
+        },
+    )
+
+
 def _load_or_create_secret(path: Path) -> str:
     cache_key = str(path)
     if cache_key in _VOLATILE_SECRETS and not path.exists():
@@ -866,7 +876,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
     async def root():
         if DASHBOARD_STATIC_INDEX.exists():
-            return FileResponse(str(DASHBOARD_STATIC_INDEX))
+            return _dashboard_index_response()
         return HTMLResponse(
             "<h1>ClawOS Dashboard</h1><p>Built frontend not found in services/dashd/static.</p>",
             status_code=503,
@@ -2573,7 +2583,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             if asset.exists() and asset.is_file():
                 return FileResponse(str(asset))
             if DASHBOARD_STATIC_INDEX.exists():
-                return FileResponse(str(DASHBOARD_STATIC_INDEX))
+                return _dashboard_index_response()
             raise HTTPException(status_code=404, detail="Not found")
 
     return app

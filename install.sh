@@ -491,7 +491,8 @@ EOF
   write_file_if_changed "$HOME/.local/bin/clawos-setup" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route /setup "\$@"
+route="/setup?fresh=\$(date +%s)"
+exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route "\${route}" "\$@"
 EOF
 
   ensure_path_line "$HOME/.bashrc"
@@ -995,7 +996,7 @@ open_url() {
   return 0
 }
 
-CLAWOS_URL="http://localhost:7070/setup"
+CLAWOS_URL="http://localhost:7070/setup?fresh=$(date +%s)"
 echo -e "  ${D}Waiting for dashboard to come online...${RESET}"
 
 READY=0
