@@ -290,17 +290,7 @@ export default function CommandCenterApp() {
     )
   }
 
-  if (isSetupRoute) {
-    return (
-      <BrowserRouter>
-        <Routes>
-          <Route path="*" element={<SetupRouteShell />} />
-        </Routes>
-      </BrowserRouter>
-    )
-  }
-
-  if (authRequired && !authenticated) {
+  if (authRequired && !authenticated && !isSetupRoute) {
     return (
       <div className="auth-screen">
         <div className="auth-screen-panel">

@@ -408,6 +408,7 @@ export function SetupPage() {
     month: 'short',
     day: 'numeric',
   })} · ${clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+  const freshLaunch = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('fresh')
 
   if (!state) {
     return (
@@ -506,7 +507,10 @@ export function SetupPage() {
   // Once dismissed, it stays gone until the page reloads.
   const installMilestones = state?.install_milestones ?? []
   const installActive =
-    !installDismissed && installMilestones.length > 0 && state?.completion_marker !== true
+    !installDismissed &&
+    installMilestones.length > 0 &&
+    state?.completion_marker !== true &&
+    !(freshLaunch && state.install_complete)
 
   return (
     <div className="clawos-setup-root" ref={rootRef} data-theme={tweaks.theme}>

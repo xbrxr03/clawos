@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { commandCenterApi } from '../../../lib/commandCenterApi'
 import { Footer, Orb, ProgressBar } from '../atoms'
 import type { ScreenProps } from '../types'
@@ -46,7 +45,6 @@ export function SummaryScreen(props: ScreenProps) {
     setUi,
     busy,
   } = props
-  const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
 
   const openClawCmd = 'ollama launch openclaw --model kimi-k2.5:cloud'
@@ -135,7 +133,7 @@ export function SummaryScreen(props: ScreenProps) {
               // hold up navigation if TTS is slow or the voice model is missing.
               // voiced.speak handles the whole pipeline (ElevenLabs → Piper → null).
               commandCenterApi.speakSetupGreeting().catch(() => null)
-              navigate('/')
+              window.location.assign('/')
             }}
           >
             Open dashboard →
@@ -143,7 +141,7 @@ export function SummaryScreen(props: ScreenProps) {
           <button
             type="button"
             className="wiz-btn"
-            onClick={() => window.open('https://github.com/clawos/clawos#readme', '_blank', 'noopener')}
+            onClick={() => window.open('https://github.com/xbrxr03/clawos#readme', '_blank', 'noopener')}
           >
             Take the tour
           </button>
