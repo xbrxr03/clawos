@@ -4,11 +4,12 @@
  * (user decision 1). Locks forward navigation — rail click only goes to steps
  * already completed (user decision 2).
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   commandCenterApi,
   type OpenClawImportManifest,
   type ProviderProfile,
+  type SetupPersona,
   type SetupDiagnostics,
   type SetupState,
   type UseCasePack,
@@ -71,6 +72,18 @@ const THEME_LABELS: Record<Theme, string> = {
   light: 'Morning',
 }
 
+function clampIndex(value: unknown, fallback = 0): number {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(num)) return fallback
+  return Math.max(0, Math.min(STEPS.length - 1, Math.trunc(num)))
+}
+
+function readLSObject<T extends object>(key: string): Partial<T> {
+  const value = readLS<unknown>(key, {})
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Partial<T>
+}
+
 function readLS<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
   try {
@@ -97,16 +110,20 @@ export function SetupPage() {
   const [diagnostics, setDiagnostics] = useState<SetupDiagnostics | null>(null)
   const [packs, setPacks] = useState<UseCasePack[]>([])
   const [providers, setProviders] = useState<ProviderProfile[]>([])
+  const [personas, setPersonas] = useState<SetupPersona[]>([])
   const [importManifest, setImportManifest] = useState<OpenClawImportManifest | null>(null)
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState('')
 
-  const [stepIndex, setStepIndex] = useState<number>(() => readLS(LS_STEP, 0))
-  const [furthest, setFurthest] = useState<number>(() => readLS(LS_FURTHEST, 0))
-  const [ui, setUiRaw] = useState<WizardUI>(() => ({ ...DEFAULT_UI, ...readLS(LS_UI, {}) }))
+  const [stepIndex, setStepIndex] = useState<number>(() => clampIndex(readLS<unknown>(LS_STEP, 0)))
+  const [furthest, setFurthest] = useState<number>(() => clampIndex(readLS<unknown>(LS_FURTHEST, 0)))
+  const [ui, setUiRaw] = useState<WizardUI>(() => ({
+    ...DEFAULT_UI,
+    ...readLSObject<WizardUI>(LS_UI),
+  }))
   const [tweaks, setTweaks] = useState<Tweaks>(() => ({
     ...DEFAULT_TWEAKS,
-    ...readLS<Partial<Tweaks>>(LS_TWEAKS, {}),
+    ...readLSObject<Tweaks>(LS_TWEAKS),
   }))
   const [tweaksOpen, setTweaksOpen] = useState(false)
   const [clock, setClock] = useState<Date>(() => new Date())
@@ -114,8 +131,19 @@ export function SetupPage() {
   // fires, so subsequent re-renders don't re-mount it while milestones linger.
   const [installDismissed, setInstallDismissed] = useState(false)
 
-  useEffect(() => writeLS(LS_STEP, stepIndex), [stepIndex])
-  useEffect(() => writeLS(LS_FURTHEST, furthest), [furthest])
+  const safeStepIndex = clampIndex(stepIndex)
+  const safeFurthest = Math.max(safeStepIndex, clampIndex(furthest, safeStepIndex))
+
+  useEffect(() => {
+    if (stepIndex !== safeStepIndex) setStepIndex(safeStepIndex)
+  }, [safeStepIndex, stepIndex])
+
+  useEffect(() => {
+    if (furthest !== safeFurthest) setFurthest(safeFurthest)
+  }, [furthest, safeFurthest])
+
+  useEffect(() => writeLS(LS_STEP, safeStepIndex), [safeStepIndex])
+  useEffect(() => writeLS(LS_FURTHEST, safeFurthest), [safeFurthest])
   useEffect(() => writeLS(LS_UI, ui), [ui])
   useEffect(() => writeLS(LS_TWEAKS, tweaks), [tweaks])
 
@@ -157,12 +185,14 @@ export function SetupPage() {
 
   const loadCatalog = useCallback(async () => {
     try {
-      const [packData, providerData] = await Promise.all([
+      const [packData, providerData, personaData] = await Promise.all([
         commandCenterApi.listPacks(),
         commandCenterApi.listProviders(),
+        commandCenterApi.listSetupPersonas(),
       ])
       setPacks(Array.isArray(packData) ? packData : [])
       setProviders(Array.isArray(providerData) ? providerData : [])
+      setPersonas(Array.isArray(personaData) ? personaData : [])
     } catch {
       /* optional */
     }
@@ -173,6 +203,18 @@ export function SetupPage() {
     loadDiagnostics()
     loadCatalog()
   }, [loadState, loadDiagnostics, loadCatalog])
+
+  useEffect(() => {
+    if (!state) return
+    if (state.selected_persona) {
+      if (ui.user_profile === state.selected_persona) return
+      setUiRaw((prev) => ({ ...prev, user_profile: state.selected_persona || prev.user_profile }))
+      return
+    }
+    if (ui.user_profile) {
+      setUiRaw((prev) => ({ ...prev, user_profile: '' }))
+    }
+  }, [state?.selected_persona, ui.user_profile])
 
   /* ── WS: stream setup state ────────────────────────────────────────── */
   useEffect(() => {
@@ -205,18 +247,18 @@ export function SetupPage() {
     [setStepIndex, setFurthest],
   )
 
-  const onBack = stepIndex > 0 ? () => goto(stepIndex - 1) : null
+  const onBack = safeStepIndex > 0 ? () => goto(safeStepIndex - 1) : null
 
   const onNext = useCallback(() => {
-    goto(stepIndex + 1)
-  }, [goto, stepIndex])
+    goto(safeStepIndex + 1)
+  }, [goto, safeStepIndex])
 
   // Rail click: lock forward — only go to steps already reached
   const onRailClick = useCallback(
     (idx: number) => {
-      if (idx <= furthest) goto(idx)
+      if (idx <= safeFurthest) goto(idx)
     },
-    [goto, furthest],
+    [goto, safeFurthest],
   )
 
   /* ── keyboard: Enter advances, Esc goes back ───────────────────────── */
@@ -228,14 +270,14 @@ export function SetupPage() {
       if (e.key === 'Enter' && !busy) {
         e.preventDefault()
         onNext()
-      } else if (e.key === 'Escape' && stepIndex > 0) {
+      } else if (e.key === 'Escape' && safeStepIndex > 0) {
         e.preventDefault()
-        goto(stepIndex - 1)
+        goto(safeStepIndex - 1)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [busy, goto, onNext, stepIndex])
+  }, [busy, goto, onNext, safeStepIndex])
 
   /* ── completion marker → jump to summary ───────────────────────────── */
   useEffect(() => {
@@ -361,6 +403,13 @@ export function SetupPage() {
   }, [])
 
   /* ── loading shell ─────────────────────────────────────────────────── */
+  const clockStr = `${clock.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })} · ${clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+  const freshLaunch = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('fresh')
+
   if (!state) {
     return (
       <div className="clawos-setup-root" ref={rootRef} data-theme={tweaks.theme}>
@@ -377,16 +426,38 @@ export function SetupPage() {
               <div className="stage">
                 <div className="stage-inner" style={{ paddingTop: 80 }}>
                   <div className="eyebrow">FIRST RUN</div>
-                  <h1 className="wiz-title">Warming up the wizard…</h1>
+                  <h1 className="wiz-title">{error ? 'Setup state is blocked' : 'Warming up the wizard…'}</h1>
                   <p className="wiz-subtitle">
-                    Restoring setup state, detecting hardware and checking local services.
+                    {error
+                      ? error
+                      : 'Restoring setup state, detecting hardware and checking local services.'}
                   </p>
-                  <div className="boot-log" style={{ marginTop: 28 }}>
-                    <span className="ln">
-                      <span className="dim">[0000ms]</span> <span className="lab">setupd</span>{' '}
-                      loading state snapshot… <span className="lab">[ … ]</span>
-                    </span>
-                  </div>
+                  {error ? (
+                    <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <button
+                        className="wiz-btn wiz-btn-primary"
+                        type="button"
+                        onClick={() => {
+                          setError('')
+                          loadState()
+                          loadDiagnostics()
+                          loadCatalog()
+                        }}
+                      >
+                        Retry
+                      </button>
+                      <a className="wiz-btn wiz-btn-ghost" href="/">
+                        Open Dashboard
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="boot-log" style={{ marginTop: 28 }}>
+                      <span className="ln">
+                        <span className="dim">[0000ms]</span> <span className="lab">setupd</span>{' '}
+                        loading state snapshot… <span className="lab">[ … ]</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -396,7 +467,7 @@ export function SetupPage() {
     )
   }
 
-  const step = STEPS[stepIndex]
+  const step = STEPS[safeStepIndex]
   const Comp = step.Component
 
   const screenProps: ScreenProps = {
@@ -404,12 +475,13 @@ export function SetupPage() {
     diagnostics,
     packs,
     providers,
+    personas,
     importManifest,
     busy,
     error,
     ui,
     setUi,
-    stepIndex,
+    stepIndex: safeStepIndex,
     totalSteps: STEPS.length,
     onBack,
     onNext,
@@ -426,11 +498,6 @@ export function SetupPage() {
     applySetup,
   }
 
-  const clockStr = useMemo(
-    () =>
-      `${clock.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
-    [clock],
-  )
   const ramLabel = state.detected_hardware?.ram_gb
     ? `◐ ${state.detected_hardware.ram_gb}GB`
     : '◐ local'
@@ -440,7 +507,10 @@ export function SetupPage() {
   // Once dismissed, it stays gone until the page reloads.
   const installMilestones = state?.install_milestones ?? []
   const installActive =
-    !installDismissed && installMilestones.length > 0 && state?.completion_marker !== true
+    !installDismissed &&
+    installMilestones.length > 0 &&
+    state?.completion_marker !== true &&
+    !(freshLaunch && state.install_complete)
 
   return (
     <div className="clawos-setup-root" ref={rootRef} data-theme={tweaks.theme}>
@@ -475,13 +545,13 @@ export function SetupPage() {
               </div>
               <div className="rail-title">Setup</div>
               {STEPS.map((s, i) => {
-                const reached = i <= furthest
-                const isDone = i < stepIndex || (i === STEPS.length - 1 && !!state.completion_marker)
+                const reached = i <= safeFurthest
+                const isDone = i < safeStepIndex || (i === STEPS.length - 1 && !!state.completion_marker)
                 return (
                   <button
                     type="button"
                     key={s.id}
-                    className={`step ${i === stepIndex ? 'active' : ''} ${isDone ? 'done' : ''}`}
+                    className={`step ${i === safeStepIndex ? 'active' : ''} ${isDone ? 'done' : ''}`}
                     onClick={() => onRailClick(i)}
                     disabled={!reached}
                     title={reached ? `Go to ${s.label}` : 'Locked — finish earlier steps first'}

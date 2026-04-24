@@ -76,6 +76,21 @@ ensure_path_line() {
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$file"
 }
 
+link_into_system_bin() {
+  local source=$1
+  local name=${2:-$(basename "$source")}
+  local sys_bin="/usr/local/bin"
+  [ -n "$source" ] || return 0
+  [ -e "$source" ] || return 0
+  if [ -d "$sys_bin" ]; then
+    if [ -w "$sys_bin" ]; then
+      ln -sf "$source" "$sys_bin/$name" >/dev/null 2>&1 || true
+    elif command -v sudo >/dev/null 2>&1; then
+      sudo ln -sf "$source" "$sys_bin/$name" >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
 systemd_user_ready() {
   command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1
 }
@@ -239,7 +254,43 @@ install_node() {
   fi
 }
 
-# OpenClaw is installed by 'ollama launch openclaw' at the end of the install.
+install_openclaw_cli() {
+  step "Installing OpenClaw"
+
+  if ! command -v npm >/dev/null 2>&1; then
+    warn "npm not found - skipping OpenClaw"
+    return 0
+  fi
+
+  npm config set prefix "$HOME/.local" >/dev/null 2>&1 || true
+  export PATH="$HOME/.local/bin:$PATH"
+  hash -r 2>/dev/null || true
+
+  if command -v openclaw >/dev/null 2>&1; then
+    link_into_system_bin "$(command -v openclaw)" "openclaw"
+    ok "OpenClaw already installed"
+    return 0
+  fi
+
+  if run_with_spinner "Installing OpenClaw via npm" npm install -g openclaw@latest --quiet; then
+    :
+  else
+    warn "OpenClaw install failed - retry later with: clawctl openclaw install"
+    return 0
+  fi
+
+  hash -r 2>/dev/null || true
+
+  if command -v openclaw >/dev/null 2>&1 && openclaw --version >/dev/null 2>&1; then
+    link_into_system_bin "$(command -v openclaw)" "openclaw"
+    ok "OpenClaw installed"
+  elif [ -x "$HOME/.local/bin/openclaw" ]; then
+    link_into_system_bin "$HOME/.local/bin/openclaw" "openclaw"
+    ok "OpenClaw installed"
+  else
+    warn "OpenClaw binary not found after install"
+  fi
+}
 
 install_python_packages() {
   step "Installing Python packages"
@@ -248,7 +299,7 @@ install_python_packages() {
     pyyaml aiohttp fastapi "uvicorn[standard]"
     ollama click chromadb json_repair
     pypdf python-docx aiofiles httpx gitpython rich openai-whisper
-    openwakeword cryptography icalendar
+    openwakeword cryptography icalendar ptyprocess
   )
 
   # Create a virtualenv so services have a clean, isolated Python environment
@@ -409,8 +460,6 @@ configure_openclaw() {
 
   OPENCLAW_MODEL="kimi-k2.5:cloud"
 
-  # Config is written now; openclaw binary is installed later by 'ollama launch'
-
   mkdir -p "$HOME/.openclaw" "$HOME/.openclaw/agents/main/sessions"
 
   write_file_if_changed "$HOME/.openclaw/openclaw.json" 600 <<EOF
@@ -462,36 +511,42 @@ install_wrapper_commands() {
   step "Installing command wrappers"
 
   mkdir -p "$HOME/.local/bin"
+  local py_bin="${INSTALL_DIR}/venv/bin/python3"
 
   write_file_if_changed "$HOME/.local/bin/nexus" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/nexus/cli.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/nexus/cli.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawos" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clients/cli/repl.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/clients/cli/repl.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawctl" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clawctl/main.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/clawctl/main.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawos-command-center" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clients/desktop/launch_command_center.py" "\$@"
+exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" "\$@"
 EOF
 
   write_file_if_changed "$HOME/.local/bin/clawos-setup" 755 <<EOF
 #!/usr/bin/env bash
 export PYTHONPATH="${INSTALL_DIR}"
-exec python3 "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route /setup "\$@"
+route="/setup?fresh=\$(date +%s)"
+exec "${py_bin}" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route "\${route}" "\$@"
 EOF
+
+  for _cmd in nexus clawos clawctl clawos-command-center clawos-setup; do
+    link_into_system_bin "$HOME/.local/bin/$_cmd" "$_cmd"
+  done
 
   ensure_path_line "$HOME/.bashrc"
   ensure_path_line "$HOME/.zshrc"
@@ -502,57 +557,6 @@ EOF
   ok "clawos  clawctl  nexus  clawos-command-center  clawos-setup"
 }
 
-install_picoclaw_if_needed() {
-  if ! echo "${CLAWOS_RUNTIMES}" | grep -q "picoclaw"; then
-    return 0
-  fi
-
-  step "Installing PicoClaw lightweight runtime"
-
-  if [ "$PLATFORM" = "macos" ]; then
-    warn "Skipping PicoClaw on macOS - only Linux release binaries are published today"
-    return 0
-  fi
-
-  if command -v picoclaw >/dev/null 2>&1; then
-    ok "PicoClaw already installed"
-  else
-    case "$(uname -m)" in
-      armv7l|armv8l|armhf) _PC_ARCH="armv7" ;;
-      aarch64|arm64)        _PC_ARCH="arm64" ;;
-      riscv64)              _PC_ARCH="riscv64" ;;
-      x86_64|amd64)         _PC_ARCH="x86_64" ;;
-      *)                    _PC_ARCH="x86_64" ;;
-    esac
-
-    _PC_VER="$(curl -fsSL https://api.github.com/repos/sipeed/picoclaw/releases/latest 2>/dev/null | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')"
-    _PC_VER="${_PC_VER:-0.2.5}"
-    _PC_URL="https://github.com/sipeed/picoclaw/releases/download/v${_PC_VER}/picoclaw_Linux_${_PC_ARCH}.tar.gz"
-
-    if run_with_spinner "Downloading PicoClaw" bash -lc "tmp=\$(mktemp /tmp/picoclaw.XXXXXX.tar.gz) && curl -fsSL --max-time 30 '$_PC_URL' -o \"\$tmp\" && tar -xzf \"\$tmp\" -C /tmp picoclaw && rm -f \"\$tmp\""; then
-      sudo mv /tmp/picoclaw /usr/local/bin/picoclaw && sudo chmod +x /usr/local/bin/picoclaw
-    fi
-
-    if command -v picoclaw >/dev/null 2>&1; then
-      ok "PicoClaw installed"
-    else
-      warn "PicoClaw download failed - skipping"
-      return 0
-    fi
-  fi
-
-  mkdir -p "$HOME/.picoclaw"
-  cat > "$HOME/.picoclaw/config.json" <<'EOF'
-{
-  "provider": "ollama",
-  "endpoint": "http://localhost:11434",
-  "model": "qwen2.5:3b",
-  "timeout": 300
-}
-EOF
-  ok "PicoClaw configured"
-}
-
 enable_autostart() {
   step "Enabling autostart"
 
@@ -560,7 +564,7 @@ enable_autostart() {
     OPENCLAW_BIN="$(command -v openclaw 2>/dev/null || true)"
     CLAWOS_HOME="$INSTALL_DIR" \
     CLAWOS_WORKSPACE="nexus_default" \
-    PYTHON_BIN="$(command -v python3)" \
+    PYTHON_BIN="${INSTALL_DIR}/venv/bin/python3" \
     OLLAMA_BIN="$OLLAMA_BIN" \
     OPENCLAW_BIN="$OPENCLAW_BIN" \
     OPENCLAW_GATEWAY_PORT="$OPENCLAW_GATEWAY_PORT" \
@@ -635,104 +639,14 @@ EOF
   fi
 }
 
-select_profile() {
-  if [ ! -t 0 ]; then
-    CLAWOS_PROFILE=6
-    export CLAWOS_PROFILE
-    return
-  fi
-  echo ""
-  echo -e "  ${P}${BOLD}Who is ClawOS for?${RESET}"
-  echo ""
-  echo -e "  ${B}1)${RESET} ${W}Developer${RESET}     — OpenClaude (open-source Claude Code) + qwen2.5-coder"
-  echo -e "  ${B}2)${RESET} ${W}Creator${RESET}       — Content workflows + daily briefing"
-  echo -e "  ${B}3)${RESET} ${W}Business${RESET}      — Lead research, reports, scheduling"
-  echo -e "  ${B}4)${RESET} ${W}Student${RESET}       — Summarise lectures, research wiki, proofread"
-  echo -e "  ${B}5)${RESET} ${W}Teacher${RESET}       — Lesson planning, curriculum wiki, scheduling"
-  echo -e "  ${B}6)${RESET} ${W}General${RESET}       — Balanced setup, good for everything"
-  echo -e "  ${B}7)${RESET} ${W}Freelancer${RESET}    — Proposals, client research, outreach, invoicing"
-  echo ""
-  read -rp "  Choose [1-7, default 6]: " CLAWOS_PROFILE
-  CLAWOS_PROFILE=${CLAWOS_PROFILE:-6}
-  export CLAWOS_PROFILE
-}
-
-apply_profile() {
-  case "$CLAWOS_PROFILE" in
-    1)
-      PROFILE_NAME="developer"
-      DEFAULT_WORKFLOWS="pr_review,write_readme,repo_summary,changelog,find_todos"
-      INSTALL_OPENCLAUDE=true
-      ;;
-    2)
-      PROFILE_NAME="creator"
-      DEFAULT_WORKFLOWS="daily_digest,caption_images,rewrite,batch_summarize,summarize_pdf"
-      INSTALL_OPENCLAUDE=false
-      ;;
-    3)
-      PROFILE_NAME="business"
-      DEFAULT_WORKFLOWS="daily_digest,csv_to_report,batch_summarize,find_todos,proofread"
-      INSTALL_OPENCLAUDE=false
-      ;;
-    4)
-      PROFILE_NAME="student"
-      DEFAULT_WORKFLOWS="summarize_pdf,pdf_to_notes,proofread,find_todos,batch_summarize"
-      INSTALL_OPENCLAUDE=false
-      ;;
-    5)
-      PROFILE_NAME="teacher"
-      DEFAULT_WORKFLOWS="summarize_pdf,batch_summarize,proofread,folder_summary,daily_digest"
-      INSTALL_OPENCLAUDE=false
-      ;;
-    7)
-      PROFILE_NAME="freelancer"
-      DEFAULT_WORKFLOWS="daily_digest,csv_to_report,proofread,summarize_pdf,batch_summarize"
-      INSTALL_OPENCLAUDE=false
-      ;;
-    *)
-      PROFILE_NAME="general"
-      DEFAULT_WORKFLOWS="daily_digest,organize_downloads,summarize_pdf,disk_report,pr_review"
-      INSTALL_OPENCLAUDE=false
-      ;;
-  esac
-
-  mkdir -p "$HOME/.config/clawos"
-  cat > "$HOME/.config/clawos/profile.yaml" <<EOF
-profile: $PROFILE_NAME
-default_workflows: [$DEFAULT_WORKFLOWS]
-EOF
-  ok "Profile: $PROFILE_NAME"
-}
-
-install_openclaude() {
-  [ "${INSTALL_OPENCLAUDE:-false}" = "true" ] || return
-  step "Installing OpenClaude (open-source Claude Code for developers)"
-  if ! command -v npm &>/dev/null; then
-    warn "npm not found — skipping OpenClaude"
-    return
-  fi
-  run_with_spinner "Installing OpenClaude" npm install -g @gitlawb/openclaude \
-    || { warn "OpenClaude install failed (non-fatal)"; return; }
-
-  cat > "$HOME/.clawos_dev_env" <<'EOF'
-# OpenClaude — open-source Claude Code, powered by local Ollama
-export CLAUDE_CODE_USE_OPENAI=1
-export OPENAI_BASE_URL=http://localhost:11434/v1
-export OPENAI_MODEL=qwen2.5-coder:7b
-EOF
-  for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    [ -f "$rc" ] && grep -q "clawos_dev_env" "$rc" || \
-      echo 'source "$HOME/.clawos_dev_env" 2>/dev/null' >> "$rc"
-  done
-  ok "OpenClaude installed — run: openclaude"
-}
-
 verify_install() {
   step "Final verification"
 
   command -v clawos >/dev/null 2>&1 && ok "clawos command available"
   command -v clawctl >/dev/null 2>&1 && ok "clawctl command available"
-  command -v openclaw >/dev/null 2>&1 && ok "openclaw command available" || true
+  command -v openclaw >/dev/null 2>&1 \
+    && ok "openclaw command available" \
+    || warn "openclaw command not available"
 
   curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 \
     && ok "Ollama API reachable" \
@@ -785,7 +699,7 @@ CHECK_ONLY=false
 # in the script, so pre-dashd milestones are simply queued in the buffer —
 # drain_install_buffer replays them via POST once dashd is alive, so the
 # browser's /setup page shows the full install history in its BootLog.
-CLAWOS_STATE_DIR="${INSTALL_DIR}/logs"
+CLAWOS_STATE_DIR="${CLAWOS_STATE_DIR:-$HOME/.clawos/install}"
 CLAWOS_INSTALL_BUFFER="${CLAWOS_STATE_DIR}/install-milestones.buffer.jsonl"
 
 # Escape a string for safe inclusion inside a JSON string literal.
@@ -863,7 +777,7 @@ for _arg in "$@"; do
       echo ""
       echo "  --check       Pre-flight only: detect hardware profile and report what would be"
       echo "                installed without changing anything on this machine."
-      echo "  --skip-model  Skip pulling Ollama models (useful for CI or offline installs)."
+      echo "  --skip-model  Deprecated. The browser wizard now provisions models after install."
       echo ""
       exit 0 ;;
   esac
@@ -932,7 +846,6 @@ if [ "$IS_ARM" = "true" ] && [ "$PROFILE" != "lowram" ]; then
 fi
 ok "Hardware: $TIER"
 emit_milestone preflight done "System checked" "$TIER · ${RAM_GB}GB RAM"
-select_profile
 
 # Staying on qwen2.5 — qwen3 / qwen3.5 tool-calling is broken on Ollama as of 2026-04.
 # Ollama's registry ships qwen3.5 with the Qwen3 Hermes JSON parser template, but the
@@ -992,9 +905,9 @@ if [ "$CHECK_ONLY" = "true" ]; then
   echo -e "  ${W}Platform   :${RESET} $(platform_name) (${ARCH})"
   echo -e "  ${W}RAM        :${RESET} ${RAM_GB}GB"
   echo -e "  ${W}Disk free  :${RESET} ${DISK_FREE}GB"
-  echo -e "  ${W}Profile    :${RESET} ${PROFILE} (Tier ${CLAWOS_DETECTED_TIER})"
+  echo -e "  ${W}Hardware   :${RESET} ${PROFILE} (Tier ${CLAWOS_DETECTED_TIER})"
   echo -e "  ${W}Model      :${RESET} ${MODEL} (${MODEL_SIZE}) — ${MODEL_NOTE}"
-  echo -e "  ${W}Runtimes   :${RESET} ${CLAWOS_RUNTIMES}"
+  echo -e "  ${W}Runtimes   :${RESET} ${CLAWOS_RUNTIMES} (recommended defaults)"
   echo -e "  ${W}Install to :${RESET} ${INSTALL_DIR}"
   echo ""
   echo -e "  ${G}${BOLD}✓ Ready to install.${RESET} Run without --check to proceed."
@@ -1030,7 +943,6 @@ cd "$INSTALL_DIR" || die "Install directory not found: $INSTALL_DIR"
 export PYTHONPATH="$INSTALL_DIR"
 
 install_python_packages
-apply_profile
 emit_milestone voice running "Provisioning voice pipeline" "Whisper + Piper + wake word"
 install_wake_word_model
 install_piper_voice
@@ -1038,82 +950,39 @@ install_playwright
 emit_milestone voice done "Voice pipeline ready" "offline STT/TTS"
 build_command_center
 emit_milestone core done "Nexus installed" "clawos + dashboard built"
+install_openclaw_cli
+configure_openclaw
 
-step "Bootstrapping Nexus"
-emit_milestone bootstrap running "Bootstrapping Nexus" "profile: $PROFILE"
-if [ -t 0 ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
-  echo ""
-  echo -e "  ${D}Optional: add an OpenRouter key for cloud models. Press Enter to skip.${RESET}"
-  read -r -s -p "  OpenRouter API key: " OPENROUTER_KEY
-  echo ""
-  if [ -n "$OPENROUTER_KEY" ]; then
-    export OPENROUTER_API_KEY="$OPENROUTER_KEY"
-    ok "OpenRouter key saved for this install session"
-  fi
-fi
-
-run_with_spinner "Running bootstrap ($PROFILE profile)" \
-  bash -c "cd \"${INSTALL_DIR}\" && PYTHONPATH=\"${INSTALL_DIR}\" \"${INSTALL_DIR}/venv/bin/python3\" -m bootstrap.bootstrap --profile \"$PROFILE\" --yes" \
+step "Preparing machine foundation"
+emit_milestone bootstrap running "Preparing machine foundation" "hardware: $PROFILE"
+BOOTSTRAP_PROFILE="$PROFILE"
+[ "$BOOTSTRAP_PROFILE" = "gaming" ] && BOOTSTRAP_PROFILE="performance"
+run_with_spinner "Running bootstrap foundation (${BOOTSTRAP_PROFILE} hardware profile)" \
+  bash -c "cd \"${INSTALL_DIR}\" && PYTHONPATH=\"${INSTALL_DIR}\" \"${INSTALL_DIR}/venv/bin/python3\" -m bootstrap.bootstrap --profile \"$BOOTSTRAP_PROFILE\" --yes --skip-model" \
   || { emit_milestone bootstrap error "Bootstrap failed" "see terminal"; die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"; }
-ok "Bootstrap complete"
-emit_milestone bootstrap done "Nexus bootstrap complete" "profile: $PROFILE"
+ok "Machine foundation ready"
+emit_milestone bootstrap done "Machine foundation ready" "finish setup in the browser wizard"
 
-# Write dashboard host config so the dashboard is accessible on the LAN
+# Keep dashd loopback-only during first-run setup. The setup wizard's
+# unauthenticated access path is intentionally restricted to trusted local
+# browser sessions, so binding 0.0.0.0 here can strand the UI on the
+# "Warming up the wizard" shell.
 CLAWOS_YAML="${INSTALL_DIR}/config/clawos.yaml"
-if [ -f "$CLAWOS_YAML" ] && ! grep -q "^dashboard:" "$CLAWOS_YAML" 2>/dev/null; then
-  printf '\ndashboard:\n  host: 0.0.0.0\n  port: 7070\n' >> "$CLAWOS_YAML"
-elif [ ! -f "$CLAWOS_YAML" ]; then
+if [ -f "$CLAWOS_YAML" ]; then
+  if grep -q "^dashboard:" "$CLAWOS_YAML" 2>/dev/null; then
+    sed -i 's/^\([[:space:]]*host:[[:space:]]*\)0\.0\.0\.0$/\1127.0.0.1/' "$CLAWOS_YAML" 2>/dev/null || true
+  else
+    printf '\ndashboard:\n  host: 127.0.0.1\n  port: 7070\n' >> "$CLAWOS_YAML"
+  fi
+else
   mkdir -p "${INSTALL_DIR}/config"
-  printf '_profile: %s\ndashboard:\n  host: 0.0.0.0\n  port: 7070\n' "$PROFILE" > "$CLAWOS_YAML"
+  printf '_profile: %s\ndashboard:\n  host: 127.0.0.1\n  port: 7070\n' "$BOOTSTRAP_PROFILE" > "$CLAWOS_YAML"
 fi
 
-step "Pulling AI model"
-emit_milestone model running "Downloading AI model" "$MODEL ($MODEL_SIZE)"
-if [ "$SKIP_MODEL" = "true" ]; then
-  warn "Skipping model pull (SKIP_MODEL=true)"
-  emit_milestone model done "Model pull skipped" "SKIP_MODEL=true"
-else
-  OLLAMA_URL="${OLLAMA_HOST:-http://127.0.0.1:11434}"
-  if [ "$OLLAMA_URL" != "http://localhost:11434" ] && [ "$OLLAMA_URL" != "http://127.0.0.1:11434" ]; then
-    info "Remote Ollama detected: $OLLAMA_URL"
-    info "Run on remote: ollama pull $MODEL"
-    ok "Remote Ollama configured"
-    emit_milestone model done "Remote Ollama configured" "$OLLAMA_URL"
-  else
-    info "Pulling $MODEL ($MODEL_SIZE) - $MODEL_NOTE"
-    "$OLLAMA_BIN" pull "$MODEL" || warn "Model pull failed"
-    if [ "${CLAWOS_PROFILE:-6}" = "1" ]; then
-      info "Pulling qwen2.5-coder:7b for developer profile (~4.7GB)"
-      "$OLLAMA_BIN" pull qwen2.5-coder:7b || warn "qwen2.5-coder:7b pull failed"
-    fi
-    emit_milestone model done "AI model ready" "$MODEL"
-  fi
-fi
 
-step "Pulling embedding model"
-emit_milestone memory running "Loading 14-layer memory" "nomic-embed-text"
-if [ "$SKIP_MODEL" = "true" ]; then
-  warn "Skipping embedding model pull (SKIP_MODEL=true)"
-  emit_milestone memory done "Embedding pull skipped" "SKIP_MODEL=true"
-else
-  EMBED_MODEL="nomic-embed-text"
-  OLLAMA_URL="${OLLAMA_HOST:-http://127.0.0.1:11434}"
-  if [ "$OLLAMA_URL" != "http://localhost:11434" ] && [ "$OLLAMA_URL" != "http://127.0.0.1:11434" ]; then
-    info "Remote Ollama detected - run on remote: ollama pull $EMBED_MODEL"
-    emit_milestone memory done "Remote embedding configured" "$OLLAMA_URL"
-  elif ! curl -sf "$OLLAMA_URL/api/tags" 2>/dev/null | grep -q '"name":"nomic-embed-text'; then
-    "$OLLAMA_BIN" pull "$EMBED_MODEL" || warn "Embedding model pull failed"
-    emit_milestone memory done "Memory layer ready" "$EMBED_MODEL"
-  else
-    ok "Embedding model already present"
-    emit_milestone memory done "Memory layer ready (cached)" "$EMBED_MODEL"
-  fi
-fi
 
 emit_milestone services running "Enabling daemons" "nexus · memd · policyd · dashd"
 install_wrapper_commands
-install_picoclaw_if_needed
-install_openclaude
 enable_autostart
 # Now that dashd is up (or starting), drain any buffered milestones so the
 # browser's /setup page can show the full install history in its BootLog.
@@ -1136,10 +1005,12 @@ divider
 echo ""
 echo -e "  ${G}${BOLD}ClawOS installed in ${ELAPSED}s${RESET}"
 echo ""
-echo -e "  ${W}Profile:${RESET}          ${B}${PROFILE_NAME:-general}${RESET}"
+echo -e "  ${W}Persona:${RESET}          ${B}Choose in browser wizard${RESET}"
+echo -e "  ${W}Hardware profile:${RESET} ${B}${BOOTSTRAP_PROFILE}${RESET}"
+echo -e "  ${W}Recommended model:${RESET} ${B}${MODEL}${RESET} ${D}(${MODEL_NOTE})${RESET}"
 echo ""
 echo -e "  ${B}clawos${RESET}"
-echo -e "  ${D}Native ClawOS runtime using ${MODEL}${RESET}"
+echo -e "  ${D}Native ClawOS runtime (model is finalized in setup)${RESET}"
 echo ""
 echo -e "  ${B}nexus workflow list${RESET}"
 echo -e "  ${D}Browse built-in workflows${RESET}"
@@ -1147,12 +1018,6 @@ echo ""
 echo -e "  ${B}openclaw tui${RESET}"
 echo -e "  ${D}OpenClaw TUI with Kimi K2.5 on port ${OPENCLAW_GATEWAY_PORT}${RESET}"
 echo ""
-if [ "${INSTALL_OPENCLAUDE:-false}" = "true" ]; then
-  echo -e "  ${B}openclaude${RESET}"
-  echo -e "  ${D}Claude Code interface → Ollama qwen2.5-coder:7b (no API bill)${RESET}"
-  echo ""
-fi
-
 if [ "$PLATFORM" = "macos" ]; then
   echo -e "  ${D}Reload shell if needed:${RESET} ${B}source ~/.zprofile${RESET}"
 else
@@ -1163,43 +1028,11 @@ echo -e "  ${D}Open setup:${RESET} ${B}clawos-setup${RESET}"
 echo -e "  ${D}Open home:${RESET} ${B}clawos-command-center${RESET}"
 echo ""
 echo -e "  ${W}Dashboard:${RESET}        ${B}http://localhost:7070${RESET}"
-echo -e "  ${D}(or from another device: http://$(hostname -I | awk '{print $1}'):7070)${RESET}"
 echo ""
-
-# Print dashboard token so new users can log in
-_CLAWOS_DIR="${CLAWOS_DIR:-$HOME/clawos}"
-_TOKEN_FILE="$_CLAWOS_DIR/config/dashboard.token"
-if [ -f "$_TOKEN_FILE" ]; then
-  echo -e "  ${Y}Dashboard token:${RESET} ${B}$(cat "$_TOKEN_FILE")${RESET}"
-  echo -e "  ${D}(saved at ${_TOKEN_FILE})${RESET}"
-  echo ""
-fi
-
-# ─── Browser handoff ─────────────────────────────────────────────────────
-# The Command Center is the primary UI. Power users can still run
-# `openclaw tui` at any time; the default flow opens the browser wizard.
-
-open_url() {
-  local url="$1"
-  if command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$url" >/dev/null 2>&1 &
-  elif command -v open >/dev/null 2>&1; then
-    open "$url" >/dev/null 2>&1 &
-  elif command -v wslview >/dev/null 2>&1; then
-    wslview "$url" >/dev/null 2>&1 &
-  elif command -v cmd.exe >/dev/null 2>&1; then
-    cmd.exe /c start "" "$url" >/dev/null 2>&1 &
-  else
-    return 1
-  fi
-  return 0
-}
-
-CLAWOS_URL="http://localhost:7070/setup"
+CLAWOS_ROUTE="/setup?fresh=$(date +%s)"
+CLAWOS_URL="http://localhost:7070${CLAWOS_ROUTE}"
 echo -e "  ${D}Waiting for dashboard to come online...${RESET}"
 
-# Poll /api/health for up to 30 seconds — dashd is started via
-# clawos.service earlier, so this is usually ready within ~5s.
 READY=0
 for i in $(seq 1 30); do
   if curl -sf "http://localhost:7070/api/health" >/dev/null 2>&1; then
@@ -1212,9 +1045,8 @@ done
 if [ "$READY" = "1" ]; then
   emit_milestone ready done "ClawOS online" "dashboard @ :7070 · ${ELAPSED}s total"
   if [ "${NO_BROWSER:-0}" = "1" ] || [ ! -t 1 ]; then
-    # Headless / CI / piped install — just print the URL.
     echo -e "  ${G}Command Center ready:${RESET} ${B}${CLAWOS_URL}${RESET}"
-  elif open_url "${CLAWOS_URL}"; then
+  elif "${INSTALL_DIR}/venv/bin/python3" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route "${CLAWOS_ROUTE}" --timeout 5 >/dev/null 2>&1; then
     echo -e "  ${G}Command Center opening in your browser...${RESET}"
     echo -e "  ${D}If the browser doesn't open, visit:${RESET} ${B}${CLAWOS_URL}${RESET}"
   else
@@ -1228,3 +1060,4 @@ else
   echo -e "  ${D}Or run manually:${RESET} ${B}openclaw tui${RESET}"
 fi
 echo ""
+

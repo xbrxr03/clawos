@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { FormEvent, Suspense, lazy, useEffect, useState } from 'react'
+import { Component, FormEvent, ReactNode, Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './app/AppShell'
 import { InspectorRail } from './app/InspectorRail'
@@ -32,6 +32,21 @@ const SkillsPage = lazy(() => import('./pages/Skills').then((mod) => ({ default:
 const LicensePage = lazy(() => import('./pages/License').then((mod) => ({ default: mod.LicensePage })))
 const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => ({ default: mod.SetupPage })))
 
+const SETUP_STORAGE_KEYS = [
+  'clawos_setup_step_v2',
+  'clawos_setup_furthest_v2',
+  'clawos_setup_ui_v2',
+  'clawos_setup_tweaks_v2',
+]
+
+function clearSetupDraftStorage() {
+  try {
+    SETUP_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key))
+  } catch {
+    /* ignore storage failures */
+  }
+}
+
 function RouteFallback({ message, compact = false }: { message: string; compact?: boolean }) {
   return (
     <div style={{ minHeight: compact ? 420 : '100vh', padding: compact ? 28 : 36 }}>
@@ -41,6 +56,67 @@ function RouteFallback({ message, compact = false }: { message: string; compact?
         body="ClawOS is composing the current surface, restoring live state, and warming up the command center."
       />
     </div>
+  )
+}
+
+class SetupRouteBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Setup route crashed', error)
+  }
+
+  reset = () => {
+    clearSetupDraftStorage()
+    this.setState({ error: null }, () => window.location.assign('/setup'))
+  }
+
+  hardReload = () => {
+    this.setState({ error: null }, () => window.location.reload())
+  }
+
+  render() {
+    if (!this.state.error) {
+      return this.props.children
+    }
+
+    return (
+      <div style={{ minHeight: '100vh', padding: 36 }}>
+        <LoadingPanel
+          eyebrow="Setup"
+          title="The wizard crashed before it could render"
+          body={this.state.error.message || 'The setup route hit an unexpected frontend error.'}
+        />
+        <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
+          <button type="button" className="btn primary" onClick={this.reset}>
+            Reset setup cache
+          </button>
+          <button type="button" className="btn" onClick={this.hardReload}>
+            Reload page
+          </button>
+          <a className="btn" href="/">
+            Open dashboard
+          </a>
+        </div>
+      </div>
+    )
+  }
+}
+
+function SetupRouteShell() {
+  return (
+    <SetupRouteBoundary>
+      <Suspense fallback={<RouteFallback message="Loading setup..." />}>
+        <SetupScreen />
+      </Suspense>
+    </SetupRouteBoundary>
   )
 }
 
@@ -124,11 +200,7 @@ function AuthenticatedApp() {
       <Routes>
         <Route
           path="/setup"
-          element={
-            <Suspense fallback={<RouteFallback message="Loading setup..." />}>
-              <SetupScreen />
-            </Suspense>
-          }
+          element={<SetupRouteShell />}
         />
         <Route
           path="*"
@@ -167,7 +239,6 @@ export default function CommandCenterApp() {
   const [ready, setReady] = useState(false)
   const [authRequired, setAuthRequired] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
-  const [token, setToken] = useState('')
   const [error, setError] = useState('')
   const isSetupRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/setup')
 
@@ -198,10 +269,10 @@ export default function CommandCenterApp() {
     const response = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({}),
     })
     if (!response.ok) {
-      setError('That token was rejected.')
+      setError('Local browser session could not be established.')
       return
     }
     setAuthenticated(true)
@@ -219,32 +290,20 @@ export default function CommandCenterApp() {
     )
   }
 
-  if (isSetupRoute) {
-    return (
-      <BrowserRouter>
-        <Suspense fallback={<RouteFallback message="Loading setup..." />}>
-          <Routes>
-            <Route path="*" element={<SetupScreen />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    )
-  }
-
-  if (authRequired && !authenticated) {
+  if (authRequired && !authenticated && !isSetupRoute) {
     return (
       <div className="auth-screen">
         <div className="auth-screen-panel">
           <div className="auth-screen-copy">
             <div className="page-eyebrow">Dashboard Access</div>
-            <div className="page-title">Unlock ClawOS</div>
+            <div className="page-title">Continue To ClawOS</div>
             <div className="page-description">
-              Your command center is local-first and private by default. Enter the dashboard token from your ClawOS config to continue.
+              ClawOS now uses a loopback-only browser session for the local dashboard. Continue to create a private session on this machine.
             </div>
             <div className="auth-screen-tips">
               <div className="auth-tip">
                 <span>Privacy-first</span>
-                <span>Local session cookie after login</span>
+                <span>Loopback-only browser session</span>
               </div>
               <div className="auth-tip">
                 <span>Quick actions</span>
@@ -259,21 +318,14 @@ export default function CommandCenterApp() {
 
           <form onSubmit={login}>
             <Card className="auth-card" style={{ padding: 24, background: 'var(--panel-solid)' }}>
-              <div className="section-label">Local Token</div>
-              <div className="panel-title">Dashboard token</div>
+              <div className="section-label">Local Browser Session</div>
+              <div className="panel-title">Start dashboard session</div>
               <div className="panel-description">
-                Paste the token exactly as it appears in your local ClawOS config.
+                This keeps the dashboard private to this machine without asking you to paste a token during setup.
               </div>
-              <input
-                type="password"
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="Dashboard token"
-                style={{ width: '100%', marginTop: 18 }}
-              />
               {error ? <div style={{ marginTop: 12, color: 'var(--red)', fontSize: 12 }}>{error}</div> : null}
               <button type="submit" className="btn primary" style={{ width: '100%', marginTop: 18 }}>
-                Unlock Command Center
+                Continue locally
               </button>
             </Card>
           </form>

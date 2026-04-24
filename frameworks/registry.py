@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from pathlib import Path
@@ -73,9 +74,41 @@ class FrameworkManifest:
         """
         if self.incompatible_tiers and profile_id in self.incompatible_tiers:
             return False, f"Your hardware ({profile_id}) is in the incompatible list"
-        if self.compatible_tiers and profile_id not in self.compatible_tiers:
+        if self.compatible_tiers and not any(_profile_satisfies(profile_id, tier) for tier in self.compatible_tiers):
             return False, f"Your hardware ({profile_id}) is not in the supported list"
         return True, ""
+
+
+_PROFILE_RE = re.compile(r"^(?P<arch>[a-z0-9]+)-(?P<accel>[a-z0-9]+)-(?P<ram>\d+)gb$")
+
+
+def _parse_profile_id(profile_id: str) -> tuple[str, str, int] | None:
+    match = _PROFILE_RE.match((profile_id or "").strip().lower())
+    if not match:
+        return None
+    return (
+        match.group("arch"),
+        match.group("accel"),
+        int(match.group("ram")),
+    )
+
+
+def _profile_satisfies(current: str, supported: str) -> bool:
+    current_id = (current or "").strip().lower()
+    supported_id = (supported or "").strip().lower()
+    if current_id == supported_id:
+        return True
+
+    parsed_current = _parse_profile_id(current_id)
+    parsed_supported = _parse_profile_id(supported_id)
+    if not parsed_current or not parsed_supported:
+        return False
+
+    current_arch, current_accel, current_ram = parsed_current
+    supported_arch, supported_accel, supported_ram = parsed_supported
+    if current_arch != supported_arch or current_accel != supported_accel:
+        return False
+    return current_ram >= supported_ram
 
 
 def _parse_simple_yaml(text: str) -> dict:

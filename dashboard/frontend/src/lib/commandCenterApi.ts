@@ -19,6 +19,7 @@ export type SetupState = {
     [extra: string]: unknown
   }
   recommended_profile?: string
+  selected_persona?: string
   selected_runtimes?: string[]
   selected_models?: string[]
   selected_provider_profile?: string
@@ -90,6 +91,18 @@ export type InstallMilestone = {
 export type SetupPlan = {
   summary?: string
   steps?: string[]
+}
+
+export type SetupPersona = {
+  id: string
+  title: string
+  glyph?: string
+  subtitle?: string
+  goals?: string[]
+  suggested_pack?: string
+  tag?: string
+  install_openclaude?: boolean
+  extra_models?: string[]
 }
 
 /** Enriched framework catalog entry — shape returned by frameworks.registry.list_for_tier(). */
@@ -607,6 +620,7 @@ export const commandCenterApi = {
       body: JSON.stringify({ enabled, command }),
     }),
   getSetupState: () => fetchJson<SetupState>('/api/setup/state', { headers: setupHeaders() }),
+  listSetupPersonas: () => fetchJson<SetupPersona[]>('/api/setup/personas', { headers: setupHeaders() }),
   inspectSetup: () =>
     fetchJson<{ state?: SetupState; openclaw?: OpenClawImportManifest }>('/api/setup/inspect', {
       method: 'POST',

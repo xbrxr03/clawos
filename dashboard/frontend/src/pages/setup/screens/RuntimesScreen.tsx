@@ -29,7 +29,7 @@ const RUNTIMES: Runtime[] = [
 ]
 
 export function RuntimesScreen(props: ScreenProps) {
-  const { state, packs, onBack, onNext, stepIndex, totalSteps, updateOptions, selectPack, ui, busy } =
+  const { state, packs, personas, onBack, onNext, stepIndex, totalSteps, updateOptions, selectPack, ui, busy } =
     props
   const selected = state.selected_runtimes?.length ? state.selected_runtimes : ['nexus', 'picoclaw']
 
@@ -40,8 +40,9 @@ export function RuntimesScreen(props: ScreenProps) {
   }
 
   // Recommend a primary pack based on persona (from profile screen)
-  const persona = PROFILE_PERSONAS.find((p) => p.id === ui.user_profile)
-  const suggestedPackId = persona?.suggestedPack || state.primary_pack || 'daily-briefing-os'
+  const personaCatalog = personas.length ? personas : PROFILE_PERSONAS
+  const persona = personaCatalog.find((p) => p.id === (state.selected_persona || ui.user_profile))
+  const suggestedPackId = persona?.suggested_pack || state.primary_pack || 'daily-briefing-os'
   const suggestedPack = packs.find((p) => p.id === suggestedPackId)
   const currentPackId = state.primary_pack || suggestedPackId
 

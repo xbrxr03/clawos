@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { commandCenterApi } from '../../../lib/commandCenterApi'
 import { Footer, Orb, ProgressBar } from '../atoms'
 import type { ScreenProps } from '../types'
@@ -36,6 +35,7 @@ function launchStageLabel(pct: number, stage: string | undefined): string {
 export function SummaryScreen(props: ScreenProps) {
   const {
     state,
+    personas,
     onBack,
     stepIndex,
     totalSteps,
@@ -45,7 +45,6 @@ export function SummaryScreen(props: ScreenProps) {
     setUi,
     busy,
   } = props
-  const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
 
   const openClawCmd = 'ollama launch openclaw --model kimi-k2.5:cloud'
@@ -65,7 +64,8 @@ export function SummaryScreen(props: ScreenProps) {
   }, [planSetup, state.plan_steps?.length])
 
   const runtimes = (state.selected_runtimes || ['nexus']).join(' + ')
-  const persona = PROFILE_PERSONAS.find((p) => p.id === ui.user_profile)
+  const personaCatalog = personas.length ? personas : PROFILE_PERSONAS
+  const persona = personaCatalog.find((p) => p.id === (state.selected_persona || ui.user_profile))
   const modelName = state.selected_models?.[0] || 'qwen2.5:7b'
   const policyCount = useMemo(() => {
     const ap = (state.autonomy_policy as unknown as Record<string, boolean>) || {}
@@ -75,8 +75,11 @@ export function SummaryScreen(props: ScreenProps) {
 
   const launchProgress = Number(state.model_pull_progress?.percent || 0)
   const stage = state.progress_stage || ''
-  const launching = busy === 'apply' || stage === 'applying'
   const done = !!state.completion_marker
+  const launching =
+    !done &&
+    stage !== 'error' &&
+    (busy === 'apply' || !!ui.launch_requested || ['applying', 'model-pull', 'model-ready'].includes(stage))
 
   // Track launch_requested in ui so refresh doesn't drop the in-progress state
   const pct = done ? 100 : launching ? Math.max(12, launchProgress) : 0
@@ -130,7 +133,7 @@ export function SummaryScreen(props: ScreenProps) {
               // hold up navigation if TTS is slow or the voice model is missing.
               // voiced.speak handles the whole pipeline (ElevenLabs → Piper → null).
               commandCenterApi.speakSetupGreeting().catch(() => null)
-              navigate('/')
+              window.location.assign('/')
             }}
           >
             Open dashboard →
@@ -138,7 +141,7 @@ export function SummaryScreen(props: ScreenProps) {
           <button
             type="button"
             className="wiz-btn"
-            onClick={() => window.open('https://github.com/clawos/clawos#readme', '_blank', 'noopener')}
+            onClick={() => window.open('https://github.com/xbrxr03/clawos#readme', '_blank', 'noopener')}
           >
             Take the tour
           </button>
@@ -249,7 +252,7 @@ export function SummaryScreen(props: ScreenProps) {
         <div className="summary-grid" style={{ marginTop: 26 }}>
           <div className="sum-item">
             <div className="sum-k">Profile</div>
-            <div className="sum-v">{cap(persona?.id || ui.user_profile || 'general')}</div>
+            <div className="sum-v">{persona?.title || cap(state.selected_persona || ui.user_profile || 'general')}</div>
           </div>
           <div className="sum-item">
             <div className="sum-k">Hardware tier</div>

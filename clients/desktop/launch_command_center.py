@@ -21,13 +21,22 @@ from clawos_core.constants import PORT_DASHD
 from services.dashd.api import load_dashboard_settings
 
 
+def _canonical_local_host(host: str) -> str:
+    value = (host or "").strip().lower()
+    if value in {"127.0.0.1", "0.0.0.0", "::1", "localhost", ""}:
+        return "localhost"
+    return host
+
+
 def dashboard_base_url() -> str:
     try:
         settings = load_dashboard_settings()
         port = int(settings.port)
+        host = _canonical_local_host(str(settings.host))
     except Exception:
         port = PORT_DASHD
-    return f"http://127.0.0.1:{port}"
+        host = "localhost"
+    return f"http://{host}:{port}"
 
 
 def command_center_url(route: str = "/") -> str:
@@ -66,19 +75,33 @@ def open_in_browser(url: str) -> bool:
     except Exception:
         pass
 
+    if shutil.which("gio"):
+        try:
+            subprocess.Popen(["gio", "open", url])
+            return True
+        except Exception:
+            pass
+
     if sys.platform == "darwin" and shutil.which("open"):
         try:
             subprocess.Popen(["open", url])
             return True
         except Exception:
-            return False
+            pass
 
     if shutil.which("xdg-open"):
         try:
             subprocess.Popen(["xdg-open", url])
             return True
         except Exception:
-            return False
+            pass
+
+    if shutil.which("sensible-browser"):
+        try:
+            subprocess.Popen(["sensible-browser", url])
+            return True
+        except Exception:
+            pass
 
     return False
 

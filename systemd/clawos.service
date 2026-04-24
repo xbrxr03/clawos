@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 %h/clawos/clients/daemon/daemon.py
+ExecStart=%h/clawos/venv/bin/python3 %h/clawos/clients/daemon/daemon.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=append:%h/clawos/logs/clawosd.log
