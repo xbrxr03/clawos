@@ -254,8 +254,14 @@ install_node() {
   fi
 }
 
-# OpenClaw is installed on-demand through the ClawOS setup wizard GUI.
-# Use: clawctl framework install openclaw
+install_openclaw() {
+  step "Installing OpenClaw"
+  if sudo npm install -g openclaw 2>/dev/null; then
+    ok "OpenClaw installed"
+  else
+    warn "OpenClaw install failed — run: sudo npm install -g openclaw"
+  fi
+}
 
 install_python_packages() {
   step "Installing Python packages"
@@ -803,7 +809,8 @@ ok "Python $PY_VER"
 
 install_ollama
 install_node
-emit_milestone deps done "Dependencies installed" "Python $PY_VER · Ollama · Node"
+install_openclaw
+emit_milestone deps done "Dependencies installed" "Python $PY_VER · Ollama · Node · OpenClaw"
 
 step "Installing Nexus"
 emit_milestone core running "Installing Nexus" "cloning clawos + python deps"

@@ -115,7 +115,14 @@ export function SetupPage() {
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState('')
 
-  const [stepIndex, setStepIndex] = useState<number>(() => clampIndex(readLS<unknown>(LS_STEP, 0)))
+  const [stepIndex, setStepIndex] = useState<number>(() => {
+    const isFresh = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('fresh')
+    if (isFresh) {
+      try { window.localStorage.removeItem(LS_STEP) } catch { /* ignore */ }
+      return 0
+    }
+    return clampIndex(readLS<unknown>(LS_STEP, 0))
+  })
   const [furthest, setFurthest] = useState<number>(() => clampIndex(readLS<unknown>(LS_FURTHEST, 0)))
   const [ui, setUiRaw] = useState<WizardUI>(() => ({
     ...DEFAULT_UI,

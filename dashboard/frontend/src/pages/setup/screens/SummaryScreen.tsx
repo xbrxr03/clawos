@@ -47,7 +47,7 @@ export function SummaryScreen(props: ScreenProps) {
   } = props
   const [copied, setCopied] = useState(false)
 
-  const openClawCmd = 'ollama launch openclaw --model kimi-k2.5:cloud'
+  const openClawCmd = 'openclaw onboard'
   const copyOpenClawCmd = async () => {
     try {
       await navigator.clipboard.writeText(openClawCmd)
@@ -147,10 +147,6 @@ export function SummaryScreen(props: ScreenProps) {
           </button>
         </div>
 
-        {/* ── NEXT · Start OpenClaw (JARVIS, your AI Butler) ────────────────
-            One command drops the user into the OpenClaw TUI with kimi-k2.5
-            running on Ollama Cloud. Free credits cover casual use; the
-            same binary accepts BYO keys for heavy lifting. */}
         <div
           className="panel hud"
           style={{
@@ -162,7 +158,7 @@ export function SummaryScreen(props: ScreenProps) {
           }}
         >
           <div className="eyebrow" style={{ marginBottom: 10 }}>
-            NEXT · START OPENCLAW
+            NEXT · SET UP OPENCLAW
           </div>
           <div
             style={{
@@ -172,8 +168,8 @@ export function SummaryScreen(props: ScreenProps) {
               lineHeight: 1.5,
             }}
           >
-            JARVIS, your AI Butler. Copy this command in a terminal to bring
-            your agent online:
+            Run the guided setup wizard in your terminal to configure your AI
+            agent — model, workspace, gateway, and channels:
           </div>
           <div
             style={{
@@ -200,34 +196,6 @@ export function SummaryScreen(props: ScreenProps) {
               {copied ? 'Copied ✓' : 'Copy ⧉'}
             </button>
           </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--ink-3)',
-              marginTop: 14,
-              lineHeight: 1.6,
-            }}
-          >
-            Ollama&rsquo;s free tier covers most daily use. Need more?
-          </div>
-          <ul
-            style={{
-              margin: '6px 0 0 0',
-              paddingLeft: 18,
-              fontSize: 12,
-              color: 'var(--ink-2)',
-              lineHeight: 1.75,
-            }}
-          >
-            <li>
-              <strong style={{ color: 'var(--ink-1)' }}>Ollama Pro</strong> —
-              same command, higher limits.
-            </li>
-            <li>
-              <strong style={{ color: 'var(--ink-1)' }}>Bring your own key</strong>{' '}
-              — Anthropic, OpenAI, or OpenRouter from the dashboard.
-            </li>
-          </ul>
         </div>
 
         <div className="hint" style={{ marginTop: 24 }}>
