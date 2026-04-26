@@ -10,7 +10,7 @@
 
 set -uo pipefail
 
-CLAWOS_HOME="${CLAWOS_HOME:-$HOME/clawos}"
+CLAWOS_HOME="${CLAWOS_HOME:-$HOME/.clawos-runtime}"
 UNIT_SRC="$CLAWOS_HOME/systemd"
 UNIT_DST="$HOME/.config/systemd/user"
 LOG_DIR="$CLAWOS_HOME/logs"

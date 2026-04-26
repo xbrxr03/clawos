@@ -6,8 +6,8 @@ Requires=clawos-policyd.service
 [Service]
 Type=simple
 ExecStart=/usr/bin/env python3 -m services.metricd.main
-WorkingDirectory=%h/clawos
-Environment=PYTHONPATH=%h/clawos
+WorkingDirectory=%h/.clawos-runtime
+Environment=PYTHONPATH=%h/.clawos-runtime
 Restart=always
 RestartSec=3
 

@@ -6,14 +6,14 @@ Requires=clawos-agentd.service
 
 [Service]
 Type=simple
-WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/scheduler/main.py
+WorkingDirectory=%h/.clawos-runtime
+ExecStart=%h/.clawos-runtime/venv/bin/python3 %h/.clawos-runtime/services/scheduler/main.py
 Restart=on-failure
 RestartSec=10
-StandardOutput=append:%h/clawos/logs/scheduler.log
-StandardError=append:%h/clawos/logs/scheduler.log
-Environment=PYTHONPATH=%h/clawos
-Environment=CLAWOS_HOME=%h/clawos
+StandardOutput=append:%h/.clawos-runtime/logs/scheduler.log
+StandardError=append:%h/.clawos-runtime/logs/scheduler.log
+Environment=PYTHONPATH=%h/.clawos-runtime
+Environment=CLAWOS_HOME=%h/.clawos-runtime
 Environment=CLAWOS_SERVICE=scheduler
 
 [Install]

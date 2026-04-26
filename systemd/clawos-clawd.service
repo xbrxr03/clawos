@@ -6,14 +6,14 @@ Requires=clawos-policyd.service clawos-memd.service clawos-modeld.service clawos
 
 [Service]
 Type=simple
-WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/clawd/main.py
+WorkingDirectory=%h/.clawos-runtime
+ExecStart=%h/.clawos-runtime/venv/bin/python3 %h/.clawos-runtime/services/clawd/main.py
 Restart=on-failure
 RestartSec=3
-StandardOutput=append:%h/clawos/logs/clawd.log
-StandardError=append:%h/clawos/logs/clawd.log
-Environment=PYTHONPATH=%h/clawos
-Environment=CLAWOS_HOME=%h/clawos
+StandardOutput=append:%h/.clawos-runtime/logs/clawd.log
+StandardError=append:%h/.clawos-runtime/logs/clawd.log
+Environment=PYTHONPATH=%h/.clawos-runtime
+Environment=CLAWOS_HOME=%h/.clawos-runtime
 Environment=CLAWOS_SERVICE=clawd
 
 [Install]

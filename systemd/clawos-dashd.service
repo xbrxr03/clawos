@@ -6,14 +6,14 @@ Wants=clawos-clawd.service
 
 [Service]
 Type=simple
-WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/venv/bin/python -m services.dashd.main
+WorkingDirectory=%h/.clawos-runtime
+ExecStart=%h/.clawos-runtime/venv/bin/python -m services.dashd.main
 Restart=on-failure
 RestartSec=5
-StandardOutput=append:%h/clawos/logs/dashd.log
-StandardError=append:%h/clawos/logs/dashd.log
-Environment=PYTHONPATH=%h/clawos
-Environment=CLAWOS_HOME=%h/clawos
+StandardOutput=append:%h/.clawos-runtime/logs/dashd.log
+StandardError=append:%h/.clawos-runtime/logs/dashd.log
+Environment=PYTHONPATH=%h/.clawos-runtime
+Environment=CLAWOS_HOME=%h/.clawos-runtime
 Environment=CLAWOS_SERVICE=dashd
 
 [Install]

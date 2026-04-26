@@ -6,16 +6,16 @@ Wants=clawos-modeld.service clawos-agentd.service
 
 [Service]
 Type=simple
-WorkingDirectory=%h/clawos
-ExecStart=%h/clawos/venv/bin/python3 %h/clawos/services/voiced/main.py
+WorkingDirectory=%h/.clawos-runtime
+ExecStart=%h/.clawos-runtime/venv/bin/python3 %h/.clawos-runtime/services/voiced/main.py
 Restart=on-failure
 RestartSec=5
 # voiced is non-critical — don't block stack on voice failure
 SuccessExitStatus=0 1
-StandardOutput=append:%h/clawos/logs/voiced.log
-StandardError=append:%h/clawos/logs/voiced.log
-Environment=PYTHONPATH=%h/clawos
-Environment=CLAWOS_HOME=%h/clawos
+StandardOutput=append:%h/.clawos-runtime/logs/voiced.log
+StandardError=append:%h/.clawos-runtime/logs/voiced.log
+Environment=PYTHONPATH=%h/.clawos-runtime
+Environment=CLAWOS_HOME=%h/.clawos-runtime
 Environment=CLAWOS_SERVICE=voiced
 # Pipewire audio fix (44100Hz)
 Environment=PULSE_LATENCY_MSEC=60
