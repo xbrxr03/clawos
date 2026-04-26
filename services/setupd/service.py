@@ -106,8 +106,6 @@ class SetupService:
         ]
         if state.voice_enabled:
             state.plan_steps.insert(7, f"Configure voice mode: {state.voice_mode}")
-        if state.whatsapp_enabled:
-            state.plan_steps.insert(8, "Prepare WhatsApp bridge and phone pairing path")
         if state.imported_openclaw:
             state.plan_steps.insert(3, "Import safe OpenClaw config and preserve compatible workflows")
         if state.installed_extensions:
@@ -293,12 +291,6 @@ class SetupService:
         enable_openclaw = payload.get("enable_openclaw")
         if isinstance(enable_openclaw, bool):
             state.enable_openclaw = enable_openclaw
-
-        whatsapp_enabled = payload.get("whatsapp_enabled")
-        if isinstance(whatsapp_enabled, bool):
-            state.whatsapp_enabled = whatsapp_enabled
-            if whatsapp_enabled and "chat-app-command-center" not in state.secondary_packs and state.primary_pack != "chat-app-command-center":
-                state.secondary_packs.append("chat-app-command-center")
 
         voice_enabled = payload.get("voice_enabled")
         if isinstance(voice_enabled, bool):
@@ -763,8 +755,6 @@ class SetupService:
 
             if state.voice_enabled:
                 self._log(f"Voice pipeline prepared in {state.voice_mode} mode")
-            if state.whatsapp_enabled:
-                self._log("WhatsApp pairing deferred to the post-launch QR flow")
             if state.briefing_enabled:
                 self._log("Prepared the first briefing")
             self._log("Installed trusted routines")
@@ -920,12 +910,6 @@ class SetupService:
         SUPPORT_DIR.mkdir(parents=True, exist_ok=True)
         gateway_status = {}
         voice_status = {}
-        try:
-            from services.gatewayd.service import get_service as get_gateway_service
-
-            gateway_status = get_gateway_service().health()
-        except Exception:
-            gateway_status = {}
         try:
             from services.voiced.service import get_service as get_voice_service
 

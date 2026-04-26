@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { type PropsWithChildren, type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type PropsWithChildren, useEffect, useMemo, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { appNav } from './navigation'
-import { Badge, ShortcutKey } from '../components/ui.jsx'
+import { ShortcutKey } from '../components/ui.jsx'
 import { desktopBridge } from '../desktop/bridge'
 import { commandCenterApi } from '../lib/commandCenterApi'
 
@@ -13,10 +13,42 @@ type AppShellProps = PropsWithChildren<{
   events: any[]
   voiceSession?: Record<string, any>
   jarvisSession?: Record<string, any>
-  inspector?: ReactNode
+  inspector?: React.ReactNode
   theme: 'dark' | 'light'
   onToggleTheme: () => void
 }>
+
+// Nav items with glyph chars + route groups matching the design
+const NAV_GROUPS: { title: string; items: { to: string; glyph: string; label: string; badge?: 'approvals' }[] }[] = [
+  {
+    title: 'Assistant',
+    items: [
+      { to: '/',          glyph: '◈', label: 'Overview' },
+      { to: '/briefing',  glyph: '☀', label: 'Briefing' },
+      { to: '/jarvis',    glyph: '◉', label: 'Jarvis' },
+    ],
+  },
+  {
+    title: 'Agents',
+    items: [
+      { to: '/workflows',  glyph: '▤', label: 'Workflows' },
+      { to: '/brain',      glyph: '❋', label: 'Brain' },
+      { to: '/memory',     glyph: '▦', label: 'Memory' },
+      { to: '/approvals',  glyph: '▢', label: 'Approvals', badge: 'approvals' },
+      { to: '/packs',      glyph: '✦', label: 'Store' },
+      { to: '/traces',     glyph: '◎', label: 'Traces' },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { to: '/models',    glyph: '◐', label: 'Models' },
+      { to: '/providers', glyph: '⬡', label: 'Providers' },
+      { to: '/mcp',       glyph: '⊞', label: 'MCP' },
+      { to: '/settings',  glyph: '⚙', label: 'Settings' },
+    ],
+  },
+]
 
 export function AppShell({
   children,
@@ -26,7 +58,6 @@ export function AppShell({
   events,
   voiceSession,
   jarvisSession,
-  inspector,
   theme,
   onToggleTheme,
 }: AppShellProps) {
@@ -37,108 +68,68 @@ export function AppShell({
   const [voiceBusy, setVoiceBusy] = useState(false)
   const [voiceMessage, setVoiceMessage] = useState('')
   const [desktopShell, setDesktopShell] = useState(false)
+  const [now, setNow] = useState(new Date())
   const isJarvisRoute = location.pathname.startsWith('/jarvis')
 
   const serviceEntries = Object.entries(services || {})
-  const serviceList = serviceEntries.map(([, value]) => value)
-  const upCount = serviceList.filter((item: any) => item.status === 'up' || item.status === 'running').length
-  const activeItem = appNav.find((item) => item.to === location.pathname) ?? appNav[0]
+  const upCount = serviceEntries.filter(([, v]: any) => v?.status === 'up' || v?.status === 'running').length
+  const total = serviceEntries.length
+
   const activeVoiceSession = isJarvisRoute ? jarvisSession : voiceSession
-  const voiceState = String(activeVoiceSession?.state || 'idle')
-  const voiceDot =
-    voiceState === 'listening'
-      ? 'green pulse'
-      : voiceState === 'speaking'
-        ? 'blue pulse'
-        : voiceState === 'thinking'
-          ? 'orange pulse'
-          : 'gray'
-  const voiceEnabled = isJarvisRoute ? activeVoiceSession?.voice_enabled !== false : activeVoiceSession?.mode !== 'off'
-
-  const navSections = useMemo(() => {
-    const grouped = new Map<string, typeof appNav>()
-    appNav.forEach((item) => {
-      const current = grouped.get(item.section) || []
-      current.push(item)
-      grouped.set(item.section, current)
-    })
-    return Array.from(grouped.entries())
-  }, [])
-
-  const servicePreview = useMemo(() => serviceEntries.slice(0, 3), [serviceEntries])
+  const voiceEnabled = isJarvisRoute
+    ? activeVoiceSession?.voice_enabled !== false
+    : activeVoiceSession?.mode !== 'off'
 
   const commandResults = useMemo(() => {
-    const query = commandQuery.trim().toLowerCase()
-    if (!query) return appNav
+    const q = commandQuery.trim().toLowerCase()
+    if (!q) return appNav
     return appNav.filter((item) => {
-      const haystack = `${item.label} ${item.description} ${item.to} ${item.section}`.toLowerCase()
-      return haystack.includes(query)
+      const hay = `${item.label} ${item.description} ${item.to} ${item.section}`.toLowerCase()
+      return hay.includes(q)
     })
   }, [commandQuery])
 
   async function runPushToTalk() {
     if (voiceBusy || !voiceEnabled) return
     setVoiceBusy(true)
-    setVoiceMessage('Listening now...')
+    setVoiceMessage('Listening…')
     try {
-      const result = isJarvisRoute ? await commandCenterApi.pushToTalkJarvis() : await commandCenterApi.pushToTalk()
-      const transcript = (result as any).transcript
-      const reply = (result as any).reply || (result as any).response
-      if ((result as any).error) {
-        setVoiceMessage((result as any).error)
-      } else if (transcript) {
-        setVoiceMessage(`Heard: "${transcript}"`)
-      } else if (reply) {
-        setVoiceMessage(`Reply: "${reply}"`)
-      } else {
-        setVoiceMessage((result as any).issues?.[0] || 'No speech detected in that round.')
-      }
-    } catch (error: any) {
-      setVoiceMessage(error.message || 'Push-to-talk failed.')
+      const result = isJarvisRoute
+        ? await commandCenterApi.pushToTalkJarvis()
+        : await commandCenterApi.pushToTalk()
+      const r = result as any
+      setVoiceMessage(r.error || (r.transcript ? `Heard: "${r.transcript}"` : r.reply || 'Done.'))
+    } catch (e: any) {
+      setVoiceMessage(e.message || 'Push-to-talk failed.')
     } finally {
       setVoiceBusy(false)
     }
   }
 
   useEffect(() => {
-    desktopBridge.isDesktopShell().then(setDesktopShell).catch(() => setDesktopShell(false))
+    desktopBridge.isDesktopShell().then(setDesktopShell).catch(() => {})
   }, [])
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
-      const isTyping =
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
+    const iv = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(iv)
+  }, [])
 
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        setCommandOpen(true)
-        return
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)
+        || (e.target as HTMLElement)?.isContentEditable
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault(); setCommandOpen(true); return
       }
-
-      if (event.key === '?' && !isTyping) {
-        event.preventDefault()
-        setCommandOpen(true)
-        return
+      if (e.key === '?' && !typing) { e.preventDefault(); setCommandOpen(true); return }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Space' && !typing) {
+        e.preventDefault(); void runPushToTalk(); return
       }
-
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === 'Space' && !isTyping) {
-        event.preventDefault()
-        void runPushToTalk()
-        return
-      }
-
-      if (event.key === 'Escape') {
-        setCommandOpen(false)
-      }
+      if (e.key === 'Escape') setCommandOpen(false)
     }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [voiceBusy, voiceEnabled, isJarvisRoute])
 
   useEffect(() => {
@@ -147,213 +138,186 @@ export function AppShell({
     setVoiceMessage('')
   }, [location.pathname])
 
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const dateStr = now.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+
   return (
     <>
-      <div className="shell-root">
-        <aside className="shell-sidebar">
-          <div className="shell-brand">
-            <div className="shell-brand-mark" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2.1 13.25 5v5.97L8 13.9 2.75 10.97V5L8 2.1Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round" />
-                <circle cx="8" cy="8" r="2.05" fill="currentColor" />
-              </svg>
-            </div>
-            <div className="shell-brand-copy">
-              <div className="shell-brand-title">ClawOS</div>
-              <div className="shell-brand-subtitle">v1.0 command center</div>
-            </div>
+      <div className="desktop">
+        {/* Menubar */}
+        <div className="menubar">
+          <span className="name">clawOS</span>
+          <span className="m-item">File</span>
+          <span className="m-item">Edit</span>
+          <span className="m-item">View</span>
+          <span className="m-item">Jarvis</span>
+          <span className="m-item">Help</span>
+          <div className="right">
+            <span className="dot" style={{ background: connected ? 'var(--success)' : 'var(--danger)', color: connected ? 'var(--success)' : 'var(--danger)' }} />
+            <span>{upCount}/{total} services</span>
+            {approvals.length > 0 && (
+              <span style={{ color: 'var(--warn)' }}>{approvals.length} pending</span>
+            )}
+            <span>{dateStr} · {timeStr}</span>
           </div>
+        </div>
 
-          <button type="button" className="command-launch" onClick={() => setCommandOpen(true)}>
-            <span className="command-launch-copy">
-              <span className="command-launch-title">Search or jump to a surface</span>
-            </span>
-            <span className="command-launch-keys">
-              <ShortcutKey>Ctrl</ShortcutKey>
-              <ShortcutKey>K</ShortcutKey>
-            </span>
-          </button>
+        {/* App grid */}
+        <div className="app">
+          {/* Sidebar */}
+          <aside className="side">
+            <div className="brand">
+              <div className="logo">◈</div>
+              <div>
+                <div className="n">clawOS</div>
+                <div className="v">v0.1.0 · dashboard</div>
+              </div>
+            </div>
 
-          <div className="shell-nav">
-            {navSections.map(([section, items]) => (
-              <div key={section} className="shell-nav-group">
-                <div className="shell-nav-group-title">{section}</div>
-                {items.map((item) => (
+            {NAV_GROUPS.map(({ title, items }) => (
+              <div key={title}>
+                <div className="nav-title">{title}</div>
+                {items.map(({ to, glyph, label, badge }) => (
                   <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    className={({ isActive }) => `shell-nav-link${isActive ? ' active' : ''}`}
+                    key={to}
+                    to={to}
+                    end={to === '/'}
+                    className={({ isActive }) => `nav-i${isActive ? ' active' : ''}`}
                   >
-                    <span className="shell-nav-icon">{item.icon}</span>
-                    <span className="shell-nav-copy">
-                      <span className="shell-nav-title">{item.label}</span>
-                      <span className="shell-nav-description">{item.description}</span>
-                    </span>
-                    {item.label === 'Approvals' && approvals.length > 0 ? <Badge color="red">{approvals.length}</Badge> : null}
+                    <span className="g">{glyph}</span>
+                    <span style={{ flex: 1 }}>{label}</span>
+                    {badge === 'approvals' && approvals.length > 0 && (
+                      <span className="badge">{approvals.length}</span>
+                    )}
                   </NavLink>
                 ))}
               </div>
             ))}
-          </div>
 
-          <div className="shell-sidebar-footer">
-            <div className="shell-sidebar-health">
-              <div className="shell-health-row">
-                <div className="shell-health-copy">
-                  <span className={`dot ${connected ? 'green pulse' : 'red'}`} />
-                  <span>{connected ? 'Nexus connected' : 'Reconnecting to Nexus'}</span>
+            <div className="side-foot">
+              <div style={{ color: connected ? 'var(--success)' : 'var(--danger)' }}>
+                {connected ? '● nexus connected' : '○ nexus offline'}
+              </div>
+              <div>events · {events.length}</div>
+              <div>{theme === 'dark' ? (
+                <button
+                  style={{ background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', padding: 0, fontSize: 10, fontFamily: 'var(--mono)' }}
+                  onClick={onToggleTheme}
+                >
+                  ☀ light mode
+                </button>
+              ) : (
+                <button
+                  style={{ background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', padding: 0, fontSize: 10, fontFamily: 'var(--mono)' }}
+                  onClick={onToggleTheme}
+                >
+                  ● dark mode
+                </button>
+              )}</div>
+            </div>
+          </aside>
+
+          {/* Content */}
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', position: 'relative' }}>
+            {desktopShell && (
+              <div className="shell-window-topbar">
+                <div className="shell-window-controls" aria-hidden>
+                  <span /><span /><span />
                 </div>
-                <Badge color={connected ? 'green' : 'red'}>{connected ? 'live' : 'offline'}</Badge>
+                <div className="shell-window-title">ClawOS Command Center</div>
+                <div className="shell-window-action-spacer" />
               </div>
-              {servicePreview.map(([name, item]) => {
-                const status = item?.status === 'up' || item?.status === 'running' ? 'green' : item?.status === 'degraded' ? 'orange' : 'red'
-                return (
-                  <div key={name} className="shell-health-row">
-                    <div className="shell-health-copy">
-                      <span className={`dot ${status}`} />
-                      <span style={{ textTransform: 'capitalize' }}>{name}</span>
-                    </div>
-                    <span className="ts">{item?.latency_ms ? `${item.latency_ms}ms` : 'idle'}</span>
-                  </div>
-                )
-              })}
-              <div className="shell-health-stats">
-                <span>{upCount}/{serviceList.length || 0} healthy</span>
-                <span>{events.length} events</span>
-              </div>
+            )}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              {children}
             </div>
           </div>
-        </aside>
-
-        <section className={`shell-window${desktopShell ? ' desktop' : ''}${isJarvisRoute ? ' jarvis-route' : ''}`}>
-          {desktopShell ? (
-            <div className="shell-window-topbar">
-              <div className="shell-window-controls" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="shell-window-title">ClawOS Command Center / {activeItem.label}</div>
-              <div className="shell-window-action-spacer" />
-            </div>
-          ) : null}
-
-          <div className={`shell-window-body${isJarvisRoute ? ' shell-window-body-immersive' : ''}`}>
-            <div className={`shell-main${isJarvisRoute ? ' shell-main-immersive' : ''}`}>
-              <header className="shell-header">
-                <div>
-                  <div className="section-label">Now Viewing</div>
-                  <div className="shell-header-title">{activeItem.label}</div>
-                  <div className="shell-header-description">{activeItem.description}</div>
-                </div>
-                <div className="shell-header-meta">
-                  <div className="shell-status-chip">
-                    <span className={`dot ${connected ? 'green pulse' : 'red'}`} />
-                    <span>{connected ? 'Connected' : 'Offline'}</span>
-                  </div>
-                  <div className="shell-status-chip">
-                    <span className={`dot ${voiceDot}`} />
-                    <span>{voiceState}</span>
-                  </div>
-                  <Badge color="blue">{serviceList.length || 0} services</Badge>
-                  <Badge color={approvals.length ? 'orange' : 'green'}>
-                    {approvals.length ? `${approvals.length} approvals` : 'No blockers'}
-                  </Badge>
-                  <button type="button" className="btn sm" onClick={() => void runPushToTalk()} disabled={voiceBusy || !voiceEnabled}>
-                    {voiceBusy ? 'Listening...' : voiceEnabled ? 'Talk now' : 'Voice off'}
-                  </button>
-                  <button type="button" className="btn sm" onClick={onToggleTheme}>
-                    {theme === 'dark' ? 'Light' : 'Dark'}
-                  </button>
-                  <button type="button" className="btn sm" onClick={() => setCommandOpen(true)}>
-                    Shortcuts
-                  </button>
-                  {voiceMessage ? <span className="mono" style={{ color: 'var(--text-3)', fontSize: 11 }}>{voiceMessage}</span> : null}
-                  <div className="shell-shortcut-hint">
-                    <ShortcutKey>?</ShortcutKey>
-                    <span>show shortcuts</span>
-                  </div>
-                </div>
-              </header>
-
-              <div className={`shell-content${isJarvisRoute ? ' shell-content-immersive' : ''}`}>{children}</div>
-            </div>
-
-            {!isJarvisRoute && inspector ? <aside className="shell-inspector">{inspector}</aside> : null}
-          </div>
-        </section>
+        </div>
       </div>
 
-      {commandOpen ? (
+      {/* Command palette */}
+      {commandOpen && (
         <div className="command-overlay" role="presentation" onClick={() => setCommandOpen(false)}>
-          <div className="command-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="command-modal-header">
-              <div>
-                <div className="section-label">Quick Actions</div>
-                <div className="panel-title">Jump anywhere in ClawOS</div>
-                <div className="panel-description">
-                  Use <ShortcutKey>Ctrl</ShortcutKey> <ShortcutKey>K</ShortcutKey> any time, or press <ShortcutKey>Esc</ShortcutKey> to close this palette.
-                </div>
+          <div
+            className="command-modal"
+            role="dialog"
+            aria-modal
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--panel-strong)',
+              backdropFilter: 'blur(20px) saturate(140%)',
+              border: '1px solid var(--panel-br-strong)',
+              borderRadius: 16,
+              padding: 20,
+              display: 'grid',
+              gap: 12,
+              width: 'min(680px, calc(100vw - 32px))',
+              maxHeight: 'min(80vh, 640px)',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+            }}
+          >
+            <div>
+              <div className="eyebrow">Command Center</div>
+              <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 6 }}>
+                Jump anywhere in clawOS
               </div>
             </div>
 
-            <input
-              autoFocus
-              type="text"
-              className="command-modal-input"
-              value={commandQuery}
-              onChange={(event) => setCommandQuery(event.target.value)}
-              placeholder="Search pages, surfaces, and tools"
-            />
+            <div className="search" style={{ marginBottom: 0 }}>
+              <span className="sym">⌕</span>
+              <input
+                autoFocus
+                placeholder="Search pages, surfaces, and tools…"
+                value={commandQuery}
+                onChange={(e) => setCommandQuery(e.target.value)}
+              />
+            </div>
 
-            <div className="command-results">
+            <div style={{ display: 'grid', gap: 6, overflowY: 'auto', maxHeight: 360 }}>
               {commandResults.map((item) => (
                 <button
                   key={item.to}
                   type="button"
-                  className="command-result"
-                  onClick={() => {
-                    navigate(item.to)
-                    setCommandOpen(false)
+                  onClick={() => { navigate(item.to); setCommandOpen(false) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 12px', borderRadius: 10,
+                    border: '1px solid var(--panel-br)',
+                    background: 'rgba(255,255,255,0.02)',
+                    color: 'var(--ink-1)', cursor: 'pointer',
+                    textAlign: 'left', transition: 'all 0.12s',
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--accent-faint)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
                 >
-                  <span className="command-result-icon">{item.icon}</span>
-                  <span className="command-result-copy">
-                    <span className="command-result-title">{item.label}</span>
-                    <span className="command-result-description">{item.section} / {item.description}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--ink-3)', width: 20, textAlign: 'center' }}>
+                    {item.icon as any}
+                  </span>
+                  <span style={{ flex: 1, display: 'grid', gap: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{item.label}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--mono)' }}>
+                      {item.section} / {item.description}
+                    </span>
                   </span>
                 </button>
               ))}
-              {commandResults.length === 0 ? (
-                <div className="command-empty">
-                  <div className="empty-title">No results yet</div>
-                  <div className="empty-body">Try a route name like "workflows", "research", or "settings".</div>
+              {commandResults.length === 0 && (
+                <div className="empty" style={{ minHeight: 80 }}>
+                  <div className="empty-title">No results</div>
+                  <div className="empty-body">Try "workflows", "memory", or "settings".</div>
                 </div>
-              ) : null}
+              )}
             </div>
 
-            <div className="command-shortcuts">
-              <div className="command-shortcuts-row">
-                <span>Open command palette</span>
-                <span><ShortcutKey>Ctrl</ShortcutKey> <ShortcutKey>K</ShortcutKey></span>
-              </div>
-              <div className="command-shortcuts-row">
-                <span>Open shortcuts help</span>
-                <span><ShortcutKey>?</ShortcutKey></span>
-              </div>
-              <div className="command-shortcuts-row">
-                <span>Push to talk</span>
-                <span><ShortcutKey>Ctrl</ShortcutKey> <ShortcutKey>Shift</ShortcutKey> <ShortcutKey>Space</ShortcutKey></span>
-              </div>
-              <div className="command-shortcuts-row">
-                <span>Close palette</span>
-                <span><ShortcutKey>Esc</ShortcutKey></span>
-              </div>
+            <div style={{ display: 'flex', gap: 16, borderTop: '1px solid var(--panel-br)', paddingTop: 10, fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--mono)' }}>
+              <span><ShortcutKey>Ctrl K</ShortcutKey> open</span>
+              <span><ShortcutKey>Esc</ShortcutKey> close</span>
+              <span><ShortcutKey>Ctrl ⇧ Space</ShortcutKey> talk</span>
+              {voiceMessage && <span style={{ marginLeft: 'auto', color: 'var(--accent-text)' }}>{voiceMessage}</span>}
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </>
   )
 }

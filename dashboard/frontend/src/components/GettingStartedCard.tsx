@@ -56,9 +56,9 @@ const ITEMS: StartItem[] = [
     id: 'phone',
     icon: '📱',
     title: 'Pair your phone (optional)',
-    body: 'Scan a QR to bridge WhatsApp so Jarvis can handle messages on your behalf.',
+    body: 'Connect your calendar, email, or messaging apps so Jarvis can handle tasks on your behalf.',
     action: {
-      label: 'Pair WhatsApp',
+      label: 'Connect integrations',
       onClick: (nav) => nav('/settings'),
     },
   },

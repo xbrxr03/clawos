@@ -30,6 +30,7 @@ const BrainPage = lazy(() => import('./pages/Brain').then((mod) => ({ default: m
 const MemoryPage = lazy(() => import('./pages/Memory').then((mod) => ({ default: mod.MemoryPage })))
 const SkillsPage = lazy(() => import('./pages/Skills').then((mod) => ({ default: mod.SkillsPage })))
 const LicensePage = lazy(() => import('./pages/License').then((mod) => ({ default: mod.LicensePage })))
+const MorningBriefingPage = lazy(() => import('./pages/MorningBriefing').then((mod) => ({ default: mod.MorningBriefingPage })))
 const SetupScreen = lazy(() => import('./pages/setup/SetupPage').then((mod) => ({ default: mod.SetupPage })))
 
 const SETUP_STORAGE_KEYS = [
@@ -177,6 +178,7 @@ function ShellRoutes({
         <Route path="/studio" element={<StudioPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/brain" element={<BrainPage />} />
+        <Route path="/briefing" element={<MorningBriefingPage />} />
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/license" element={<LicensePage />} />
       </Routes>

@@ -141,10 +141,13 @@ def test_dashd_exposes_competitive_surface(monkeypatch):
     monkeypatch.setattr("services.dashd.api.record_trace", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("services.a2ad.discovery.get_local_ip", lambda: "127.0.0.1")
     monkeypatch.setattr("services.a2ad.discovery.get_peers", lambda: [{"name": "Peer A", "url": "http://127.0.0.1:7083/a2a"}])
-    async def _delegate_to_peer(peer_url, intent, workspace):
-        return "delegated-result"
 
-    monkeypatch.setattr("services.gatewayd.service.delegate_to_peer", _delegate_to_peer)
+    import contextlib, json as _json
+    class _FakeResp:
+        def read(self): return _json.dumps("delegated-result").encode()
+        def __enter__(self): return self
+        def __exit__(self, *_): pass
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_a, **_kw: _FakeResp())
 
     app = create_app(
         {

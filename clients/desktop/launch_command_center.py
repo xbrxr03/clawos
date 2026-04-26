@@ -23,8 +23,8 @@ from services.dashd.api import load_dashboard_settings
 
 def _canonical_local_host(host: str) -> str:
     value = (host or "").strip().lower()
-    if value in {"127.0.0.1", "0.0.0.0", "::1", "localhost", ""}:
-        return "localhost"
+    if value in {"0.0.0.0", "::1", "localhost", ""}:
+        return "127.0.0.1"
     return host
 
 

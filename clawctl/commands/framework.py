@@ -95,7 +95,7 @@ def run_use(name: str) -> None:
     result = set_active_framework(name)
     if result["ok"]:
         print(f"✓ Active framework set to: {result['active']}")
-        print("  All inbound messages (voice, WhatsApp, dashboard) will route through it.")
+        print("  All inbound messages (voice, chat, dashboard) will route through it.")
     else:
         print(f"✗ {result.get('error', 'Failed')}", file=sys.stderr)
         sys.exit(1)

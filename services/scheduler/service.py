@@ -159,26 +159,22 @@ async def _run_ambient_checks() -> None:
 
 
 async def _maybe_send_morning_briefing(now: datetime) -> None:
-    """
-    Send morning briefing to WhatsApp if:
-    - The current hour matches the configured briefing_hour (default 7)
-    - The briefing has not been sent today already
-    """
+    """Trigger JARVIS morning briefing at the configured hour (default 7am)."""
     try:
         briefing_hour = int(os.environ.get("CLAWOS_BRIEFING_HOUR", "7"))
         if now.hour != briefing_hour:
             return
 
-        # Check if already sent today
         from clawos_core.constants import CLAWOS_DIR
         marker = CLAWOS_DIR / "state" / "briefing_sent_today.txt"
         today = now.strftime("%Y-%m-%d")
         if marker.exists() and marker.read_text().strip() == today:
             return
 
-        from services.gatewayd.service import get_service
-        gw = get_service()
-        await gw.send_morning_briefing()
+        from services.jarvisd.service import get_service as get_jarvis
+        await get_jarvis().speak_morning_briefing()
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(today)
     except Exception as e:
         log.debug(f"Morning briefing check skipped: {e}")
 

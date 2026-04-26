@@ -30,8 +30,6 @@ dependencies = [
     "networkx>=3.2",
     "pdfplumber>=0.10",
     "python-docx>=1.1",
-    "ptyprocess>=0.7; platform_system != 'Windows'",
-    "pywinpty>=2.0; platform_system == 'Windows'",
 ]
 
 [project.optional-dependencies]

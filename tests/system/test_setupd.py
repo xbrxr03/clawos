@@ -68,11 +68,15 @@ def test_setupd_plan_apply_repair_and_diagnostics(monkeypatch):
     monkeypatch.setattr(setup_service.SetupState, "load", classmethod(lambda cls: seed_state))
     monkeypatch.setattr(setup_service.SetupState, "save", lambda self, path=None: None)
     monkeypatch.setattr("bootstrap.bootstrap.run", lambda **_: {"ok": True})
+    monkeypatch.setattr("bootstrap.model_provision.ensure_model", lambda model, show=True, progress_callback=None: True)
     monkeypatch.setattr(setup_service, "start_service", lambda _name: (True, "started"))
     monkeypatch.setattr(setup_service, "autostart_supported", lambda: True)
     monkeypatch.setattr(setup_service, "enable_launch_on_login", lambda: Path("/tmp/clawos-command-center.desktop"))
     monkeypatch.setattr(setup_service, "record_trace", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(setup_service, "sync_presence_from_setup", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(setup_service, "install_picoclaw", lambda: (True, "picoclaw ready (mock)"))
+    monkeypatch.setattr(setup_service, "install_openclaw", lambda: (True, "openclaw ready (mock)"))
+    monkeypatch.setattr(setup_service, "install_openclaude", lambda: (True, "openclaude ready (mock)"))
 
     setup_service._SERVICE = None
     app = setup_service.create_app()
@@ -151,11 +155,10 @@ def test_setupd_options_and_model_preparation(monkeypatch):
         options = client.post(
             "/api/setup/options",
             headers=SETUP_HEADERS,
-            json={"selected_models": ["qwen2.5-coder:7b"], "whatsapp_enabled": True, "launch_on_login": False},
+            json={"selected_models": ["qwen2.5-coder:7b"], "launch_on_login": False},
         )
         assert options.status_code == 200
         assert options.json()["selected_models"] == ["qwen2.5-coder:7b"]
-        assert options.json()["whatsapp_enabled"] is True
         assert options.json()["launch_on_login"] is False
 
         prepare = client.post("/api/setup/model", headers=SETUP_HEADERS, json={"model": "qwen2.5-coder:7b"})

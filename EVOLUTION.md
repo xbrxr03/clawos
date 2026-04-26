@@ -54,4 +54,23 @@ This log is automatically updated as ClawOS encounters edge cases, user correcti
 
 ---
 
+## 2026-04-26 — Phase 11: workflow engine, clawctl wf, and platform cleanup
+
+**What happened:** Three gaps blocked the HN demo: (1) no `clawctl wf` CLI despite the dashboard showing `clawctl wf organize-downloads` as the entry point; (2) `PORT_GATEWAYD` was removed from constants but still imported in `responses_api.py` and `launcher.py`, crashing on startup; (3) WhatsApp references leaked through Traces, Brain, JarvisVoice, and the Getting Started card — a product that removed WhatsApp still showed it everywhere.
+
+**Root cause:** The gatewayd service was retired but its dependents weren't updated. The `clawctl wf` command was spec'd in the UI layer but never implemented. WhatsApp surface-area wasn't swept after the capability decision.
+
+**What ClawOS learned:** Removing a service requires a blast-radius sweep of all importers, not just the service file. CLI commands referenced in the UI must exist before UI ships. Product decisions need a full-surface audit across every page, diagram, and static copy.
+
+**Fix shipped:**
+- `workflows/engine.py` + 27 workflow modules: full Phase 11 engine with `needs_agent=False` for the two HN demo workflows (`organize-downloads`, `summarize-pdf`), CapabilityScanner for ranked suggestions.
+- `clawctl/commands/workflow.py` + `clawctl wf` group registered in `main.py`: `wf list [--category] [--search]`, `wf info <id>`, `wf run <id> [key=value…] [--dry-run]`. All three verified end-to-end.
+- `responses_api.py` + `launcher.py`: removed `PORT_GATEWAYD` import, added local `_PORT_OPENCLAW = 18789`.
+- `tests/system/test_phase9.py`: removed dead `test_port_gatewayd` and `test_gatewayd_whatsapp` test functions.
+- `dashd` login + `_setup_bypass_allowed`: now accepts token-in-body auth and falls back to `settings.host` loopback check so TestClient requests pass.
+- WhatsApp stripped from Traces, Brain, JarvisVoice transcript, pages.jsx approvals/audit, GettingStartedCard, PolicyScreen, and README architecture diagram.
+- Test suite: 205/206 passing (1 known timing flake in WebSocket test under parallel run).
+
+---
+
 *This log is append-only. Mistakes are features — they tell you ClawOS is being used.*

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 import { type Key, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Badge, Card, PageHeader, PanelHeader } from '../components/ui.jsx'
-import { commandCenterApi, type DashboardHealth, type DesktopPosture, type GatewayHealth, type JarvisConfig, type JarvisHealth } from '../lib/commandCenterApi'
+import { commandCenterApi, type DashboardHealth, type DesktopPosture, type JarvisConfig, type JarvisHealth } from '../lib/commandCenterApi'
 import { desktopBridge } from '../desktop/bridge'
 
 const JARVIS_VOICE_ID = 'nPczCjzI2devNBz1zQrb' // Brian — deep, cinematic
@@ -18,7 +18,6 @@ const PATH_LABELS: Record<PathKind, string> = {
 export function SettingsPage() {
   const [health, setHealth] = useState<DashboardHealth | null>(null)
   const [posture, setPosture] = useState<DesktopPosture | null>(null)
-  const [gateway, setGateway] = useState<GatewayHealth | null>(null)
   const [jarvisHealth, setJarvisHealth] = useState<JarvisHealth | null>(null)
   const [jarvisConfig, setJarvisConfig] = useState<JarvisConfig | null>(null)
   const [bundlePath, setBundlePath] = useState('')
@@ -29,26 +28,23 @@ export function SettingsPage() {
   useEffect(() => {
     commandCenterApi.getHealth().then(setHealth).catch(() => null)
     commandCenterApi.getDesktopPosture().then(setPosture).catch(() => null)
-    commandCenterApi.getGatewayHealth().then(setGateway).catch(() => null)
     commandCenterApi.getJarvisHealth().then(setJarvisHealth).catch(() => null)
     commandCenterApi.getJarvisConfig().then(setJarvisConfig).catch(() => null)
     desktopBridge.isDesktopShell().then(setShellMode).catch(() => setShellMode(false))
     const id = window.setInterval(() => {
-      commandCenterApi.getGatewayHealth().then(setGateway).catch(() => null)
       commandCenterApi.getJarvisHealth().then(setJarvisHealth).catch(() => null)
       commandCenterApi.getJarvisConfig().then(setJarvisConfig).catch(() => null)
     }, 15000)
     return () => window.clearInterval(id)
   }, [])
 
-  const runtimeRows = useMemo<[string, string][]>(() => [
-    ['Dashboard host', String(health?.host ?? '127.0.0.1')],
-    ['Dashboard port', String(health?.port ?? 7070)],
-    ['Local only', health?.local_only ? 'Yes' : 'No'],
-    ['Auth required', health?.auth_required ? 'Yes' : 'No'],
-    ['Desktop shell', shellMode ? 'Connected' : 'Browser mode'],
-    ['Launch on login', posture?.launch_on_login_enabled ? 'Enabled' : 'Disabled'],
-    ['Autostart mode', String(posture?.autostart_kind ?? 'unknown')],
+  const runtimeRows = useMemo<[string, string, string][]>(() => [
+    ['Host', String(health?.host ?? '127.0.0.1'), 'Loopback address serving the dashboard'],
+    ['Port', String(health?.port ?? 7070), 'API + frontend traffic'],
+    ['Auth', health?.auth_required ? 'Required' : 'Open', 'Session gate before any action runs'],
+    ['Local only', health?.local_only ? 'Yes' : 'No', 'Restricted to loopback trust boundary'],
+    ['Shell mode', shellMode ? 'Desktop' : 'Browser', 'Native bridge availability'],
+    ['Autostart', String(posture?.autostart_kind ?? 'unknown'), 'Platform startup mechanism'],
   ], [health, posture, shellMode])
 
   const createBundle = async () => {
@@ -125,67 +121,47 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="fade-up" style={{ padding: '0 0 48px' }}>
+    <div className="fade-up" style={{ padding: '0 0 48px', overflowY: 'auto', flex: 1, height: '100%' }}>
       <div style={{ padding: '24px 20px 16px' }}>
         <PageHeader
           eyebrow="Settings"
-          title="Desktop posture, grouped like a native settings app."
-          description="Runtime controls, startup behavior, support tooling, and phone-bridge posture are collected into compact grouped sections with immediate feedback."
+          title="System settings"
+          description="Runtime, voice, integrations, and startup controls."
           meta={
             <>
               <Badge color={health?.auth_required ? 'green' : 'orange'}>{health?.auth_required ? 'Auth required' : 'Auth open'}</Badge>
               <Badge color={shellMode ? 'blue' : 'gray'}>{shellMode ? 'Desktop shell' : 'Browser mode'}</Badge>
-              <Badge color={gateway?.whatsapp === 'linked' ? 'green' : gateway?.whatsapp === 'not linked' ? 'gray' : 'orange'}>
-                {gateway?.whatsapp || 'WhatsApp unknown'}
-              </Badge>
             </>
           }
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.12fr 0.88fr', gap: 16, padding: '0 20px' }}>
-        <div style={{ display: 'grid', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '0 20px' }}>
+        <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
           <Card style={{ padding: 18 }}>
             <PanelHeader
-              eyebrow="Runtime Profile"
-              title="Current dashboard posture"
-              description="The live host, auth, shell, and startup state for this command center instance."
+              eyebrow="Runtime"
+              title="Dashboard posture"
+              description="Live host, auth, shell, and startup state."
             />
             <div className="setting-group">
-              {runtimeRows.map(([label, value]) => (
-                <SettingRow
-                  key={label}
-                  label={label}
-                  description={runtimeDescription(label)}
-                  value={String(value)}
-                />
+              {runtimeRows.map(([label, value, description]) => (
+                <SettingRow key={label} label={label} description={description} value={value} />
               ))}
             </div>
           </Card>
 
           <Card style={{ padding: 18 }}>
             <PanelHeader
-              eyebrow="Runtime Control"
-              title="Desktop-managed service actions"
-              description="Native lifecycle controls appear automatically when Command Center is running inside the desktop shell."
+              eyebrow="Services"
+              title="Lifecycle controls"
+              description="Start, restart, or stop the managed stack. Only available in desktop shell mode."
               aside={<Badge color={shellMode ? 'green' : 'gray'}>{shellMode ? 'available' : 'desktop only'}</Badge>}
             />
             <div className="setting-group">
-              <SettingActionRow
-                label="Start services"
-                description="Bring the desktop-managed stack online."
-                action={<button className="btn sm" onClick={() => runServiceAction('start')} disabled={!shellMode || busy !== null}>Start</button>}
-              />
-              <SettingActionRow
-                label="Restart services"
-                description="Restart the managed services without leaving the dashboard."
-                action={<button className="btn sm" onClick={() => runServiceAction('restart')} disabled={!shellMode || busy !== null}>Restart</button>}
-              />
-              <SettingActionRow
-                label="Stop services"
-                description="Stop the stack from the desktop shell when native controls are available."
-                action={<button className="btn danger sm" onClick={() => runServiceAction('stop')} disabled={!shellMode || busy !== null}>Stop</button>}
-              />
+              <SettingActionRow label="Start" description="Bring the stack online." action={<button className="btn sm" onClick={() => runServiceAction('start')} disabled={!shellMode || busy !== null}>Start</button>} />
+              <SettingActionRow label="Restart" description="Restart without leaving the dashboard." action={<button className="btn sm" onClick={() => runServiceAction('restart')} disabled={!shellMode || busy !== null}>Restart</button>} />
+              <SettingActionRow label="Stop" description="Shut down the managed stack." action={<button className="btn danger sm" onClick={() => runServiceAction('stop')} disabled={!shellMode || busy !== null}>Stop</button>} />
             </div>
           </Card>
 
@@ -198,87 +174,41 @@ export function SettingsPage() {
             <PanelHeader
               eyebrow="Startup"
               title="Launch on login"
-              description="Use the platform-native startup mechanism for Linux, macOS, and the desktop image."
+              description="Start ClawOS automatically when you sign in."
               aside={<Badge color={posture?.launch_on_login_enabled ? 'green' : 'gray'}>{posture?.launch_on_login_enabled ? 'enabled' : 'disabled'}</Badge>}
             />
             <div className="setting-group">
-              <SettingRow
-                label="Autostart behavior"
-                description="Writes or removes the platform-native startup file for this machine."
-                value={posture?.autostart_kind ?? 'unknown'}
-              />
+              <SettingRow label="Mechanism" description="Platform startup method." value={posture?.autostart_kind ?? 'unknown'} />
               <div className="setting-row">
                 <div className="setting-row-copy">
                   <div className="setting-row-title">Launch on login</div>
-                  <div className="setting-row-description">Toggle whether ClawOS should be ready as soon as you sign in.</div>
+                  <div className="setting-row-description">Start ClawOS as soon as you sign in.</div>
                 </div>
-                <button
-                  className="btn"
-                  onClick={toggleLaunchOnLogin}
-                  disabled={busy !== null || !posture?.launch_on_login_supported}
-                  style={{ minWidth: 92 }}
-                >
+                <button className="btn" onClick={toggleLaunchOnLogin} disabled={busy !== null || !posture?.launch_on_login_supported} style={{ minWidth: 72 }}>
                   <span className={`toggle${posture?.launch_on_login_enabled ? ' active' : ''}`} aria-hidden="true" />
                   <span>{posture?.launch_on_login_enabled ? 'On' : 'Off'}</span>
                 </button>
               </div>
               {posture?.launch_on_login_path ? (
-                <SettingRow
-                  label="Autostart file"
-                  description="The current platform-native file that controls startup behavior."
-                  value={posture.launch_on_login_path}
-                />
+                <SettingRow label="Autostart file" description="Platform startup file." value={posture.launch_on_login_path} />
               ) : null}
             </div>
           </Card>
         </div>
 
-        <div style={{ display: 'grid', gap: 16 }}>
-          <Card style={{ padding: 18 }}>
-            <PanelHeader
-              eyebrow="Phone Bridge"
-              title="WhatsApp connection posture"
-              description="Connection state, routing posture, and the last observed activity for the personal command-center bridge."
-              aside={<Badge color={gateway?.whatsapp === 'linked' ? 'green' : gateway?.whatsapp === 'not linked' ? 'gray' : 'orange'}>{gateway?.whatsapp || 'unknown'}</Badge>}
-            />
-            <div className="setting-group">
-              <SettingRow label="Linked phone" description="The currently paired WhatsApp number for gatewayd." value={gateway?.linked_phone || 'Not linked'} />
-              <SettingRow label="Routes" description="How many JID-to-workspace mappings are currently remembered." value={String(gateway?.routes_count ?? 0)} />
-              <SettingRow label="Approval queue" description="Pending approvals that can be decided by replying yes or no from the paired phone." value={String(gateway?.approval_queue ?? 0)} />
-              <SettingRow label="Last route" description="Most recent workspace selected for an inbound WhatsApp message." value={gateway?.last_workspace || 'No inbound traffic yet'} />
-              <SettingRow label="Last activity" description="Latest observed WhatsApp message or bridge-side event." value={gateway?.last_message_at || gateway?.last_ready_at || 'Waiting for activity'} />
-            </div>
-            {gateway?.last_preview ? (
-              <div className="log-terminal" style={{ marginTop: 12 }}>
-                Last preview: {gateway.last_preview}
-              </div>
-            ) : null}
-            {gateway?.last_disconnect_reason ? (
-              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--orange)' }}>
-                Last disconnect reason: {gateway.last_disconnect_reason}
-              </div>
-            ) : null}
-          </Card>
-
+        <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
           <Card style={{ padding: 18 }}>
             <PanelHeader
               eyebrow="Support"
-              title="Bundles and release channels"
-              description="Quick access to the support-bundle flow and the current packaging targets."
+              title="Diagnostics"
+              description="Export logs and service state for debugging."
             />
             <div className="setting-group">
-              <SettingRow label="ISO" description="Bootable desktop image target." value="clawos-x.y.z-amd64.iso" />
-              <SettingRow label="Linux desktop" description="Debian package target for desktop installs." value="clawos-command-center_x.y.z_amd64.deb" />
-              <SettingRow label="macOS desktop" description="Desktop bundle target for Apple Silicon." value="ClawOS-Command-Center-x.y.z.dmg" />
-              <SettingActionRow
-                label="Support bundle"
-                description="Create a diagnostics bundle from the desktop shell or dashboard API."
-                action={<button className="btn primary sm" onClick={createBundle} disabled={busy !== null}>Create</button>}
-              />
+              <SettingActionRow label="Support bundle" description="Creates a zip of logs, config, and service health you can share when something breaks." action={<button className="btn primary sm" onClick={createBundle} disabled={busy !== null}>Create</button>} />
             </div>
             {bundlePath ? (
-              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-2)' }}>
-                Bundle: <span className="mono">{bundlePath}</span>
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--ink-3)' }}>
+                Bundle: <span style={{ fontFamily: 'var(--mono)' }}>{bundlePath}</span>
               </div>
             ) : null}
           </Card>
@@ -286,8 +216,8 @@ export function SettingsPage() {
           <Card style={{ padding: 18 }}>
             <PanelHeader
               eyebrow="Paths"
-              title="Open known directories"
-              description="Jump directly to the logs, config, workspace, or support folders that matter during debugging."
+              title="Open directories"
+              description="Jump to logs, config, workspace, or support folders."
             />
             <div className="setting-group">
               {(Object.keys(PATH_LABELS) as PathKind[]).map((kind) => (
@@ -314,19 +244,6 @@ export function SettingsPage() {
   )
 }
 
-function runtimeDescription(label: string) {
-  const descriptions: Record<string, string> = {
-    'Dashboard host': 'The loopback or desktop-shell endpoint that serves the dashboard.',
-    'Dashboard port': 'The port the frontend is expected to reach for health and API traffic.',
-    'Local only': 'Whether the dashboard is restricted to the local machine or loopback trust boundary.',
-    'Auth required': 'Whether the dashboard is protected by a session or bearer gate before actions run.',
-    'Desktop shell': 'Shows whether native bridge features like path opening and service control are available.',
-    'Launch on login': 'Reflects the persisted desktop posture rather than the current login session.',
-    'Autostart mode': 'The platform-specific startup mechanism in use for this device.',
-  }
-
-  return descriptions[label] || 'Current runtime setting.'
-}
 
 function JarvisVoiceCard({ health, config }: { health: JarvisHealth | null; config: JarvisConfig | null }) {
   const activeProvider = health?.provider_status?.active || config?.tts_provider_preference || 'piper'
@@ -338,41 +255,17 @@ function JarvisVoiceCard({ health, config }: { health: JarvisHealth | null; conf
   return (
     <Card style={{ padding: 18 }}>
       <PanelHeader
-        eyebrow="JARVIS Voice"
-        title="Voice settings now live in the JARVIS chamber"
-        description="JARVIS now owns OpenClaw routing, cinematic voice, and briefing posture. Manage provider selection, wake phrase, transcripts, and live voice state from the dedicated room."
-        aside={
-          <Badge color={health?.openclaw_running ? 'green' : 'orange'}>
-            {health?.openclaw_running ? 'OpenClaw live' : 'OpenClaw unavailable'}
-          </Badge>
-        }
+        eyebrow="Jarvis"
+        title="Voice &amp; routing"
+        description="Provider, mode, and briefing source status."
+        aside={<Badge color={health?.openclaw_running ? 'green' : 'orange'}>{health?.openclaw_running ? 'OpenClaw live' : 'OpenClaw offline'}</Badge>}
       />
       <div className="setting-group">
-        <SettingRow
-          label="Brain routing"
-          description="JARVIS is separate from Nexus and routes through the shared OpenClaw main agent."
-          value={health?.openclaw_running ? 'OpenClaw main agent' : 'Waiting for OpenClaw'}
-        />
-        <SettingRow
-          label="Voice provider"
-          description="ElevenLabs is primary for JARVIS, with Piper staying available as the fallback lane."
-          value={health?.provider_status?.fallback ? `${activeProvider} (fallback)` : activeProvider}
-        />
-        <SettingRow
-          label="Voice mode"
-          description="Typed and spoken turns share the same JARVIS UI thread and answer out loud unless voice is turned off."
-          value={voiceMode}
-        />
-        <SettingRow
-          label="Briefing sources"
-          description="Weather, headlines, calendar, tasks, and last-project context can mix live and demo sources in v1."
-          value={briefingSources.length ? `${liveCount} live / ${demoCount} demo` : 'Loading status'}
-        />
-        <SettingActionRow
-          label="JARVIS chamber"
-          description="Open the dedicated voice room to configure ElevenLabs, Piper fallback, wake phrase, and the live transcript cockpit."
-          action={<a className="btn primary sm" href="/jarvis">Open JARVIS</a>}
-        />
+        <SettingRow label="Routing" description="Brain agent." value={health?.openclaw_running ? 'OpenClaw' : 'Waiting'} />
+        <SettingRow label="TTS provider" description="Active voice engine." value={health?.provider_status?.fallback ? `${activeProvider} (fallback)` : activeProvider} />
+        <SettingRow label="Voice mode" description="Input method." value={voiceMode} />
+        <SettingRow label="Briefing sources" description="Live vs demo data." value={briefingSources.length ? `${liveCount} live / ${demoCount} demo` : 'loading'} />
+        <SettingActionRow label="Open Jarvis" description="Configure voice, wake phrase, and transcript cockpit." action={<a className="btn primary sm" href="/jarvis">Open →</a>} />
       </div>
     </Card>
   )
@@ -413,8 +306,8 @@ function ElevenLabsCard() {
     <Card style={{ padding: 18 }}>
       <PanelHeader
         eyebrow="Voice"
-        title="ElevenLabs JARVIS voice"
-        description="Upgrade from Piper (offline) to a cinematic JARVIS voice. Paste your ElevenLabs API key — ClawOS wires the rest."
+        title="ElevenLabs TTS"
+        description="Upgrade from Piper to ElevenLabs. Paste your API key — ClawOS wires the rest."
         aside={
           <Badge color={status?.enabled ? 'green' : 'gray'}>
             {status?.enabled ? 'ElevenLabs ✓' : 'Piper (free)'}
@@ -435,8 +328,8 @@ function ElevenLabsCard() {
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
             style={{
-              width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 6, padding: '8px 12px', color: 'var(--text)', fontSize: 13,
+              width: '100%', background: 'var(--panel)', border: '1px solid var(--panel-br)',
+              borderRadius: 6, padding: '8px 12px', color: 'var(--ink-1)', fontSize: 13,
             }}
           />
         </div>
@@ -450,8 +343,8 @@ function ElevenLabsCard() {
             value={voiceId}
             onChange={e => setVoiceId(e.target.value)}
             style={{
-              width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 6, padding: '8px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'monospace',
+              width: '100%', background: 'var(--panel)', border: '1px solid var(--panel-br)',
+              borderRadius: 6, padding: '8px 12px', color: 'var(--ink-1)', fontSize: 13, fontFamily: 'var(--mono)',
             }}
           />
         </div>
@@ -497,9 +390,9 @@ function CalendarCard({ config }: { config: JarvisConfig | null }) {
   return (
     <Card style={{ padding: 18 }}>
       <PanelHeader
-        eyebrow="JARVIS Briefing"
-        title="Google Calendar"
-        description="Connect your calendar so JARVIS reads your real schedule during morning briefings. No OAuth — just paste your secret ICS link."
+        eyebrow="Jarvis Briefing"
+        title="Calendar"
+        description="Paste your secret ICS link — no OAuth. Works with Google, Apple, Nextcloud, Outlook."
         aside={<Badge color={hasUrl ? 'green' : 'gray'}>{hasUrl ? 'Connected ✓' : 'Not connected (demo)'}</Badge>}
       />
       <div className="setting-group">
@@ -517,9 +410,9 @@ function CalendarCard({ config }: { config: JarvisConfig | null }) {
             value={icsUrl}
             onChange={e => setIcsUrl(e.target.value)}
             style={{
-              width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 6, padding: '8px 12px', color: 'var(--text)', fontSize: 12,
-              fontFamily: 'monospace',
+              width: '100%', background: 'var(--panel)', border: '1px solid var(--panel-br)',
+              borderRadius: 6, padding: '8px 12px', color: 'var(--ink-1)', fontSize: 12,
+              fontFamily: 'var(--mono)',
             }}
           />
         </div>
