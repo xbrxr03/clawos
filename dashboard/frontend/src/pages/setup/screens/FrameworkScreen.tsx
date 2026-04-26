@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { commandCenterApi, type FrameworkCatalogEntry } from '../../../lib/commandCenterApi'
 import { Choice, Footer, Readout } from '../atoms'
 import type { ScreenProps } from '../types'
+import { OpenClawOnboardModal } from './OpenClawOnboardModal'
 
 /** Map catalog names to a short glyph + marketing tag. Anything missing falls
  *  back to a neutral glyph — we never hardcode framework identity here, just
@@ -41,6 +42,7 @@ export function FrameworkScreen(props: ScreenProps) {
   const { state, onBack, onNext, stepIndex, totalSteps, updateOptions, busy } = props
   const [items, setItems] = useState<FrameworkCatalogEntry[] | null>(null)
   const [loadError, setLoadError] = useState('')
+  const [showOnboardModal, setShowOnboardModal] = useState(false)
 
   const profileId = state.detected_hardware?.profile_id || ''
   const selected = state.selected_framework || ''
@@ -169,7 +171,7 @@ export function FrameworkScreen(props: ScreenProps) {
               })}
         </div>
 
-        {selectedEntry ? (
+        {selectedEntry && selectedEntry.name !== 'openclaw' ? (
           <div className="note" style={{ marginTop: 22 }}>
             <span>↪</span>
             Installing{' '}
@@ -181,13 +183,53 @@ export function FrameworkScreen(props: ScreenProps) {
             </span>
           </div>
         ) : null}
+
+        {selectedEntry?.name === 'openclaw' ? (
+          <div className="note" style={{ marginTop: 22 }}>
+            <span>◉</span>
+            <strong style={{ marginLeft: 4 }}>OpenClaw</strong>
+            <span style={{ marginLeft: 8, color: 'var(--ink-3)' }}>
+              requires guided setup — click "Install &amp; Set Up" to continue
+            </span>
+            <button
+              onClick={() => setShowOnboardModal(true)}
+              style={{
+                marginLeft: 'auto',
+                background: 'var(--accent)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '5px 14px',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Install &amp; Set Up →
+            </button>
+          </div>
+        ) : null}
       </div>
+
+      {showOnboardModal && (
+        <OpenClawOnboardModal
+          ramGb={state.detected_hardware?.ram_gb as number | undefined}
+          selectedModel={state.selected_models?.[0] || undefined}
+          onDone={async () => {
+            setShowOnboardModal(false)
+            await updateOptions({ selected_framework: 'openclaw', openclaw_onboarded: true })
+            onNext()
+          }}
+          onDismiss={() => setShowOnboardModal(false)}
+        />
+      )}
+
       <Footer
         onBack={onBack}
         onNext={onNext}
         step={stepIndex + 1}
         total={totalSteps}
-        nextLabel={selected ? 'Continue' : 'Skip'}
+        nextLabel={selected && selected !== 'openclaw' ? 'Continue' : 'Skip'}
       />
     </>
   )

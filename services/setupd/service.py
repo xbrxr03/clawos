@@ -50,6 +50,46 @@ except ImportError:
     uvicorn = None
 
 
+def _write_systemd_unit(openclaw_bin: str, port: int) -> None:
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    unit_dir.mkdir(parents=True, exist_ok=True)
+    unit = unit_dir / "openclaw-gateway.service"
+    unit.write_text(
+        f"[Unit]\nDescription=OpenClaw Gateway\nAfter=network.target ollama.service\n\n"
+        f"[Service]\nType=simple\nExecStart={openclaw_bin} gateway --port {port}\n"
+        f"Restart=always\nRestartSec=5\nEnvironment=HOME={Path.home()}\n\n"
+        f"[Install]\nWantedBy=default.target\n",
+        encoding="utf-8",
+    )
+    import subprocess
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+    subprocess.run(["systemctl", "--user", "enable", "openclaw-gateway.service"], check=False)
+    subprocess.run(["systemctl", "--user", "restart", "openclaw-gateway.service"], check=False)
+
+
+def _write_launchd_plist(openclaw_bin: str, port: int) -> None:
+    plist_dir = Path.home() / "Library" / "LaunchAgents"
+    plist_dir.mkdir(parents=True, exist_ok=True)
+    plist = plist_dir / "io.clawos.openclaw-gateway.plist"
+    plist.write_text(
+        f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>io.clawos.openclaw-gateway</string>
+  <key>ProgramArguments</key><array>
+    <string>{openclaw_bin}</string><string>gateway</string>
+    <string>--port</string><string>{port}</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+""",
+        encoding="utf-8",
+    )
+    import subprocess
+    subprocess.run(["launchctl", "load", "-w", str(plist)], check=False)
+
+
 class SetupService:
     def __init__(self):
         self._state = SetupState.load()
@@ -1144,6 +1184,165 @@ def create_app() -> "FastAPI":
         except Exception:
             items = []
         return {"profile_id": profile_id, "frameworks": items}
+
+    # ── OpenClaw on-demand onboarding endpoints ───────────────────────────────
+
+    @app.post("/api/setup/openclaw/install")
+    async def openclaw_install(request: Request):
+        """Install OpenClaw via frameworkd. Streams milestones via WebSocket."""
+        _require_setup_access(request)
+        import asyncio
+        messages: list[str] = []
+
+        def _do_install():
+            from services.frameworkd.service import install_framework
+            return install_framework("openclaw")
+
+        result = await asyncio.to_thread(_do_install)
+        service.record_install_milestone({"id": "openclaw-install",
+                                          "label": result["message"],
+                                          "status": "done" if result["ok"] else "error"})
+        await service.broadcast()
+        return {"ok": result["ok"], "message": result["message"]}
+
+    @app.post("/api/setup/openclaw/configure")
+    async def openclaw_configure(request: Request):
+        """Write ~/.openclaw/openclaw.json with provider/model/workspace config."""
+        _require_setup_access(request)
+        import json as _json
+        body = await request.json()
+        provider = str(body.get("provider", "ollama_local"))
+        model = str(body.get("model", "kimi-k2.5"))
+        ollama_url = str(body.get("ollama_url", "http://127.0.0.1:11434"))
+        api_key = str(body.get("api_key", ""))
+        workspace_path = str(body.get("workspace_path", "")) or str(
+            Path.home() / ".openclaw" / "workspace"
+        )
+        channels = body.get("channels", {})
+
+        config_dir = Path.home() / ".openclaw"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        Path(workspace_path).mkdir(parents=True, exist_ok=True)
+
+        # Build provider section
+        if provider == "ollama_cloud":
+            provider_block = {
+                "ollama": {
+                    "baseUrl": "https://api.ollama.com",
+                    "apiKey": api_key,
+                    "models": [{"id": model, "name": model, "contextWindow": 262144}],
+                }
+            }
+        elif provider == "ollama_local":
+            provider_block = {
+                "ollama": {
+                    "baseUrl": ollama_url,
+                    "models": [{"id": model, "name": model, "contextWindow": 32768},
+                               {"id": "nomic-embed-text", "name": "nomic-embed-text", "contextWindow": 8192}],
+                }
+            }
+        else:
+            # anthropic / openai / openrouter
+            provider_block = {
+                provider: {"apiKey": api_key,
+                           "models": [{"id": model, "name": model, "contextWindow": 200000}]}
+            }
+
+        cfg: dict = {
+            "gateway": {"mode": "local", "port": int(body.get("port", 18789))},
+            "workspace": {"path": workspace_path},
+            "models": {"providers": provider_block},
+            "agents": {"defaults": {"model": {"primary": f"{list(provider_block.keys())[0]}/{model}"},
+                                    "memorySearch": {"enabled": False}}},
+        }
+        if channels:
+            cfg["channels"] = channels
+
+        config_path = config_dir / "openclaw.json"
+        config_path.write_text(_json.dumps(cfg, indent=2), encoding="utf-8")
+        config_path.chmod(0o600)
+        return {"ok": True, "config_path": str(config_path)}
+
+    @app.post("/api/setup/openclaw/start")
+    async def openclaw_start(request: Request):
+        """Start the OpenClaw gateway daemon."""
+        _require_setup_access(request)
+        import asyncio, shutil, subprocess, sys as _sys
+        body = await request.json()
+        port = int(body.get("port", 18789))
+        autostart = bool(body.get("autostart", True))
+
+        openclaw_bin = shutil.which("openclaw")
+        if not openclaw_bin:
+            return {"ok": False, "message": "openclaw binary not found — install first"}
+
+        def _start():
+            if _sys.platform == "darwin" and autostart:
+                _write_launchd_plist(openclaw_bin, port)
+            elif _sys.platform.startswith("linux") and autostart:
+                _write_systemd_unit(openclaw_bin, port)
+            # Start the gateway as a background process if not already running
+            import urllib.request as _ur
+            try:
+                _ur.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=2)
+                return True, f"Gateway already running on port {port}"
+            except Exception:
+                pass
+            subprocess.Popen(
+                [openclaw_bin, "gateway", "--port", str(port)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            return True, f"Gateway started on port {port}"
+
+        ok, msg = await asyncio.to_thread(_start)
+        return {"ok": ok, "message": msg, "port": port}
+
+    @app.get("/api/setup/openclaw/health")
+    async def openclaw_health(request: Request):
+        """Check if the OpenClaw gateway is responding on port 18789."""
+        _require_setup_access(request)
+        import urllib.request as _ur
+        port = int(request.query_params.get("port", 18789))
+        url = f"http://localhost:{port}"
+        try:
+            _ur.urlopen(f"{url}/healthz", timeout=3)
+            running = True
+        except Exception:
+            running = False
+        return {"running": running, "url": url, "port": port}
+
+    @app.post("/api/setup/openclaw/skills")
+    async def openclaw_skills(request: Request):
+        """Install recommended OpenClaw skills."""
+        _require_setup_access(request)
+        import asyncio, shutil, subprocess
+
+        openclaw_bin = shutil.which("openclaw")
+        if not openclaw_bin:
+            return {"ok": False, "message": "openclaw binary not found"}
+
+        def _install_skills():
+            try:
+                result = subprocess.run(
+                    [openclaw_bin, "skills", "install", "--recommended"],
+                    capture_output=True, text=True, timeout=300,
+                )
+                installed = [
+                    line.strip().lstrip("✓ ").strip()
+                    for line in result.stdout.splitlines()
+                    if "✓" in line or "installed" in line.lower()
+                ]
+                return result.returncode == 0, installed or ["recommended skills"]
+            except Exception as exc:
+                return False, [str(exc)]
+
+        ok, installed = await asyncio.to_thread(_install_skills)
+        service.record_install_milestone({"id": "openclaw-skills",
+                                          "label": f"Skills installed: {', '.join(installed)}" if ok else "Skills install failed",
+                                          "status": "done" if ok else "error"})
+        await service.broadcast()
+        return {"ok": ok, "installed": installed}
 
     @app.websocket("/ws/setup")
     async def setup_ws(websocket: WebSocket):

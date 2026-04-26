@@ -5,13 +5,12 @@ category: framework
 install_method: npm
 package: "@openclaw/cli"
 entry_point: openclaw
-port: 3000
+port: 18789
 compatible_tiers: [arm-cpu-16gb, x86-cpu-16gb, x86-cuda-12gb, x86-cpu-32gb, arm-npu-16gb]
 incompatible_tiers: [arm-cpu-4gb, arm-cpu-8gb]
 requires_ollama: true
 requires_node: true
-api_base: "http://localhost:11500/v1"
-managed_by: openclaw_integration
+api_base: "http://localhost:18789/v1"
 links:
   website: "https://openclaw.ai"
   github: "https://github.com/openclaw/openclaw"

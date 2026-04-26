@@ -125,13 +125,6 @@ def _pip_install(manifest: FrameworkManifest, progress: Callable) -> Path:
 
 def _npm_install(manifest: FrameworkManifest, progress: Callable) -> Path:
     """Install via npm globally or into a local prefix."""
-    if manifest.managed_by == "openclaw_integration":
-        # Delegate to existing OpenClaw integration module
-        from openclaw_integration.installer import install as oc_install
-        progress("Installing via openclaw_integration…")
-        oc_install()
-        return Path.home() / ".openclaw"
-
     work_dir = FRAMEWORKS_DIR / manifest.name
     work_dir.mkdir(parents=True, exist_ok=True)
     npm = shutil.which("npm")

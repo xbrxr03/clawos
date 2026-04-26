@@ -19,63 +19,12 @@ from clawos_core.constants import PICOCLAW_GITHUB, PICOCLAW_HTTP_TIMEOUT, PICOCL
 
 
 def install_openclaw() -> tuple[bool, str]:
+    """Delegate to the canonical frameworkd install path."""
     if sys.platform == "win32":
-        return False, "OpenClaw install is skipped on Windows during setup"
-
-    npm = shutil.which("npm")
-    if not npm:
-        return False, "npm not found - skipping OpenClaw"
-
-    prefix = Path.home() / ".local"
-    bin_dir = prefix / "bin"
-    bin_dir.mkdir(parents=True, exist_ok=True)
-
-    env = os.environ.copy()
-    env["PATH"] = str(bin_dir) + os.pathsep + env.get("PATH", "")
-
-    try:
-        subprocess.run(
-            [npm, "config", "set", "prefix", str(prefix)],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            env=env,
-        )
-    except Exception:
-        pass
-
-    existing = shutil.which("openclaw", path=env["PATH"])
-    if existing:
-        _ensure_local_bin_export()
-        return True, f"OpenClaw already installed at {existing}"
-
-    try:
-        subprocess.run(
-            [npm, "install", "-g", "openclaw@latest"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=900,
-            env=env,
-        )
-    except subprocess.CalledProcessError as exc:
-        detail = exc.stderr.strip() or exc.stdout.strip() or str(exc)
-        return False, f"OpenClaw install failed: {detail}"
-    except Exception as exc:
-        return False, f"OpenClaw install failed: {exc}"
-
-    installed = shutil.which("openclaw", path=env["PATH"])
-    if installed:
-        _ensure_local_bin_export()
-        return True, "OpenClaw installed - run: openclaw tui"
-
-    local_binary = bin_dir / "openclaw"
-    if local_binary.exists():
-        _ensure_local_bin_export()
-        return True, f"OpenClaw installed to {local_binary}"
-
-    return False, "OpenClaw install finished but the binary was not found"
+        return False, "OpenClaw install is skipped on Windows"
+    from services.frameworkd.service import install_framework
+    result = install_framework("openclaw")
+    return result["ok"], result["message"]
 
 
 def install_openclaude() -> tuple[bool, str]:
