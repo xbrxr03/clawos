@@ -9,8 +9,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from clawos_core.constants import PORT_GATEWAYD
-
+_PORT_OPENCLAW = 18789
 log = logging.getLogger("openclaw.launcher")
 
 _GATEWAY_PID_FILE = Path.home() / ".openclaw" / "gateway.pid"
@@ -23,7 +22,7 @@ def is_installed() -> bool:
 def is_running() -> bool:
     try:
         import urllib.request
-        urllib.request.urlopen(f"http://localhost:{PORT_GATEWAYD}/health", timeout=2)
+        urllib.request.urlopen(f"http://localhost:{_PORT_OPENCLAW}/health", timeout=2)
         return True
     except Exception:
         pass
@@ -81,5 +80,5 @@ def status() -> dict:
     return {
         "installed": is_installed(),
         "running":   is_running(),
-        "port":      PORT_GATEWAYD,
+        "port":      _PORT_OPENCLAW,
     }

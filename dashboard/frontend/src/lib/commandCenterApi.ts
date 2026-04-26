@@ -39,7 +39,6 @@ export type SetupState = {
   voice_mode?: string
   briefing_enabled?: boolean
   voice_enabled?: boolean
-  whatsapp_enabled?: boolean
   enable_openclaw?: boolean
   launch_on_login?: boolean
   policy_mode?: string
@@ -134,16 +133,6 @@ export type SetupDiagnostics = {
   support_dir?: string
   cwd?: string
   desktop?: DesktopPosture
-  gateway?: {
-    status?: string
-    whatsapp?: string
-    channels?: string[]
-    linked_phone?: string
-    last_message_at?: string
-    last_disconnect_reason?: string
-    routes_count?: number
-    approval_queue?: number
-  }
   voice?: VoiceHealth
 }
 
@@ -153,23 +142,6 @@ export type DashboardHealth = {
   host?: string
   port?: number
   local_only?: boolean
-}
-
-export type GatewayHealth = {
-  status?: string
-  whatsapp?: string
-  channels?: string[]
-  linked_phone?: string
-  ready?: boolean
-  last_ready_at?: string
-  last_disconnect_reason?: string
-  last_message_at?: string
-  last_sender?: string
-  last_workspace?: string
-  last_preview?: string
-  routes_count?: number
-  approval_queue?: number
-  restart_count?: number
 }
 
 export type DesktopPosture = {
@@ -419,6 +391,15 @@ export type JarvisSession = {
   updated_at?: string
 }
 
+export type MorningBriefing = {
+  weather: { temp: number | null; desc: string | null; summary: string; source: string }
+  calendar: { events: { time: string; title: string }[]; source: string }
+  system: { services_up: number; services_total: number; disk_pct: number; ram_total_gb: number; ram_used_gb: number }
+  approvals: { count: number; items: any[] }
+  brain: { node_count: number; edge_count: number }
+  sources: Record<string, string>
+}
+
 export type JarvisHealth = {
   openclaw_installed?: boolean
   openclaw_running?: boolean
@@ -605,14 +586,6 @@ function maybeSetupHeaders(extra?: HeadersInit): HeadersInit | undefined {
 export const commandCenterApi = {
   getHealth: () => fetchJson<DashboardHealth>('/api/health'),
   getDesktopPosture: () => fetchJson<DesktopPosture>('/api/desktop/posture'),
-  getGatewayHealth: () => fetchJson<GatewayHealth>('/api/gateway/health', { headers: maybeSetupHeaders() }),
-  getGatewayRoutes: () => fetchJson<Record<string, string>>('/api/gateway/routes'),
-  setGatewayRoute: (jid: string, workspace_id: string) =>
-    fetchJson<{ ok?: boolean; routes?: Record<string, string> }>('/api/gateway/routes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jid, workspace_id }),
-    }),
   setLaunchOnLogin: (enabled: boolean, command?: string) =>
     fetchJson<DesktopPosture>('/api/desktop/launch-on-login', {
       method: 'POST',
@@ -665,6 +638,7 @@ export const commandCenterApi = {
     }),
   listAttention: () => fetchJson<AttentionEvent[]>('/api/attention'),
   getTodayBriefing: () => fetchJson<Briefing>('/api/briefings/today'),
+  getMorningBriefing: () => fetchJson<MorningBriefing>('/api/briefings/morning'),
   listMissions: () => fetchJson<Mission[]>('/api/missions'),
   startMission: (title: string, summary = '', trust_lane = 'trusted-automatic') =>
     fetchJson<{ ok?: boolean; mission?: Mission }>('/api/missions', {

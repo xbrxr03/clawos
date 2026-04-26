@@ -88,10 +88,6 @@ export function PolicyScreen(props: ScreenProps) {
     await updateAutonomy(next)
   }
 
-  const toggleWhatsApp = async () => {
-    await updateOptions({ whatsapp_enabled: !state.whatsapp_enabled })
-  }
-
   const toggleLaunchOnLogin = async () => {
     await updateOptions({ launch_on_login: !state.launch_on_login })
   }
@@ -187,7 +183,7 @@ export function PolicyScreen(props: ScreenProps) {
           ))}
         </div>
 
-        {/* Collapsed whatsapp + launch-on-login toggles — keeps parity with old flow */}
+        {/* Startup options */}
         <div className="panel" style={{ padding: 4, marginTop: 12 }}>
           <div
             style={{
@@ -210,41 +206,6 @@ export function PolicyScreen(props: ScreenProps) {
               onChange={toggleLaunchOnLogin}
               disabled={busy === 'options'}
               ariaLabel="Launch on login"
-            />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 18px',
-              borderTop: '1px solid var(--panel-br)',
-            }}
-          >
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warn)', flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 600 }}>
-                WhatsApp bridge{' '}
-                <span
-                  className="c-tag"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    color: 'var(--ink-2)',
-                    borderColor: 'var(--panel-br)',
-                  }}
-                >
-                  PAIR LATER
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
-                Prepare the phone bridge. QR pairing happens from the dashboard after launch.
-              </div>
-            </div>
-            <WizToggle
-              on={!!state.whatsapp_enabled}
-              onChange={toggleWhatsApp}
-              disabled={busy === 'options'}
-              ariaLabel="WhatsApp bridge"
             />
           </div>
         </div>

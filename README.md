@@ -102,7 +102,7 @@ The **Developer** persona gets **OpenClaude** pre-wired to Ollama — Claude Cod
 - **OpenClaude** — open-source Claude Code, pre-configured for offline Ollama. Dev profile only. No subscription.
 - **Framework Store** — install any AI agent framework from a store UI: SmolAgents, AgentZero, PocketFlow, NullClaw, Langroid, and more.
 - **Nexus Brain** — 3D knowledge graph. Drop a ZIP of notes, watch your personal knowledge base build itself.
-- **29 one-command workflows** — organize downloads, summarize PDFs, review PRs, disk reports, daily digest, and more.
+- **29 one-command workflows** — organize downloads, summarize PDFs, review PRs, disk reports, daily digest, and more. Run any from the terminal: `clawctl wf list` · `clawctl wf run organize-downloads --dry-run`
 - **Proactive ambient intelligence** — ClawOS watches in the background. "82% disk full." "Brain found a new connection." Surfaces what matters before you ask.
 - **Session continuity** — wake up your device and JARVIS briefs you on where you left off. No re-explaining context.
 - **policyd** — every tool call gated, audited, and logged before it runs. Human approval queue for sensitive ops.
@@ -146,7 +146,7 @@ Every framework routes through a shared LiteLLM proxy — one Ollama backend, an
 ## How it works
 
 ```
-You (Terminal / Voice / Dashboard / WhatsApp)
+You (Terminal / Voice / Dashboard / App)
          |
       agentd   ← task queue + session manager
          |
@@ -183,21 +183,49 @@ Every action goes through `policyd`. Sensitive operations pause for your approva
 
 ## vs. other local AI setups
 
-| | Just Ollama | Open WebUI | Leon | ClawOS |
-|---|---|---|---|---|
-| One-command install | No | Partial | No | **Yes** |
-| Voice pipeline (offline) | No | No | Partial | **Yes** |
-| Dashboard UI | No | Yes | No | **Yes** |
-| Built-in workflows | No | No | Partial | **Yes (29)** |
-| Persistent memory | No | No | No | **Yes** |
-| Proactive ambient alerts | No | No | No | **Yes** |
-| Knowledge brain + graph | No | No | No | **Yes** |
-| Human approval queue | No | No | No | **Yes** |
-| Session continuity (morning briefing) | No | No | No | **Yes** |
-| Framework store (install any agent runtime) | No | No | No | **Yes** |
-| Signed skill marketplace | No | No | No | **Yes** |
+> Ollama runs models. ClawOS runs agents.
+
+| | Just Ollama | Open WebUI | AnythingLLM | Leon | ClawOS |
+|---|---|---|---|---|---|
+| One-command install | No | Partial | Partial | No | **Yes** |
+| Hardware-aware model selection | No | No | No | No | **Yes** |
+| Voice pipeline (offline) | No | No | No | Partial | **Yes** |
+| Dashboard UI | No | Yes | Yes | No | **Yes** |
+| Built-in workflows | No | No | No | Partial | **Yes (29)** |
+| Persistent memory | No | No | Partial | No | **Yes (14 layers)** |
+| Proactive ambient alerts | No | No | No | No | **Yes** |
+| Knowledge brain + graph | No | No | No | No | **Yes** |
+| Human approval queue | No | No | No | No | **Yes** |
+| Session continuity (morning briefing) | No | No | No | No | **Yes** |
+| Framework store (install any agent runtime) | No | No | No | No | **Yes** |
+| Signed skill marketplace | No | No | No | No | **Yes** |
 
 *Note: OpenClaw is not in this comparison because ClawOS includes OpenClaw as an optional installable component.*
+
+---
+
+## Memory architecture (taosmd)
+
+Most local AI tools have one memory layer — a vector database. ClawOS has 14, layered by function:
+
+| Layer | Storage | Purpose |
+|-------|---------|---------|
+| 1 | `PINNED.md` | Human-editable durable facts — always injected into every prompt |
+| 2 | `WORKFLOW.md` | Current task state and in-progress context |
+| 3 | ChromaDB | Semantic vector search across past conversations |
+| 4 | SQLite FTS5 | Keyword search for exact recall |
+| 5 | `HISTORY.md` | Activity log and session summaries |
+| 6 | taosmd Archive | Long-term archival with decay-resistant storage |
+| 7 | Temporal knowledge graph | Time-aware entity relationships |
+| 8 | Vector memory | Dense embeddings for similarity retrieval |
+| 9 | `SOUL.md` | Agent personality and behaviour shaping |
+| 10 | `AGENTS.md` | Operating instructions and capability boundaries |
+| 11 | `IDENTITY.md` | Public name and channel persona |
+| 12 | `LEARNED.md` | ACE self-improving loop — extractions from past corrections |
+| 13 | `HEARTBEAT.md` | Periodic check configuration |
+| 14 | RAG index | Document retrieval from ingested files |
+
+The write lifecycle is ADD → UPDATE → DELETE → NOOP to prevent bloat. Memory writes are async — the agent loop never blocks on them.
 
 ---
 

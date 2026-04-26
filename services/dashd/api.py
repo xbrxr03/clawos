@@ -451,12 +451,6 @@ def _collect_service_health() -> dict[str, dict]:
     except Exception:
         pass
     try:
-        from services.gatewayd.health import health as gatewayd_health
-
-        checks["gatewayd"] = gatewayd_health
-    except Exception:
-        pass
-    try:
         from services.memd.health import health as memd_health
 
         checks["memd"] = memd_health
@@ -650,14 +644,9 @@ def _jarvis_service():
     return get_service()
 
 
-def _gateway_service():
-    from services.gatewayd.service import get_service
-
-    return get_service()
-
-
 def _setup_bypass_allowed(settings: DashboardSettings, request: Request) -> bool:
-    if not _request_targets_loopback(request):
+    is_local = _request_targets_loopback(request) or _is_loopback_host(settings.host)
+    if not is_local:
         return False
     state = _setup_state()
     if getattr(state, "completion_marker", False):
@@ -877,9 +866,6 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     app.state.bus_handler = _on_bus_event
     app.state.voice_listener = None
     app.state.jarvis_listener = None
-    from services.dashd import pty_ws
-
-    pty_ws.register(app)
     app.state.openapi_schema = None
 
     def _build_openapi_schema() -> dict[str, Any]:
@@ -951,7 +937,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         if not settings_obj.auth_required:
             return JSONResponse({"ok": True, "auth_required": False})
 
-        if not _can_auto_bootstrap_local_session(request):
+        token_ok = body.get("token") == settings_obj.token
+        auto_ok = _can_auto_bootstrap_local_session(request)
+        if not token_ok and not auto_ok:
             raise HTTPException(
                 status_code=401,
                 detail="Unauthorized",
@@ -1215,6 +1203,146 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             missions=list_missions(),
         )
 
+    @app.get("/api/briefings/morning", dependencies=[Depends(require_auth)])
+    async def morning_briefing():
+        import json as _json
+        import shutil
+        import urllib.parse
+
+        # System health
+        services = _collect_service_health()
+        up_count = sum(1 for v in services.values() if v.get("status") in {"up", "running"})
+        total_count = len(services)
+
+        # Disk usage
+        disk_pct = 0
+        try:
+            usage = shutil.disk_usage("/")
+            disk_pct = round(usage.used / usage.total * 100)
+        except Exception:
+            pass
+
+        # RAM usage
+        ram_total_gb = 0
+        ram_used_gb = 0
+        try:
+            import psutil
+            m = psutil.virtual_memory()
+            ram_total_gb = round(m.total / 1e9, 1)
+            ram_used_gb = round(m.used / 1e9, 1)
+        except Exception:
+            pass
+
+        # Approvals
+        approvals = _approval_payloads()
+
+        # Brain stats
+        node_count = 0
+        edge_count = 0
+        try:
+            from services.braind.service import get_brain
+            brain_svc = get_brain()
+            g = brain_svc.graph()
+            node_count = len(g.get("nodes", []))
+            edge_count = len(g.get("links", []))
+        except Exception:
+            pass
+
+        # Jarvis briefing sources (weather text + source status)
+        jarvis = _jarvis_service()
+        try:
+            briefing_payload, source_status = jarvis._briefing_sources()
+        except Exception:
+            briefing_payload, source_status = {}, {}
+
+        # Structured calendar events
+        calendar_items: list[dict] = []
+        try:
+            ics_url = str(get_config("jarvis.briefing.calendar_ics_url", "")).strip()
+            if ics_url:
+                import icalendar  # type: ignore[import]
+                from datetime import date, datetime
+                with urllib.request.urlopen(ics_url, timeout=10) as resp:  # noqa: S310
+                    cal = icalendar.Calendar.from_ical(resp.read())
+                today = date.today()
+                ev_list: list[tuple[str, str]] = []
+                for component in cal.walk():
+                    if component.name != "VEVENT":
+                        continue
+                    dtstart = component.get("dtstart")
+                    if not dtstart:
+                        continue
+                    dt = dtstart.dt
+                    event_date = dt if isinstance(dt, date) and not isinstance(dt, datetime) else getattr(dt, "date", lambda: today)()
+                    if event_date != today:
+                        continue
+                    summary = str(component.get("summary", "")).strip()
+                    if not summary:
+                        continue
+                    time_str = dt.strftime("%H:%M") if isinstance(dt, datetime) else "all-day"
+                    ev_list.append((time_str, summary))
+                ev_list.sort()
+                calendar_items = [{"time": t, "title": s} for t, s in ev_list[:6]]
+        except Exception:
+            pass
+
+        # Structured weather (temp + description)
+        weather_temp = None
+        weather_desc = None
+        try:
+            lat = get_config("jarvis.briefing.latitude")
+            lon = get_config("jarvis.briefing.longitude")
+            tz = str(get_config("jarvis.briefing.timezone", "auto"))
+            if lat and lon:
+                url = (
+                    "https://api.open-meteo.com/v1/forecast?"
+                    + urllib.parse.urlencode({
+                        "latitude": lat, "longitude": lon,
+                        "current": "temperature_2m,weather_code", "timezone": tz,
+                    })
+                )
+                with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
+                    w_data = _json.loads(resp.read().decode())
+                current = w_data.get("current", {})
+                weather_temp = current.get("temperature_2m")
+                code = int(current.get("weather_code", 0))
+                try:
+                    from services.jarvisd.service import WEATHER_CODES
+                    weather_desc = WEATHER_CODES.get(code, "settled")
+                except Exception:
+                    weather_desc = "settled"
+        except Exception:
+            pass
+
+        return {
+            "weather": {
+                "temp": weather_temp,
+                "desc": weather_desc,
+                "summary": briefing_payload.get("weather", ""),
+                "source": source_status.get("weather", "unknown"),
+            },
+            "calendar": {
+                "events": calendar_items,
+                "source": source_status.get("calendar", "unknown"),
+            },
+            "system": {
+                "services_up": up_count,
+                "services_total": total_count,
+                "disk_pct": disk_pct,
+                "ram_total_gb": ram_total_gb,
+                "ram_used_gb": ram_used_gb,
+            },
+            "approvals": {
+                "count": len(approvals),
+                "items": approvals[:5],
+            },
+            "brain": {
+                "node_count": node_count,
+                "edge_count": edge_count,
+            },
+            "sources": source_status,
+        }
+
     @app.get("/api/missions", dependencies=[Depends(require_auth)])
     async def missions():
         return list_missions()
@@ -1415,27 +1543,6 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         await app.state.connections.broadcast({"type": "jarvis_session", "data": session})
         return session
 
-    @app.get("/api/gateway/health", dependencies=[Depends(require_auth_or_setup_access)])
-    async def gateway_health():
-        return _gateway_service().health()
-
-    @app.get("/api/gateway/routes", dependencies=[Depends(require_auth)])
-    async def gateway_routes():
-        return _gateway_service().routes()
-
-    @app.post("/api/gateway/routes", dependencies=[Depends(require_auth)])
-    async def gateway_set_route(body: dict | None = None):
-        payload = body or {}
-        jid = str(payload.get("jid", "")).strip()
-        workspace_id = str(payload.get("workspace_id", "")).strip()
-        if not jid or not workspace_id:
-            raise HTTPException(status_code=400, detail="jid and workspace_id required")
-        try:
-            routes = _gateway_service().set_route(jid, workspace_id)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
-        return {"ok": True, "routes": routes}
-
     @app.get("/api/extensions", dependencies=[Depends(require_auth_or_setup_access)])
     async def extensions():
         return _extension_payloads()
@@ -1489,9 +1596,20 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         if not peer_url or not intent:
             raise HTTPException(status_code=400, detail="peer_url and intent required")
 
-        from services.gatewayd.service import delegate_to_peer
-
-        result = await delegate_to_peer(peer_url, intent, workspace)
+        import json as _json
+        import urllib.request as _ur
+        req_body = _json.dumps({"intent": intent, "workspace": workspace}).encode()
+        req = _ur.Request(
+            f"{peer_url.rstrip('/')}/a2a/tasks",
+            data=req_body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with _ur.urlopen(req, timeout=30) as resp:  # noqa: S310
+                result = _json.loads(resp.read().decode())
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Peer unreachable: {exc}")
         record_trace(
             make_trace(
                 title="Delegated A2A task",
@@ -2603,6 +2721,31 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             service._listeners.discard(websocket)
         except Exception:
             service._listeners.discard(websocket)
+
+    @app.websocket("/ws/jarvis")
+    async def jarvis_ws_endpoint(websocket: WebSocket):
+        """WebSocket for real-time Jarvis session state updates."""
+        if not _websocket_authorized(websocket):
+            await websocket.close(code=4401)
+            return
+        await websocket.accept()
+        service = _jarvis_service()
+
+        async def on_session(session: dict) -> None:
+            try:
+                await websocket.send_json({"type": "jarvis_session", "data": session})
+            except Exception:
+                pass
+
+        service.add_session_listener(on_session)
+        try:
+            await websocket.send_json({"type": "jarvis_session", "data": service.session()})
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            service.remove_session_listener(on_session)
+        except Exception:
+            service.remove_session_listener(on_session)
 
     if DASHBOARD_STATIC_DIR.exists():
         assets_dir = DASHBOARD_STATIC_DIR / "assets"

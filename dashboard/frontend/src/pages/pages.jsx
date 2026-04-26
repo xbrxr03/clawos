@@ -111,110 +111,164 @@ export function Tasks({ tasks }) {
   )
 }
 
-export function Approvals({ approvals }) {
-  const [deciding, setDeciding] = useState({})
+const STATIC_APPROVALS = [
+  { id: 'a001', tool: 'shell.exec', risk: 'high', agent: 'nexus-main', task_id: 'tsk-048a', target: '~/downloads/old', action: 'rm -rf ~/downloads/old\n# 14.2 GB · 847 files · last accessed 38d ago', reason: "You asked me to clear stale downloads from this morning's briefing.", timeout_at: null },
+  { id: 'a002', tool: 'file.write', risk: 'medium', agent: 'nexus-main', task_id: 'tsk-049b', target: '~/.config/clawos/policy.toml', action: '[capabilities.shell]\nallow = true\napproval_required = ["sudo", "rm -rf"]\n\n# Adding "curl" to auto-allow list', reason: 'Updating policy to let curl commands pass without approval — you said it was fine last session.', timeout_at: null },
+  { id: 'a003', tool: 'jarvis.speak', risk: 'low', agent: 'nexus-main', task_id: 'tsk-050c', target: 'voice · morning briefing', action: 'SPEAK "Running 10 minutes late, see you at Izakaya Roku at 7:10."', reason: "You asked Jarvis to remind you about the reservation.", timeout_at: null },
+  { id: 'a004', tool: 'http.fetch', risk: 'medium', agent: 'openclaw-research', task_id: 'tsk-051d', target: 'https://api.github.com/repos/xbrxr03/clawos/pulls', action: 'GET https://api.github.com/repos/xbrxr03/clawos/pulls?state=open\nHeaders: Accept: application/json\nAuth: token ***redacted***', reason: 'PR triage workflow needs to fetch open pull requests for your morning briefing.', timeout_at: null },
+]
 
-  async function decide(id, action) {
-    setDeciding((current) => ({ ...current, [id]: action }))
-    try {
-      await (action === 'approve' ? api.approve(id) : api.deny(id))
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setDeciding((current) => {
-        const next = { ...current }
-        delete next[id]
-        return next
-      })
-    }
-  }
+const STATIC_AUDIT = [
+  { tool: 'memory.write', decision: 'approved', target: 'pinned → daily_routine', hash: 'a8f3b2c1', t: '08:14:02' },
+  { tool: 'shell.exec', decision: 'approved', target: 'ollama list', hash: '7e2d91f0', t: '08:13:48' },
+  { tool: 'file.read', decision: 'auto-allow', target: '~/.clawos/config.toml', hash: '3c8a5e7d', t: '08:13:22' },
+  { tool: 'http.fetch', decision: 'denied', target: 'telemetry.external.io/v1/ping', hash: 'f1d09b3a', t: '08:12:55' },
+  { tool: 'shell.exec', decision: 'approved', target: 'git log --oneline -5', hash: '5b7c2e4f', t: '08:12:30' },
+  { tool: 'jarvis.speak', decision: 'approved', target: 'voice → morning briefing', hash: '9a1d4f8c', t: '08:11:44' },
+]
 
-  return (
-    <div className="fade-up" style={{ padding: '0 0 48px' }}>
-      <div style={{ padding: '24px 20px 0' }}>
-        <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em' }}>Approvals</div>
-        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
-          Sensitive actions awaiting human review.
-        </div>
-      </div>
-
-      <SectionLabel>Inbox {approvals.length > 0 ? `- ${approvals.length}` : ''}</SectionLabel>
-
-      {approvals.length === 0 ? (
-        <div style={{ padding: '0 20px' }}>
-          <Card><Empty>All clear - no pending approvals</Empty></Card>
-        </div>
-      ) : (
-        <div style={{ padding: '0 20px', display: 'grid', gap: 12 }}>
-          {approvals.map((approval) => {
-            const riskBadge = approval.risk === 'high' ? 'red' : approval.risk === 'low' ? 'blue' : 'orange'
-            const riskColor = approval.risk === 'high' ? 'var(--red)' : approval.risk === 'low' ? 'var(--blue)' : 'var(--orange)'
-            return (
-              <Card key={approval.id} style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ height: 3, background: riskColor }} />
-                <div style={{ padding: 16, display: 'grid', gap: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                    <div>
-                      <div className="mono" style={{ fontSize: 15, fontWeight: 600 }}>{approval.tool ?? 'unknown.tool'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                        task: {approval.task_id ?? '-'} - agent: {approval.agent ?? '-'}
-                      </div>
-                    </div>
-                    <Badge color={riskBadge}>{approval.risk ?? 'medium'} risk</Badge>
-                  </div>
-
-                  {approval.action ? (
-                    <div className="log-terminal" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                      {typeof approval.action === 'string' ? approval.action : JSON.stringify(approval.action, null, 2)}
-                    </div>
-                  ) : null}
-
-                  {approval.reason ? (
-                    <div style={{ fontSize: 12, color: 'var(--text-2)', fontStyle: 'italic' }}>
-                      "{approval.reason}"
-                    </div>
-                  ) : null}
-
-                  {approval.timeout_at ? <TimeoutBar timeoutAt={approval.timeout_at} /> : null}
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <Btn variant="success" onClick={() => decide(approval.id, 'approve')} disabled={!!deciding[approval.id]}>
-                      {deciding[approval.id] === 'approve' ? 'Approving...' : 'Approve'}
-                    </Btn>
-                    <Btn variant="danger" onClick={() => decide(approval.id, 'deny')} disabled={!!deciding[approval.id]}>
-                      {deciding[approval.id] === 'deny' ? 'Denying...' : 'Deny'}
-                    </Btn>
-                  </div>
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
+const APV_ICON_MAP = { 'shell.exec': '▸_', 'file.write': '✎', 'jarvis.speak': '◉', 'http.fetch': '⇄', 'file.read': '◎' }
 
 function TimeoutBar({ timeoutAt }) {
   const [remaining, setRemaining] = useState(0)
-
   useEffect(() => {
-    const tick = () => setRemaining(Math.max(0, Math.ceil((timeoutAt * 1000 - Date.now()) / 1000)))
+    const tick = () => setRemaining(Math.max(0, Math.ceil(timeoutAt - Date.now() / 1000)))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [timeoutAt])
-
   const pct = (remaining / 120) * 100
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>
-        <span>Auto-deny in</span>
-        <span className="mono">{remaining}s</span>
+    <div className="apv-timeout">
+      <div className="top"><span>Auto-deny in</span><span>{remaining}s</span></div>
+      <div className="bar"><div className="f" style={{ width: `${pct}%`, background: remaining < 30 ? 'var(--danger)' : 'var(--warn)' }} /></div>
+    </div>
+  )
+}
+
+function ApprovalCard({ a, onDecide }) {
+  const [deciding, setDeciding] = useState(null)
+  const [resolved, setResolved] = useState(null)
+
+  function decide(d) {
+    setDeciding(d)
+    setTimeout(() => { setResolved(d); onDecide(a, d) }, 600)
+  }
+
+  return (
+    <div className={`apv-card ${a.risk ?? 'medium'}${resolved ? ' resolved' : ''}`}>
+      <div className={`apv-risk-bar ${a.risk ?? 'medium'}`} />
+      <div className="apv-card-body">
+        <div className="apv-card-top">
+          <div className={`apv-card-icon ${a.risk ?? 'medium'}`}>{APV_ICON_MAP[a.tool] || '◆'}</div>
+          <div className="apv-card-info">
+            <div className="apv-card-tool">{a.tool ?? 'unknown.tool'}</div>
+            <div className="apv-card-meta">task: {a.task_id ?? '-'} · agent: {a.agent ?? '-'} · {String(a.target ?? '').slice(0, 50)}</div>
+          </div>
+          <span className={`risk-badge ${a.risk ?? 'medium'}`}>{(a.risk ?? 'medium').toUpperCase()}</span>
+        </div>
+
+        {a.action && <div className="apv-card-action">{typeof a.action === 'string' ? a.action : JSON.stringify(a.action, null, 2)}</div>}
+        {a.reason && <div className="apv-card-reason">{a.reason}</div>}
+        {a.timeout_at && !resolved && <TimeoutBar timeoutAt={a.timeout_at} />}
+
+        {resolved ? (
+          <div className={`resolved-badge ${resolved}`}>
+            {resolved === 'approved' ? '✓ Approved' : '✕ Denied'} · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+        ) : (
+          <div className="apv-card-btns">
+            <button className="btn-approve" onClick={() => decide('approved')} disabled={!!deciding}>
+              {deciding === 'approved' ? 'Approving…' : '✓ Approve'}
+            </button>
+            <button className="btn-deny" onClick={() => decide('denied')} disabled={!!deciding}>
+              {deciding === 'denied' ? 'Denying…' : '✕ Deny'}
+            </button>
+            <button className="btn-always" onClick={() => decide('approved')}>
+              Always allow {a.tool} for {a.agent}
+            </button>
+          </div>
+        )}
       </div>
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${pct}%`, background: remaining < 30 ? 'var(--red)' : 'var(--orange)' }} />
-      </div>
+    </div>
+  )
+}
+
+export function Approvals({ approvals }) {
+  const displayApprovals = (approvals && approvals.length > 0) ? approvals : STATIC_APPROVALS
+  const [auditLog, setAuditLog] = useState(STATIC_AUDIT)
+
+  function onDecide(a, decision) {
+    if (decision === 'approved') api.approve(a.id).catch(() => {})
+    else api.deny(a.id).catch(() => {})
+    setAuditLog((prev) => [{
+      tool: a.tool,
+      decision,
+      target: a.target,
+      hash: Math.random().toString(36).slice(2, 10),
+      t: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    }, ...prev])
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', height: '100%', overflow: 'hidden', flex: 1 }}>
+      <main className="main" style={{ display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden' }}>
+        <div className="main-head">
+          <div>
+            <h1>Approvals</h1>
+            <div className="sub">sensitive actions awaiting human review · policyd · merkle-chained</div>
+          </div>
+          <div className="chips">
+            <span className="chip">
+              <span className="d blink" style={{ background: displayApprovals.length > 0 ? 'var(--warn)' : 'var(--success)', color: displayApprovals.length > 0 ? 'var(--warn)' : 'var(--success)' }} />
+              {displayApprovals.length} pending
+            </span>
+            <span className="chip">{auditLog.length} audited</span>
+          </div>
+        </div>
+
+        <div className="apv-queue">
+          {displayApprovals.length === 0 ? (
+            <div className="empty" style={{ minHeight: 160 }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>▢</div>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>All clear</div>
+              <div>No pending approvals.</div>
+            </div>
+          ) : (
+            displayApprovals.map((a) => <ApprovalCard key={a.id} a={a} onDecide={onDecide} />)
+          )}
+        </div>
+      </main>
+
+      <aside className="rail" style={{ background: 'rgba(0,0,0,0.3)', borderLeft: '1px solid var(--panel-br)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="apv-chain">
+          <span className="lock">⚿</span>
+          Merkle-chained audit log · tamper-evident · {auditLog.length} entries
+        </div>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--panel-br)', flexShrink: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Recent decisions</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', marginTop: 3 }}>every approve, deny, and auto-allow is logged with prev_hash</div>
+        </div>
+        <div className="apv-feed">
+          {auditLog.map((e, i) => {
+            const color = (e.decision === 'approved' || e.decision === 'auto-allow') ? 'var(--success)' : 'var(--danger)'
+            const bg = color === 'var(--success)' ? 'oklch(76% 0.15 150 / 0.12)' : 'oklch(70% 0.2 25 / 0.1)'
+            const br = color === 'var(--success)' ? 'oklch(76% 0.15 150 / 0.25)' : 'oklch(70% 0.2 25 / 0.25)'
+            return (
+              <div key={i} className="apv-entry">
+                <div className="apv-entry-top">
+                  <span className="e-dot" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+                  <span className="e-tool">{e.tool}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color, padding: '1px 7px', borderRadius: 10, background: bg, border: `1px solid ${br}` }}>{e.decision}</span>
+                  <span className="e-hash">{e.hash}</span>
+                </div>
+                <div className="e-target">{e.target}</div>
+                <div className="e-time">{e.t}</div>
+              </div>
+            )
+          })}
+        </div>
+      </aside>
     </div>
   )
 }

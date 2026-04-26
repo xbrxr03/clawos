@@ -15,8 +15,9 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from clawos_core.constants import PORT_GATEWAYD
 from openclaw_integration.config_gen import CONFIG_PATH, OPENCLAW_DIR
+
+_PORT_OPENCLAW = 18789
 from openclaw_integration.launcher import is_installed, is_running, start, status
 
 GATEWAY_TOKEN_PATH = OPENCLAW_DIR / "gateway.token"
@@ -83,9 +84,9 @@ def _generated_token() -> str:
 def _config_port(config: dict[str, Any]) -> int:
     gateway = _gateway_dict(config)
     try:
-        return int(gateway.get("port") or PORT_GATEWAYD)
+        return int(gateway.get("port") or _PORT_OPENCLAW)
     except Exception:
-        return PORT_GATEWAYD
+        return _PORT_OPENCLAW
 
 
 def gateway_url(config: dict[str, Any] | None = None) -> str:
@@ -123,7 +124,7 @@ def ensure_responses_endpoint() -> dict[str, Any]:
 
     gateway = _gateway_dict(config)
     if not gateway.get("port"):
-        gateway["port"] = PORT_GATEWAYD
+        gateway["port"] = _PORT_OPENCLAW
         changed = True
 
     responses = _gateway_endpoint_config(config)

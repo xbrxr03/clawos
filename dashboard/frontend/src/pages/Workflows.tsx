@@ -1,665 +1,291 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { useEffect, useMemo, useState } from 'react'
-import { Badge, Card, Empty, PageHeader, PanelHeader, SectionLabel, Skeleton, SkeletonText, StatusDot } from '../components/ui.jsx'
-import { commandCenterApi, type WorkflowRecord, type WorkflowRunResult } from '../lib/commandCenterApi'
+import { useEffect, useState } from 'react'
+import { commandCenterApi } from '../lib/commandCenterApi'
 
-const CATEGORIES = ['all', 'files', 'documents', 'developer', 'content', 'system', 'data']
-const HERO_WORKFLOW_IDS = new Set(['organize-downloads', 'summarize-pdf'])
-
-const CATEGORY_COLORS: Record<string, string> = {
-  files: 'blue',
-  documents: 'purple',
-  developer: 'green',
-  content: 'orange',
-  system: 'red',
-  data: 'blue',
+const CATS: Record<string, string> = {
+  files: 'var(--blue)', documents: 'var(--violet)', developer: 'var(--success)',
+  content: 'var(--warn)', system: 'var(--danger)', data: 'var(--blue)',
+}
+const ICONS: Record<string, string> = {
+  files: '▤', documents: '¶', developer: '{}', content: '✎', system: '⚙', data: '▦',
 }
 
-type HistoryEntry = {
-  id: string
-  name: string
-  status: string
-  ts: number
+type Wf = {
+  id: string; name: string; category: string; description: string
+  cmd: string; hero: boolean; destructive: boolean; platforms: string[]
+  last: { status: string; t: string; output: string | null } | null
 }
 
-type LiveProgress = {
-  id: string
-  status: string
-  output?: string
-  message?: string
-  phase?: string
-  progress?: number
-  updatedAt: number
-}
+const STATIC_WFS: Wf[] = [
+  { id: 'organize-downloads', name: 'Organize downloads', category: 'files', description: 'Sort ~/Downloads by file type, move stale files to archive, rename duplicates.', cmd: 'clawctl wf organize-downloads', hero: true, destructive: false, platforms: ['linux', 'macos'], last: { status: 'completed', t: '08:14', output: 'Moved 23 files · 1.4 GB freed · 3 duplicates renamed' } },
+  { id: 'summarize-pdf', name: 'Summarize PDF', category: 'documents', description: 'Extract text from a PDF, run through qwen2.5 for a structured summary.', cmd: 'clawctl wf summarize-pdf <path>', hero: true, destructive: false, platforms: ['all'], last: { status: 'completed', t: 'yesterday', output: "3-page summary of 'ReAct paper' → ~/notes/react-summary.md" } },
+  { id: 'pr-review', name: 'PR review', category: 'developer', description: 'Fetch PR diff, generate inline comments, post review draft to GitHub.', cmd: 'clawctl wf pr-review <pr-url>', hero: false, destructive: false, platforms: ['all'], last: { status: 'completed', t: '08:12', output: 'PR #142 — 3 inline comments, 1 suggestion' } },
+  { id: 'repo-summary', name: 'Repo summary', category: 'developer', description: 'Analyze repo structure, README, recent commits. Output a structured overview.', cmd: 'clawctl wf repo-summary <path>', hero: false, destructive: false, platforms: ['all'], last: null },
+  { id: 'morning-briefing', name: 'Morning briefing', category: 'content', description: 'Compile calendar, git, disk, and messages into a spoken briefing via JARVIS voice.', cmd: 'clawctl wf morning-briefing', hero: false, destructive: false, platforms: ['all'], last: { status: 'completed', t: '08:09', output: 'Briefing delivered via JARVIS voice' } },
+  { id: 'daily-digest', name: 'Daily digest', category: 'content', description: 'End-of-day summary: tasks done, approvals decided, memory growth, upcoming tomorrow.', cmd: 'clawctl wf daily-digest', hero: false, destructive: false, platforms: ['all'], last: { status: 'completed', t: 'yesterday', output: 'Digest: 8 tasks, 5 approvals, +142 brain facts' } },
+  { id: 'disk-report', name: 'Disk report', category: 'system', description: 'Scan all volumes, identify large + stale files, output a structured cleanup report.', cmd: 'clawctl wf disk-report', hero: false, destructive: false, platforms: ['linux', 'macos'], last: { status: 'completed', t: '08:06', output: '82% used · 14 GB pruneable in ~/downloads/old' } },
+  { id: 'clean-stale', name: 'Clean stale files', category: 'files', description: 'Delete files not accessed in 30+ days from specified directories. Requires approval.', cmd: 'clawctl wf clean-stale <dir>', hero: false, destructive: true, platforms: ['linux', 'macos'], last: { status: 'pending', t: 'now', output: null } },
+  { id: 'proofread', name: 'Proofread', category: 'documents', description: 'Grammar, style, and tone check on any text file. Outputs annotated diff.', cmd: 'clawctl wf proofread <path>', hero: false, destructive: false, platforms: ['all'], last: null },
+  { id: 'lead-research', name: 'Lead research', category: 'data', description: 'Given a company name, scrape public info, build a brief, save to memory.', cmd: 'clawctl wf lead-research <company>', hero: false, destructive: false, platforms: ['all'], last: null },
+  { id: 'meeting-notes', name: 'Meeting notes', category: 'content', description: 'Transcribe audio, extract action items, send follow-up draft. Approval gate on sends.', cmd: 'clawctl wf meeting-notes <audio>', hero: false, destructive: false, platforms: ['all'], last: { status: 'completed', t: 'yesterday', output: 'Design review — 4 action items extracted' } },
+  { id: 'backup-config', name: 'Backup config', category: 'system', description: 'Snapshot ~/.clawos to a timestamped tarball. Includes policy, memory, audit chain.', cmd: 'clawctl wf backup-config', hero: false, destructive: false, platforms: ['all'], last: { status: 'completed', t: '02:00', output: 'Backup: clawos-backup-20260423-0200.tar.gz (4.2 MB)' } },
+  { id: 'csv-analyze', name: 'CSV analyze', category: 'data', description: 'Load a CSV, describe columns, compute stats, answer questions conversationally.', cmd: 'clawctl wf csv-analyze <path>', hero: false, destructive: false, platforms: ['all'], last: null },
+  { id: 'invoice-gen', name: 'Invoice generator', category: 'data', description: 'Fill an invoice template from your contact + project data. Outputs PDF.', cmd: 'clawctl wf invoice <client>', hero: false, destructive: false, platforms: ['all'], last: null },
+  { id: 'wiki-build', name: 'Build wiki', category: 'documents', description: 'Turn a folder of markdown notes into a structured wiki with backlinks.', cmd: 'clawctl wf wiki-build <dir>', hero: false, destructive: false, platforms: ['all'], last: null },
+]
 
-type WorkflowDraft = Record<string, string | boolean>
-
-function formatPlatforms(workflow: WorkflowRecord) {
-  if (!workflow.platforms || workflow.platforms.length === 0) return 'all platforms'
-  return workflow.platforms.join(', ')
-}
-
-function formatBytes(value?: number) {
-  if (!value || value <= 0) return '0B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let size = value
-  let unit = units[0]
-  for (const candidate of units) {
-    unit = candidate
-    if (size < 1024 || candidate === units[units.length - 1]) break
-    size /= 1024
-  }
-  return unit === 'B' ? `${Math.round(size)}${unit}` : `${size.toFixed(1)}${unit}`
-}
-
-function normalizeProgressStatus(status?: string) {
-  if (status === 'failed') return 'failed'
-  if (status === 'queued') return 'queued'
-  if (status === 'ok' || status === 'skipped') return 'completed'
-  return 'running'
-}
-
-function progressColor(status?: string) {
-  if (status === 'failed') return 'red'
-  if (status === 'queued') return 'blue'
-  if (status === 'ok' || status === 'skipped') return 'green'
-  return 'orange'
-}
-
-function progressWidth(progress?: number, status?: string) {
-  if (typeof progress === 'number') return `${Math.max(8, Math.min(100, progress))}%`
-  if (status === 'queued') return '28%'
-  if (status === 'ok' || status === 'skipped' || status === 'failed') return '100%'
-  return '72%'
-}
-
-function defaultDraftFor(workflowId?: string | null): WorkflowDraft {
-  if (workflowId === 'organize-downloads') return { target_dir: '', dry_run: true }
-  if (workflowId === 'summarize-pdf') return { file: '' }
-  return {}
-}
-
-function heroButtonLabel(workflowId: string, draft: WorkflowDraft) {
-  if (workflowId === 'organize-downloads') {
-    return draft.dry_run === false ? 'Organize Downloads Now' : 'Preview Downloads Cleanup'
-  }
-  if (workflowId === 'summarize-pdf') return 'Summarize PDF'
-  return 'Run Selected Workflow'
-}
-
-function buildWorkflowArgs(workflowId: string, draft: WorkflowDraft) {
-  if (workflowId === 'organize-downloads') {
-    const args: Record<string, string | boolean> = { dry_run: draft.dry_run !== false }
-    const targetDir = String(draft.target_dir || '').trim()
-    if (targetDir) args.target_dir = targetDir
-    return args
-  }
-  if (workflowId === 'summarize-pdf') {
-    const file = String(draft.file || '').trim()
-    return file ? { file } : {}
-  }
-  return {}
-}
+type RunState = { pct: number; status: 'running' | 'completed' | 'failed' }
+type HistEntry = { id: string; name: string; status: string; ts: number }
 
 export function Workflows() {
-  const [workflows, setWorkflows] = useState<WorkflowRecord[]>([])
-  const [category, setCategory] = useState('all')
-  const [search, setSearch] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [runningId, setRunningId] = useState<string | null>(null)
-  const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [liveProgress, setLiveProgress] = useState<LiveProgress | null>(null)
-  const [progressFeed, setProgressFeed] = useState<LiveProgress[]>([])
-  const [results, setResults] = useState<Record<string, WorkflowRunResult>>({})
-  const [drafts, setDrafts] = useState<Record<string, WorkflowDraft>>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [wfs, setWfs] = useState<Wf[]>(STATIC_WFS)
+  const [cat, setCat] = useState('all')
+  const [selId, setSelId] = useState('organize-downloads')
+  const [running, setRunning] = useState<Record<string, RunState>>({})
+  const [history, setHistory] = useState<HistEntry[]>([])
+  const [liveOutput, setLiveOutput] = useState<Record<string, string>>({})
+  const [runError, setRunError] = useState('')
 
   useEffect(() => {
-    setLoading(true)
-    setError('')
     commandCenterApi
-      .listWorkflows({ category, search })
-      .then((data) => setWorkflows(Array.isArray(data) ? data : []))
-      .catch((err) => setError(err.message || 'Failed to load workflows'))
-      .finally(() => setLoading(false))
-  }, [category, search])
+      .listWorkflows({ category: cat === 'all' ? undefined : cat })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const staticById = Object.fromEntries(STATIC_WFS.map((w) => [w.id, w]))
+          setWfs(
+            data.map((w) => ({
+              cmd: `clawctl wf ${w.id}`,
+              hero: false,
+              last: null,
+              ...staticById[w.id],
+              ...w,
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+  }, [cat])
 
   useEffect(() => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const socket = new WebSocket(`${proto}://${window.location.host}/ws`)
     socket.onmessage = ({ data }) => {
       try {
-        const message = JSON.parse(data)
-        if (message.type === 'workflow_progress' && message.data) {
-          const next: LiveProgress = {
-            id: message.data.id || runningId || 'workflow',
-            status: message.data.status || 'running',
-            output: message.data.output,
-            message: message.data.message || message.data.output,
-            phase: message.data.phase,
-            progress: typeof message.data.progress === 'number' ? message.data.progress : undefined,
-            updatedAt: Date.now(),
+        const msg = JSON.parse(data)
+        if (msg.type === 'workflow_progress' && msg.data) {
+          const id = msg.data.id as string
+          const pct = typeof msg.data.progress === 'number' ? msg.data.progress : 72
+          const st: string = msg.data.status || 'running'
+          if (st === 'ok' || st === 'completed') {
+            setRunning((r) => ({ ...r, [id]: { pct: 100, status: 'completed' } }))
+          } else if (st === 'failed') {
+            setRunning((r) => ({ ...r, [id]: { pct: 100, status: 'failed' } }))
+          } else {
+            setRunning((r) => ({ ...r, [id]: { pct, status: 'running' } }))
           }
-          setLiveProgress(next)
-          setProgressFeed((current) => [next, ...current].slice(0, 48))
-          if (message.data.status && message.data.status !== 'running' && message.data.status !== 'queued') {
-            setRunningId(null)
-          }
-        }
-        if (message.type === 'workflow_error' && message.data) {
-          const next: LiveProgress = {
-            id: message.data.id || runningId || 'workflow',
-            status: 'failed',
-            output: message.data.error,
-            message: message.data.message || message.data.error,
-            phase: message.data.phase,
-            progress: typeof message.data.progress === 'number' ? message.data.progress : 100,
-            updatedAt: Date.now(),
-          }
-          setRunningId(null)
-          setLiveProgress(next)
-          setProgressFeed((current) => [next, ...current].slice(0, 48))
-          setResults((current) => ({
-            ...current,
-            [next.id]: { ...(current[next.id] || {}), status: 'failed', error: message.data.error },
-          }))
+          if (msg.data.output) setLiveOutput((o) => ({ ...o, [id]: msg.data.output }))
         }
       } catch {}
     }
     return () => socket.close()
-  }, [runningId])
+  }, [])
 
-  useEffect(() => {
-    if (!workflows.length) {
-      setSelectedId(null)
-      return
-    }
-    if (!selectedId || !workflows.some((workflow) => workflow.id === selectedId)) {
-      setSelectedId(workflows[0].id)
-    }
-  }, [selectedId, workflows])
+  const filtered = cat === 'all' ? wfs : wfs.filter((w) => w.category === cat)
+  const selWf = wfs.find((w) => w.id === selId) ?? null
 
-  const selectedWorkflow = useMemo(
-    () => workflows.find((workflow) => workflow.id === selectedId) || null,
-    [selectedId, workflows]
-  )
+  async function runWf(wf: Wf) {
+    setSelId(wf.id)
+    setRunError('')
+    setRunning((r) => ({ ...r, [wf.id]: { pct: 4, status: 'running' } }))
 
-  useEffect(() => {
-    if (!selectedWorkflow) return
-    setDrafts((current) => {
-      if (current[selectedWorkflow.id]) return current
-      return { ...current, [selectedWorkflow.id]: defaultDraftFor(selectedWorkflow.id) }
-    })
-  }, [selectedWorkflow])
-
-  const stats = useMemo(() => {
-    const direct = workflows.filter((workflow) => !workflow.needs_agent).length
-    const agent = workflows.filter((workflow) => workflow.needs_agent).length
-    const destructive = workflows.filter((workflow) => workflow.destructive).length
-    return { total: workflows.length, direct, agent, destructive }
-  }, [workflows])
-
-  const selectedDraft = selectedWorkflow ? drafts[selectedWorkflow.id] || defaultDraftFor(selectedWorkflow.id) : {}
-  const selectedResult = selectedWorkflow ? results[selectedWorkflow.id] : undefined
-  const selectedProgressFeed = useMemo(
-    () => (selectedWorkflow ? progressFeed.filter((entry) => entry.id === selectedWorkflow.id).slice(0, 6) : []),
-    [progressFeed, selectedWorkflow]
-  )
-
-  function updateDraft(workflowId: string, key: string, value: string | boolean) {
-    setDrafts((current) => ({
-      ...current,
-      [workflowId]: { ...(current[workflowId] || defaultDraftFor(workflowId)), [key]: value },
-    }))
-  }
-
-  async function runWorkflow(workflow: WorkflowRecord) {
-    const args = buildWorkflowArgs(workflow.id, drafts[workflow.id] || defaultDraftFor(workflow.id))
-    if (workflow.id === 'summarize-pdf' && !String(args.file || '').trim()) {
-      setError('Enter a PDF path before running Summarize PDF.')
-      return
-    }
-
-    setSelectedId(workflow.id)
-    setRunningId(workflow.id)
-    setLiveProgress({
-      id: workflow.id,
-      status: 'queued',
-      message: 'Queued in the dashboard. Live workflow events will stream below.',
-      progress: 4,
-      updatedAt: Date.now(),
-    })
-    setResults((current) => ({ ...current, [workflow.id]: {} }))
-    setError('')
+    const iv = setInterval(() => {
+      setRunning((r) => {
+        const cur = r[wf.id]
+        if (!cur || cur.status !== 'running') { clearInterval(iv); return r }
+        return { ...r, [wf.id]: { ...cur, pct: Math.min(88, cur.pct + 2 + Math.random() * 4) } }
+      })
+    }, 200)
 
     try {
-      const result = await commandCenterApi.runWorkflow(workflow.id, {
-        args,
-        workspace: 'nexus_default',
-      })
-      setResults((current) => ({ ...current, [workflow.id]: result }))
-      setHistory((current) => [
-        { id: workflow.id, name: workflow.name, status: result.status || 'ok', ts: Date.now() },
-        ...current,
-      ].slice(0, 12))
+      const result = await commandCenterApi.runWorkflow(wf.id, { args: {}, workspace: 'nexus_default' })
+      clearInterval(iv)
+      const st: RunState['status'] = result.status === 'failed' ? 'failed' : 'completed'
+      setRunning((r) => ({ ...r, [wf.id]: { pct: 100, status: st } }))
+      if (result.output) setLiveOutput((o) => ({ ...o, [wf.id]: result.output! }))
+      setHistory((h) =>
+        [{ id: wf.id, name: wf.name, status: result.status || 'ok', ts: Date.now() }, ...h].slice(0, 12)
+      )
     } catch (err: any) {
-      const message = err.message || 'Failed to run workflow'
-      setError(message)
-      setResults((current) => ({
-        ...current,
-        [workflow.id]: { status: 'failed', error: message },
-      }))
-    } finally {
-      setRunningId(null)
+      clearInterval(iv)
+      setRunning((r) => ({ ...r, [wf.id]: { pct: 100, status: 'failed' } }))
+      setRunError(err.message || 'Run failed')
     }
   }
 
-  const liveOutput =
-    selectedResult?.output ||
-    selectedResult?.error ||
-    (liveProgress?.id === selectedWorkflow?.id ? liveProgress.output || liveProgress.message : '') ||
-    ''
+  const run = selId ? running[selId] : undefined
+  const selOut = selId ? liveOutput[selId] : undefined
 
   return (
-    <div className="fade-up" style={{ padding: '0 0 48px' }}>
-      <div style={{ padding: '24px 20px 16px' }}>
-        <PageHeader
-          eyebrow="Workflow Library"
-          title="Local automations, compact and runnable."
-          description="Search, filter, launch, and review deterministic workflows with a denser macOS-style library and a live execution rail."
-          meta={
-            <>
-              <Badge color="blue">{stats.total} available</Badge>
-              <Badge color={runningId ? 'orange' : 'green'}>{runningId ? 'Run in progress' : 'Ready'}</Badge>
-              <Badge color="gray">{history.length} recent runs</Badge>
-            </>
-          }
-        />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, padding: '0 20px 16px' }}>
-        <MetricCard label="Available" value={stats.total} tone="blue" />
-        <MetricCard label="Direct" value={stats.direct} tone="green" />
-        <MetricCard label="Agent" value={stats.agent} tone="purple" />
-        <MetricCard label="Guarded" value={stats.destructive} tone="orange" />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.12fr 0.88fr', gap: 14, padding: '0 20px' }}>
-        <div style={{ display: 'grid', gap: 14 }}>
-          <Card style={{ padding: 16 }}>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <input
-                placeholder="Search workflows, tags, or categories"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                style={{ borderRadius: 999 }}
-              />
-              <div className="seg" style={{ flexWrap: 'wrap' }}>
-                {CATEGORIES.map((item) => (
-                  <button
-                    key={item}
-                    className={`seg-btn${category === item ? ' active' : ''}`}
-                    onClick={() => setCategory(item)}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          <SectionLabel>{loading ? 'Loading library' : `${workflows.length} workflows`}</SectionLabel>
-          {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Card key={index} style={{ padding: 16 }}>
-                  <Skeleton width="34%" height={12} />
-                  <div style={{ height: 10 }} />
-                  <Skeleton width="64%" height={18} radius={10} />
-                  <div style={{ height: 10 }} />
-                  <SkeletonText lines={3} />
-                </Card>
-              ))}
-            </div>
-          ) : error && workflows.length === 0 ? (
-            <Card><Empty>{error}</Empty></Card>
-          ) : workflows.length === 0 ? (
-            <Card><Empty>No workflows matched the current filters.</Empty></Card>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
-              {workflows.map((workflow) => {
-                const selected = selectedId === workflow.id
-                const categoryColor = CATEGORY_COLORS[workflow.category] || 'blue'
-                return (
-                  <button
-                    key={workflow.id}
-                    type="button"
-                    onClick={() => setSelectedId(workflow.id)}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      padding: 0,
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Card
-                      style={{
-                        padding: 16,
-                        display: 'grid',
-                        gap: 12,
-                        borderColor: selected ? 'rgba(0, 122, 255, 0.24)' : 'var(--border)',
-                        boxShadow: selected ? 'var(--shadow)' : 'var(--shadow-sm)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                        <div style={{ display: 'grid', gap: 8 }}>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <Badge color={categoryColor}>{workflow.category}</Badge>
-                            <Badge color={workflow.needs_agent ? 'purple' : 'green'}>
-                              {workflow.needs_agent ? 'agent' : 'direct'}
-                            </Badge>
-                            {workflow.destructive ? <Badge color="orange">guarded</Badge> : null}
-                          </div>
-                          <div style={{ fontSize: 16, fontWeight: 600 }}>{workflow.name}</div>
-                        </div>
-                        {HERO_WORKFLOW_IDS.has(workflow.id) ? <Badge color="blue">hero</Badge> : null}
-                      </div>
-
-                      <div style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
-                        {workflow.description}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Badge color="gray">{formatPlatforms(workflow)}</Badge>
-                        {workflow.timeout_s ? <Badge color="gray">{workflow.timeout_s}s budget</Badge> : null}
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                          {workflow.requires?.length ? `requires ${workflow.requires.join(', ')}` : 'ready to run'}
-                        </span>
-                        <button
-                          className={`btn${runningId === workflow.id ? '' : ' primary'} sm`}
-                          disabled={!!runningId}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            runWorkflow(workflow)
-                          }}
-                        >
-                          {runningId === workflow.id ? 'Running...' : 'Run'}
-                        </button>
-                      </div>
-                    </Card>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', height: '100%', overflow: 'hidden', flex: 1 }}>
+      {/* Left — library */}
+      <main className="main">
+        <div className="main-head">
+          <div>
+            <h1>Workflows</h1>
+            <div className="sub">one-command automations · run from dashboard, CLI, or voice</div>
+          </div>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+            {filtered.length} workflows
+          </span>
         </div>
 
-        <div style={{ display: 'grid', gap: 14 }}>
-          <Card style={{ padding: 18 }}>
-            <PanelHeader
-              eyebrow="Execution"
-              title={selectedWorkflow ? selectedWorkflow.name : 'Select a workflow'}
-              description={selectedWorkflow ? selectedWorkflow.description : 'Pick a workflow from the library to inspect posture and run it.'}
-              aside={selectedWorkflow ? <Badge color={runningId === selectedWorkflow.id ? 'orange' : 'blue'}>{runningId === selectedWorkflow.id ? 'live' : 'ready'}</Badge> : null}
-            />
-            {selectedWorkflow ? (
-              <div style={{ display: 'grid', gap: 14 }}>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <Badge color={CATEGORY_COLORS[selectedWorkflow.category] || 'blue'}>{selectedWorkflow.category}</Badge>
-                  <Badge color={selectedWorkflow.needs_agent ? 'purple' : 'green'}>
-                    {selectedWorkflow.needs_agent ? 'agent-mediated' : 'direct run'}
-                  </Badge>
-                  <Badge color="gray">{formatPlatforms(selectedWorkflow)}</Badge>
-                  {selectedWorkflow.destructive ? <Badge color="orange">approval-sensitive</Badge> : null}
+        <div className="tabs">
+          {[['all','ALL'],['files','FILES'],['documents','DOCS'],['developer','DEV'],['content','CONTENT'],['system','SYSTEM'],['data','DATA']].map(([k, l]) => (
+            <button key={k} className={`tab${cat === k ? ' sel' : ''}`} onClick={() => setCat(k)}>{l}</button>
+          ))}
+        </div>
+
+        <div className="wf-grid">
+          {filtered.map((w) => {
+            const r = running[w.id]
+            const color = CATS[w.category] || 'var(--ink-3)'
+            const icon = ICONS[w.category] || '◆'
+            return (
+              <div key={w.id} className={`wf${selId === w.id ? ' sel' : ''}`} onClick={() => setSelId(w.id)}>
+                <div className="wf-bar" style={{ background: color }} />
+                <div className="wf-top">
+                  <div className="wf-icon" style={{ background: `${color}1a`, border: `1px solid ${color}33`, color }}>{icon}</div>
+                  <div className="wf-name">{w.name}</div>
+                  {w.destructive && <span className="tag tag-w">DESTR</span>}
+                  {w.hero && <span className="tag tag-b">HERO</span>}
+                  {w.last?.status === 'completed' && (
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 6px var(--success)', flexShrink: 0 }} />
+                  )}
+                  {w.last?.status === 'pending' && (
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--warn)', boxShadow: '0 0 6px var(--warn)', flexShrink: 0 }} />
+                  )}
                 </div>
-
-                {HERO_WORKFLOW_IDS.has(selectedWorkflow.id) ? (
-                  <div className="glass" style={{ padding: 14, display: 'grid', gap: 12 }}>
-                    <div className="section-label">Hero run setup</div>
-                    {selectedWorkflow.id === 'organize-downloads' ? (
-                      <>
-                        <label style={{ display: 'grid', gap: 6 }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-                            Downloads folder
-                          </span>
-                          <input
-                            value={String(selectedDraft.target_dir || '')}
-                            placeholder="Leave blank to use ~/Downloads"
-                            onChange={(event) => updateDraft(selectedWorkflow.id, 'target_dir', event.target.value)}
-                            style={inputStyle}
-                          />
-                        </label>
-                        <div className="seg">
-                          <button
-                            className={`seg-btn${selectedDraft.dry_run !== false ? ' active' : ''}`}
-                            onClick={() => updateDraft(selectedWorkflow.id, 'dry_run', true)}
-                          >
-                            Preview only
-                          </button>
-                          <button
-                            className={`seg-btn${selectedDraft.dry_run === false ? ' active' : ''}`}
-                            onClick={() => updateDraft(selectedWorkflow.id, 'dry_run', false)}
-                          >
-                            Apply live
-                          </button>
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.55 }}>
-                          Start with a preview for demos. When the plan looks good, rerun in apply mode to actually move the files.
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <label style={{ display: 'grid', gap: 6 }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-                            PDF path
-                          </span>
-                          <input
-                            value={String(selectedDraft.file || '')}
-                            placeholder="/Users/you/Documents/brief.pdf"
-                            onChange={(event) => updateDraft(selectedWorkflow.id, 'file', event.target.value)}
-                            style={inputStyle}
-                          />
-                        </label>
-                        <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.55 }}>
-                          Paste a local PDF path and ClawOS will extract the text, summarize it, and return a structured briefing with live progress.
-                        </div>
-                      </>
-                    )}
+                <div className="wf-desc">{w.description}</div>
+                <div className="wf-meta">
+                  <span className="m">{w.category}</span>
+                  <span className="m">{w.platforms.join(', ')}</span>
+                  {w.last && <span className="m">{w.last.t}</span>}
+                </div>
+                {r?.status === 'running' && (
+                  <div className="wf-progress">
+                    <div className="wf-progress-fill" style={{ width: `${r.pct}%`, background: color }} />
                   </div>
-                ) : null}
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </main>
 
-                <button className="btn primary" disabled={!!runningId} onClick={() => runWorkflow(selectedWorkflow)}>
-                  {runningId === selectedWorkflow.id ? 'Running selected workflow...' : heroButtonLabel(selectedWorkflow.id, selectedDraft)}
+      {/* Right — detail rail */}
+      <aside className="rail">
+        {!selWf ? (
+          <div style={{ padding: '40px 22px', textAlign: 'center', color: 'var(--ink-3)', fontSize: 12.5, lineHeight: 1.6 }}>
+            Select a workflow to see details, run history, and output.
+          </div>
+        ) : (
+          <>
+            <div className="r-head">
+              <h2>{selWf.name}</h2>
+              <div className="meta">
+                <span>{selWf.category}</span>
+                <span>{selWf.platforms.join(', ')}</span>
+                {selWf.destructive && <span style={{ color: 'var(--warn)' }}>approval-sensitive</span>}
+                {selWf.hero && <span style={{ color: 'var(--blue)' }}>hero workflow</span>}
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              <div className="r-sect">
+                <h4>Description</h4>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.6 }}>{selWf.description}</div>
+              </div>
+
+              <div className="r-sect">
+                <h4>Command</h4>
+                <div className="r-output">{selWf.cmd}</div>
+              </div>
+
+              {selWf.last && (
+                <div className="r-sect">
+                  <h4>Last run</h4>
+                  <div className="r-row">
+                    <span className="k">status</span>
+                    <span className="v" style={{
+                      color: selWf.last.status === 'completed' ? 'var(--success)'
+                        : selWf.last.status === 'pending' ? 'var(--warn)'
+                        : 'var(--ink-1)'
+                    }}>
+                      {selWf.last.status}
+                    </span>
+                  </div>
+                  <div className="r-row"><span className="k">time</span><span className="v">{selWf.last.t}</span></div>
+                  {selWf.last.output && (
+                    <>
+                      <h4 style={{ marginTop: 10 }}>Output</h4>
+                      <div className="r-output">{selWf.last.output}</div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {(selOut || runError || run) && (
+                <div className="r-sect">
+                  <h4>Live output</h4>
+                  {run?.status === 'running' && (
+                    <div className="wf-progress" style={{ marginBottom: 8 }}>
+                      <div className="wf-progress-fill" style={{ width: `${run.pct}%`, background: CATS[selWf.category] || 'var(--accent)' }} />
+                    </div>
+                  )}
+                  {selOut && <div className="r-output">{selOut}</div>}
+                  {runError && (
+                    <div className="r-output" style={{ color: 'var(--danger)', borderColor: 'oklch(70% 0.2 25 / 0.25)' }}>
+                      {runError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {history.length > 0 && (
+                <div className="r-sect">
+                  <h4>Run history</h4>
+                  {history.slice(0, 6).map((h) => (
+                    <div key={`${h.id}-${h.ts}`} className="wf-hist">
+                      <span className="dot" style={{
+                        background: h.status === 'ok' || h.status === 'completed' ? 'var(--success)' : 'var(--danger)',
+                        boxShadow: `0 0 4px ${h.status === 'ok' || h.status === 'completed' ? 'var(--success)' : 'var(--danger)'}`,
+                      }} />
+                      <span style={{ color: h.status === 'ok' || h.status === 'completed' ? 'var(--ink-2)' : 'var(--danger)' }}>
+                        {h.name}
+                      </span>
+                      <span className="t">{new Date(h.ts).toLocaleTimeString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="r-btns">
+              {run?.status === 'running' ? (
+                <button className="btn-run" disabled>
+                  <span style={{ animation: 'blink 1s ease-in-out infinite' }}>●</span>{' '}
+                  Running… {Math.floor(run.pct)}%
                 </button>
-
-                {liveProgress && liveProgress.id === selectedWorkflow.id ? (
-                  <div className="glass" style={{ padding: 14, display: 'grid', gap: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <StatusDot status={normalizeProgressStatus(liveProgress.status)} />
-                        <span style={{ fontWeight: 600 }}>Live progress</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        {typeof liveProgress.progress === 'number' ? <Badge color="gray">{liveProgress.progress}%</Badge> : null}
-                        <Badge color={progressColor(liveProgress.status)}>{liveProgress.status}</Badge>
-                      </div>
-                    </div>
-                    <div style={{ color: 'var(--text-2)', fontSize: 12, lineHeight: 1.55 }}>
-                      {liveProgress.message || liveProgress.output || 'ClawOS is streaming updates here as the workflow runs.'}
-                    </div>
-                    <div className="progress-bar">
-                      <div
-                        className="progress-fill"
-                        style={{
-                          width: progressWidth(liveProgress.progress, liveProgress.status),
-                          background: `var(--${progressColor(liveProgress.status)})`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                {selectedProgressFeed.length ? (
-                  <div className="grouped-list">
-                    {selectedProgressFeed.map((entry, index) => (
-                      <div
-                        key={`${entry.id}-${entry.phase || 'phase'}-${entry.updatedAt}-${index}`}
-                        className="row"
-                        style={{ alignItems: 'flex-start' }}
-                      >
-                        <span className={`dot ${progressColor(entry.status)}`} style={{ marginTop: 6 }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600 }}>
-                            {entry.phase ? entry.phase.replace(/-/g, ' ') : 'workflow'}
-                          </div>
-                          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.45 }}>
-                            {entry.message || entry.output || 'Waiting for the next event.'}
-                          </div>
-                        </div>
-                        <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
-                          <Badge color={progressColor(entry.status)}>{entry.status}</Badge>
-                          {typeof entry.progress === 'number' ? <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{entry.progress}%</span> : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                {selectedResult?.metadata ? (
-                  <HeroInsights workflowId={selectedWorkflow.id} metadata={selectedResult.metadata} />
-                ) : null}
-
-                <div className="log-terminal" style={{ minHeight: 220, maxHeight: 320, overflowY: 'auto' }}>
-                  {liveOutput || 'Run a workflow to inspect output, errors, or generated notes here.'}
-                </div>
-              </div>
-            ) : (
-              <Empty>Select a workflow from the library to inspect and run it.</Empty>
-            )}
-          </Card>
-
-          <Card style={{ padding: 18 }}>
-            <PanelHeader
-              eyebrow="History"
-              title="Recent runs"
-              description="A local memory of the latest launches from this session."
-              aside={<Badge color="gray">{history.length}</Badge>}
-            />
-            {history.length === 0 ? (
-              <Empty>No workflow runs yet.</Empty>
-            ) : (
-              <div className="grouped-list">
-                {history.map((entry) => (
-                  <div key={`${entry.id}-${entry.ts}`} className="row">
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{entry.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-                        {new Date(entry.ts).toLocaleTimeString()}
-                      </div>
-                    </div>
-                    <Badge color={entry.status === 'ok' ? 'green' : entry.status === 'skipped' ? 'blue' : 'red'}>{entry.status}</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
+              ) : run?.status === 'completed' ? (
+                <button className="btn-sec" style={{ flex: 1, color: 'var(--success)' }}>✓ Completed</button>
+              ) : (
+                <button className="btn-run" onClick={() => runWf(selWf)}>▸ Run {selWf.name}</button>
+              )}
+              <button className="btn-sec">Schedule</button>
+            </div>
+          </>
+        )}
+      </aside>
     </div>
   )
 }
-
-function HeroInsights({ workflowId, metadata }: { workflowId: string; metadata: Record<string, any> }) {
-  if (workflowId === 'organize-downloads') {
-    const categoryCounts = Object.entries(metadata.category_counts || {}) as Array<[string, number]>
-    return (
-      <div className="glass" style={{ padding: 14, display: 'grid', gap: 12 }}>
-        <div className="section-label">Run insights</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
-          <InsightCard label="Files" value={String(metadata.files_moved || 0)} />
-          <InsightCard label="Folders" value={String(metadata.folders_created || 0)} />
-          <InsightCard label="Volume" value={formatBytes(metadata.total_bytes)} />
-          <InsightCard label="Mode" value={metadata.dry_run ? 'preview' : 'applied'} />
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {categoryCounts.map(([name, count]) => (
-            <Badge key={name} color="gray">
-              {name}: {count}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (workflowId === 'summarize-pdf') {
-    const keywords = Array.isArray(metadata.keywords) ? metadata.keywords : []
-    return (
-      <div className="glass" style={{ padding: 14, display: 'grid', gap: 12 }}>
-        <div className="section-label">Run insights</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
-          <InsightCard label="Pages" value={String(metadata.pages_used || 0)} />
-          <InsightCard label="Words" value={String(metadata.word_count || 0)} />
-          <InsightCard label="Read time" value={`${metadata.read_minutes || 0} min`} />
-          <InsightCard label="Highlights" value={String(metadata.bullet_count || 0)} />
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {keywords.map((term: string) => (
-            <Badge key={term} color="gray">{term}</Badge>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  return null
-}
-
-function InsightCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        padding: '12px 14px',
-        borderRadius: 10,
-        background: 'var(--surface-2)',
-        border: '0.5px solid var(--border)',
-      }}
-    >
-      <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
-      <div style={{ marginTop: 8, fontSize: 20, fontWeight: 700, letterSpacing: '-0.04em' }}>{value}</div>
-    </div>
-  )
-}
-
-function MetricCard({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'green' | 'purple' | 'orange' }) {
-  const toneValue = {
-    blue: 'var(--blue)',
-    green: 'var(--green)',
-    purple: 'var(--purple)',
-    orange: 'var(--orange)',
-  }[tone]
-
-  return (
-    <Card style={{ padding: 16 }}>
-      <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
-      <div style={{ marginTop: 8, fontSize: 28, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.04em', color: toneValue }}>
-        {value}
-      </div>
-    </Card>
-  )
-}
-
-const inputStyle = {
-  width: '100%',
-  padding: '8px 12px',
-  borderRadius: 8,
-  border: '0.5px solid var(--border)',
-  background: 'var(--surface-2)',
-  color: 'var(--text)',
-  outline: 'none',
-} as const

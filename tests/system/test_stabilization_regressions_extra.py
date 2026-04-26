@@ -107,42 +107,6 @@ def test_a2a_peer_listing_rejects_untrusted_header(monkeypatch):
         assert response.status_code == 403
 
 
-def test_gateway_delegate_to_peer_rejects_untrusted_peer(monkeypatch):
-    monkeypatch.setattr(
-        "services.a2ad.peer_registry.get_registry",
-        lambda: type(
-            "Registry",
-            (),
-            {
-                "is_blocked": staticmethod(lambda url: False),
-                "is_trusted_url": staticmethod(lambda url: False),
-            },
-        )(),
-    )
-
-    from services.gatewayd.service import delegate_to_peer
-
-    result = asyncio.run(delegate_to_peer("http://peer.test/a2a", "hello", "nexus_default"))
-    assert result.startswith("[A2A DENIED]")
-
-
-def test_gateway_delegate_to_peer_rejects_blocked_peer(monkeypatch):
-    monkeypatch.setattr(
-        "services.a2ad.peer_registry.get_registry",
-        lambda: type(
-            "Registry",
-            (),
-            {
-                "is_blocked": staticmethod(lambda url: True),
-                "is_trusted_url": staticmethod(lambda url: True),
-            },
-        )(),
-    )
-
-    from services.gatewayd.service import delegate_to_peer
-
-    result = asyncio.run(delegate_to_peer("http://peer.test/a2a", "hello", "nexus_default"))
-    assert result.startswith("[A2A DENIED]")
 
 
 def test_toolbridge_prompt_only_lists_granted_tools():

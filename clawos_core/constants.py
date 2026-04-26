@@ -65,7 +65,6 @@ SERVICES = [
     "a2ad",
     "setupd",
     "picoclawd",
-    "gatewayd",
 ]
 
 # ── Ports ─────────────────────────────────────────────────────────────────────
@@ -79,7 +78,6 @@ PORT_METRICD    = 7076
 PORT_A2AD       = 7083
 PORT_SETUPD     = 7084
 PORT_PICOCLAWD  = 18800
-PORT_GATEWAYD   = 18789
 PORT_OLLAMA     = 11434
 
 # Legacy aliases used by older code

@@ -17,7 +17,7 @@ from typing import Optional
 
 log = logging.getLogger("frameworkd")
 
-# Active framework name (gatewayd routes traffic here)
+# Active framework name (Nexus routes traffic here)
 _active_framework: str = "nexus"  # default — Nexus native runtime
 
 

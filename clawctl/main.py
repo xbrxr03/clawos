@@ -26,11 +26,6 @@ Commands:
   voice disable             — disable voice
   voice test                — test TTS
 
-  whatsapp status           — check WhatsApp link
-  whatsapp link             — scan QR to link phone
-  whatsapp unlink           — unlink phone
-  whatsapp test             — send test message
-
   openclaw status           — check OpenClaw installation
   openclaw install [model]  — install and configure OpenClaw
   openclaw start            — start OpenClaw gateway
@@ -43,6 +38,10 @@ Commands:
   a2a status                — check a2ad service
 
   budget                    — show per-workspace token usage
+
+  wf list [--category <c>] [--search <q>]  — list workflows
+  wf info <id>              — show workflow details
+  wf run <id> [key=value …] [--dry-run]   — run a workflow
 
   wizard                    — run first-run wizard
   chat                      — start Nexus
@@ -195,28 +194,6 @@ else:
     def voice_mode(mode):
         from clawctl.commands.voice import run_mode; run_mode(mode or "")
 
-    # ── whatsapp ──────────────────────────────────────────────────────────────
-    @main.group()
-    def whatsapp():
-        """Manage WhatsApp gateway."""
-        pass
-
-    @whatsapp.command("status")
-    def wa_status():
-        from clawctl.commands.whatsapp import run_status; run_status()
-
-    @whatsapp.command("link")
-    def wa_link():
-        from clawctl.commands.whatsapp import run_link; run_link()
-
-    @whatsapp.command("unlink")
-    def wa_unlink():
-        from clawctl.commands.whatsapp import run_unlink; run_unlink()
-
-    @whatsapp.command("test")
-    def wa_test():
-        from clawctl.commands.whatsapp import run_test; run_test()
-
     # ── openclaw ──────────────────────────────────────────────────────────────
     @main.group()
     def openclaw():
@@ -248,11 +225,6 @@ else:
     @openclaw.command("restart")
     def oc_restart():
         from clawctl.commands.openclaw import run_restart; run_restart()
-
-    @openclaw.command("whatsapp")
-    def oc_whatsapp():
-        """Link WhatsApp via OpenClaw (QR scan)."""
-        from clawctl.commands.openclaw import run_whatsapp; run_whatsapp()
 
     @openclaw.command("onboard")
     def oc_onboard():
@@ -576,7 +548,7 @@ if CLICK_OK:
     @framework.command("use")
     @click.argument("name")
     def framework_use(name):
-        """Set the active framework (gatewayd routes messages here)."""
+        """Set the active framework for agent routing."""
         from clawctl.commands.framework import run_use; run_use(name)
 
     @framework.command("status")
@@ -651,6 +623,39 @@ if CLICK_OK:
     def ace_resume(workspace):
         """Resume writing entries to LEARNED.md."""
         from clawctl.commands.ace import run_resume; run_resume(workspace)
+
+
+# ── wf (workflows) ────────────────────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def wf():
+        """List and run built-in ClawOS workflows."""
+        pass
+
+    @wf.command("list")
+    @click.option("--category", "-c", default=None, help="Filter by category (files, documents, developer, …)")
+    @click.option("--search", "-s", default=None, help="Full-text search across name, description, tags")
+    def wf_list(category, search):
+        """List all available workflows."""
+        from clawctl.commands.workflow import run_list
+        run_list(category=category, search=search)
+
+    @wf.command("info")
+    @click.argument("workflow_id")
+    def wf_info(workflow_id):
+        """Show details for a single workflow."""
+        from clawctl.commands.workflow import run_info
+        run_info(workflow_id)
+
+    @wf.command("run")
+    @click.argument("workflow_id")
+    @click.argument("kvpairs", nargs=-1, metavar="[key=value ...]")
+    @click.option("--workspace", "-w", default="nexus_default", help="Workspace ID")
+    @click.option("--dry-run", is_flag=True, help="Preview actions without making changes")
+    def wf_run(workflow_id, kvpairs, workspace, dry_run):
+        """Run a workflow. Pass arguments as key=value pairs."""
+        from clawctl.commands.workflow import run_run
+        run_run(workflow_id, list(kvpairs), workspace=workspace, dry_run=dry_run)
 
 
 if __name__ == "__main__":

@@ -1,357 +1,187 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Badge, Card, Empty, PageHeader, PanelHeader, SectionLabel, Skeleton, SkeletonText } from '../components/ui.jsx'
-import { commandCenterApi, type UseCasePack } from '../lib/commandCenterApi'
+import { useState } from 'react'
 
-// ── Pack-specific setup guides ─────────────────────────────────────────────────
-
-const PACK_SETUP: Record<string, {
-  steps: string[]
-  firstWorkflow?: string
-  quickstartNote?: string
-}> = {
-  'daily-briefing-os': {
-    steps: [
-      '1. Set your WhatsApp JID in Settings → Gateway to receive briefings',
-      '2. Set CLAWOS_BRIEFING_HOUR env var (default: 7 for 7am)',
-      '3. Run "Morning Briefing" workflow once to verify delivery',
-      '4. Optionally connect your calendar for event summaries',
-    ],
-    firstWorkflow: 'morning-briefing',
-    quickstartNote: 'Your first morning briefing will arrive on WhatsApp tomorrow at 7am.',
-  },
-  'coding-autopilot': {
-    steps: [
-      '1. Set your default repo path in Settings → Workspace',
-      '2. Run "repo-summary" workflow on your main repo to seed Kizuna',
-      '3. Enable "pr-review" workflow for GitHub PRs',
-      '4. Set policyd to "developer-workstation" for sensible defaults',
-    ],
-    firstWorkflow: 'repo-summary',
-    quickstartNote: 'Kizuna will index your repo and surface TODOs, patterns, and tech debt.',
-  },
-  'sales-meeting-operator': {
-    steps: [
-      '1. Run "meeting-notes" workflow after your next call',
-      '2. Connect calendar in Settings → Providers for auto-prep',
-      '3. Enable approval gates for all external draft sends',
-      '4. Set your CRM field mapping in Settings → Integrations',
-    ],
-    firstWorkflow: 'meeting-notes',
-    quickstartNote: 'Meeting notes and follow-up drafts will route through the approval lane.',
-  },
-  'chat-app-command-center': {
-    steps: [
-      '1. Link WhatsApp via Settings → Gateway → Scan QR code',
-      '2. Send "Hey Jarvis, run morning brief" to test routing',
-      '3. Add trusted contact JIDs in Settings → Gateway → Routes',
-      '4. Enable voice transcription for voice note support',
-    ],
-    firstWorkflow: 'organize-downloads',
-    quickstartNote: 'Once WhatsApp is linked, every message routes through ClawOS.',
-  },
+type Framework = {
+  id: string
+  name: string
+  by: string
+  color: string
+  letter: string
+  desc: string
+  tags: string[]
+  stars: string
+  license: string
+  size: string
+  status: 'running' | 'installed' | 'available'
+  cat: 'built-in' | 'ecosystem'
 }
 
-const WAVE_COLORS: Record<string, string> = {
-  'wave-1': 'green',
-  'wave-2': 'blue',
-  'wave-3': 'orange',
+const FRAMEWORKS: Framework[] = [
+  { id: 'nexus', name: 'Nexus', by: 'clawOS', color: 'var(--accent)', letter: 'N', desc: 'Native Python ReAct agent. Always-on, CPU-capable, 4-layer persistent memory, skill loader, A2A federation.', tags: ['built-in', 'offline', 'react', 'memory'], stars: '—', license: 'AGPL-3.0', size: '12 MB', status: 'running', cat: 'built-in' },
+  { id: 'picoclaw', name: 'PicoClaw', by: 'Sipeed', color: 'var(--warn)', letter: 'P', desc: 'Lightweight runtime from Sipeed. Auto-activated on ARM hardware — zero configuration, zero cost agentic tasks.', tags: ['arm', 'lightweight', 'edge'], stars: '1.2k', license: 'MIT', size: '4 MB', status: 'running', cat: 'built-in' },
+  { id: 'nullclaw', name: 'NullClaw', by: 'clawOS', color: 'var(--ink-2)', letter: 'Ø', desc: 'Stateless, ephemeral, pure function execution. No memory, no state — just input → output. Perfect for one-shot tasks.', tags: ['stateless', 'ephemeral', 'fast'], stars: '—', license: 'AGPL-3.0', size: '2 MB', status: 'installed', cat: 'built-in' },
+  { id: 'zeroclaw', name: 'ZeroClaw', by: 'clawOS', color: 'oklch(80% 0.15 30)', letter: 'Z', desc: 'Rust implementation, ultra-lightweight. Sub-millisecond cold start, minimal memory footprint.', tags: ['rust', 'fast', 'minimal'], stars: '—', license: 'AGPL-3.0', size: '8 MB', status: 'available', cat: 'built-in' },
+  { id: 'openclaw', name: 'OpenClaw', by: 'openclaw.ai', color: 'var(--violet)', letter: 'O', desc: 'Full ecosystem with 13,700+ community skills, multi-channel support. Built on pi-mono\'s 4-tool core.', tags: ['skills', 'multi-channel', 'mcp'], stars: '8.4k', license: 'MIT', size: '180 MB', status: 'installed', cat: 'ecosystem' },
+  { id: 'smolagents', name: 'SmolAgents', by: 'HuggingFace', color: 'oklch(75% 0.2 50)', letter: 'S', desc: 'Code-based agent with 30% fewer LLM calls. Executes Python directly instead of JSON tool calls.', tags: ['code-agent', 'efficient', 'huggingface'], stars: '14k', license: 'Apache-2.0', size: '45 MB', status: 'available', cat: 'ecosystem' },
+  { id: 'agentzero', name: 'AgentZero', by: 'frdel', color: 'oklch(70% 0.2 15)', letter: 'A0', desc: 'Self-correcting agent with tool creation and computer use. Creates its own tools at runtime when needed.', tags: ['self-correcting', 'tool-creation', 'computer-use'], stars: '6.2k', license: 'MIT', size: '62 MB', status: 'available', cat: 'ecosystem' },
+  { id: 'pocketflow', name: 'PocketFlow', by: 'pocketflow', color: 'oklch(78% 0.14 185)', letter: 'PF', desc: '100-line LLM framework with zero dependencies and MCP support. The smallest serious agent framework.', tags: ['minimal', 'zero-deps', 'mcp'], stars: '3.1k', license: 'MIT', size: '0.3 MB', status: 'available', cat: 'ecosystem' },
+  { id: 'langroid', name: 'Langroid', by: 'langroid', color: 'oklch(72% 0.18 150)', letter: 'L', desc: 'Multi-agent message-passing framework with built-in local LLM support. Agents as first-class citizens.', tags: ['multi-agent', 'message-passing', 'local-llm'], stars: '4.5k', license: 'MIT', size: '38 MB', status: 'available', cat: 'ecosystem' },
+  { id: 'openai-agents', name: 'OpenAI Agents SDK', by: 'OpenAI', color: 'oklch(76% 0.16 210)', letter: 'OA', desc: 'Provider-agnostic SDK supporting 100+ LLMs. Handoffs, guardrails, and tracing built in.', tags: ['provider-agnostic', 'guardrails', 'tracing'], stars: '18k', license: 'MIT', size: '22 MB', status: 'available', cat: 'ecosystem' },
+]
+
+const TABS: [string, string][] = [
+  ['all', 'ALL'],
+  ['running', 'RUNNING'],
+  ['installed', 'INSTALLED'],
+  ['built-in', 'BUILT-IN'],
+  ['ecosystem', 'ECOSYSTEM'],
+]
+
+function tabCount(key: string) {
+  if (key === 'all') return FRAMEWORKS.length
+  if (key === 'running') return FRAMEWORKS.filter((f) => f.status === 'running').length
+  if (key === 'installed') return FRAMEWORKS.filter((f) => f.status !== 'available').length
+  if (key === 'built-in') return FRAMEWORKS.filter((f) => f.cat === 'built-in').length
+  return FRAMEWORKS.filter((f) => f.cat === 'ecosystem').length
 }
 
 export function PacksPage() {
-  const navigate = useNavigate()
-  const [packs, setPacks] = useState<UseCasePack[]>([])
-  const [selectedId, setSelectedId] = useState('')
-  const [busy, setBusy] = useState<string | null>(null)
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null)
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [installing, setInstalling] = useState<string | null>(null)
+  const [installed, setInstalled] = useState<Set<string>>(new Set())
 
-  const load = async () => {
-    setLoading(true)
-    try {
-      const data = await commandCenterApi.listPacks()
-      setPacks(Array.isArray(data) ? data : [])
-    } finally {
-      setLoading(false)
+  const filtered = FRAMEWORKS.filter((f) => {
+    if (filter === 'running' && f.status !== 'running') return false
+    if (filter === 'installed' && f.status === 'available' && !installed.has(f.id)) return false
+    if (filter === 'built-in' && f.cat !== 'built-in') return false
+    if (filter === 'ecosystem' && f.cat !== 'ecosystem') return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!f.name.toLowerCase().includes(q) && !f.desc.toLowerCase().includes(q) && !f.tags.some((t) => t.includes(q))) return false
     }
+    return true
+  })
+
+  function install(id: string) {
+    setInstalling(id)
+    setTimeout(() => {
+      setInstalled((s) => new Set([...s, id]))
+      setInstalling(null)
+    }, 1800)
   }
 
-  useEffect(() => {
-    load().catch(() => setMessage('Failed to load packs'))
-  }, [])
-
-  useEffect(() => {
-    if (!selectedId && packs.length) {
-      const primary = packs.find((item) => item.primary) || packs[0]
-      setSelectedId(primary.id)
-    }
-  }, [packs, selectedId])
-
-  const selected = useMemo(
-    () => packs.find((pack) => pack.id === selectedId) || null,
-    [packs, selectedId],
-  )
-  const stats = useMemo(
-    () => ({
-      total: packs.length,
-      primary: packs.filter((pack) => pack.primary).length,
-      installed: packs.filter((pack) => pack.primary || pack.secondary).length,
-      recommendedExtensions: packs.reduce((max, pack) => Math.max(max, pack.extension_recommendations?.length || 0), 0),
-    }),
-    [packs],
-  )
-
-  const installPack = async (pack: UseCasePack, primary = false) => {
-    setBusy(pack.id)
-    setMessage('')
-    try {
-      await commandCenterApi.installPack(pack.id, primary)
-      await load()
-      setMessage(`${pack.name} is now ${primary ? 'the primary pack' : 'available in your workspace'}.`)
-    } catch (error: any) {
-      setMessage(error.message || `Failed to install ${pack.name}`)
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const runFirstWorkflow = async (workflowId: string, packName: string) => {
-    setRunningWorkflow(workflowId)
-    setMessage('')
-    try {
-      const r = await fetch(`/api/workflows/${encodeURIComponent(workflowId)}/run`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-      if (r.ok) {
-        setMessage(`${packName} quickstart workflow started — check Tasks for progress.`)
-        setTimeout(() => navigate('/tasks'), 1500)
-      } else {
-        setMessage(`Run "${workflowId}" manually from the Workflows tab.`)
-      }
-    } catch {
-      setMessage(`Run "${workflowId}" manually from the Workflows tab.`)
-    } finally {
-      setRunningWorkflow(null)
-    }
-  }
+  const running = FRAMEWORKS.filter((f) => f.status === 'running').length
+  const totalInstalled = FRAMEWORKS.filter((f) => f.status !== 'available').length + installed.size
 
   return (
-    <div className="fade-up" style={{ padding: '0 0 48px' }}>
-      <div style={{ padding: '32px 24px 18px' }}>
-        <PageHeader
-          eyebrow="Packs"
-          title="Outcome-focused packs with install posture and setup defaults."
-          description="Inspect the primary pack, compare workflow bundles, and switch the product posture without leaving the dashboard."
-          meta={
-            <>
-              <Badge color="blue">{stats.total} packs</Badge>
-              <Badge color={stats.primary ? 'green' : 'gray'}>{stats.primary ? 'Primary selected' : 'No primary yet'}</Badge>
-              <Badge color="gray">{stats.installed} installed</Badge>
-            </>
-          }
-        />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, padding: '0 20px 16px' }}>
-        <MetricCard label="Available" value={stats.total} tone="blue" />
-        <MetricCard label="Installed" value={stats.installed} tone="green" />
-        <MetricCard label="Primary" value={stats.primary} tone="orange" />
-        <MetricCard label="Best ext. set" value={stats.recommendedExtensions} tone="purple" />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 14, padding: '0 20px' }}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          {loading ? (
-            Array.from({ length: 3 }).map((_, index) => (
-              <Card key={index} style={{ padding: 18 }}>
-                <Skeleton width="26%" height={14} />
-                <div style={{ height: 12 }} />
-                <SkeletonText lines={3} />
-              </Card>
-            ))
-          ) : packs.length === 0 ? (
-            <Card><Empty>No packs are available yet.</Empty></Card>
-          ) : (
-            packs.map((pack) => (
-              <Card
-                key={pack.id}
-                style={{
-                  padding: 18,
-                  cursor: 'pointer',
-                  borderColor: pack.id === selectedId ? 'rgba(77, 143, 247, 0.28)' : undefined,
-                }}
-                onClick={() => setSelectedId(pack.id)}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <div style={{ fontSize: 16, fontWeight: 600 }}>{pack.name}</div>
-                      <Badge color={WAVE_COLORS[pack.wave || 'wave-2'] || 'blue'}>{pack.wave || 'wave-1'}</Badge>
-                      {pack.primary ? <Badge color="green">primary</Badge> : null}
-                      {pack.secondary ? <Badge color="blue">installed</Badge> : null}
-                    </div>
-                    <div style={{ marginTop: 8, color: 'var(--text-2)', lineHeight: 1.55 }}>{pack.description}</div>
-                    <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <Badge color="gray">{(pack.default_workflows || []).length} workflows</Badge>
-                      <Badge color="gray">{(pack.extension_recommendations || []).length} recommended extensions</Badge>
-                      <Badge color="gray">{(pack.provider_recommendations || []).length} provider fits</Badge>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gap: 8, flexShrink: 0 }}>
-                    <button className="btn primary" disabled={busy !== null} onClick={(event) => { event.stopPropagation(); installPack(pack, true) }}>
-                      {busy === pack.id ? 'Applying...' : pack.primary ? 'Primary Pack' : 'Set Primary'}
-                    </button>
-                    {!pack.primary && (
-                      <button className="btn" disabled={busy !== null} onClick={(event) => { event.stopPropagation(); installPack(pack, false) }}>
-                        {pack.secondary ? 'Installed' : 'Install'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
+    <main className="main" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0 }}>
+        <div className="main-head">
+          <div>
+            <h1>Framework Store</h1>
+            <div className="sub">install any agent framework — one shared Ollama backend, any framework on top</div>
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', textAlign: 'right' }}>
+            <div>{running} running</div>
+            <div>{totalInstalled} installed · {FRAMEWORKS.length} total</div>
+          </div>
         </div>
 
-        <Card style={{ padding: 20 }}>
-          {selected ? (
-            <div style={{ display: 'grid', gap: 16 }}>
-              <PanelHeader
-                eyebrow="Selected pack"
-                title={selected.name}
-                description={selected.setup_summary || selected.description}
-                aside={
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <Badge color={WAVE_COLORS[selected.wave || 'wave-2'] || 'blue'}>{selected.wave || 'wave-1'}</Badge>
-                    {selected.primary ? <Badge color="green">primary</Badge> : null}
-                    {selected.secondary ? <Badge color="blue">installed</Badge> : null}
-                  </div>
-                }
-              />
+        <div className="search">
+          <span className="sym">⌕</span>
+          <input
+            placeholder="Search frameworks…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
 
-              <div>
-                <SectionLabel>Dashboards</SectionLabel>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {(selected.dashboards || []).map((item) => <Badge key={item} color="blue">{item}</Badge>)}
-                </div>
-              </div>
+        <div className="tabs">
+          {TABS.map(([k, l]) => (
+            <button key={k} className={`tab${filter === k ? ' sel' : ''}`} onClick={() => setFilter(k)}>
+              {l} · {tabCount(k)}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              <div>
-                <SectionLabel>Default workflows</SectionLabel>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {(selected.default_workflows || []).map((item) => (
-                    <div key={item} className="mono" style={{ padding: '10px 12px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <SectionLabel>Recommended extensions</SectionLabel>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {(selected.extension_recommendations || []).map((item) => <Badge key={item} color="gray">{item}</Badge>)}
-                  </div>
-                </div>
-                <div>
-                  <SectionLabel>Recommended providers</SectionLabel>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {(selected.provider_recommendations || []).map((item) => <Badge key={item} color="gray">{item}</Badge>)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass" style={{ padding: 14 }}>
-                <div className="section-label">Policy pack</div>
-                <div className="mono" style={{ marginTop: 6 }}>{selected.policy_pack || 'recommended'}</div>
-              </div>
-
-              {/* ── Quick Setup Guide ── */}
-              {PACK_SETUP[selected.id] && (
-                <div style={{
-                  background: 'rgba(124, 106, 245, 0.06)',
-                  border: '1px solid rgba(124, 106, 245, 0.2)',
-                  borderRadius: 12,
-                  padding: 16,
-                  display: 'grid',
-                  gap: 12,
-                }}>
-                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a78bfa', fontWeight: 700 }}>
-                    Quick Setup
-                  </div>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {PACK_SETUP[selected.id].steps.map((step, i) => (
-                      <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.55 }}>{step}</div>
-                    ))}
-                  </div>
-                  {PACK_SETUP[selected.id].quickstartNote && (
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
-                      {PACK_SETUP[selected.id].quickstartNote}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {PACK_SETUP[selected.id].firstWorkflow && (
-                      <button
-                        className="btn primary"
-                        style={{ fontSize: 12 }}
-                        disabled={runningWorkflow !== null}
-                        onClick={() => runFirstWorkflow(
-                          PACK_SETUP[selected.id].firstWorkflow!,
-                          selected.name,
-                        )}
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 24 }}>
+        {filtered.length === 0 ? (
+          <div className="empty" style={{ minHeight: 160 }}>
+            <div className="empty-title">No frameworks match</div>
+            <div className="empty-body">Try a different filter or clear your search.</div>
+          </div>
+        ) : (
+          <div className="fw-grid">
+            {filtered.map((f) => {
+              const isInstalled = f.status !== 'available' || installed.has(f.id)
+              const isRunning = f.status === 'running'
+              return (
+                <div key={f.id} className="fw">
+                  <div className="bar" style={{ background: f.color }} />
+                  <div className="fw-body">
+                    <div className="fw-top">
+                      <div
+                        className="fw-icon"
+                        style={{ background: `${f.color}22`, border: `1px solid ${f.color}44`, color: f.color }}
                       >
-                        {runningWorkflow === PACK_SETUP[selected.id].firstWorkflow
-                          ? 'Starting...'
-                          : `Run ${PACK_SETUP[selected.id].firstWorkflow} →`}
-                      </button>
-                    )}
-                    <button
-                      className="btn"
-                      style={{ fontSize: 12 }}
-                      onClick={() => navigate('/workflows')}
-                    >
-                      Open Workflows
-                    </button>
+                        {f.letter}
+                      </div>
+                      <div className="fw-info">
+                        <div className="fw-name">{f.name}</div>
+                        <div className="fw-by">{f.by} · {f.license}</div>
+                      </div>
+                      <span
+                        className="status-dot"
+                        style={{
+                          background: isRunning ? 'var(--success)' : isInstalled ? 'var(--blue)' : 'var(--ink-4)',
+                          boxShadow: isRunning ? '0 0 8px var(--success)' : isInstalled ? '0 0 6px var(--blue)' : 'none',
+                        }}
+                      />
+                    </div>
+
+                    <div className="fw-desc">{f.desc}</div>
+
+                    <div className="fw-tags">
+                      {f.tags.map((t) => <span key={t} className="fw-tag">{t}</span>)}
+                    </div>
+
+                    <div className="fw-stats">
+                      {f.stars !== '—' && <span className="s">★ {f.stars}</span>}
+                      <span className="s">↓ {f.size}</span>
+                      <span
+                        className="s"
+                        style={{ color: isRunning ? 'var(--success)' : isInstalled ? 'var(--blue)' : 'var(--ink-4)' }}
+                      >
+                        {isRunning ? 'running' : isInstalled ? 'installed' : 'available'}
+                      </span>
+                    </div>
+
+                    <div className="fw-foot">
+                      {isRunning ? (
+                        <button className="btn-running">● Running</button>
+                      ) : isInstalled ? (
+                        <button className="btn-installed">✓ Installed</button>
+                      ) : (
+                        <button
+                          className="btn-run"
+                          style={{ flex: 'none', padding: '8px 14px', fontSize: 12 }}
+                          disabled={installing === f.id}
+                          onClick={() => install(f.id)}
+                        >
+                          {installing === f.id ? '⤓ Installing…' : `⤓ Install ${f.name}`}
+                        </button>
+                      )}
+                      <button className="btn-sec" style={{ marginLeft: 'auto', fontSize: 11 }}>Docs →</button>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <Empty>Select a pack to inspect its setup shape and defaults.</Empty>
-          )}
-        </Card>
+              )
+            })}
+          </div>
+        )}
       </div>
-
-      {message && (
-        <div style={{ padding: '16px 20px 0' }}>
-          <Card style={{ padding: 14, color: 'var(--text-2)' }}>{message}</Card>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function MetricCard({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'green' | 'orange' | 'purple' }) {
-  const toneValue = {
-    blue: 'var(--blue)',
-    green: 'var(--green)',
-    orange: 'var(--orange)',
-    purple: 'var(--purple)',
-  }[tone]
-
-  return (
-    <Card style={{ padding: 18 }}>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
-      <div style={{ marginTop: 8, fontSize: 30, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.05em', color: toneValue }}>
-        {value}
-      </div>
-    </Card>
+    </main>
   )
 }

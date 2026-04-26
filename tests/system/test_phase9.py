@@ -102,15 +102,6 @@ def test_sqlite_wal_audit():
         fail("audit: SQLite WAL missing")
 
 
-# ── Port: gatewayd moved to 18789 ────────────────────────────────────────────
-def test_port_gatewayd():
-    from clawos_core.constants import PORT_GATEWAYD
-    if PORT_GATEWAYD == 18789:
-        ok("constants: PORT_GATEWAYD=18789")
-    else:
-        fail("constants: PORT_GATEWAYD wrong", str(PORT_GATEWAYD))
-
-
 def test_a2a_ports():
     from clawos_core.constants import A2A_PORT_NEXUS, A2A_PORT_RAGD, PORT_A2AD
     if A2A_PORT_NEXUS == PORT_A2AD == 7083:
@@ -305,15 +296,6 @@ def test_modeld_routing():
         fail("modeld: task routing missing")
 
 
-# ── gatewayd: WhatsApp wired ──────────────────────────────────────────────────
-def test_gatewayd_whatsapp():
-    f = read_text(ROOT / "services" / "gatewayd" / "service.py")
-    if "WhatsAppChannel" in f and "on_message" in f:
-        ok("gatewayd: WhatsApp channel wired")
-    else:
-        fail("gatewayd: WhatsApp channel not wired")
-
-
 # ── Run all tests ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("\n  ClawOS Phase 9 Tests\n  " + "─"*46)
@@ -326,7 +308,6 @@ if __name__ == "__main__":
         test_dashd_bearer_token,
         test_sqlite_wal_policyd,
         test_sqlite_wal_audit,
-        test_port_gatewayd,
         test_a2a_ports,
         test_config_gen_no_qwen3,
         test_config_gen_kimi,
@@ -346,7 +327,6 @@ if __name__ == "__main__":
         test_iso_chroot,
         test_no_malformed_dir,
         test_modeld_routing,
-        test_gatewayd_whatsapp,
     ]
 
     for t in tests:

@@ -30,6 +30,8 @@ def test_tracked_source_files_carry_agpl_headers():
         if rel in SKIP_FILES or rel.startswith(SKIP_PREFIXES):
             continue
         path = ROOT / rel
+        if not path.exists():
+            continue
         if path.suffix.lower() not in SOURCE_EXTENSIONS:
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
