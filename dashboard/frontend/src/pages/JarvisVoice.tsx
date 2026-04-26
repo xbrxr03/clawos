@@ -43,7 +43,6 @@ function srcClass(source: string) {
   const tag = srcTag(source)
   if (tag === 'VOICE') return 'voice'
   if (tag === 'BRIEFING') return 'brief'
-  if (tag === 'WA') return 'wa'
   return ''
 }
 

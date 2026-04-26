@@ -55,7 +55,8 @@ export function MemoryPage() {
           return t
         })
         setTiers(updated)
-        if (Array.isArray(data.entries) && data.entries.length > 0) setEntries(data.entries)
+        if (Array.isArray(data.entries) && data.entries.length > 0)
+          setEntries(data.entries.map((e: { kind?: string; source?: string; ts?: string; content?: string }) => ({ kind: e.kind ?? '', src: e.source ?? '', ts: e.ts ?? '', content: e.content ?? '' })))
       })
       .catch(() => {})
   }, [ws])
