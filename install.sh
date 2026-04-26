@@ -567,7 +567,7 @@ divider
 echo ""
 
 CLAWOS_REPO="${CLAWOS_REPO:-https://github.com/xbrxr03/clawos}"
-INSTALL_DIR="${CLAWOS_DIR:-$HOME/clawos}"
+INSTALL_DIR="${CLAWOS_DIR:-$HOME/.clawos-runtime}"
 CLAWOS_BRANCH="${CLAWOS_BRANCH:-main}"
 SKIP_MODEL="${SKIP_MODEL:-false}"
 OPENCLAW_GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
