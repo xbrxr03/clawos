@@ -820,6 +820,7 @@ elif [ -d "$INSTALL_DIR/.git" ]; then
   run_with_spinner "Updating existing install" git -C "$INSTALL_DIR" pull --ff-only -q || warn "Git pull failed - using existing checkout"
   ok "ClawOS updated"
 else
+  rm -rf "$INSTALL_DIR"
   run_with_spinner "Cloning from GitHub" \
     git clone -q --branch "$CLAWOS_BRANCH" --depth 1 "$CLAWOS_REPO" "$INSTALL_DIR" \
     || die "Clone failed. Check: $CLAWOS_REPO"
