@@ -519,7 +519,7 @@ EOF
     systemctl --user enable ollama.service >/dev/null 2>&1 || true
     ok "Ollama starts on boot"
 
-    bash "${INSTALL_DIR}/scripts/setup-systemd.sh" >/dev/null 2>&1 \
+    CLAWOS_HOME="$INSTALL_DIR" bash "${INSTALL_DIR}/scripts/setup-systemd.sh" >/dev/null 2>&1 \
       && ok "ClawOS starts on boot" \
       || warn "ClawOS autostart setup failed"
     systemctl --user restart clawos.service >/dev/null 2>&1 \

@@ -5,13 +5,13 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/clawos/venv/bin/python3 %h/clawos/clients/daemon/daemon.py
+ExecStart=%h/.clawos-runtime/venv/bin/python3 %h/.clawos-runtime/clients/daemon/daemon.py
 Restart=on-failure
 RestartSec=5
-StandardOutput=append:%h/clawos/logs/clawosd.log
-StandardError=append:%h/clawos/logs/clawosd.log
-Environment=PYTHONPATH=%h/clawos
-Environment=CLAWOS_HOME=%h/clawos
+StandardOutput=append:%h/.clawos-runtime/logs/clawosd.log
+StandardError=append:%h/.clawos-runtime/logs/clawosd.log
+Environment=PYTHONPATH=%h/.clawos-runtime
+Environment=CLAWOS_HOME=%h/.clawos-runtime
 Environment=OLLAMA_HOST=http://localhost:11434
 Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
