@@ -26,11 +26,9 @@ Commands:
   voice disable             — disable voice
   voice test                — test TTS
 
-  openclaw status           — check OpenClaw installation
-  openclaw install [model]  — install and configure OpenClaw
-  openclaw start            — start OpenClaw gateway
-  openclaw stop             — stop OpenClaw gateway
-  openclaw config [model]   — regenerate OpenClaw config
+  framework install openclaw — install OpenClaw via the Framework Store
+  framework start openclaw  — start OpenClaw gateway
+  framework status          — show all framework statuses
 
   a2a peers                 — list discovered A2A nodes on LAN
   a2a card                  — print this node's Agent Card
@@ -193,43 +191,6 @@ else:
     @click.argument("mode", required=False)
     def voice_mode(mode):
         from clawctl.commands.voice import run_mode; run_mode(mode or "")
-
-    # ── openclaw ──────────────────────────────────────────────────────────────
-    @main.group()
-    def openclaw():
-        """Manage optional OpenClaw runtime."""
-        pass
-
-    @openclaw.command("status")
-    def oc_status():
-        from clawctl.commands.openclaw import run_status; run_status()
-
-    @openclaw.command("install")
-    @click.argument("model", required=False)
-    def oc_install(model):
-        from clawctl.commands.openclaw import run_install; run_install(model)
-
-    @openclaw.command("start")
-    def oc_start():
-        from clawctl.commands.openclaw import run_start; run_start()
-
-    @openclaw.command("stop")
-    def oc_stop():
-        from clawctl.commands.openclaw import run_stop; run_stop()
-
-    @openclaw.command("config")
-    @click.argument("model", required=False)
-    def oc_config(model):
-        from clawctl.commands.openclaw import run_config; run_config(model)
-
-    @openclaw.command("restart")
-    def oc_restart():
-        from clawctl.commands.openclaw import run_restart; run_restart()
-
-    @openclaw.command("onboard")
-    def oc_onboard():
-        """Run OpenClaw full onboard wizard."""
-        from clawctl.commands.openclaw import run_onboard; run_onboard()
 
     @main.group()
     def packs():

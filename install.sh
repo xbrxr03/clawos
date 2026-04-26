@@ -254,43 +254,8 @@ install_node() {
   fi
 }
 
-install_openclaw_cli() {
-  step "Installing OpenClaw"
-
-  if ! command -v npm >/dev/null 2>&1; then
-    warn "npm not found - skipping OpenClaw"
-    return 0
-  fi
-
-  npm config set prefix "$HOME/.local" >/dev/null 2>&1 || true
-  export PATH="$HOME/.local/bin:$PATH"
-  hash -r 2>/dev/null || true
-
-  if command -v openclaw >/dev/null 2>&1; then
-    link_into_system_bin "$(command -v openclaw)" "openclaw"
-    ok "OpenClaw already installed"
-    return 0
-  fi
-
-  if run_with_spinner "Installing OpenClaw via npm" npm install -g openclaw@latest --quiet; then
-    :
-  else
-    warn "OpenClaw install failed - retry later with: clawctl openclaw install"
-    return 0
-  fi
-
-  hash -r 2>/dev/null || true
-
-  if command -v openclaw >/dev/null 2>&1 && openclaw --version >/dev/null 2>&1; then
-    link_into_system_bin "$(command -v openclaw)" "openclaw"
-    ok "OpenClaw installed"
-  elif [ -x "$HOME/.local/bin/openclaw" ]; then
-    link_into_system_bin "$HOME/.local/bin/openclaw" "openclaw"
-    ok "OpenClaw installed"
-  else
-    warn "OpenClaw binary not found after install"
-  fi
-}
+# OpenClaw is installed on-demand through the ClawOS setup wizard GUI.
+# Use: clawctl framework install openclaw
 
 install_python_packages() {
   step "Installing Python packages"
@@ -455,57 +420,7 @@ build_command_center() {
   fi
 }
 
-configure_openclaw() {
-  step "Configuring OpenClaw"
-
-  OPENCLAW_MODEL="kimi-k2.5:cloud"
-
-  mkdir -p "$HOME/.openclaw" "$HOME/.openclaw/agents/main/sessions"
-
-  write_file_if_changed "$HOME/.openclaw/openclaw.json" 600 <<EOF
-{
-  "gateway": {
-    "mode": "local"
-  },
-  "models": {
-    "providers": {
-      "ollama": {
-        "baseUrl": "http://127.0.0.1:11434",
-        "models": [
-          {
-            "id": "$OPENCLAW_MODEL",
-            "name": "$OPENCLAW_MODEL",
-            "contextWindow": 262144
-          },
-          {
-            "id": "$MODEL",
-            "name": "$MODEL (local fallback)",
-            "contextWindow": 32768
-          },
-          {
-            "id": "nomic-embed-text",
-            "name": "nomic-embed-text",
-            "contextWindow": 8192
-          }
-        ]
-      }
-    }
-  },
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "ollama/$OPENCLAW_MODEL"
-      },
-      "memorySearch": {
-        "enabled": false
-      }
-    }
-  }
-}
-EOF
-
-  ok "OpenClaw configured"
-}
+# OpenClaw config is written by the setup wizard GUI (/api/setup/openclaw/configure).
 
 install_wrapper_commands() {
   step "Installing command wrappers"
@@ -606,34 +521,6 @@ EOF
       || warn "Start manually: systemctl --user start clawos.service"
     sleep 5  # wait for sub-services to initialize before verify check
 
-    if command -v openclaw >/dev/null 2>&1; then
-      OPENCLAW_BIN="$(command -v openclaw)"
-      write_file_if_changed "$HOME/.config/systemd/user/openclaw-gateway.service" 644 <<EOF
-[Unit]
-Description=OpenClaw Gateway
-After=network.target ollama.service
-Wants=ollama.service
-
-[Service]
-Type=simple
-ExecStart=${OPENCLAW_BIN} gateway --port ${OPENCLAW_GATEWAY_PORT}
-Restart=always
-RestartSec=5
-Environment=HOME=${HOME}
-
-[Install]
-WantedBy=default.target
-EOF
-
-      systemctl --user daemon-reload
-      systemctl --user enable openclaw-gateway.service >/dev/null 2>&1 || true
-      systemctl --user restart openclaw-gateway.service >/dev/null 2>&1 || true
-      if systemctl --user is-active --quiet openclaw-gateway.service; then
-        ok "OpenClaw gateway starts on boot"
-      else
-        warn "OpenClaw gateway did not stay up"
-      fi
-    fi
   else
     info "No systemd user session - start manually with clawctl start"
   fi
@@ -644,9 +531,6 @@ verify_install() {
 
   command -v clawos >/dev/null 2>&1 && ok "clawos command available"
   command -v clawctl >/dev/null 2>&1 && ok "clawctl command available"
-  command -v openclaw >/dev/null 2>&1 \
-    && ok "openclaw command available" \
-    || warn "openclaw command not available"
 
   curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 \
     && ok "Ollama API reachable" \
@@ -656,14 +540,10 @@ verify_install() {
     launchctl print "gui/$(id -u)/io.clawos.daemon" >/dev/null 2>&1 \
       && ok "io.clawos.daemon active" \
       || warn "io.clawos.daemon is not active"
-    launchctl print "gui/$(id -u)/io.clawos.openclaw-gateway" >/dev/null 2>&1 \
-        && ok "io.clawos.openclaw-gateway active" || true
   elif systemd_user_ready; then
     systemctl --user is-active --quiet clawos.service \
       && ok "clawos.service active" \
       || warn "clawos.service is not active"
-    systemctl --user is-active --quiet openclaw-gateway.service \
-      && ok "openclaw-gateway.service active" || true
   fi
 }
 
@@ -887,10 +767,10 @@ esac
 CLAWOS_RUNTIMES="${CLAWOS_RUNTIMES:-}"
 if [ -z "$CLAWOS_RUNTIMES" ]; then
   case "$PROFILE" in
-    lowram)      CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
-    balanced)    CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
-    performance) CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
-    gaming)      CLAWOS_RUNTIMES="nexus,picoclaw,openclaw" ;;
+    lowram)      CLAWOS_RUNTIMES="nexus,picoclaw" ;;
+    balanced)    CLAWOS_RUNTIMES="nexus,picoclaw" ;;
+    performance) CLAWOS_RUNTIMES="nexus,picoclaw" ;;
+    gaming)      CLAWOS_RUNTIMES="nexus,picoclaw" ;;
   esac
 fi
 export CLAWOS_RUNTIMES
@@ -950,9 +830,6 @@ install_playwright
 emit_milestone voice done "Voice pipeline ready" "offline STT/TTS"
 build_command_center
 emit_milestone core done "Nexus installed" "clawos + dashboard built"
-install_openclaw_cli
-configure_openclaw
-
 step "Preparing machine foundation"
 emit_milestone bootstrap running "Preparing machine foundation" "hardware: $PROFILE"
 BOOTSTRAP_PROFILE="$PROFILE"
@@ -1015,8 +892,8 @@ echo ""
 echo -e "  ${B}clawctl wf list${RESET}"
 echo -e "  ${D}Browse 29 built-in workflows${RESET}"
 echo ""
-echo -e "  ${B}openclaw tui${RESET}"
-echo -e "  ${D}OpenClaw TUI with Kimi K2.5 on port ${OPENCLAW_GATEWAY_PORT}${RESET}"
+echo -e "  ${B}clawctl framework install openclaw${RESET}"
+echo -e "  ${D}Install OpenClaw from the setup wizard or this command${RESET}"
 echo ""
 if [ "$PLATFORM" = "macos" ]; then
   echo -e "  ${D}Reload shell if needed:${RESET} ${B}source ~/.zprofile${RESET}"
@@ -1057,7 +934,7 @@ else
   emit_milestone ready error "Dashboard did not start" "timed out after 30s"
   warn "Dashboard did not come online within 30s"
   echo -e "  ${D}Once the service is up, open:${RESET} ${B}${CLAWOS_URL}${RESET}"
-  echo -e "  ${D}Or run manually:${RESET} ${B}openclaw tui${RESET}"
+  echo -e "  ${D}Or open manually:${RESET} ${B}http://localhost:7070/setup${RESET}"
 fi
 echo ""
 
