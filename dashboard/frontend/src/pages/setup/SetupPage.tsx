@@ -105,6 +105,8 @@ function writeLS(key: string, value: unknown) {
 }
 
 export function SetupPage() {
+  const freshLaunch = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('fresh')
+
   /* ── state ─────────────────────────────────────────────────────────── */
   const [state, setState] = useState<SetupState | null>(null)
   const [diagnostics, setDiagnostics] = useState<SetupDiagnostics | null>(null)
@@ -288,11 +290,11 @@ export function SetupPage() {
 
   /* ── completion marker → jump to summary ───────────────────────────── */
   useEffect(() => {
-    if (state?.completion_marker) {
+    if (state?.completion_marker && !freshLaunch) {
       setStepIndex(STEPS.length - 1)
       setFurthest(STEPS.length - 1)
     }
-  }, [state?.completion_marker])
+  }, [state?.completion_marker, freshLaunch])
 
   /* ── action wrappers ───────────────────────────────────────────────── */
   const runAction = useCallback(
@@ -415,7 +417,6 @@ export function SetupPage() {
     month: 'short',
     day: 'numeric',
   })} · ${clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-  const freshLaunch = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('fresh')
 
   if (!state) {
     return (
