@@ -317,7 +317,7 @@ class ClawOSMCPServer:
             bridge = ToolBridge(policy, memory, workspace)
             
             # Extract target and content from parameters
-            target = parameters.get("target", parameters.get("path", parameters.get("query", ""))
+            target = parameters.get("target", parameters.get("path", parameters.get("query", "")))
             content = parameters.get("content", "")
             
             result = await bridge.run(skill, target, content)
