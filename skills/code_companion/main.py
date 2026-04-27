@@ -25,8 +25,14 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from urllib.parse import urlparse
 
-import chromadb
-from chromadb.utils import embedding_functions
+try:
+    import chromadb
+    from chromadb.utils import embedding_functions
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    chromadb = None
+    embedding_functions = None
 
 from clawos_core.constants import CLAWOS_DIR
 
@@ -332,6 +338,9 @@ class CodebaseIndex:
     """
     
     def __init__(self, project_path: Path, workspace: str = "code_default"):
+        if not CHROMADB_AVAILABLE:
+            raise RuntimeError("ChromaDB not available. Install with: pip install chromadb")
+        
         self.project_path = project_path
         self.workspace = workspace
         self.db_path = CLAWOS_DIR / "code_index" / workspace
