@@ -5,7 +5,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(cd "$(dirname "$SCRIPT_DIR")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "╔════════════════════════════════════════════════════════════════╗"
@@ -40,7 +40,7 @@ echo "Phase 1: Static Analysis"
 echo "════════════════════════════════════════════════════════════════"
 
 # Check Python syntax
-if python3 -m py_compile clawos_core/constants.py; then
+if python3 -m py_compile "$PROJECT_ROOT/clawos_core/constants.py"; then
     test_pass "Python syntax check"
 else
     test_fail "Python syntax check"
@@ -48,7 +48,7 @@ fi
 
 # Check imports
 cd "$PROJECT_ROOT"
-if python3 -c "from clawos_core import constants, security, performance" 2>/dev/null; then
+if cd "$PROJECT_ROOT" && python3 -c "from clawos_core import constants, security, performance" 2>/dev/null; then
     test_pass "Core module imports"
 else
     test_fail "Core module imports"
