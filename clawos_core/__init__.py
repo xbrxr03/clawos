@@ -21,10 +21,36 @@ from clawos_core.circuit_breaker import (
     CircuitBreakerConfig,
     CircuitBreakerRegistry,
     CircuitState,
+    get_registry as get_circuit_registry,
+    register as register_circuit,
+    get as get_circuit,
+    health as circuit_health,
+)
+
+from clawos_core.service_registry import (
+    ServiceRegistry,
+    ServiceRegistryConfig,
+    ServiceInstance,
+    ServiceStatus,
     get_registry,
     register,
-    get,
+    discover,
+    heartbeat,
     health,
+)
+
+from clawos_core.database import (
+    ConnectionPool,
+    get_pool,
+    db_connection,
+    execute_query,
+)
+
+from clawos_core.bootstrap import (
+    Bootstrap,
+    ServiceConfig,
+    get_bootstrap,
+    create_default_bootstrap,
 )
 
 __all__ = [
@@ -46,8 +72,28 @@ __all__ = [
     "CircuitBreakerConfig",
     "CircuitBreakerRegistry",
     "CircuitState",
+    "get_circuit_registry",
+    "register_circuit",
+    "get_circuit",
+    "circuit_health",
+    # Service Registry
+    "ServiceRegistry",
+    "ServiceRegistryConfig",
+    "ServiceInstance",
+    "ServiceStatus",
     "get_registry",
     "register",
-    "get",
+    "discover",
+    "heartbeat",
     "health",
+    # Database
+    "ConnectionPool",
+    "get_pool",
+    "db_connection",
+    "execute_query",
+    # Bootstrap
+    "Bootstrap",
+    "ServiceConfig",
+    "get_bootstrap",
+    "create_default_bootstrap",
 ]
