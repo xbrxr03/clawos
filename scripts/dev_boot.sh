@@ -154,7 +154,12 @@ if ! [[ " $* " =~ " --no-observd " ]]; then
   start_service "observd" "services.observd" || true
 fi
 
-# 7. Health check summary
+# 7. Voice Pipeline 2.0 (streaming, VAD, wake word)
+if ! [[ " $* " =~ " --no-voiced " ]]; then
+  start_service "voiced" "services.voiced" || true
+fi
+
+# 8. Health check summary
 echo ""
 log "╔══════════════════════════════════════╗"
 log "║   ClawOS is running (dev mode)       ║"
