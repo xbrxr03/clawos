@@ -23,6 +23,7 @@ ClawOS is a **curated installation and orchestration layer**. We built the glue,
 | Dashboard + workflow engine | ✅ ClawOS | 17-page React UI, 29 workflows |
 | Memory system (memd) | ✅ ClawOS | 14-layer persistent memory (taosmd) |
 | Policy engine (policyd) | ✅ ClawOS | Merkle audit, approval queue |
+| **MCP Client** | ✅ ClawOS | Connect to 600+ external tools via MCP |
 | OMI integration (omid) | ✅ ClawOS | Ambient AI capture + command detection |
 | Framework Store (frameworkd) | ✅ ClawOS | 9 agent frameworks, one-click install |
 | Scheduler, toolbridge, A2A | ✅ ClawOS | Original services |
@@ -108,7 +109,7 @@ The **Developer** persona gets **OpenClaude** pre-wired to Ollama — Claude Cod
 - **policyd** — every tool call gated, audited, and logged before it runs. Human approval queue for sensitive ops.
 - **Dashboard** — 17-page React UI at `:7070`. Tasks, approvals, models, memory, audit log, workflows, brain graph.
 - **Smart model routing** — lightweight models for simple tasks, full models for complex ones.
-- **MCP Manager** — connect any Model Context Protocol server, visual UI.
+- **MCP Manager** — connect to 600+ tools via Model Context Protocol. Use filesystem, GitHub, browser automation, databases, and more. `clawctl mcp init` to get started.
 - **A2A Federation** — link multiple ClawOS instances on your network.
 
 ---
@@ -199,6 +200,7 @@ Every action goes through `policyd`. Sensitive operations pause for your approva
 | Session continuity (morning briefing) | No | No | No | No | **Yes** |
 | Framework store (install any agent runtime) | No | No | No | No | **Yes** |
 | Signed skill marketplace | No | No | No | No | **Yes** |
+| MCP support (600+ tool integrations) | No | No | No | No | **Yes** |
 
 *Note: OpenClaw is not in this comparison because ClawOS includes OpenClaw as an optional installable component.*
 
