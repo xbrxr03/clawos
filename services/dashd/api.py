@@ -469,6 +469,12 @@ def _collect_service_health() -> dict[str, dict]:
     except Exception:
         pass
     try:
+        from services.desktopd.health import health as desktopd_health
+
+        checks["desktopd"] = desktopd_health
+    except Exception:
+        pass
+    try:
         from services.memd.health import health as memd_health
 
         checks["memd"] = memd_health

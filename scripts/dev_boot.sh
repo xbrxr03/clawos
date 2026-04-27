@@ -159,7 +159,12 @@ if ! [[ " $* " =~ " --no-voiced " ]]; then
   start_service "voiced" "services.voiced" || true
 fi
 
-# 8. Health check summary
+# 8. Desktop Automation (screenshot, input control, vision)
+if ! [[ " $* " =~ " --no-desktopd " ]]; then
+  start_service "desktopd" "services.desktopd" || true
+fi
+
+# 9. Health check summary
 echo ""
 log "╔══════════════════════════════════════╗"
 log "║   ClawOS is running (dev mode)       ║"
