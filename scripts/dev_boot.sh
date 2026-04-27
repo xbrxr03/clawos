@@ -144,7 +144,12 @@ if ! [[ " $* " =~ " --no-clawd " ]]; then
   start_service "clawd" "services.clawd" || true
 fi
 
-# 5. Health check summary
+# 5. MCP server (Phase 2 MCP integration)
+if ! [[ " $* " =~ " --no-mcpd " ]]; then
+  start_service "mcpd" "services.mcpd" || true
+fi
+
+# 6. Health check summary
 echo ""
 log "╔══════════════════════════════════════╗"
 log "║   ClawOS is running (dev mode)       ║"

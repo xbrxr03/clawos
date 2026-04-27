@@ -675,6 +675,49 @@ if CLICK_OK:
         from clawctl.commands.mcp import mcp_template as run_template
         run_template(template_name)
 
+    # ── mcpd (MCP Server Daemon) ─────────────────────────────────────────────
+    @main.group()
+    def mcpd():
+        """Manage ClawOS MCP Server (exposes ClawOS to external AI)."""
+        pass
+
+    @mcpd.command("status")
+    def mcpd_status():
+        """Check MCP server status."""
+        from clawctl.commands.mcpd import mcpd_status as run_status
+        run_status()
+
+    @mcpd.command("start")
+    def mcpd_start():
+        """Start the MCP server."""
+        from clawctl.commands.mcpd import mcpd_start as run_start
+        run_start()
+
+    @mcpd.command("stop")
+    def mcpd_stop():
+        """Stop the MCP server."""
+        from clawctl.commands.mcpd import mcpd_stop as run_stop
+        run_stop()
+
+    @mcpd.command("info")
+    def mcpd_info():
+        """Show MCP server capabilities."""
+        from clawctl.commands.mcpd import mcpd_info as run_info
+        run_info()
+
+    @mcpd.command("test")
+    @click.option("--tool", default="clawos_system_info", help="Tool to test")
+    def mcpd_test(tool):
+        """Test MCP server with sample request."""
+        from clawctl.commands.mcpd import mcpd_test as run_test
+        run_test(tool)
+
+    @mcpd.command("clients")
+    def mcpd_clients():
+        """Show connection instructions for MCP clients."""
+        from clawctl.commands.mcpd import mcpd_clients as run_clients
+        run_clients()
+
 
 if __name__ == "__main__":
     main()
