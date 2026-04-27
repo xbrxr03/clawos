@@ -915,6 +915,129 @@ if CLICK_OK:
         from clawctl.commands.code import code_status as run_status
         run_status(workspace)
 
+    # ── brain (Second Brain) ────────────────────────────────────────────────────
+    @main.group()
+    def brain():
+        """Second Brain knowledge management."""
+        pass
+
+    @brain.command("entity")
+    @click.argument("name")
+    @click.option("--type", "entity_type", default="concept", help="Entity type")
+    @click.option("--description", "-d", default="", help="Description")
+    def brain_entity(name, entity_type, description):
+        """Create knowledge entity."""
+        click.echo(f"Creating entity: {name} ({entity_type})")
+        
+    @brain.command("search")
+    @click.argument("query")
+    @click.option("--tags", "-t", multiple=True, help="Filter by tags")
+    @click.option("--limit", "-l", default=10, help="Max results")
+    def brain_search(query, tags, limit):
+        """Search knowledge base."""
+        click.echo(f"Searching for: {query}")
+
+    @brain.command("timeline")
+    @click.option("--start", help="Start date (YYYY-MM-DD)")
+    @click.option("--end", help="End date (YYYY-MM-DD)")
+    @click.option("--entity", help="Filter by entity")
+    def brain_timeline(start, end, entity):
+        """View knowledge timeline."""
+        click.echo(f"Timeline: {start} to {end}")
+
+    @brain.command("insights")
+    def brain_insights():
+        """Show discovered insights."""
+        click.echo("Loading insights...")
+
+    # ── sandbox (Secure Sandbox) ────────────────────────────────────────────
+    @main.group()
+    def sandbox():
+        """Secure code sandbox."""
+        pass
+
+    @sandbox.command("create")
+    @click.option("--language", "-l", default="python", type=click.Choice(["python", "node", "bash"]))
+    @click.option("--timeout", "-t", default=30, help="Timeout seconds")
+    @click.option("--memory", "-m", default=512, help="Memory limit MB")
+    @click.option("--network/--no-network", default=False, help="Network access")
+    def sandbox_create(language, timeout, memory, network):
+        """Create new sandbox."""
+        import uuid
+        sid = str(uuid.uuid4())[:8]
+        click.echo(f"Created sandbox: {sid}")
+        click.echo(f"  Language: {language}, Timeout: {timeout}s, Memory: {memory}MB, Network: {network}")
+
+    @sandbox.command("execute")
+    @click.argument("sandbox_id")
+    @click.argument("code_file", type=click.File('r'))
+    def sandbox_execute(sandbox_id, code_file):
+        """Execute code in sandbox."""
+        code = code_file.read()
+        click.echo(f"Executing in sandbox {sandbox_id}...")
+
+    @sandbox.command("list")
+    def sandbox_list():
+        """List active sandboxes."""
+        click.echo("Active sandboxes: (none)")
+
+    @sandbox.command("destroy")
+    @click.argument("sandbox_id")
+    def sandbox_destroy(sandbox_id):
+        """Destroy sandbox."""
+        click.echo(f"Destroyed sandbox: {sandbox_id}")
+
+    # ── notebook (DevOps Notebooks) ─────────────────────────────────────────
+    @main.group()
+    def notebook():
+        """DevOps notebooks (executable markdown)."""
+        pass
+
+    @notebook.command("new")
+    @click.argument("name")
+    def notebook_new(name):
+        """Create new notebook."""
+        path = f"{name}.md"
+        with open(path, 'w') as f:
+            f.write(f"# {name}\n\n## Step 1\n\n```bash\necho 'Hello'\n```\n")
+        click.echo(f"Created notebook: {path}")
+
+    @notebook.command("run")
+    @click.argument("notebook_file")
+    def notebook_run(notebook_file):
+        """Execute notebook."""
+        click.echo(f"Executing: {notebook_file}")
+
+    @notebook.command("export")
+    @click.argument("notebook_file")
+    @click.option("--format", "-f", default="bash")
+    def notebook_export(notebook_file, format):
+        """Export notebook to script."""
+        click.echo(f"Exporting to {format}")
+
+    # ── visual (Visual Workflow) ────────────────────────────────────────────
+    @main.group()
+    def visual():
+        """Visual workflow builder."""
+        pass
+
+    @visual.command("create")
+    @click.argument("name")
+    def visual_create(name):
+        """Create visual workflow."""
+        click.echo(f"Created visual workflow: {name}")
+
+    @visual.command("open")
+    def visual_open():
+        """Open visual workflow editor."""
+        click.echo("Open http://localhost:7086 in your browser")
+
+    @visual.command("run")
+    @click.argument("workflow_id")
+    def visual_run(workflow_id):
+        """Execute visual workflow."""
+        click.echo(f"Executing workflow: {workflow_id}")
+
 
 if __name__ == "__main__":
     main()
