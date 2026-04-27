@@ -149,7 +149,12 @@ if ! [[ " $* " =~ " --no-mcpd " ]]; then
   start_service "mcpd" "services.mcpd" || true
 fi
 
-# 6. Health check summary
+# 6. Observability service (tracing, costs, latency)
+if ! [[ " $* " =~ " --no-observd " ]]; then
+  start_service "observd" "services.observd" || true
+fi
+
+# 7. Health check summary
 echo ""
 log "╔══════════════════════════════════════╗"
 log "║   ClawOS is running (dev mode)       ║"

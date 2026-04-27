@@ -718,6 +718,71 @@ if CLICK_OK:
         from clawctl.commands.mcpd import mcpd_clients as run_clients
         run_clients()
 
+    # ── observ (Observability) ─────────────────────────────────────────────
+    @main.group()
+    def observ():
+        """Observability and tracing for LLM calls, costs, latency."""
+        pass
+
+    @observ.command("status")
+    def observ_status():
+        """Check observability service status."""
+        from clawctl.commands.observ import observ_status as run_status
+        run_status()
+
+    @observ.command("calls")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--service", "-s", help="Filter by service")
+    @click.option("--model", "-m", help="Filter by model")
+    @click.option("--hours", "-h", default=24, help="Time window in hours")
+    @click.option("--limit", "-l", default=20, help="Number of calls")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def observ_calls(workspace, service, model, hours, limit, as_json):
+        """Show recent LLM calls."""
+        from clawctl.commands.observ import observ_calls as run_calls
+        run_calls(workspace, service, model, hours, limit, as_json)
+
+    @observ.command("stats")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--hours", "-h", default=24, help="Time window in hours")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def observ_stats(workspace, hours, as_json):
+        """Show aggregate statistics."""
+        from clawctl.commands.observ import observ_stats as run_stats
+        run_stats(workspace, hours, as_json)
+
+    @observ.command("cost")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--days", "-d", default=7, help="Time window in days")
+    def observ_cost(workspace, days):
+        """Show cost breakdown."""
+        from clawctl.commands.observ import observ_cost as run_cost
+        run_cost(workspace, days)
+
+    @observ.command("latency")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--hours", "-h", default=24, help="Time window in hours")
+    def observ_latency(workspace, hours):
+        """Show latency analysis."""
+        from clawctl.commands.observ import observ_latency as run_latency
+        run_latency(workspace, hours)
+
+    @observ.command("workspaces")
+    def observ_workspaces():
+        """List workspaces with activity."""
+        from clawctl.commands.observ import observ_workspaces as run_workspaces
+        run_workspaces()
+
+    @observ.command("export")
+    @click.option("--format", "fmt", type=click.Choice(["json", "csv"]), default="json")
+    @click.option("--output", "-o", help="Output file")
+    @click.option("--hours", "-h", default=168, help="Time window in hours")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    def observ_export(fmt, output, hours, workspace):
+        """Export observability data."""
+        from clawctl.commands.observ import observ_export as run_export
+        run_export(fmt, output, hours, workspace)
+
 
 if __name__ == "__main__":
     main()
