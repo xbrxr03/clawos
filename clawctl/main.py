@@ -619,5 +619,62 @@ if CLICK_OK:
         run_run(workflow_id, list(kvpairs), workspace=workspace, dry_run=dry_run)
 
 
+# ── mcp (Model Context Protocol) ────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def mcp():
+        """Manage MCP (Model Context Protocol) servers."""
+        pass
+
+    @mcp.command("init")
+    def mcp_init():
+        """Create default MCP configuration."""
+        from clawctl.commands.mcp import mcp_init as run_init
+        run_init()
+
+    @mcp.command("list")
+    def mcp_list():
+        """List configured MCP servers."""
+        from clawctl.commands.mcp import mcp_list as run_list
+        run_list()
+
+    @mcp.command("add")
+    @click.argument("name")
+    @click.option("--stdio", "stdio_cmd", help="stdio command")
+    @click.option("--http", "http_url", help="HTTP endpoint URL")
+    @click.option("--env", "env_vars", multiple=True, help="Environment variables")
+    def mcp_add(name, stdio_cmd, http_url, env_vars):
+        """Add an MCP server."""
+        from clawctl.commands.mcp import mcp_add as run_add
+        run_add(name, stdio_cmd, http_url, env_vars)
+
+    @mcp.command("remove")
+    @click.argument("name")
+    def mcp_remove(name):
+        """Remove an MCP server."""
+        from clawctl.commands.mcp import mcp_remove as run_remove
+        run_remove(name)
+
+    @mcp.command("test")
+    @click.argument("name")
+    def mcp_test(name):
+        """Test connection to MCP server."""
+        from clawctl.commands.mcp import mcp_test as run_test
+        run_test(name)
+
+    @mcp.command("discover")
+    def mcp_discover():
+        """Discover available MCP servers."""
+        from clawctl.commands.mcp import mcp_discover as run_discover
+        run_discover()
+
+    @mcp.command("template")
+    @click.argument("template_name", required=False)
+    def mcp_template(template_name):
+        """Show MCP server templates."""
+        from clawctl.commands.mcp import mcp_template as run_template
+        run_template(template_name)
+
+
 if __name__ == "__main__":
     main()
