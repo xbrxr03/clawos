@@ -836,6 +836,63 @@ if CLICK_OK:
         from clawctl.commands.durable import durable_cleanup as run_cleanup
         run_cleanup(days, yes)
 
+    # ── code (Code Companion) ───────────────────────────────────────────────
+    @main.group()
+    def code():
+        """Code companion - developer AI assistant with LSP integration."""
+        pass
+
+    @code.command("index")
+    @click.argument("path", type=click.Path(exists=True, file_okay=False, dir_okay=True))
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    @click.option("--verbose", "-v", is_flag=True, help="Show progress")
+    def code_index(path, workspace, verbose):
+        """Index a codebase for semantic search."""
+        from clawctl.commands.code import code_index as run_index
+        run_index(path, workspace, verbose)
+
+    @code.command("search")
+    @click.argument("query")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    @click.option("--limit", "-l", default=10, help="Number of results")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def code_search(query, workspace, limit, as_json):
+        """Search codebase using semantic search."""
+        from clawctl.commands.code import code_search as run_search
+        run_search(query, workspace, limit, as_json)
+
+    @code.command("explain")
+    @click.argument("location")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    def code_explain(location, workspace):
+        """Explain code at location (file:line)."""
+        from clawctl.commands.code import code_explain as run_explain
+        run_explain(location, workspace)
+
+    @code.command("review")
+    @click.argument("file_path", type=click.Path(exists=True))
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def code_review(file_path, as_json):
+        """Review code for issues."""
+        from clawctl.commands.code import code_review as run_review
+        run_review(file_path, as_json)
+
+    @code.command("test")
+    @click.argument("symbol")
+    @click.option("--file", "-f", required=True, help="File containing symbol")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    def code_test(symbol, file, workspace):
+        """Generate test cases."""
+        from clawctl.commands.code import code_test as run_test
+        run_test(symbol, file, workspace)
+
+    @code.command("status")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    def code_status(workspace):
+        """Show code companion status."""
+        from clawctl.commands.code import code_status as run_status
+        run_status(workspace)
+
 
 if __name__ == "__main__":
     main()
