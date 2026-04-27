@@ -653,6 +653,48 @@ drain_install_buffer() {
   done < "$CLAWOS_INSTALL_BUFFER"
 }
 
+# ── Resume checkpoint system ─────────────────────────────────────────────────
+# Allows installation to resume from last completed step if interrupted
+
+CHECKPOINT_FILE="${CLAWOS_STATE_DIR}/install_checkpoint"
+
+save_checkpoint() {
+  local step="$1"
+  echo "$step" > "$CHECKPOINT_FILE" 2>/dev/null || true
+}
+
+get_checkpoint() {
+  if [ -f "$CHECKPOINT_FILE" ]; then
+    cat "$CHECKPOINT_FILE" 2>/dev/null || echo ""
+  else
+    echo ""
+  fi
+}
+
+clear_checkpoint() {
+  rm -f "$CHECKPOINT_FILE" 2>/dev/null || true
+}
+
+should_skip_step() {
+  local current_step="$1"
+  local checkpoint="$(get_checkpoint)"
+  
+  # If no checkpoint, don't skip anything
+  [ -z "$checkpoint" ] && return 1
+  
+  # If current step was already completed, skip it
+  if [ "$current_step" = "$checkpoint" ] || echo "$checkpoint" | grep -q "^${current_step}_done$"; then
+    return 0
+  fi
+  
+  return 1
+}
+
+mark_step_done() {
+  local step="$1"
+  save_checkpoint "${step}_done"
+}
+
 # ── Parse flags ───────────────────────────────────────────────────────────────
 for _arg in "$@"; do
   case "$_arg" in
@@ -811,42 +853,55 @@ install_ollama
 install_node
 install_openclaw
 emit_milestone deps done "Dependencies installed" "Python $PY_VER · Ollama · Node · OpenClaw"
+mark_step_done "deps"
 
 step "Installing Nexus"
-emit_milestone core running "Installing Nexus" "cloning clawos + python deps"
-if [ -d "$INSTALL_DIR/clawos_core" ]; then
-  ok "ClawOS already present at $INSTALL_DIR"
-elif [ -d "$INSTALL_DIR/.git" ]; then
-  run_with_spinner "Updating existing install" git -C "$INSTALL_DIR" pull --ff-only -q || warn "Git pull failed - using existing checkout"
-  ok "ClawOS updated"
+if should_skip_step "nexus"; then
+  ok "Nexus installation already completed (checkpoint)"
+  cd "$INSTALL_DIR" || die "Install directory not found: $INSTALL_DIR"
+  export PYTHONPATH="$INSTALL_DIR"
 else
-  rm -rf "$INSTALL_DIR"
-  run_with_spinner "Cloning from GitHub" \
-    git clone -q --branch "$CLAWOS_BRANCH" --depth 1 "$CLAWOS_REPO" "$INSTALL_DIR" \
-    || die "Clone failed. Check: $CLAWOS_REPO"
-  ok "ClawOS cloned to $INSTALL_DIR"
+  emit_milestone core running "Installing Nexus" "cloning clawos + python deps"
+  if [ -d "$INSTALL_DIR/clawos_core" ]; then
+    ok "ClawOS already present at $INSTALL_DIR"
+  elif [ -d "$INSTALL_DIR/.git" ]; then
+    run_with_spinner "Updating existing install" git -C "$INSTALL_DIR" pull --ff-only -q || warn "Git pull failed - using existing checkout"
+    ok "ClawOS updated"
+  else
+    rm -rf "$INSTALL_DIR"
+    run_with_spinner "Cloning from GitHub" \
+      git clone -q --branch "$CLAWOS_BRANCH" --depth 1 "$CLAWOS_REPO" "$INSTALL_DIR" \
+      || die "Clone failed. Check: $CLAWOS_REPO"
+    ok "ClawOS cloned to $INSTALL_DIR"
+  fi
+
+  cd "$INSTALL_DIR" || die "Install directory not found: $INSTALL_DIR"
+  export PYTHONPATH="$INSTALL_DIR"
+
+  install_python_packages
+  emit_milestone voice running "Provisioning voice pipeline" "Whisper + Piper + wake word"
+  install_wake_word_model
+  install_piper_voice
+  install_playwright
+  emit_milestone voice done "Voice pipeline ready" "offline STT/TTS"
+  build_command_center
+  emit_milestone core done "Nexus installed" "clawos + dashboard built"
+  mark_step_done "nexus"
 fi
-
-cd "$INSTALL_DIR" || die "Install directory not found: $INSTALL_DIR"
-export PYTHONPATH="$INSTALL_DIR"
-
-install_python_packages
-emit_milestone voice running "Provisioning voice pipeline" "Whisper + Piper + wake word"
-install_wake_word_model
-install_piper_voice
-install_playwright
-emit_milestone voice done "Voice pipeline ready" "offline STT/TTS"
-build_command_center
-emit_milestone core done "Nexus installed" "clawos + dashboard built"
 step "Preparing machine foundation"
-emit_milestone bootstrap running "Preparing machine foundation" "hardware: $PROFILE"
-BOOTSTRAP_PROFILE="$PROFILE"
-[ "$BOOTSTRAP_PROFILE" = "gaming" ] && BOOTSTRAP_PROFILE="performance"
-run_with_spinner "Running bootstrap foundation (${BOOTSTRAP_PROFILE} hardware profile)" \
-  bash -c "cd \"${INSTALL_DIR}\" && PYTHONPATH=\"${INSTALL_DIR}\" \"${INSTALL_DIR}/venv/bin/python3\" -m bootstrap.bootstrap --profile \"$BOOTSTRAP_PROFILE\" --yes --skip-model" \
-  || { emit_milestone bootstrap error "Bootstrap failed" "see terminal"; die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"; }
-ok "Machine foundation ready"
-emit_milestone bootstrap done "Machine foundation ready" "finish setup in the browser wizard"
+if should_skip_step "bootstrap"; then
+  ok "Bootstrap already completed (checkpoint)"
+else
+  emit_milestone bootstrap running "Preparing machine foundation" "hardware: $PROFILE"
+  BOOTSTRAP_PROFILE="$PROFILE"
+  [ "$BOOTSTRAP_PROFILE" = "gaming" ] && BOOTSTRAP_PROFILE="performance"
+  run_with_spinner "Running bootstrap foundation (${BOOTSTRAP_PROFILE} hardware profile)" \
+    bash -c "cd \"${INSTALL_DIR}\" && PYTHONPATH=\"${INSTALL_DIR}\" \"${INSTALL_DIR}/venv/bin/python3\" -m bootstrap.bootstrap --profile \"$BOOTSTRAP_PROFILE\" --yes --skip-model" \
+    || { emit_milestone bootstrap error "Bootstrap failed" "see terminal"; die "Bootstrap failed. Run: cd $INSTALL_DIR && python3 -m bootstrap.bootstrap"; }
+  ok "Machine foundation ready"
+  emit_milestone bootstrap done "Machine foundation ready" "finish setup in the browser wizard"
+  mark_step_done "bootstrap"
+fi
 
 # Keep dashd loopback-only during first-run setup. The setup wizard's
 # unauthenticated access path is intentionally restricted to trusted local
@@ -929,6 +984,7 @@ done
 
 if [ "$READY" = "1" ]; then
   emit_milestone ready done "ClawOS online" "dashboard @ :7070 · ${ELAPSED}s total"
+  clear_checkpoint  # Installation complete, clear resume checkpoint
   if [ "${NO_BROWSER:-0}" = "1" ] || [ ! -t 1 ]; then
     echo -e "  ${G}Command Center ready:${RESET} ${B}${CLAWOS_URL}${RESET}"
   elif "${INSTALL_DIR}/venv/bin/python3" "${INSTALL_DIR}/clients/desktop/launch_command_center.py" --route "${CLAWOS_ROUTE}" --timeout 5 >/dev/null 2>&1; then
@@ -943,6 +999,9 @@ else
   warn "Dashboard did not come online within 30s"
   echo -e "  ${D}Once the service is up, open:${RESET} ${B}${CLAWOS_URL}${RESET}"
   echo -e "  ${D}Or open manually:${RESET} ${B}http://localhost:7070/setup${RESET}"
+  echo ""
+  echo -e "  ${Y}Installation incomplete. To resume:${RESET}"
+  echo -e "  ${B}bash ${INSTALL_DIR}/scripts/install-resume.sh${RESET}"
 fi
 echo ""
 
