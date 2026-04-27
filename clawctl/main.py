@@ -877,6 +877,28 @@ if CLICK_OK:
         from clawctl.commands.code import code_review as run_review
         run_review(file_path, as_json)
 
+    # ── dashboard ────────────────────────────────────────────────────────────
+    @main.group()
+    def dashboard():
+        """Service dashboard and monitoring."""
+        pass
+
+    @dashboard.command("show")
+    @click.option("--watch", "-w", is_flag=True, help="Watch mode (auto-refresh)")
+    @click.option("--interval", "-i", default=2.0, help="Refresh interval in seconds")
+    def dashboard_show(watch, interval):
+        """Show service dashboard."""
+        from clawctl.commands.dashboard import show_dashboard
+        show_dashboard(watch, interval)
+
+    @dashboard.command("logs")
+    @click.argument("service")
+    @click.option("--lines", "-n", default=50, help="Number of log lines")
+    def dashboard_logs(service, lines):
+        """Show logs for a service."""
+        from clawctl.commands.dashboard import show_service_logs
+        show_service_logs(service, lines)
+
     @code.command("test")
     @click.argument("symbol")
     @click.option("--file", "-f", required=True, help="File containing symbol")
