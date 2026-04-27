@@ -783,6 +783,59 @@ if CLICK_OK:
         from clawctl.commands.observ import observ_export as run_export
         run_export(fmt, output, hours, workspace)
 
+    # ── durable (Durable Workflows) ──────────────────────────────────────────
+    @main.group()
+    def durable():
+        """Durable workflow management with checkpoint/resume."""
+        pass
+
+    @durable.command("runs")
+    @click.option("--workflow", "-w", help="Filter by workflow ID")
+    @click.option("--status", "-s", type=click.Choice(["pending", "running", "completed", "failed", "cancelled"]))
+    @click.option("--limit", "-l", default=20, help="Number of runs")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def durable_runs(workflow, status, limit, as_json):
+        """List workflow runs."""
+        from clawctl.commands.durable import durable_runs as run_runs
+        run_runs(workflow, status, limit, as_json)
+
+    @durable.command("show")
+    @click.argument("run_id")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def durable_show(run_id, as_json):
+        """Show run details."""
+        from clawctl.commands.durable import durable_show as run_show
+        run_show(run_id, as_json)
+
+    @durable.command("resume")
+    @click.argument("run_id")
+    def durable_resume(run_id):
+        """Resume a workflow run."""
+        from clawctl.commands.durable import durable_resume as run_resume
+        run_resume(run_id)
+
+    @durable.command("cancel")
+    @click.argument("run_id")
+    def durable_cancel(run_id):
+        """Cancel a running workflow."""
+        from clawctl.commands.durable import durable_cancel as run_cancel
+        run_cancel(run_id)
+
+    @durable.command("stats")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def durable_stats(as_json):
+        """Show workflow statistics."""
+        from clawctl.commands.durable import durable_stats as run_stats
+        run_stats(as_json)
+
+    @durable.command("cleanup")
+    @click.option("--days", "-d", default=30, help="Delete runs older than N days")
+    @click.option("--yes", is_flag=True, help="Skip confirmation")
+    def durable_cleanup(days, yes):
+        """Clean up old workflow runs."""
+        from clawctl.commands.durable import durable_cleanup as run_cleanup
+        run_cleanup(days, yes)
+
 
 if __name__ == "__main__":
     main()
