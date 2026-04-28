@@ -7,6 +7,7 @@ Resolve relative paths to absolute BEFORE policyd check.
 Agent tool filtering: only inject granted tools into system prompt.
 """
 import asyncio
+import json
 import logging
 import re
 import subprocess
@@ -55,12 +56,13 @@ ALL_TOOL_DESCRIPTIONS = {
 
 
 class ToolBridge:
-    def __init__(self, policy_client, memory_service, workspace_id: str):
+    def __init__(self, policy_client, memory_service, workspace_id: str, mcp_client=None):
         self.policy    = policy_client
         self.memory    = memory_service
         self.workspace = workspace_id
         self._workspace_id = workspace_id
         self._ws_root  = workspace_path(workspace_id)
+        self.mcp_client = mcp_client  # MCP client for external tools
 
     @property
     def _ws_root_fresh(self):
@@ -71,6 +73,12 @@ class ToolBridge:
         """Only inject granted tools — reduces tokens by 30-60%."""
         granted = set(self.policy.granted_tools)
         available = {k: v for k, v in ALL_TOOL_DESCRIPTIONS.items() if k in granted}
+        
+        # Add MCP tools if available
+        if self.mcp_client:
+            mcp_tools = self.mcp_client.get_all_tools()
+            available.update(mcp_tools)
+        
         if not available:
             return ""
         lines = [
@@ -145,11 +153,37 @@ class ToolBridge:
         }
         fn = dispatch.get(tool)
         if fn is None:
+            # Check if it's an MCP tool
+            if self.mcp_client and tool.startswith("mcp."):
+                return await self._execute_mcp_tool(tool, target, content)
             return f"[ERROR] Unknown tool: {tool}"
         result = fn()
         if asyncio.iscoroutine(result):
             return await result
         return await result
+
+    async def _execute_mcp_tool(self, tool_name: str, target: str, content: str = "") -> str:
+        """Execute an MCP tool with proper argument handling."""
+        try:
+            # Parse arguments from target/content
+            arguments = {}
+            if target:
+                arguments["target"] = target
+            if content:
+                arguments["content"] = content
+            
+            # Try to parse as JSON if target looks like JSON
+            if target and target.strip().startswith("{"):
+                try:
+                    arguments = json.loads(target)
+                except json.JSONDecodeError:
+                    pass
+            
+            result = await self.mcp_client.execute_tool(tool_name, arguments)
+            return result
+        except Exception as e:
+            log.error(f"MCP tool execution failed: {e}")
+            return f"[MCP ERROR] {tool_name}: {str(e)}"
 
     def _resolve_path(self, target: str) -> Path:
         if Path(target).is_absolute():

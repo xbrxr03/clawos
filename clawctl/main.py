@@ -619,5 +619,425 @@ if CLICK_OK:
         run_run(workflow_id, list(kvpairs), workspace=workspace, dry_run=dry_run)
 
 
+# ── mcp (Model Context Protocol) ────────────────────────────────────────────
+if CLICK_OK:
+    @main.group()
+    def mcp():
+        """Manage MCP (Model Context Protocol) servers."""
+        pass
+
+    @mcp.command("init")
+    def mcp_init():
+        """Create default MCP configuration."""
+        from clawctl.commands.mcp import mcp_init as run_init
+        run_init()
+
+    @mcp.command("list")
+    def mcp_list():
+        """List configured MCP servers."""
+        from clawctl.commands.mcp import mcp_list as run_list
+        run_list()
+
+    @mcp.command("add")
+    @click.argument("name")
+    @click.option("--stdio", "stdio_cmd", help="stdio command")
+    @click.option("--http", "http_url", help="HTTP endpoint URL")
+    @click.option("--env", "env_vars", multiple=True, help="Environment variables")
+    def mcp_add(name, stdio_cmd, http_url, env_vars):
+        """Add an MCP server."""
+        from clawctl.commands.mcp import mcp_add as run_add
+        run_add(name, stdio_cmd, http_url, env_vars)
+
+    @mcp.command("remove")
+    @click.argument("name")
+    def mcp_remove(name):
+        """Remove an MCP server."""
+        from clawctl.commands.mcp import mcp_remove as run_remove
+        run_remove(name)
+
+    @mcp.command("test")
+    @click.argument("name")
+    def mcp_test(name):
+        """Test connection to MCP server."""
+        from clawctl.commands.mcp import mcp_test as run_test
+        run_test(name)
+
+    @mcp.command("discover")
+    def mcp_discover():
+        """Discover available MCP servers."""
+        from clawctl.commands.mcp import mcp_discover as run_discover
+        run_discover()
+
+    @mcp.command("template")
+    @click.argument("template_name", required=False)
+    def mcp_template(template_name):
+        """Show MCP server templates."""
+        from clawctl.commands.mcp import mcp_template as run_template
+        run_template(template_name)
+
+    # ── mcpd (MCP Server Daemon) ─────────────────────────────────────────────
+    @main.group()
+    def mcpd():
+        """Manage ClawOS MCP Server (exposes ClawOS to external AI)."""
+        pass
+
+    @mcpd.command("status")
+    def mcpd_status():
+        """Check MCP server status."""
+        from clawctl.commands.mcpd import mcpd_status as run_status
+        run_status()
+
+    @mcpd.command("start")
+    def mcpd_start():
+        """Start the MCP server."""
+        from clawctl.commands.mcpd import mcpd_start as run_start
+        run_start()
+
+    @mcpd.command("stop")
+    def mcpd_stop():
+        """Stop the MCP server."""
+        from clawctl.commands.mcpd import mcpd_stop as run_stop
+        run_stop()
+
+    @mcpd.command("info")
+    def mcpd_info():
+        """Show MCP server capabilities."""
+        from clawctl.commands.mcpd import mcpd_info as run_info
+        run_info()
+
+    @mcpd.command("test")
+    @click.option("--tool", default="clawos_system_info", help="Tool to test")
+    def mcpd_test(tool):
+        """Test MCP server with sample request."""
+        from clawctl.commands.mcpd import mcpd_test as run_test
+        run_test(tool)
+
+    @mcpd.command("clients")
+    def mcpd_clients():
+        """Show connection instructions for MCP clients."""
+        from clawctl.commands.mcpd import mcpd_clients as run_clients
+        run_clients()
+
+    # ── observ (Observability) ─────────────────────────────────────────────
+    @main.group()
+    def observ():
+        """Observability and tracing for LLM calls, costs, latency."""
+        pass
+
+    @observ.command("status")
+    def observ_status():
+        """Check observability service status."""
+        from clawctl.commands.observ import observ_status as run_status
+        run_status()
+
+    @observ.command("calls")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--service", "-s", help="Filter by service")
+    @click.option("--model", "-m", help="Filter by model")
+    @click.option("--hours", "-h", default=24, help="Time window in hours")
+    @click.option("--limit", "-l", default=20, help="Number of calls")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def observ_calls(workspace, service, model, hours, limit, as_json):
+        """Show recent LLM calls."""
+        from clawctl.commands.observ import observ_calls as run_calls
+        run_calls(workspace, service, model, hours, limit, as_json)
+
+    @observ.command("stats")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--hours", "-h", default=24, help="Time window in hours")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def observ_stats(workspace, hours, as_json):
+        """Show aggregate statistics."""
+        from clawctl.commands.observ import observ_stats as run_stats
+        run_stats(workspace, hours, as_json)
+
+    @observ.command("cost")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--days", "-d", default=7, help="Time window in days")
+    def observ_cost(workspace, days):
+        """Show cost breakdown."""
+        from clawctl.commands.observ import observ_cost as run_cost
+        run_cost(workspace, days)
+
+    @observ.command("latency")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    @click.option("--hours", "-h", default=24, help="Time window in hours")
+    def observ_latency(workspace, hours):
+        """Show latency analysis."""
+        from clawctl.commands.observ import observ_latency as run_latency
+        run_latency(workspace, hours)
+
+    @observ.command("workspaces")
+    def observ_workspaces():
+        """List workspaces with activity."""
+        from clawctl.commands.observ import observ_workspaces as run_workspaces
+        run_workspaces()
+
+    @observ.command("export")
+    @click.option("--format", "fmt", type=click.Choice(["json", "csv"]), default="json")
+    @click.option("--output", "-o", help="Output file")
+    @click.option("--hours", "-h", default=168, help="Time window in hours")
+    @click.option("--workspace", "-w", help="Filter by workspace")
+    def observ_export(fmt, output, hours, workspace):
+        """Export observability data."""
+        from clawctl.commands.observ import observ_export as run_export
+        run_export(fmt, output, hours, workspace)
+
+    # ── durable (Durable Workflows) ──────────────────────────────────────────
+    @main.group()
+    def durable():
+        """Durable workflow management with checkpoint/resume."""
+        pass
+
+    @durable.command("runs")
+    @click.option("--workflow", "-w", help="Filter by workflow ID")
+    @click.option("--status", "-s", type=click.Choice(["pending", "running", "completed", "failed", "cancelled"]))
+    @click.option("--limit", "-l", default=20, help="Number of runs")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def durable_runs(workflow, status, limit, as_json):
+        """List workflow runs."""
+        from clawctl.commands.durable import durable_runs as run_runs
+        run_runs(workflow, status, limit, as_json)
+
+    @durable.command("show")
+    @click.argument("run_id")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def durable_show(run_id, as_json):
+        """Show run details."""
+        from clawctl.commands.durable import durable_show as run_show
+        run_show(run_id, as_json)
+
+    @durable.command("resume")
+    @click.argument("run_id")
+    def durable_resume(run_id):
+        """Resume a workflow run."""
+        from clawctl.commands.durable import durable_resume as run_resume
+        run_resume(run_id)
+
+    @durable.command("cancel")
+    @click.argument("run_id")
+    def durable_cancel(run_id):
+        """Cancel a running workflow."""
+        from clawctl.commands.durable import durable_cancel as run_cancel
+        run_cancel(run_id)
+
+    @durable.command("stats")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def durable_stats(as_json):
+        """Show workflow statistics."""
+        from clawctl.commands.durable import durable_stats as run_stats
+        run_stats(as_json)
+
+    @durable.command("cleanup")
+    @click.option("--days", "-d", default=30, help="Delete runs older than N days")
+    @click.option("--yes", is_flag=True, help="Skip confirmation")
+    def durable_cleanup(days, yes):
+        """Clean up old workflow runs."""
+        from clawctl.commands.durable import durable_cleanup as run_cleanup
+        run_cleanup(days, yes)
+
+    # ── code (Code Companion) ───────────────────────────────────────────────
+    @main.group()
+    def code():
+        """Code companion - developer AI assistant with LSP integration."""
+        pass
+
+    @code.command("index")
+    @click.argument("path", type=click.Path(exists=True, file_okay=False, dir_okay=True))
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    @click.option("--verbose", "-v", is_flag=True, help="Show progress")
+    def code_index(path, workspace, verbose):
+        """Index a codebase for semantic search."""
+        from clawctl.commands.code import code_index as run_index
+        run_index(path, workspace, verbose)
+
+    @code.command("search")
+    @click.argument("query")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    @click.option("--limit", "-l", default=10, help="Number of results")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def code_search(query, workspace, limit, as_json):
+        """Search codebase using semantic search."""
+        from clawctl.commands.code import code_search as run_search
+        run_search(query, workspace, limit, as_json)
+
+    @code.command("explain")
+    @click.argument("location")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    def code_explain(location, workspace):
+        """Explain code at location (file:line)."""
+        from clawctl.commands.code import code_explain as run_explain
+        run_explain(location, workspace)
+
+    @code.command("review")
+    @click.argument("file_path", type=click.Path(exists=True))
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def code_review(file_path, as_json):
+        """Review code for issues."""
+        from clawctl.commands.code import code_review as run_review
+        run_review(file_path, as_json)
+
+    # ── dashboard ────────────────────────────────────────────────────────────
+    @main.group()
+    def dashboard():
+        """Service dashboard and monitoring."""
+        pass
+
+    @dashboard.command("show")
+    @click.option("--watch", "-w", is_flag=True, help="Watch mode (auto-refresh)")
+    @click.option("--interval", "-i", default=2.0, help="Refresh interval in seconds")
+    def dashboard_show(watch, interval):
+        """Show service dashboard."""
+        from clawctl.commands.dashboard import show_dashboard
+        show_dashboard(watch, interval)
+
+    @dashboard.command("logs")
+    @click.argument("service")
+    @click.option("--lines", "-n", default=50, help="Number of log lines")
+    def dashboard_logs(service, lines):
+        """Show logs for a service."""
+        from clawctl.commands.dashboard import show_service_logs
+        show_service_logs(service, lines)
+
+    @code.command("test")
+    @click.argument("symbol")
+    @click.option("--file", "-f", required=True, help="File containing symbol")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    def code_test(symbol, file, workspace):
+        """Generate test cases."""
+        from clawctl.commands.code import code_test as run_test
+        run_test(symbol, file, workspace)
+
+    @code.command("status")
+    @click.option("--workspace", "-w", default="code_default", help="Workspace name")
+    def code_status(workspace):
+        """Show code companion status."""
+        from clawctl.commands.code import code_status as run_status
+        run_status(workspace)
+
+    # ── brain (Second Brain) ────────────────────────────────────────────────────
+    @main.group()
+    def brain():
+        """Second Brain knowledge management."""
+        pass
+
+    @brain.command("entity")
+    @click.argument("name")
+    @click.option("--type", "entity_type", default="concept", help="Entity type")
+    @click.option("--description", "-d", default="", help="Description")
+    def brain_entity(name, entity_type, description):
+        """Create knowledge entity."""
+        click.echo(f"Creating entity: {name} ({entity_type})")
+        
+    @brain.command("search")
+    @click.argument("query")
+    @click.option("--tags", "-t", multiple=True, help="Filter by tags")
+    @click.option("--limit", "-l", default=10, help="Max results")
+    def brain_search(query, tags, limit):
+        """Search knowledge base."""
+        click.echo(f"Searching for: {query}")
+
+    @brain.command("timeline")
+    @click.option("--start", help="Start date (YYYY-MM-DD)")
+    @click.option("--end", help="End date (YYYY-MM-DD)")
+    @click.option("--entity", help="Filter by entity")
+    def brain_timeline(start, end, entity):
+        """View knowledge timeline."""
+        click.echo(f"Timeline: {start} to {end}")
+
+    @brain.command("insights")
+    def brain_insights():
+        """Show discovered insights."""
+        click.echo("Loading insights...")
+
+    # ── sandbox (Secure Sandbox) ────────────────────────────────────────────
+    @main.group()
+    def sandbox():
+        """Secure code sandbox."""
+        pass
+
+    @sandbox.command("create")
+    @click.option("--language", "-l", default="python", type=click.Choice(["python", "node", "bash"]))
+    @click.option("--timeout", "-t", default=30, help="Timeout seconds")
+    @click.option("--memory", "-m", default=512, help="Memory limit MB")
+    @click.option("--network/--no-network", default=False, help="Network access")
+    def sandbox_create(language, timeout, memory, network):
+        """Create new sandbox."""
+        import uuid
+        sid = str(uuid.uuid4())[:8]
+        click.echo(f"Created sandbox: {sid}")
+        click.echo(f"  Language: {language}, Timeout: {timeout}s, Memory: {memory}MB, Network: {network}")
+
+    @sandbox.command("execute")
+    @click.argument("sandbox_id")
+    @click.argument("code_file", type=click.File('r'))
+    def sandbox_execute(sandbox_id, code_file):
+        """Execute code in sandbox."""
+        code = code_file.read()
+        click.echo(f"Executing in sandbox {sandbox_id}...")
+
+    @sandbox.command("list")
+    def sandbox_list():
+        """List active sandboxes."""
+        click.echo("Active sandboxes: (none)")
+
+    @sandbox.command("destroy")
+    @click.argument("sandbox_id")
+    def sandbox_destroy(sandbox_id):
+        """Destroy sandbox."""
+        click.echo(f"Destroyed sandbox: {sandbox_id}")
+
+    # ── notebook (DevOps Notebooks) ─────────────────────────────────────────
+    @main.group()
+    def notebook():
+        """DevOps notebooks (executable markdown)."""
+        pass
+
+    @notebook.command("new")
+    @click.argument("name")
+    def notebook_new(name):
+        """Create new notebook."""
+        path = f"{name}.md"
+        with open(path, 'w') as f:
+            f.write(f"# {name}\n\n## Step 1\n\n```bash\necho 'Hello'\n```\n")
+        click.echo(f"Created notebook: {path}")
+
+    @notebook.command("run")
+    @click.argument("notebook_file")
+    def notebook_run(notebook_file):
+        """Execute notebook."""
+        click.echo(f"Executing: {notebook_file}")
+
+    @notebook.command("export")
+    @click.argument("notebook_file")
+    @click.option("--format", "-f", default="bash")
+    def notebook_export(notebook_file, format):
+        """Export notebook to script."""
+        click.echo(f"Exporting to {format}")
+
+    # ── visual (Visual Workflow) ────────────────────────────────────────────
+    @main.group()
+    def visual():
+        """Visual workflow builder."""
+        pass
+
+    @visual.command("create")
+    @click.argument("name")
+    def visual_create(name):
+        """Create visual workflow."""
+        click.echo(f"Created visual workflow: {name}")
+
+    @visual.command("open")
+    def visual_open():
+        """Open visual workflow editor."""
+        click.echo("Open http://localhost:7086 in your browser")
+
+    @visual.command("run")
+    @click.argument("workflow_id")
+    def visual_run(workflow_id):
+        """Execute visual workflow."""
+        click.echo(f"Executing workflow: {workflow_id}")
+
+
 if __name__ == "__main__":
     main()

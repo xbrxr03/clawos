@@ -11,7 +11,8 @@
       "Bash(python -c ':*)",
       "Bash(pip install:*)",
       "Bash(python -m playwright install chromium --with-deps)",
-      "WebFetch(domain:clawos-zeta.vercel.app)"
+      "WebFetch(domain:clawos-zeta.vercel.app)",
+      "Bash(sort -t: -k2 -nr)"
     ]
   }
 }
