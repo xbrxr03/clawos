@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { commandCenterApi } from '../../../lib/commandCenterApi'
 import { Footer, Orb, ProgressBar } from '../atoms'
 import type { ScreenProps } from '../types'
@@ -24,11 +24,11 @@ function launchStageLabel(pct: number, stage: string | undefined): string {
   const s = (stage || '').toLowerCase()
   if (s.startsWith('applying')) return 'applying plan…'
   if (s === 'complete' || s === 'ready') return 'ready'
-  if (pct < 20) return 'starting nexus…'
-  if (pct < 40) return 'loading memd (14-layer memory)…'
-  if (pct < 60) return 'wiring policyd audit chain…'
-  if (pct < 80) return 'mounting toolbridge + workflows…'
-  if (pct < 95) return 'jarvis coming online…'
+  if (pct < 20) return 'starting services…'
+  if (pct < 40) return 'loading memory layer…'
+  if (pct < 60) return 'wiring policy and toolbridge…'
+  if (pct < 80) return 'mounting agent and workflows…'
+  if (pct < 95) return 'JARVIS coming online…'
   return 'ready'
 }
 
@@ -45,19 +45,6 @@ export function SummaryScreen(props: ScreenProps) {
     setUi,
     busy,
   } = props
-  const [copied, setCopied] = useState(false)
-
-  const openClawCmd = 'openclaw onboard'
-  const copyOpenClawCmd = async () => {
-    try {
-      await navigator.clipboard.writeText(openClawCmd)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* clipboard blocked — silent, the command is still visible on-screen */
-    }
-  }
-
   // Kick off plan generation as soon as user lands on summary
   useEffect(() => {
     if (!state.plan_steps?.length) planSetup().catch(() => null)
@@ -158,43 +145,32 @@ export function SummaryScreen(props: ScreenProps) {
           }}
         >
           <div className="eyebrow" style={{ marginBottom: 10 }}>
-            NEXT · SET UP OPENCLAW
+            WHAT'S NEXT
           </div>
-          <div
-            style={{
-              fontSize: 14,
-              color: 'var(--ink-2)',
-              marginBottom: 14,
-              lineHeight: 1.5,
-            }}
-          >
-            Run the guided setup wizard in your terminal to configure your AI
-            agent — model, workspace, gateway, and channels:
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '12px 14px',
-              borderRadius: 8,
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid var(--panel-br)',
-              fontFamily: 'var(--mono)',
-              fontSize: 13,
-            }}
-          >
-            <span style={{ flex: 1, color: 'var(--ink-1)', userSelect: 'all' }}>
-              {openClawCmd}
-            </span>
-            <button
-              type="button"
-              className="wiz-btn"
-              style={{ padding: '4px 12px', fontSize: 11, minWidth: 78 }}
-              onClick={copyOpenClawCmd}
-            >
-              {copied ? 'Copied ✓' : 'Copy ⧉'}
-            </button>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {[
+              { cmd: 'clawos', desc: 'Start talking to JARVIS' },
+              { cmd: 'clawctl wf list', desc: 'Browse 29 built-in workflows' },
+              { cmd: 'clawctl framework list', desc: 'Swap or add agent brains' },
+            ].map(({ cmd, desc }) => (
+              <div
+                key={cmd}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid var(--panel-br)',
+                }}
+              >
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', flex: '0 0 auto' }}>
+                  {cmd}
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{desc}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -230,21 +206,21 @@ export function SummaryScreen(props: ScreenProps) {
             </div>
           </div>
           <div className="sum-item">
-            <div className="sum-k">Runtimes</div>
+            <div className="sum-k">Agent brain</div>
             <div className="sum-v m" style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
-              {runtimes}
+              {state.selected_framework || 'none · configure from Settings'}
             </div>
           </div>
           <div className="sum-item">
-            <div className="sum-k">Primary model</div>
+            <div className="sum-k">JARVIS model</div>
             <div className="sum-v m" style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
               {modelName}
             </div>
           </div>
           <div className="sum-item">
-            <div className="sum-k">Framework</div>
+            <div className="sum-k">System services</div>
             <div className="sum-v m" style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
-              {state.selected_framework || 'built-in only'}
+              {runtimes}
             </div>
           </div>
           <div className="sum-item">
@@ -264,8 +240,8 @@ export function SummaryScreen(props: ScreenProps) {
                 Bring ClawOS online
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-                Starts Nexus, memd, policyd, toolbridge and dashboard services. No restart
-                required. Safe to re-run.
+                Starts your agent, memory, policy, toolbridge, and dashboard services. No
+                restart required. Safe to re-run.
               </div>
             </div>
             {!launching && (

@@ -34,7 +34,7 @@ const STEPS: StepDef[] = [
   { id: 'hardware', label: 'Hardware', Component: HardwareScreen },
   { id: 'profile', label: 'Profile', Component: ProfileScreen },
   { id: 'runtimes', label: 'Runtimes', Component: RuntimesScreen },
-  { id: 'framework', label: 'Framework', Component: FrameworkScreen },
+  { id: 'framework', label: 'Agent', Component: FrameworkScreen },
   { id: 'model', label: 'Model', Component: ModelScreen },
   { id: 'voice', label: 'Meet Jarvis', Component: VoiceScreen },
   { id: 'policy', label: 'Policy', Component: PolicyScreen },

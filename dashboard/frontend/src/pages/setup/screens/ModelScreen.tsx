@@ -63,8 +63,9 @@ export function ModelScreen(props: ScreenProps) {
     <>
       <div className="stage-inner">
         <div className="eyebrow">06 · Model</div>
-        <h1 className="wiz-title">Provision the primary model.</h1>
+        <h1 className="wiz-title">Choose JARVIS's model.</h1>
         <p className="wiz-subtitle">
+          This runs locally and powers everything — voice, memory, workflows, and agent reasoning.
           Stored in Ollama on this machine. Swap any time with{' '}
           <span style={{ fontFamily: 'var(--mono)', color: 'var(--ink-1)' }}>
             clawctl model set

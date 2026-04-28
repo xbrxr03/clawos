@@ -46,6 +46,7 @@ export function FrameworkScreen(props: ScreenProps) {
 
   const profileId = state.detected_hardware?.profile_id || ''
   const selected = state.selected_framework || ''
+  const onboarded = !!(state as Record<string, unknown>).openclaw_onboarded
 
   useEffect(() => {
     let cancelled = false
@@ -53,18 +54,24 @@ export function FrameworkScreen(props: ScreenProps) {
       .listSetupFrameworks(profileId)
       .then((payload) => {
         if (cancelled) return
-        setItems(Array.isArray(payload?.frameworks) ? payload.frameworks : [])
+        const list = Array.isArray(payload?.frameworks) ? payload.frameworks : []
+        setItems(list)
+        // Auto-select openclaw as default if nothing is chosen yet and it's compatible
+        if (!state.selected_framework) {
+          const oc = list.find((f: FrameworkCatalogEntry) => f.name === 'openclaw' && f.compatible)
+          if (oc) updateOptions({ selected_framework: 'openclaw' }).catch(() => null)
+        }
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        const msg = err instanceof Error ? err.message : 'Framework catalog unavailable'
+        const msg = err instanceof Error ? err.message : 'Agent catalog unavailable'
         setLoadError(msg)
         setItems([])
       })
     return () => {
       cancelled = true
     }
-  }, [profileId])
+  }, [profileId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = async (id: string) => {
     // Empty string is valid — clears the selection and falls back to built-in only.
@@ -92,12 +99,12 @@ export function FrameworkScreen(props: ScreenProps) {
   return (
     <>
       <div className="stage-inner">
-        <div className="eyebrow">05 · Framework</div>
-        <h1 className="wiz-title">Pick an agent framework.</h1>
+        <div className="eyebrow">05 · Agent</div>
+        <h1 className="wiz-title">Choose JARVIS's brain.</h1>
         <p className="wiz-subtitle">
-          Nexus is always on — this adds a second agent brain for tasks that need
-          a different pattern. Tier-filtered against your detected hardware.
-          Skip this step and you can install any framework later from Settings → Frameworks.
+          ClawOS wraps any agent framework and gives it voice, memory, and the JARVIS persona.
+          OpenClaw is recommended — deepest integration and best skills library.
+          You can swap agents later from Settings.
         </p>
 
         <div className="panel" style={{ marginTop: 24, padding: 16 }}>
@@ -113,10 +120,10 @@ export function FrameworkScreen(props: ScreenProps) {
                 v: items == null ? 'loading…' : `${compatibleCount} of ${ordered.length} compatible`,
               },
               {
-                k: 'current choice',
+                k: 'agent brain',
                 v: selected
                   ? FRIENDLY_NAMES[selected] || selected
-                  : 'none (built-in Nexus only)',
+                  : 'none selected',
                 tone: selected ? 'ok' : 'default',
               },
             ]}
@@ -131,22 +138,12 @@ export function FrameworkScreen(props: ScreenProps) {
         ) : null}
 
         <div className="choices cols-2" style={{ marginTop: 22 }}>
-          {/* Always-available "built-in only" option pinned to the top */}
-          <Choice
-            key="__none__"
-            selected={!selected}
-            glyph="◯"
-            title="Built-in only"
-            sub="Just Nexus. Fastest boot, zero extra install. Recommended if you're unsure."
-            tag={!selected ? 'DEFAULT' : undefined}
-            disabled={busy === 'options'}
-            onClick={() => pick('')}
-          />
           {items == null
             ? null
             : ordered.map((f) => {
                 const meta = GLYPHS[f.name] || { glyph: '◆' }
                 const title = FRIENDLY_NAMES[f.name] || f.name
+                const isOC = f.name === 'openclaw'
                 const sub = f.compatible
                   ? f.description || 'Agent framework'
                   : `Incompatible — ${f.incompatible_reason || 'not supported on this tier'}`
@@ -155,7 +152,9 @@ export function FrameworkScreen(props: ScreenProps) {
                   ? undefined
                   : isInstalled
                     ? 'INSTALLED'
-                    : meta.tag
+                    : isOC
+                      ? 'RECOMMENDED'
+                      : meta.tag
                 return (
                   <Choice
                     key={f.name}
@@ -169,17 +168,27 @@ export function FrameworkScreen(props: ScreenProps) {
                   />
                 )
               })}
+          {/* Deemphasised skip option at the end */}
+          <Choice
+            key="__none__"
+            selected={!selected}
+            glyph="◯"
+            title="Configure later"
+            sub="No agent now. JARVIS will have limited reasoning until you add one from Settings."
+            disabled={busy === 'options'}
+            onClick={() => pick('')}
+          />
         </div>
 
         {selectedEntry && selectedEntry.name !== 'openclaw' ? (
           <div className="note" style={{ marginTop: 22 }}>
             <span>↪</span>
-            Installing{' '}
+            <span>JARVIS will use</span>
             <strong style={{ marginLeft: 4 }}>
               {FRIENDLY_NAMES[selectedEntry.name] || selectedEntry.name}
             </strong>{' '}
             <span style={{ marginLeft: 'auto', color: 'var(--ink-3)' }}>
-              queued for the apply step · you can remove it later
+              as its agent brain · installed at apply step
             </span>
           </div>
         ) : null}
@@ -188,25 +197,33 @@ export function FrameworkScreen(props: ScreenProps) {
           <div className="note" style={{ marginTop: 22 }}>
             <span>◉</span>
             <strong style={{ marginLeft: 4 }}>OpenClaw</strong>
-            <span style={{ marginLeft: 8, color: 'var(--ink-3)' }}>
-              requires guided setup — click "Install &amp; Set Up" to continue
-            </span>
-            <button
-              onClick={() => setShowOnboardModal(true)}
-              style={{
-                marginLeft: 'auto',
-                background: 'var(--accent)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '5px 14px',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Install &amp; Set Up →
-            </button>
+            {onboarded ? (
+              <span style={{ marginLeft: 8, color: 'var(--ok)' }}>
+                ✓ configured — JARVIS is ready
+              </span>
+            ) : (
+              <span style={{ marginLeft: 8, color: 'var(--ink-3)' }}>
+                needs a quick setup — configure model, workspace, and gateway
+              </span>
+            )}
+            {!onboarded && (
+              <button
+                onClick={() => setShowOnboardModal(true)}
+                style={{
+                  marginLeft: 'auto',
+                  background: 'var(--accent)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '5px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Set Up JARVIS →
+              </button>
+            )}
           </div>
         ) : null}
       </div>
@@ -226,10 +243,16 @@ export function FrameworkScreen(props: ScreenProps) {
 
       <Footer
         onBack={onBack}
-        onNext={onNext}
+        onNext={selected === 'openclaw' && !onboarded ? () => setShowOnboardModal(true) : onNext}
         step={stepIndex + 1}
         total={totalSteps}
-        nextLabel={selected && selected !== 'openclaw' ? 'Continue' : 'Skip'}
+        nextLabel={
+          !selected
+            ? 'Skip for now'
+            : selected === 'openclaw' && !onboarded
+              ? 'Set Up JARVIS →'
+              : 'Continue'
+        }
       />
     </>
   )
