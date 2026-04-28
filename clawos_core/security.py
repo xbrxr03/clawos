@@ -164,21 +164,32 @@ class SecurityContext:
 
 class AuditLogger:
     """Security audit logging."""
-    
+
     def __init__(self, log_file: str = "/var/log/clawos/audit.log"):
-        self.logger = logging.getLogger("audit")
-        # TODO: Configure file handler
-    
-    def log_action(self, action: str, context: SecurityContext, details: Dict = None):
+        self.logger = logging.getLogger("clawos.audit")
+        if not self.logger.handlers:
+            import os
+            from logging.handlers import RotatingFileHandler
+            try:
+                os.makedirs(os.path.dirname(log_file), exist_ok=True)
+                fh = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5)
+                fh.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+                self.logger.addHandler(fh)
+            except OSError:
+                # Fall back to stderr if log dir isn't writable (e.g. dev mode)
+                self.logger.addHandler(logging.StreamHandler())
+            self.logger.setLevel(logging.INFO)
+
+    def log_action(self, action: str, context: "SecurityContext", details: Dict = None):
         """Log security-relevant action."""
         entry = {
             "timestamp": datetime.now().isoformat(),
             "action": action,
             "user_id": context.user_id,
             "session_id": context.session_id,
-            "details": details or {}
+            "details": details or {},
         }
-        self.logger.info(f"AUDIT: {entry}")
+        self.logger.info("AUDIT: %s", entry)
 
 
 # Decorators for common security patterns
@@ -196,11 +207,22 @@ def require_permission(permission: str):
 
 
 def sanitize_input(**validators):
-    """Decorator to sanitize function inputs."""
+    """Decorator to validate function inputs using InputValidator rules.
+
+    Each keyword arg maps a parameter name to a validator callable that raises
+    ValueError if the value is unsafe.  Pass-through when no validator defined.
+    """
     def decorator(func):
+        import inspect
+        sig = inspect.signature(func)
+
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # TODO: Implement input sanitization
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            for param, validate in validators.items():
+                if param in bound.arguments:
+                    validate(bound.arguments[param])
             return func(*args, **kwargs)
         return wrapper
     return decorator

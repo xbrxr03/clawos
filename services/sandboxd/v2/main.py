@@ -12,7 +12,7 @@ Features:
 - Pre-installed tools (Python, Node, etc.)
 - Secure IPC
 
-Addresses Gap #11: Secure Code Execution from CRITICAL_GAPS_RESEARCH.md
+Uses Docker when available; falls back to subprocess with resource limits.
 """
 import asyncio
 import json
@@ -263,8 +263,8 @@ timeout {self.config.timeout_seconds} bash -c "$code" 2>&1
         if not self.config.persistence_enabled:
             try:
                 shutil.rmtree(self.sandbox_path)
-            except:
-                pass
+            except Exception as exc:
+                log.warning("Failed to clean up sandbox %s: %s", self.sandbox_id, exc)
     
     def write_file(self, filename: str, content: str):
         """Write file to sandbox."""

@@ -12,7 +12,7 @@ Features:
 - Performance analytics
 - Dashboard integration
 
-This addresses the observability gap identified in CRITICAL_GAPS_RESEARCH.md
+Writes to a local SQLite store; endpoints expose aggregated stats to dashd.
 """
 import asyncio
 import json
@@ -408,10 +408,13 @@ store = ObservabilityStore()
 async def record_call(request: dict):
     """Record a new LLM call."""
     try:
-        call_id = store.record_call(LLMCall(**request))
+        call = LLMCall(**request)
+        call_id = await asyncio.to_thread(store.record_call, call)
         return {"status": "ok", "id": call_id}
+    except TypeError as e:
+        raise HTTPException(status_code=422, detail=f"Invalid call payload: {e}")
     except Exception as e:
-        log.error(f"Failed to record call: {e}")
+        log.error("Failed to record call: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -429,7 +432,8 @@ async def get_calls(
     end_time = time.time()
     start_time = end_time - (hours * 3600)
     
-    calls = store.get_calls(
+    calls = await asyncio.to_thread(
+        store.get_calls,
         workspace=workspace,
         service=service,
         model=model,
@@ -437,7 +441,7 @@ async def get_calls(
         start_time=start_time,
         end_time=end_time,
         limit=limit,
-        offset=offset
+        offset=offset,
     )
     
     return {

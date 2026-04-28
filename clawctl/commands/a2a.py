@@ -34,14 +34,20 @@ def run_card():
 
 def run_delegate(task: str, peer_ip: str, workspace: str = "nexus_default"):
     """Send a task to a remote ClawOS A2A node."""
-    import asyncio
+    import json as _json
+    import urllib.request as _ur
     print()
     info(f"Delegating to {peer_ip}: {task[:60]}")
     try:
-        from services.gatewayd.service import delegate_to_peer
-        result = asyncio.run(delegate_to_peer(
-            f"http://{peer_ip}:7083/a2a", task, workspace
-        ))
+        body = _json.dumps({"intent": task, "workspace": workspace}).encode()
+        req = _ur.Request(
+            f"http://{peer_ip}:7083/a2a/tasks",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with _ur.urlopen(req, timeout=30) as resp:
+            result = _json.loads(resp.read().decode()).get("result", "ok")
         success("Result:")
         print(f"\n  {result}\n")
     except Exception as e:

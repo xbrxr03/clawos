@@ -60,6 +60,21 @@ class ClawOSMCPServer:
         self.tools = self._discover_tools()
         self.resources = self._discover_resources()
         self.prompts = self._discover_prompts()
+        # Lazy-initialised clients — instantiated once, reused across calls.
+        self._policy_client = None
+        self._memory_client = None
+
+    def _get_policy_client(self):
+        if self._policy_client is None:
+            from services.policyd.client import PolicyClient
+            self._policy_client = PolicyClient()
+        return self._policy_client
+
+    def _get_memory_client(self):
+        if self._memory_client is None:
+            from services.memd.client import MemoryClient
+            self._memory_client = MemoryClient()
+        return self._memory_client
     
     def _discover_tools(self) -> list[dict]:
         """Discover all available tools."""
@@ -307,13 +322,9 @@ class ClawOSMCPServer:
     async def _execute_skill(self, skill: str, parameters: dict, workspace: str) -> dict:
         """Execute a ClawOS skill via toolbridge."""
         try:
-            # Import here to avoid circular dependencies
             from services.toolbridge.service import ToolBridge
-            from services.policyd.client import PolicyClient
-            from services.memd.client import MemoryClient
-            
-            policy = PolicyClient()
-            memory = MemoryClient()
+            policy = self._get_policy_client()
+            memory = self._get_memory_client()
             bridge = ToolBridge(policy, memory, workspace)
             
             # Extract target and content from parameters
@@ -344,9 +355,7 @@ class ClawOSMCPServer:
     async def _search_memory(self, query: str, workspace: str, limit: int) -> dict:
         """Search agent memory."""
         try:
-            from services.memd.client import MemoryClient
-            
-            memory = MemoryClient()
+            memory = self._get_memory_client()
             results = memory.recall(query, workspace, top_k=limit)
             
             formatted_results = []
@@ -375,9 +384,7 @@ class ClawOSMCPServer:
     async def _save_memory(self, content: str, workspace: str, tags: list) -> dict:
         """Save to agent memory."""
         try:
-            from services.memd.client import MemoryClient
-            
-            memory = MemoryClient()
+            memory = self._get_memory_client()
             mid = memory.remember(content, workspace, source="mcp")
             
             return {

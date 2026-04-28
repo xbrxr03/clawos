@@ -7,7 +7,7 @@ Metrics, profiling, and performance optimization utilities.
 import time
 import functools
 import threading
-from collections import deque
+from collections import deque, OrderedDict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Callable, Any
 from contextlib import contextmanager
@@ -206,43 +206,42 @@ def check_performance(name: str, duration: float) -> tuple[bool, str]:
 
 
 class CachingDecorator:
-    """Simple caching decorator with TTL."""
-    
+    """TTL + LRU-bounded cache decorator.
+
+    Uses an OrderedDict so eviction is O(1) (popitem(last=False) removes the
+    oldest insertion regardless of expiry).  Expired entries are lazily removed
+    on access so the hot path stays fast.
+    """
+
     def __init__(self, ttl_seconds: float = 60.0, max_size: int = 1000):
         self.ttl = ttl_seconds
         self.max_size = max_size
-        self.cache: Dict[str, tuple[Any, float]] = {}
+        self._cache: OrderedDict[str, tuple[Any, float]] = OrderedDict()
         self._lock = threading.Lock()
-    
+
     def __call__(self, func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # Create cache key
             key = f"{func.__name__}:{hash(args)}:{hash(tuple(sorted(kwargs.items())))}"
-            
+            now = time.time()
+
             with self._lock:
-                # Check cache
-                if key in self.cache:
-                    result, expiry = self.cache[key]
-                    if time.time() < expiry:
+                if key in self._cache:
+                    result, expiry = self._cache[key]
+                    if now < expiry:
+                        self._cache.move_to_end(key)  # refresh LRU position
                         return result
-                    else:
-                        del self.cache[key]
-                
-                # Evict old entries if needed
-                if len(self.cache) >= self.max_size:
-                    oldest = min(self.cache.keys(), key=lambda k: self.cache[k][1])
-                    del self.cache[oldest]
-            
-            # Call function
+                    del self._cache[key]
+
             result = func(*args, **kwargs)
-            
-            # Store in cache
+
             with self._lock:
-                self.cache[key] = (result, time.time() + self.ttl)
-            
+                if len(self._cache) >= self.max_size:
+                    self._cache.popitem(last=False)  # evict oldest — O(1)
+                self._cache[key] = (result, now + self.ttl)
+
             return result
-        
+
         return wrapper
 
 
