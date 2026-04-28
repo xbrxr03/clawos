@@ -43,8 +43,17 @@ run/
 *.log
 
 # ── Claude Code harness (tool, not project code) ──────────────────────────────
-.claude/settings.local.json
-.claude/worktrees/
+.claude/
+
+# ── Dev-only / internal documents (kept local, not for public repo) ───────────
+CHANGELOG.md
+FINAL_SUMMARY.md
+IMPLEMENTATION_COMPLETE.md
+IMPROVEMENTS_SUMMARY.md
+docs/research/
+docs/BUG_BOUNTY_REPORT.md
+docs/COMPLETION_SUMMARY.md
+docs/END_TO_END_TEST_REPORT.md
 
 # ── Editors / OS ──────────────────────────────────────────────────────────────
 .DS_Store
