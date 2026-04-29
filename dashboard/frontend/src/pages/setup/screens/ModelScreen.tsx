@@ -63,9 +63,10 @@ export function ModelScreen(props: ScreenProps) {
     <>
       <div className="stage-inner">
         <div className="eyebrow">06 · Model</div>
-        <h1 className="wiz-title">Choose your offline local model.</h1>
+        <h1 className="wiz-title">Choose your local model.</h1>
         <p className="wiz-subtitle">
-          Runs on your hardware, powers voice and workflows. Stored in Ollama — swap any time with{' '}
+          The Ollama model your agent runs on. Stays on your machine, no internet required.
+          Swap any time with{' '}
           <span style={{ fontFamily: 'var(--mono)', color: 'var(--ink-1)' }}>
             clawctl model set
           </span>
