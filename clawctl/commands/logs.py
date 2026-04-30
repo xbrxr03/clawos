@@ -1,45 +1,42 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""clawctl logs — tail ClawOS logs."""
+"""clawctl logs — tail service logs with color."""
 import subprocess
+import sys
 from pathlib import Path
 
-from clawos_core.constants import LOGS_DIR
-from clawos_core.service_manager import log_files_for, service_manager_name
+import click
 
 
-def run(service: str = None, follow: bool = False, lines: int = 40):
-    print()
-    if service_manager_name() == "systemd":
-        unit = f"clawos-{service}.service" if service else None
-        cmd = ["journalctl", "--user", "-n", str(lines)]
-        if unit:
-            cmd += ["-u", unit]
+LOG_DIR = Path.home() / ".clawos-runtime" / "logs"
+
+
+SERVICES = [
+    "dashd", "clawd", "agentd", "memd", "policyd",
+    "modeld", "voiced", "desktopd", "reminderd", "waketrd",
+    "a2ad", "toolbridge", "scheduler", "metricd", "picoclawd",
+]
+
+
+def run(service, follow, lines):
+    """Tail service logs with color."""
+    if service:
+        log_file = LOG_DIR / f"{service}.log"
+        if not log_file.exists():
+            click.echo(f"No logs found for {service}")
+            sys.exit(1)
+        
         if follow:
-            cmd.append("-f")
-        try:
-            subprocess.run(cmd)
-            return
-        except KeyboardInterrupt:
-            return
-
-    files = [path for path in log_files_for(service) if path.exists()]
-    if not files:
-        print(f"  No logs found in {LOGS_DIR}")
+            subprocess.run(["tail", "-f", str(log_file)])
+        else:
+            subprocess.run(["tail", "-n", str(lines), str(log_file)])
     else:
-        for log_file in files:
-            _tail(log_file, lines, follow)
-    print()
-
-
-def _tail(path: Path, n: int, follow: bool):
-    if follow:
-        try:
-            subprocess.run(["tail", "-f", "-n", str(n), str(path)])
-        except KeyboardInterrupt:
-            pass
-        return
-
-    text = path.read_text(encoding="utf-8", errors="replace").strip()
-    for line in text.split("\n")[-n:]:
-        if line:
-            print(f"  {line}")
+        # List available logs
+        click.echo("Available logs:")
+        for svc in SERVICES:
+            log_file = LOG_DIR / f"{svc}.log"
+            if log_file.exists():
+                size = log_file.stat().st_size
+                size_str = f"{size / 1024:.1f}KB" if size < 1024 * 1024 else f"{size / (1024 * 1024):.1f}MB"
+                click.echo(f"  {svc:20} {size_str:10} {log_file}")
+            else:
+                click.echo(f"  {svc:20} (no logs)")

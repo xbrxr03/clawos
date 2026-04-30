@@ -9,7 +9,7 @@ Type=simple
 ExecStart=/usr/bin/env python3 -m services.picoclawd.main
 WorkingDirectory=%h/.clawos-runtime
 Environment=PYTHONPATH=%h/.clawos-runtime
-Restart=on-failure
+Restart=always
 RestartSec=10
 
 [Install]

@@ -8,7 +8,7 @@ Wants=clawos-modeld.service clawos-agentd.service
 Type=simple
 WorkingDirectory=%h/.clawos-runtime
 ExecStart=%h/.clawos-runtime/venv/bin/python3 %h/.clawos-runtime/services/voiced/main.py
-Restart=on-failure
+Restart=always
 RestartSec=5
 # voiced is non-critical — don't block stack on voice failure
 SuccessExitStatus=0 1
