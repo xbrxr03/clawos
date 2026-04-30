@@ -4,34 +4,25 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/status-v0.1.0-green.svg)](https://github.com/xbrxr03/clawos)
 
-> **OpenClaw + Ollama, offline, on any x86 machine.**
-> 
-> Flash a USB. Boot. Your AI agent is running locally. No API keys. No monthly bill.
+> **Local AI agent for your laptop. One curl command. No cloud. No API keys. No telemetry.**
 
 ---
 
 ## ⚡ What is ClawOS?
 
-ClawOS is a **bootable Linux ISO** that turns any x86 machine (laptop, mini PC, old desktop) into a **local AI agent computer**.
+ClawOS is a **local-first AI agent** that runs on your existing machine — no cloud required, no API keys, no monthly bill.
 
-It combines the power of [OpenClaw](https://github.com/openclaw) with the simplicity of [Ollama](https://ollama.com) to give you:
+Bring your own agent brain — **Nexus** (built-in), **OpenClaw**, or any framework with plugin hooks. It combines local LLMs via [Ollama](https://ollama.com) with a powerful agent runtime to give you:
 
-- 🤖 **13,700+ community skills** — from file management to web scraping
-- 🗣️ **Voice activation** — "Hey JARVIS" wakes your agent
-- 🔒 **100% offline** — runs locally, never sends data to the cloud
+- 🤖 **Your own AI agent** — runs 100% offline on your hardware
+- 🗣️ **Voice activation** — "Hey Claw" wakes your agent
+- 🔒 **Zero telemetry** — nothing leaves your machine, ever
 - 🎨 **Beautiful dashboard** — control everything from your browser
-- 📱 **WhatsApp/Telegram integration** — chat with your agent from your phone
+- ⚡ **Fast and private** — local inference, no network latency
 
 ---
 
-## 🎬 Demo
-
-```bash
-# Flash ClawOS to USB
-sudo dd if=clawos-0.1.0-amd64.iso of=/dev/sdX bs=4M status=progress
-
-# Boot from USB → First-run wizard → Done.
-```
+## 🎬 Demos
 
 **60-second demo:** [Watch on YouTube](https://youtube.com/...) *(coming soon)*
 
@@ -39,25 +30,28 @@ sudo dd if=clawos-0.1.0-amd64.iso of=/dev/sdX bs=4M status=progress
 
 ## 🚀 Quick Start
 
-### Option 1: Bootable ISO (Recommended)
-
-1. **Download** the ISO from [Releases](https://github.com/xbrxr03/clawos/releases)
-2. **Flash** to USB: `sudo dd if=clawos-0.1.0-amd64.iso of=/dev/sdX bs=4M`
-3. **Boot** from USB on any x86 machine
-4. **Follow** the first-run wizard
-5. **Done** — dashboard opens at `http://localhost:7070`
-
-### Option 2: Install on Existing Linux
+### Option 1: Install on Your Existing Machine (Recommended)
 
 ```bash
-# Download and run installer
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
+# One command, 2 minutes, your AI is ready
+curl -fsSL https://install.clawos.io | bash
 
 # Start services
 clawctl start
 
 # Check health
 clawctl health
+```
+
+### Option 2: Bootable ISO (Dedicated Machine)
+
+For a clean machine or dedicated AI appliance:
+
+```bash
+# Download and flash to USB
+sudo dd if=clawos-0.1.0-amd64.iso of=/dev/sdX bs=4M status=progress
+
+# Boot from USB → First-run wizard → Done.
 ```
 
 ---
@@ -67,7 +61,7 @@ clawctl health
 | Tier | RAM | Hardware | Experience |
 |------|-----|----------|------------|
 | **A** | 8GB | Old laptops, mini PCs | Claw Core (gemma3:4b) |
-| **B** | 16GB | Modern laptops, desktops | + OpenClaw (qwen2.5:7b) |
+| **B** | 16GB | Modern laptops, desktops | + Larger models (qwen2.5:7b) |
 | **C** | 32GB+ | Workstations, gaming PCs | Large models, fast inference |
 
 **Minimum:** x86_64 CPU, 8GB RAM, 20GB storage  
@@ -78,7 +72,7 @@ clawctl health
 ## ✨ Key Features
 
 ### 🌅 Morning Briefing
-Say "Hey JARVIS" and get a spoken summary of your day: calendar, weather, tasks, and news.
+Say "Hey Claw" and get a spoken summary of your day: calendar, weather, tasks, and news.
 
 ```bash
 clawctl demos morning-briefing
@@ -113,7 +107,7 @@ Web interface at `http://localhost:7070`:
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   User Interfaces                     │
-│  Voice │ Web Dashboard │ CLI │ WhatsApp │ Telegram  │
+│  Voice │ Web Dashboard │ CLI                        │
 └────────────────────────┬────────────────────────────┘
                          │
     ┌────────────────────┼────────────────────┐
@@ -226,13 +220,12 @@ git push origin feature/my-feature
 
 ## 📜 License
 
-[AGPL-3.0](LICENSE) — Free to use, modify, and distribute. OpenClaw was AGPL, so ClawOS is too.
+[AGPL-3.0](LICENSE) — Free to use, modify, and distribute.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **OpenClaw** — The original 13,700+ skill ecosystem
 - **Ollama** — Local LLM management made simple
 - **Nous Research** — Hermes models and agent research
 - **Claude Code** — Architecture inspiration
