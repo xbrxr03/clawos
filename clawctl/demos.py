@@ -145,3 +145,44 @@ def briefing_cmd():
 def rewrite_cmd(style, text):
     """Alias for 'demos essay-editor'."""
     essay_editor.callback(style=style, text=text, skip_grammar=False, verbose=False)
+
+
+@demos_cli.command(name="quirky-combo")
+def quirky_combo():
+    """Multi-tool combo: weather + news + reminder (Demo 4)."""
+    click.echo("🎭 Quirky Combo")
+    click.echo("===============")
+    click.echo("Testing multi-tool orchestration...")
+    
+    from runtimes.agent.runtime import build_runtime
+    
+    async def run_combo():
+        runtime = await build_runtime()
+        
+        # Execute multiple tools in sequence
+        tools_to_run = [
+            ("get_weather", {"location": "Toronto"}),
+            ("get_news", {"topic": "technology", "limit": 3}),
+            ("add_reminder", {"text": "Review combo demo results", "due": "in 1 hour"}),
+        ]
+        
+        results = []
+        for tool_name, args in tools_to_run:
+            click.echo(f"\n🔧 {tool_name}...")
+            try:
+                result = await runtime.toolbridge.run_native(tool_name, args)
+                results.append((tool_name, result))
+                click.echo(f"  ✅ {str(result)[:100]}...")
+            except Exception as e:
+                click.echo(f"  ❌ Error: {e}")
+                results.append((tool_name, f"[ERROR] {e}"))
+        
+        click.echo(f"\n📊 Completed {len(results)} tool calls")
+        return results
+    
+    try:
+        asyncio.run(run_combo())
+        click.echo("\n✅ Quirky combo complete!")
+    except Exception as e:
+        click.echo(f"\n❌ Combo failed: {e}")
+        sys.exit(1)
