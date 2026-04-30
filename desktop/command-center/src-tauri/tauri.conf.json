@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "io.clawos.command-center",
   "build": {
-    "beforeDevCommand": "npm --prefix ../../dashboard/frontend run dev -- --host 127.0.0.1 --port 5173",
-    "beforeBuildCommand": "npm --prefix ../../dashboard/frontend run build",
+    "beforeDevCommand": "npm --prefix /home/jarvis/clawos-analysis/dashboard/frontend run dev -- --host 127.0.0.1 --port 5173",
+    "beforeBuildCommand": "npm --prefix /home/jarvis/clawos-analysis/dashboard/frontend run build",
     "devUrl": "http://localhost:5173",
-    "frontendDist": "../../services/dashd/static"
+    "frontendDist": "/home/jarvis/clawos-analysis/services/dashd/static"
   },
   "app": {
     "windows": [
