@@ -63,7 +63,6 @@ except ImportError:
     XLIB_AVAILABLE = False
 
 from clawos_core.constants import CLAWOS_DIR, PORT_DESKTOPD
-from clawos_core.config.loader import get as get_config
 
 log = logging.getLogger("desktopd")
 
@@ -824,7 +823,10 @@ async def health():
 
 def run():
     """Run the desktop automation service."""
-    config = get_config()
+def run():
+    """Run the desktop automation service."""
+    from clawos_core.config.loader import load as load_config
+    config = load_config()
     host = config.get("desktop", {}).get("host", "127.0.0.1")
     port = config.get("desktop", {}).get("port", PORT_DESKTOPD)
     
