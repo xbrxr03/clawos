@@ -26,13 +26,13 @@ AGPL-3.0. Forever.
 
 ---
 
-## Tweet 3 (Demo 2: Essay Editor)
-Copy text from any editor, run grammar check + style rewrite, paste back.
+## Tweet 3 (Demo 2: Essay → Editor)
+One sentence. Four tool calls. Essay appears in gedit.
 
-All in one sentence to your agent:
 "Write me 1000 words on AI ethics and paste it into the text editor"
 
-4 tool calls. 3 seconds. Essay appears in gedit.
+The agent generates → copies → opens the editor → pastes. All on your
+laptop. No cloud round-trip.
 [Demo GIF: essay-to-editor]
 
 ---
@@ -66,8 +66,6 @@ curl -fsSL https://install.clawos.io | bash
 ```
 
 ⭐ Star us on GitHub: https://github.com/xbrxr03/clawos
-
-💬 Discord: https://discord.gg/clawos
 
 Built for people who want AI without the cloud. Let me know what you think.
 
