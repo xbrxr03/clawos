@@ -1,0 +1,54 @@
+# Maintainer: ClawOS Team <hello@clawos.ai>
+pkgname=clawos-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Local AI agent for your laptop - runs 100% offline"
+arch=('x86_64')
+url="https://github.com/xbrxr03/clawos"
+license=('AGPL3')
+depends=('python>=3.10' 'ollama')
+optdepends=('piper-tts: voice synthesis')
+provides=('clawos')
+conflicts=('clawos')
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/xbrxr03/clawos/archive/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  cd "${srcdir}/clawos-${pkgver}"
+  
+  # Install to /opt/clawos
+  mkdir -p "${pkgdir}/opt/clawos"
+  cp -r . "${pkgdir}/opt/clawos/"
+  
+  # Install binaries
+  mkdir -p "${pkgdir}/usr/bin"
+  
+  cat > "${pkgdir}/usr/bin/clawos" <<EOF
+#!/usr/bin/env bash
+export PYTHONPATH=/opt/clawos
+exec python3 /opt/clawos/clients/cli/repl.py "\$@"
+EOF
+  
+  cat > "${pkgdir}/usr/bin/clawctl" <<EOF
+#!/usr/bin/env bash
+export PYTHONPATH=/opt/clawos
+exec python3 /opt/clawos/clawctl/main.py "\$@"
+EOF
+  
+  chmod +x "${pkgdir}/usr/bin/clawos" "${pkgdir}/usr/bin/clawctl"
+  
+  # Install systemd user units
+  mkdir -p "${pkgdir}/usr/lib/systemd/user"
+  cp systemd/*.service "${pkgdir}/usr/lib/systemd/user/"
+  
+  # Install desktop file
+  mkdir -p "${pkgdir}/usr/share/applications"
+  cat > "${pkgdir}/usr/share/applications/clawos.desktop" <<EOF
+[Desktop Entry]
+Name=ClawOS
+Exec=clawos
+Type=Application
+Categories=Development;AI;
+Comment=Local AI agent for your laptop
+EOF
+}
