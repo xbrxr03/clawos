@@ -92,7 +92,7 @@ PORT_OLLAMA     = 11434
 
 # Legacy aliases used by older code
 A2A_PORT_NEXUS  = PORT_A2AD
-A2A_PORT_RAGD   = 7082
+A2A_PORT_RAGD   = PORT_BRAIND  # Maps to braind port, not duplicate
 
 # Read from environment
 OLLAMA_HOST   = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
