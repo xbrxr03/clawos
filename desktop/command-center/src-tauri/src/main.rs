@@ -1,7 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::process::Command;
 use std::path::PathBuf;
+use std::process::Command;
+use std::sync::Mutex;
+
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 fn clawos_dir() -> Result<PathBuf, String> {
     if let Ok(dir) = std::env::var("CLAWOS_DIR") {
@@ -80,9 +83,56 @@ fn open_path(kind: String) -> Result<String, String> {
     Ok(path.to_string_lossy().to_string())
 }
 
+// ─── Approval overlay ──────────────────────────────────────────────────────
+//
+// Floating, always-on-top, undecorated window that surfaces pending approvals
+// from policyd. Created on demand by `show_approval_overlay`, hidden by
+// `hide_approval_overlay`. The window shares the same web frontend as the
+// main dashboard but loads the route #/overlay/approval.
+
+const APPROVAL_OVERLAY_LABEL: &str = "approval-overlay";
+
+#[tauri::command]
+fn show_approval_overlay(app: tauri::AppHandle) -> Result<String, String> {
+    if let Some(win) = app.get_webview_window(APPROVAL_OVERLAY_LABEL) {
+        win.show().map_err(|e| e.to_string())?;
+        win.set_focus().map_err(|e| e.to_string())?;
+        return Ok("shown".to_string());
+    }
+
+    let url = WebviewUrl::App("index.html#/overlay/approval".into());
+    WebviewWindowBuilder::new(&app, APPROVAL_OVERLAY_LABEL, url)
+        .title("Approve task")
+        .inner_size(420.0, 240.0)
+        .resizable(false)
+        .always_on_top(true)
+        .decorations(false)
+        .skip_taskbar(true)
+        .center()
+        .visible(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok("created".to_string())
+}
+
+#[tauri::command]
+fn hide_approval_overlay(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(APPROVAL_OVERLAY_LABEL) {
+        win.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![reveal_logs, service_action, create_support_bundle, open_path])
+        .invoke_handler(tauri::generate_handler![
+            reveal_logs,
+            service_action,
+            create_support_bundle,
+            open_path,
+            show_approval_overlay,
+            hide_approval_overlay,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running ClawOS desktop shell");
 }

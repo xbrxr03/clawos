@@ -39,3 +39,10 @@ class LocalPolicyAdapter:
 
     def decide_approval(self, request_id: str, approve: bool) -> bool:
         return self._get_engine().decide_approval(request_id, approve)
+
+    async def resolve(self, request_id: str, allow: bool = True) -> bool:
+        """Async-friendly alias used by the Nexus runtime confirmation flow."""
+        return self.decide_approval(request_id, bool(allow))
+
+    def get_pending_approvals(self) -> list[dict]:
+        return self._get_engine().get_pending_approvals()

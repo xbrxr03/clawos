@@ -92,6 +92,71 @@ class ToolBridge:
             lines.append(f"- **{tool}**: {desc}")
         return "\n".join(lines)
 
+    async def run_native(self, tool: str, args: dict) -> str:
+        """
+        Native-args entry point for the new Nexus runtime (Phase 1+).
+
+        Takes a dict of arguments straight from the LLM's tool_call and
+        dispatches to either the new tools package (runtimes.agent.tools)
+        or the legacy (target, content) execute path. Policy gating is the
+        same as run().
+        """
+        from runtimes.agent.tools import dispatch_tool, NATIVE_TOOLS
+
+        normalized_tool = TOOL_ALIASES.get(tool, tool)
+
+        # Build a policy "target" for legacy gating compatibility.
+        # Most tools surface their primary identifier as one of these keys.
+        target_keys = ("path", "name", "query", "url", "command", "text", "fact")
+        policy_target = ""
+        for k in target_keys:
+            if k in args and args[k] is not None:
+                policy_target = str(args[k])
+                break
+        content = str(args.get("content") or args.get("text") or "")
+
+        # Resolve fs paths before policy
+        check_target = policy_target
+        if normalized_tool in ("fs.read", "fs.write", "fs.list", "fs.delete", "fs.search",
+                               "read_file", "write_file", "list_files", "open_file"):
+            try:
+                check_target = str(self._resolve_path(policy_target or "."))
+            except Exception:
+                pass
+
+        decision, reason = await self.policy.check(normalized_tool, check_target, content)
+        if decision == "DENY":
+            log.warning(f"Tool blocked: {normalized_tool} — {reason}")
+            return f"[DENIED] {reason}"
+        if decision == "QUEUE":
+            return f"[PENDING APPROVAL] {normalized_tool}"
+
+        try:
+            if normalized_tool in NATIVE_TOOLS:
+                # New native-args dispatch (runtimes.agent.tools.*)
+                ctx = {
+                    "workspace_id": self.workspace,
+                    "ws_root":      self._ws_root_fresh,
+                    "memory":       self.memory,
+                    "bridge":       self,
+                }
+                result = await dispatch_tool(normalized_tool, args, ctx)
+            else:
+                # Fall back to the legacy (target, content) dispatch
+                result = await self._execute(normalized_tool, policy_target, content)
+        except Exception as e:
+            result = f"[ERROR] {normalized_tool} failed: {e}"
+            log.error(f"Tool error: {normalized_tool}: {e}")
+
+        # Run after-hooks
+        try:
+            ctx = {"workspace_id": self.workspace, "task_id": self.policy.task_id}
+            await self.policy._get_engine().hooks.run_after(normalized_tool, policy_target, str(result), ctx)
+        except Exception:
+            pass
+
+        return result if isinstance(result, str) else str(result)
+
     async def run(self, tool: str, target: str, content: str = "", **kwargs) -> str:
         if not content and "content" in kwargs:
             content = kwargs["content"]

@@ -94,6 +94,17 @@ export function useCommandCenter() {
           break
         case 'approval_pending':
           setApprovals((prev) => [message.data, ...prev])
+          // If we're inside the Tauri Command Center, surface the floating
+          // approval overlay so the user sees the request even when the
+          // dashboard window isn't focused.
+          try {
+            const t = (window as unknown as {
+              __TAURI__?: { core?: { invoke: (cmd: string) => Promise<unknown> } }
+            }).__TAURI__
+            if (t?.core?.invoke) void t.core.invoke('show_approval_overlay')
+          } catch {
+            /* not running inside Tauri — ignore */
+          }
           break
         case 'approval_resolved':
           setApprovals((prev) => prev.filter((item) => item.id !== message.data.approval_id))
