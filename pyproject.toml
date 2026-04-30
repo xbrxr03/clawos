@@ -88,6 +88,7 @@ license-files = ["LICENSE"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"
 python_functions = ["test_*"]
 
 [tool.ruff]

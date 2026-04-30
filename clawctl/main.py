@@ -261,6 +261,35 @@ else:
         """Generate the current Nexus briefing."""
         from clawctl.commands.briefing import run_now; run_now()
 
+    # ── demos ─────────────────────────────────────────────────────────────
+    @main.group()
+    def demos():
+        """Run ClawOS v1.0 flagship demos."""
+        pass
+
+    @demos.command("morning-briefing")
+    @click.option("--voice/--text", "use_voice", default=True)
+    def demos_morning_briefing(use_voice):
+        """Trigger the morning briefing (Demo 1)."""
+        from clawctl.demos import morning_briefing
+        morning_briefing.callback(use_voice=use_voice)
+
+    @demos.command("essay-editor")
+    @click.option("--style", default="engaging", 
+                  type=click.Choice(["formal", "casual", "academic", "concise", "engaging"]))
+    @click.option("--text", default=None)
+    @click.option("--skip-grammar", is_flag=True)
+    def demos_essay_editor(style, text, skip_grammar):
+        """Grammar check and rewrite text (Demo 2)."""
+        from clawctl.demos import essay_editor
+        essay_editor.callback(style=style, text=text, skip_grammar=skip_grammar, verbose=False)
+
+    @demos.command("approval-test")
+    def demos_approval_test():
+        """Test the approval popup system (Demo 3)."""
+        from clawctl.demos import approval_test
+        approval_test.callback()
+
     @main.group()
     def mission():
         """Inspect or start Nexus missions."""
