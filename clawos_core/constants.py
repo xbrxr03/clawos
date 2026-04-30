@@ -14,7 +14,7 @@ from pathlib import Path
 from clawos_core.platform import launch_agents_dir, platform_key
 
 # ── Version ───────────────────────────────────────────────────────────────────
-VERSION      = "0.1.0"
+VERSION      = "0.1.1"
 CODENAME     = "Nexus"
 VERSION_FULL = f"{VERSION} {CODENAME}"
 

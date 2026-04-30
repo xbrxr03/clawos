@@ -1,8 +1,8 @@
-# ClawOS v0.1.0
+# ClawOS v0.1.1
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Status](https://img.shields.io/badge/status-v0.1.0-green.svg)](https://github.com/xbrxr03/clawos)
+[![Status](https://img.shields.io/badge/status-v0.1.1-green.svg)](https://github.com/xbrxr03/clawos)
 
 > **Local AI agent for your laptop. One curl command. No cloud. No API keys. No telemetry.**
 
