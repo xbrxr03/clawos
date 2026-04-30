@@ -18,10 +18,16 @@ from pathlib import Path
 from typing import List, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from clawos_core.constants import CLAWOS_DIR, PORT_REMINDERD
+
+
+class ReminderCreate(BaseModel):
+    task: str
+    due_at: str  # ISO format datetime
 
 log = logging.getLogger("reminderd")
 
@@ -93,8 +99,8 @@ class ReminderStore:
         """Add a new reminder. Returns the ID."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
-                "INSERT INTO reminders (task, due_at) VALUES (?, ?)",
-                (task, due_at.timestamp())
+                "INSERT INTO reminders (task, due_at, created_at) VALUES (?, ?, ?)",
+                (task, due_at.timestamp(), datetime.now().timestamp())
             )
             return cursor.lastrowid
 
@@ -244,14 +250,14 @@ async def list_reminders():
 
 
 @app.post("/reminders")
-async def create_reminder(task: str, due_at: str):
+async def create_reminder(data: ReminderCreate):
     """Create a new reminder."""
     if not store:
         raise HTTPException(status_code=503, detail="Service not ready")
     try:
-        due = datetime.fromisoformat(due_at)
-        reminder_id = store.add_reminder(task, due)
-        return {"id": reminder_id, "task": task, "due_at": due_at}
+        due = datetime.fromisoformat(data.due_at)
+        reminder_id = store.add_reminder(data.task, due)
+        return {"id": reminder_id, "task": data.task, "due_at": data.due_at}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid datetime: {e}")
 
