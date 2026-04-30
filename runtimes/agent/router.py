@@ -20,7 +20,7 @@ log = logging.getLogger("agent.router")
 
 # Tier definitions. Override via env vars.
 FAST_MODEL  = os.environ.get("CLAWOS_MODEL_FAST",  "qwen2.5:3b")
-SMART_MODEL = os.environ.get("CLAWOS_MODEL_SMART", "qwen2.5:7b-instruct")
+SMART_MODEL = os.environ.get("CLAWOS_MODEL_SMART", "qwen2.5:7b")
 CODER_MODEL = os.environ.get("CLAWOS_MODEL_CODER", "qwen2.5-coder:7b")
 
 # Tools that benefit from the coder model (file/code/shell ops)
