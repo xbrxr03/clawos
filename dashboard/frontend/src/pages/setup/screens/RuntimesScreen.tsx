@@ -9,7 +9,7 @@ const RUNTIMES: Runtime[] = [
   {
     id: 'nexus',
     title: 'Nexus',
-    sub: 'Offline native ReAct agent. Always local, no API keys.',
+    sub: 'Native Ollama function-calling agent. Local, offline, no API keys.',
     tag: 'RECOMMENDED',
     sizeGB: 1.2,
   },
@@ -23,7 +23,7 @@ const RUNTIMES: Runtime[] = [
   {
     id: 'openclaw',
     title: 'OpenClaw',
-    sub: 'Full ecosystem, 13,700+ community skills, MCP support.',
+    sub: 'Full ecosystem with skills library and MCP support.',
     sizeGB: 2.4,
   },
 ]

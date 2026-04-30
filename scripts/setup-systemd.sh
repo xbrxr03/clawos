@@ -90,6 +90,15 @@ install_units() {
     systemctl --user enable clawos.service
     ok "clawos.service enabled (auto-starts at login)"
 
+    # Standalone services (not started by clawos-start.sh): enable individually
+    # so they auto-start at user login like everything else.
+    for standalone_unit in clawos-reminderd.service clawos-waketrd.service; do
+        if [ -f "$UNIT_DST/$standalone_unit" ]; then
+            systemctl --user enable "$standalone_unit" 2>/dev/null || true
+            ok "$standalone_unit enabled"
+        fi
+    done
+
     echo -e "\n${GREEN}${BOLD}Done.${NC}"
     echo ""
     echo "  Start:   systemctl --user start clawos"

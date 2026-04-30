@@ -1,6 +1,6 @@
-# Maintainer: ClawOS Team <hello@clawos.ai>
+# Maintainer: ClawOS Team
 pkgname=clawos-bin
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Local AI agent for your laptop - runs 100% offline"
 arch=('x86_64')
