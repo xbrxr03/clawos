@@ -81,7 +81,14 @@ else:
     @main.command()
     def status():
         """Show all service health."""
-        from clawctl.commands.status import run; run()
+        from clawctl.commands.health_dash import run
+        run()
+
+    @main.command(name="health")
+    def health_cmd():
+        """Alias for status - show service health dashboard."""
+        from clawctl.commands.health_dash import run
+        run()
 
     # ── start / stop / restart ────────────────────────────────────────────────
     @main.command()
