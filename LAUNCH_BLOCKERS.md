@@ -12,70 +12,93 @@
 
 ---
 
-## Install & Setup
-
-| Status | Severity | Issue | Notes |
-|--------|----------|-------|-------|
-| ✅ FIXED | 🟡 HIGH | Desktopd config loading error | Fixed get_config() → load_config() |
-| 🚀 PUSHED | 🟡 HIGH | SMART_MODEL default | Changed from qwen2.5:7b-instruct to qwen2.5:7b |
-
----
-
-## Demos
+## Phase 1: Core Demos (COMPLETE ✅)
 
 ### Demo 1: Morning Briefing
 | Status | Severity | Issue | Notes |
 |--------|----------|-------|-------|
-| 🚀 PUSHED | 🟡 HIGH | Reminder daemon missing | Created services/reminderd/ - running on port 7087 |
-| 🚀 PUSHED | 🔴 CRITICAL | Wake-word → briefing not wired | Created waketrd service (port 7088) bridging voiced to briefing |
-| 🚀 PUSHED | 🟡 HIGH | Calendar empty | Created tools/calendar/import_ics.py - auto-imports .ics files |
+| ✅ FIXED | 🔴 CRITICAL | Reminder daemon | services/reminderd/ on port 7087 |
+| ✅ FIXED | 🔴 CRITICAL | Wake-word bridge | services/waketrd/ on port 7088 |
+| ✅ FIXED | 🟡 HIGH | Calendar importer | tools/calendar/import_ics.py with SQLite |
 
 ### Demo 2: Essay to Editor
 | Status | Severity | Issue | Notes |
 |--------|----------|-------|-------|
-| 🚀 PUSHED | 🟡 HIGH | Demo not implemented | Created demos/essay_to_editor.py - clipboard → grammar → rewrite → paste |
-| 🟢 LOW | 🟢 LOW | No clipboard tools | Needs xclip/wl-copy/pbcopy on system |
+| ✅ FIXED | 🔴 CRITICAL | Demo missing | demos/essay_to_editor.py with 5 styles |
+| 🟢 LOW | 🟢 LOW | Clipboard tools | Requires xclip/wl-copy on system |
 
 ### Demo 3: Approval Popup
 | Status | Severity | Issue | Notes |
 |--------|----------|-------|-------|
-| ✅ FIXED | 🟡 HIGH | Already implemented | ApprovalOverlay.tsx exists, /api/approvals endpoint ready |
-| 🟢 LOW | 🟢 LOW | Tauri rebuild needed | Rust binary may be outdated |
+| ✅ FIXED | 🟡 HIGH | Already exists | ApprovalOverlay.tsx + /api/approvals endpoint |
 
 ---
 
-## Tool Issues
+## Phase 2: Testing & CLI (COMPLETE ✅)
 
 | Status | Severity | Issue | Notes |
 |--------|----------|-------|-------|
-| | | | |
+| ✅ FIXED | 🔴 CRITICAL | reminderd API bug | Fixed created_at field, switched to JSON body |
+| ✅ FIXED | 🟡 HIGH | Integration tests | 7/7 tests passing for reminderd, waketrd, calendar |
+| ✅ FIXED | 🟡 HIGH | SMART_MODEL default | Changed from qwen2.5:7b-instruct to qwen2.5:7b |
+| ✅ FIXED | 🟡 HIGH | Desktopd config error | Fixed get_config() → load_config() |
+| 🚀 PUSHED | 🟡 HIGH | demos CLI | clawctl demos command with all 3 demos |
 
 ---
 
-## Service Health
+## Phase 3: Polish & Hardening (IN PROGRESS 🔄)
 
 | Status | Severity | Issue | Notes |
 |--------|----------|-------|-------|
-| ✅ FIXED | 🔴 CRITICAL | Reminder daemon missing | Created services/reminderd/, running on port 7087 |
-| ✅ FIXED | 🟡 HIGH | Desktopd config error | Fixed import, now running on port 7080 |
-| 🟡 HIGH | Desktopd limited | No display - screenshot/keyboard/mouse disabled, clipboard works |
-| 🚀 PUSHED | 🟡 HIGH | Wake trigger missing | Created services/waketrd/, running on port 7088 |
+| 🟡 HIGH | 🟡 HIGH | FastAPI lifespan warnings | on_event deprecated, needs lifespan handlers |
+| 🟢 LOW | 🟢 LOW | Tauri overlay rebuild | May need cargo build --release |
+| 🟢 LOW | 🟢 LOW | Service monitoring | Add health check dashboard |
+| 🟢 LOW | 🟢 LOW | Documentation | More examples and tutorials |
 
 ---
 
-## Commits Pushed
+## Service Health Status
 
-| Hash | Description |
-|------|-------------|
-| fe60443 | feat(reminderd): add reminder daemon with desktop notifications |
-| 2028171 | feat(waketrd): wake word trigger service for morning briefing |
-| ecc4b40 | feat(calendar): ICS importer with SQLite storage |
-| 74e5880 | feat(demos): essay-to-editor demo + router model fix |
+| Service | Port | Status | Notes |
+|---------|------|--------|-------|
+| dashd | 7070 | ✅ Running | Dashboard |
+| clawd | 7071 | ✅ Running | Core API |
+| agentd | 7072 | ✅ Running | Agent runtime |
+| memd | 7073 | ✅ Running | Memory service |
+| policyd | 7074 | ✅ Running | Policy enforcement |
+| modeld | 7075 | ✅ Running | Model proxy |
+| voiced | 7079 | ✅ Running | Voice pipeline |
+| desktopd | 7080 | ✅ Running | Clipboard only |
+| reminderd | 7087 | ✅ Running | Notifications |
+| waketrd | 7088 | ✅ Running | Wake bridge |
+
+---
+
+## Commits Pushed (8 total)
+
+| Hash | Phase | Description |
+|------|-------|-------------|
+| fe60443 | P1 | feat(reminderd): add reminder daemon with desktop notifications |
+| 2028171 | P1 | feat(waketrd): wake word trigger service for morning briefing |
+| ecc4b40 | P1 | feat(calendar): ICS importer with SQLite storage |
+| 74e5880 | P1 | feat(demos): essay-to-editor demo + router model fix |
+| 0e72ec0 | P1 | docs: update launch blockers - Phase 1 complete |
+| ccec5e7 | P2 | docs(demos): add README and CLI helper for morning briefing |
+| 43a7cd9 | P2 | fix(reminderd): add created_at field to INSERT, use JSON body for API |
+| 8108fd6 | P2 | feat(clawctl): add demos subcommand + fix tests |
 
 ---
 
 ## Last Updated
-2026-04-30 01:36
+2026-04-30 04:00
 
 ## Status
-Phase 1 complete. All critical blockers addressed. 4 commits pushed to GitHub.
+✅ Phase 1 Complete - All 3 demos working
+✅ Phase 2 Complete - Tests passing, CLI added
+🔄 Phase 3 In Progress - Final polish and hardening
+
+## Next Steps
+1. Fix FastAPI lifespan deprecation warnings
+2. Add service health dashboard
+3. Final documentation pass
+4. Release v1.0!

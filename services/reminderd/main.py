@@ -201,23 +201,25 @@ class ReminderDaemon:
 
 
 # FastAPI app for HTTP API
-app = FastAPI(title="Reminder Daemon", version="1.0.0")
-daemon: Optional[ReminderDaemon] = None
-store: Optional[ReminderStore] = None
+from contextlib import asynccontextmanager
 
-
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context for startup/shutdown."""
     global daemon, store
     store = ReminderStore()
     daemon = ReminderDaemon()
     await daemon.start()
-
-
-@app.on_event("shutdown")
-async def shutdown():
+    log.info("reminderd ready")
+    yield
     if daemon:
         await daemon.stop()
+    log.info("reminderd shut down")
+
+
+app = FastAPI(title="Reminder Daemon", version="1.0.0", lifespan=lifespan)
+daemon: Optional[ReminderDaemon] = None
+store: Optional[ReminderStore] = None
 
 
 @app.get("/health")
