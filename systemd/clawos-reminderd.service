@@ -1,0 +1,20 @@
+[Unit]
+Description=ClawOS reminderd - desktop notification daemon
+Documentation=https://github.com/xbrxr03/clawos
+After=clawos-dashd.service
+Wants=clawos-dashd.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.clawos-runtime
+ExecStart=%h/.clawos-runtime/venv/bin/python -m services.reminderd.main
+Restart=always
+RestartSec=5
+StandardOutput=append:%h/.clawos-runtime/logs/reminderd.log
+StandardError=append:%h/.clawos-runtime/logs/reminderd.log
+Environment=PYTHONPATH=%h/.clawos-runtime
+Environment=CLAWOS_HOME=%h/.clawos-runtime
+Environment=CLAWOS_SERVICE=reminderd
+
+[Install]
+WantedBy=default.target

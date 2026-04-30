@@ -1,0 +1,20 @@
+[Unit]
+Description=ClawOS waketrd - wake word trigger bridge
+Documentation=https://github.com/xbrxr03/clawos
+After=clawos-voiced.service
+Wants=clawos-voiced.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.clawos-runtime
+ExecStart=%h/.clawos-runtime/venv/bin/python -m services.waketrd.main
+Restart=always
+RestartSec=5
+StandardOutput=append:%h/.clawos-runtime/logs/waketrd.log
+StandardError=append:%h/.clawos-runtime/logs/waketrd.log
+Environment=PYTHONPATH=%h/.clawos-runtime
+Environment=CLAWOS_HOME=%h/.clawos-runtime
+Environment=CLAWOS_SERVICE=waketrd
+
+[Install]
+WantedBy=default.target
