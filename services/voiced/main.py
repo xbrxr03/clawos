@@ -507,15 +507,27 @@ async def startup():
     voice_pipeline = VoicePipeline()
     
     # Set up callbacks
-    def on_wake():
+    async def on_wake():
         log.info("Wake word triggered!")
+        # Call waketrd to handle briefing/chat
+        try:
+            import httpx
+            from clawos_core.constants import PORT_WAKETRD
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.post(f"http://127.0.0.1:{PORT_WAKETRD}/trigger")
+        except Exception as e:
+            log.warning(f"Failed to call waketrd: {e}")
+    
+    def on_wake_sync():
+        # Async wrapper for the callback
+        asyncio.create_task(on_wake())
     
     def on_command(text: str) -> str:
         log.info(f"Processing command: {text}")
         # In real implementation, this would call the agent
         return f"I heard you say: {text}"
     
-    voice_pipeline.on_wake_word = on_wake
+    voice_pipeline.on_wake_word = on_wake_sync
     voice_pipeline.on_command = on_command
     
     log.info("Voice 2.0 service started")

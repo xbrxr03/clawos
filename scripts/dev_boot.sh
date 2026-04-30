@@ -67,6 +67,7 @@ OBSERVABILITY_SERVICES=(
     "metricd:7076:services.metricd.main:Metrics Collection"
     "observd:7078:services.observd.main:Observability"
     "reminderd:7087:services.reminderd.main:Reminder Daemon"
+    "waketrd:7088:services.waketrd.main:Wake Word Trigger"
 )
 
 ALL_SERVICES=("${CORE_SERVICES[@]}" "${AI_SERVICES[@]}" "${AGENT_SERVICES[@]}" "${TOOL_SERVICES[@]}" "${OBSERVABILITY_SERVICES[@]}")
