@@ -91,3 +91,11 @@ def test_open_url_rejects_non_http():
 def test_run_command_rejects_disallowed():
     r = asyncio.run(dispatch_tool("run_command", {"command": "rm -rf /"}, {}))
     assert "[DENIED]" in r or "[ERROR]" in r
+
+
+def test_read_file_rejects_workspace_escape(tmp_path: Path):
+    """Verify read_file cannot escape workspace via ../../../etc/passwd"""
+    r = asyncio.run(dispatch_tool("read_file", {"path": "../../../etc/passwd"}, {"ws_root": tmp_path}))
+    assert "[ERROR]" in r
+    # Verify the file was NOT actually read
+    assert "root:" not in r  # /etc/passwd contains root user entries

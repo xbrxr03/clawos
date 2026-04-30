@@ -4,6 +4,7 @@ import asyncio
 import subprocess
 import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import click
 import httpx
@@ -82,22 +83,35 @@ def approval_test():
     click.echo("🛡️ Approval Popup Test")
     click.echo("=====================")
     
+    # Check if Tauri binary exists
+    tauri_bin = Path.home() / ".clawos-runtime" / "bin" / "clawos-command-center"
+    if not tauri_bin.exists():
+        # Try build location
+        tauri_bin = Path(__file__).parent.parent / "desktop" / "command-center" / "src-tauri" / "target" / "release" / "clawos-command-center"
+    
+    if tauri_bin.exists():
+        click.echo(f"✅ Tauri binary found: {tauri_bin}")
+        click.echo("\nTo test approval popup:")
+        click.echo("1. Run: clawos-command-center (opens main window)")
+        click.echo("2. In another terminal: clawos")
+        click.echo("3. Type: 'delete all files in ~/Downloads'")
+        click.echo("4. Approval popup should appear as floating window")
+    else:
+        click.echo("⚠️ Tauri binary not found")
+        click.echo("Build with: cd desktop/command-center && cargo tauri build")
+    
+    # Also check if any approvals are pending via API (may need auth)
     try:
-        r = httpx.get(f"http://localhost:{PORT_DASHD}/api/approvals", timeout=5.0)
+        r = httpx.get(f"http://localhost:{PORT_DASHD}/api/approvals", timeout=2.0)
         if r.status_code == 200:
             data = r.json()
             approvals = data.get("approvals", [])
             if approvals:
-                click.echo(f"Found {len(approvals)} pending approval(s):")
+                click.echo(f"\n📝 Found {len(approvals)} pending approval(s):")
                 for a in approvals:
                     click.echo(f"  - {a.get('tool')}: {a.get('target', 'N/A')}")
-            else:
-                click.echo("No pending approvals")
-                click.echo("\nTo test: clawctl chat \"delete all files in ~/Downloads\"")
-        else:
-            click.echo(f"❌ Error: {r.status_code}")
-    except httpx.ConnectError:
-        click.echo("❌ dashd not running")
+    except Exception:
+        pass  # Auth or connection error, ignore
 
 
 @demos_cli.command(name="list")

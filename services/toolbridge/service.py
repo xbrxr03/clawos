@@ -23,7 +23,7 @@ SHELL_ALLOWLIST = [
     r'^ls(\s|$)', r'^pwd$', r'^echo\s', r'^cat\s', r'^head\s', r'^tail\s',
     r'^wc\s', r'^find\s', r'^grep\s', r'^which\s', r'^whoami$', r'^date$',
     r'^df\s', r'^du\s', r'^uname', r'^hostname$', r'^ps\s',
-    r'^python3?\s', r'^pip\s', r'^git\s',
+    r'^python3?\s+[^-]', r'^pip\s', r'^git\s',
 ]
 
 TOOL_ALIASES = {}
