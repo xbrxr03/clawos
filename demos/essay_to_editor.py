@@ -130,8 +130,11 @@ async def essay_to_editor(
     
     log.info(f"✅ Done! {original_words} → {rewritten_words} words")
     
-    # Optional: Speak summary
-    await speak(f"Essay rewritten in {style} style. {original_words} words became {rewritten_words}.")
+    # Optional: Speak summary (fire-and-forget, don't await bytes)
+    try:
+        speak(f"Essay rewritten in {style} style. {original_words} words became {rewritten_words}.")
+    except Exception:
+        pass  # TTS optional
     
     return {
         "original": original,
