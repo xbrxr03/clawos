@@ -111,6 +111,48 @@ def ensure_node() -> bool:
         return False
 
 
+def _ollama_supports_launch() -> bool:
+    """
+    Detect whether Ollama exposes the first-class `ollama launch <package>`
+    command introduced when OpenClaw became an Ollama-blessed app.
+    Reference: https://ollama.com/blog/openclaw
+    """
+    if not shutil.which("ollama"):
+        return False
+    try:
+        result = _run(["ollama", "--help"])
+        haystack = (result.stdout or "") + (result.stderr or "")
+        return "launch" in haystack.lower()
+    except Exception:
+        return False
+
+
+def _install_via_ollama_launch() -> bool:
+    """
+    Use Ollama's first-class OpenClaw integration: `ollama launch openclaw`
+    handles install + start in one step, so we get a running gateway too.
+    Returns True only when Ollama reports success.
+    """
+    print("  Using Ollama's first-class OpenClaw integration "
+          "(`ollama launch openclaw`)...")
+    try:
+        # 5 minute ceiling — first launch can be slow if Ollama needs to
+        # download the OpenClaw package.
+        result = _run(["ollama", "launch", "openclaw"], timeout=300)
+        if result.returncode == 0:
+            print("  ✓  OpenClaw launched via Ollama")
+            return True
+        err = (result.stderr or result.stdout or "").strip().splitlines()
+        print(f"  ✗  ollama launch failed: {(err[-1] if err else 'unknown'):80}")
+        return False
+    except subprocess.TimeoutExpired:
+        print("  ✗  ollama launch timed out (5 min)")
+        return False
+    except Exception as exc:
+        print(f"  ✗  ollama launch error: {exc}")
+        return False
+
+
 def install_openclaw(force: bool = False) -> bool:
     local_prefix = Path.home() / ".local"
     local_bin = local_prefix / "bin"
@@ -123,6 +165,13 @@ def install_openclaw(force: bool = False) -> bool:
         except Exception:
             print("  ✓  OpenClaw already installed")
         return True
+
+    # Preferred path: Ollama's first-class launch command (April 2026+).
+    # Falls through to npm if Ollama is too old, missing, or the launch fails.
+    if _ollama_supports_launch():
+        if _install_via_ollama_launch():
+            return True
+        print("  Falling back to npm install...")
 
     try:
         subprocess.run(

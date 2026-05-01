@@ -103,7 +103,8 @@ export function FrameworkScreen(props: ScreenProps) {
         <h1 className="wiz-title">Choose JARVIS's brain.</h1>
         <p className="wiz-subtitle">
           ClawOS wraps any agent framework and gives it voice, memory, and the JARVIS persona.
-          OpenClaw is recommended — deepest integration and best skills library.
+          OpenClaw is recommended — now first-class in Ollama (<span style={{ fontFamily: 'var(--mono)', color: 'var(--ink-1)' }}>ollama&nbsp;launch&nbsp;openclaw</span>),
+          with the deepest integration and richest skills library.
           You can swap agents later from Settings.
         </p>
 
