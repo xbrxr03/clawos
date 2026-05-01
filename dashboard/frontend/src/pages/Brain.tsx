@@ -16,7 +16,7 @@ type GraphLink = { src: string; tgt: string; pred: string; auto?: boolean }
 const STATIC_NODES: GraphNode[] = [
   { id: 'clawos',        label: 'clawOS',             c: 0, pr: 1.0,  sources: ['GitHub', 'Notes'] },
   { id: 'openclaw',      label: 'OpenClaw',           c: 0, pr: 0.72, sources: ['GitHub', 'Docs'] },
-  { id: 'nexus',         label: 'Nexus ReAct loop',   c: 0, pr: 0.68, sources: ['Code'] },
+  { id: 'nexus',         label: 'Nexus agent loop',   c: 0, pr: 0.68, sources: ['Code'] },
   { id: 'piper',         label: 'Piper TTS',          c: 0, pr: 0.42, sources: ['GitHub'] },
   { id: 'whisper',       label: 'Whisper',            c: 0, pr: 0.4,  sources: ['GitHub'] },
   { id: 'ollama',        label: 'Ollama',             c: 0, pr: 0.55, sources: ['Docs'] },

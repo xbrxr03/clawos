@@ -114,17 +114,49 @@ def run_all() -> list[dict]:
 
     print()
 
-    try:
-        import socket
+    import socket
 
-        sock = socket.socket()
-        sock.settimeout(1)
-        sock.connect(("localhost", 7070))
-        sock.close()
-        dash_up = True
-    except Exception:
-        dash_up = False
-    results.append(_check("Dashboard running (:7070)", dash_up, "bash scripts/dev_boot.sh  OR  python3 -m services.dashd.main"))
+    def _port_open(port: int) -> bool:
+        try:
+            sock = socket.socket()
+            sock.settimeout(1)
+            sock.connect(("localhost", port))
+            sock.close()
+            return True
+        except Exception:
+            return False
+
+    results.append(_check("Dashboard running (:7070)", _port_open(7070),
+                          "bash scripts/dev_boot.sh  OR  python3 -m services.dashd.main"))
+
+    # Optional daemons added in v0.1.x — won't block, just inform.
+    for label, port, hint in [
+        ("desktopd (:7080)", 7080, "python3 -m services.desktopd.main"),
+        ("reminderd (:7087)", 7087, "systemctl --user start clawos-reminderd"),
+        ("waketrd (:7088)",  7088, "systemctl --user start clawos-waketrd"),
+    ]:
+        ok = _port_open(port)
+        marker = "✓" if ok else "○"
+        if ok:
+            print(f"  {marker}  {label}")
+        else:
+            print(f"  {marker}  {label}  (start: {hint})")
+        results.append({"label": label, "ok": ok, "fix": hint})
+
+    # Verify the agent tool registry is internally consistent — easy bug to
+    # introduce when adding tools, hard to spot without explicit check.
+    try:
+        from runtimes.agent.tool_schemas import ALL_TOOLS
+        from runtimes.agent.tools import NATIVE_TOOLS
+        schemas, dispatchers = set(ALL_TOOLS), set(NATIVE_TOOLS)
+        diff = schemas.symmetric_difference(dispatchers)
+        results.append(_check(
+            f"Agent tool registry coherent ({len(schemas)} tools)",
+            not diff,
+            f"Mismatch: {sorted(diff)}",
+        ))
+    except Exception as e:
+        results.append(_check("Agent tool registry", False, str(e)))
 
     if manager == "launchd":
         print("  ○  launchd user agents")
