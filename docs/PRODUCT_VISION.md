@@ -17,7 +17,6 @@ ClawOS asks nothing of the kind.
 
 You install it. You go through a setup that feels like Apple's. You talk to it.
 It answers. It runs your workflows. It lives in your dashboard. It picks up your voice.
-It messages you on WhatsApp when a task finishes.
 
 That is the promise: AI that belongs to you, fully, without compromise.
 
@@ -29,8 +28,7 @@ That is the promise: AI that belongs to you, fully, without compromise.
 - **Bootable or installable** — ships as a clean Ubuntu-based ISO or installs onto an existing machine.
 - **Local-first and offline-capable** — Ollama models on your hardware. No cloud required, no API keys.
 - **Command Center** — a polished dashboard at :7070. Operations, workflows, traces, approvals, settings.
-- **Voice** — Whisper STT + Piper TTS. Wake word. Push-to-talk. Native audio pipeline.
-- **WhatsApp** — scan once. Message JARVIS from your phone. Approve tool calls by replying.
+- **Voice** — Whisper STT + Piper TTS. Wake word ("Hey Claw"). Push-to-talk. Native audio pipeline.
 - **Workflows** — 29 prebuilt jobs across files, documents, code, content, system, and data. One click.
 - **Packs** — curated use-case configurations. Pick "Coding Autopilot" or "Daily Briefing OS" during setup.
 - **Provider-neutral** — local Ollama by default. Plug in Anthropic, OpenAI, or any compatible endpoint.
@@ -75,7 +73,7 @@ ISO validation target: Tier A + B on clean Ubuntu.
 ## Runtime Ecosystem
 
 ### Claw Core / Nexus (default)
-Native Python ReAct agent. Works on 8GB RAM. CPU-only capable.
+Native Python agent with native Ollama function calling. Works on 8GB RAM. CPU-only capable.
 The reliable foundation every user gets by default.
 
 ### PicoClaw (Tier A ARM)
@@ -112,7 +110,7 @@ This is not a metaphor for style. It is a quality filter.
 **JARVIS standard:**
 - It anticipates. Workflows surface when the agent detects relevant context.
 - It explains itself. Traces and approvals make the AI's actions transparent.
-- It works across surfaces. Voice, dashboard, WhatsApp, CLI — same intelligence.
+- It works across surfaces. Voice, dashboard, CLI — same intelligence.
 - It never loses context. Memory is durable, layered, and searchable.
 - It stays in the background until you need it.
 

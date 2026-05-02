@@ -471,5 +471,5 @@ security:
 
 ---
 
-**Version:** ClawOS 0.1.0  
-**Last Updated:** April 27, 2026
+**Version:** ClawOS 0.1.1  
+**Last Updated:** April 30, 2026

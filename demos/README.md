@@ -6,7 +6,7 @@ Three flagship demos that prove offline AI can be magical on your own laptop.
 
 ## Demo 1: Morning Briefing (Voice-First)
 
-**What it does:** Say "Hey JARVIS" → Get a spoken morning briefing with weather, calendar, and tasks.
+**What it does:** Say "Hey Claw" → Get a spoken morning briefing with weather, calendar, and tasks.
 
 **How to try it:**
 ```bash
