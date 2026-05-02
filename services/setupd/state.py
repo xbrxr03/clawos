@@ -28,7 +28,13 @@ class SetupState:
     recommended_profile: str = "balanced"
     selected_persona: str = ""
     selected_runtimes: list[str] = field(default_factory=lambda: ["nexus", "picoclaw"])
-    selected_models: list[str] = field(default_factory=lambda: ["qwen2.5:7b"])
+    # Option A (April 2026): pull all three tier models so the runtime's
+    # dynamic router (FAST=qwen2.5:3b, SMART=qwen2.5:7b, CODER=qwen2.5-coder:7b)
+    # always finds what it needs. User can deselect on the Model screen if
+    # they're constrained on disk.
+    selected_models: list[str] = field(default_factory=lambda: [
+        "qwen2.5:3b", "qwen2.5:7b", "qwen2.5-coder:7b",
+    ])
     selected_provider_profile: str = "local-ollama"
     primary_pack: str = "daily-briefing-os"
     secondary_packs: list[str] = field(default_factory=lambda: ["coding-autopilot"])

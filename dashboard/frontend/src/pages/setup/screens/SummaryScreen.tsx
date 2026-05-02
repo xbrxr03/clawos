@@ -53,7 +53,13 @@ export function SummaryScreen(props: ScreenProps) {
   const runtimes = (state.selected_runtimes || ['nexus']).join(' + ')
   const personaCatalog = personas.length ? personas : PROFILE_PERSONAS
   const persona = personaCatalog.find((p) => p.id === (state.selected_persona || ui.user_profile))
-  const modelName = state.selected_models?.[0] || 'qwen2.5:7b'
+  const modelList = state.selected_models?.length
+    ? state.selected_models
+    : ['qwen2.5:7b']
+  const modelName =
+    modelList.length === 1
+      ? modelList[0]
+      : `${modelList.length} models · ${modelList.find((m) => m === 'qwen2.5:7b') ? 'qwen2.5:7b' : modelList[0]} primary`
   const policyCount = useMemo(() => {
     const ap = (state.autonomy_policy as unknown as Record<string, boolean>) || {}
     const vals = Object.values(ap)

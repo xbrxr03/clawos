@@ -434,25 +434,37 @@ class SetupService:
         sync_presence_from_setup(state)
         return self.to_dict()
 
-    async def _prepare_model(self, model: str) -> bool:
+    async def _prepare_model(self, models: str | list[str]) -> bool:
+        """
+        Pull one or more Ollama models, reporting per-model + aggregate
+        progress to the wizard. Accepts a single model name (legacy) or a
+        list — Option A (April 2026): pull all three tier models so the
+        runtime's dynamic router (FAST=qwen2.5:3b, SMART=qwen2.5:7b,
+        CODER=qwen2.5-coder:7b) always finds what it needs.
+        """
         state = self._state
-        state.progress_stage = "model-pull"
-        state.last_error = ""
-        state.model_pull_progress = {
-            "model": model,
-            "status": "Preparing model runtime",
-            "percent": 0,
-            "eta_seconds": None,
-        }
-        self._persist()
-        await self.broadcast()
+        # Normalize to a list, preserving order, deduplicated
+        if isinstance(models, str):
+            model_list = [m.strip() for m in [models] if m.strip()]
+        else:
+            seen: set[str] = set()
+            model_list = []
+            for m in models or []:
+                m = (m or "").strip()
+                if m and m not in seen:
+                    seen.add(m)
+                    model_list.append(m)
+        if not model_list:
+            return False
 
+        # Cloud provider short-circuit: no local pulls needed
         if state.selected_provider_profile and state.selected_provider_profile != "local-ollama":
             state.model_pull_progress = {
-                "model": model,
+                "model": ", ".join(model_list),
                 "status": "Cloud provider selected - skipping local model pull",
                 "percent": 100,
                 "eta_seconds": 0,
+                "models": [{"name": m, "percent": 100, "status": "skipped"} for m in model_list],
             }
             state.progress_stage = "model-ready"
             self._log("Skipped local model pull because a cloud provider is selected")
@@ -461,59 +473,99 @@ class SetupService:
             self._model_task = None
             return True
 
-        loop = asyncio.get_running_loop()
+        state.progress_stage = "model-pull"
+        state.last_error = ""
+        # Per-model progress tracker; aggregated for legacy `percent` field.
+        per_model = {m: {"name": m, "percent": 0, "status": "queued"} for m in model_list}
 
-        def _report(update: dict[str, Any]):
+        def _aggregate_pct() -> float:
+            if not per_model:
+                return 0.0
+            return sum(s["percent"] for s in per_model.values()) / len(per_model)
+
+        def _publish(active: str, status: str = "", eta: int | None = None):
             state.model_pull_progress = {
-                **state.model_pull_progress,
-                **update,
-                "model": model,
+                "model": active,
+                "status": status,
+                "percent": _aggregate_pct(),
+                "eta_seconds": eta,
+                "models": list(per_model.values()),
             }
             self._persist()
-            asyncio.run_coroutine_threadsafe(self.broadcast(), loop)
+
+        _publish(model_list[0], "Preparing model runtime")
+        await self.broadcast()
+
+        loop = asyncio.get_running_loop()
 
         try:
             from bootstrap.model_provision import ensure_model
 
-            ok = await asyncio.to_thread(ensure_model, model, False, _report)
-            if not ok:
-                raise RuntimeError(f"Failed to prepare model {model}")
+            for current in model_list:
+                per_model[current]["status"] = "pulling"
+                _publish(current, f"Pulling {current}")
+                asyncio.run_coroutine_threadsafe(self.broadcast(), loop)
+
+                def _report(update: dict[str, Any], _m=current):
+                    pct = update.get("percent")
+                    if pct is not None:
+                        per_model[_m]["percent"] = float(pct)
+                    if "status" in update:
+                        per_model[_m]["status"] = update["status"]
+                    _publish(_m, update.get("status", per_model[_m]["status"]),
+                             update.get("eta_seconds"))
+                    asyncio.run_coroutine_threadsafe(self.broadcast(), loop)
+
+                ok = await asyncio.to_thread(ensure_model, current, False, _report)
+                if not ok:
+                    raise RuntimeError(f"Failed to prepare model {current}")
+                per_model[current]["percent"] = 100.0
+                per_model[current]["status"] = "ready"
+                _publish(current, f"{current} ready")
+                self._log(f"Model ready: {current}")
+                await self.broadcast()
+
+            # All models done
             state.model_pull_progress = {
-                "model": model,
-                "status": "Model ready",
+                "model": ", ".join(model_list),
+                "status": f"{len(model_list)} model{'s' if len(model_list) != 1 else ''} ready",
                 "percent": 100,
                 "eta_seconds": 0,
+                "models": list(per_model.values()),
             }
             state.progress_stage = "model-ready"
-            self._log(f"Model ready: {model}")
             self._persist()
             await self.broadcast()
             return True
         except Exception as exc:
             state.progress_stage = "error"
             state.last_error = str(exc)
-            state.model_pull_progress = {
-                "model": model,
-                "status": str(exc),
-                "percent": state.model_pull_progress.get("percent", 0),
-                "eta_seconds": None,
-            }
+            _publish(model_list[0], str(exc))
             self._log(f"Model preparation failed: {exc}")
-            self._persist()
             await self.broadcast()
             return False
         finally:
             self._model_task = None
 
     def prepare_model(self, model: str = "") -> dict[str, Any]:
-        selected_model = model.strip() or (self._state.selected_models[0] if self._state.selected_models else "")
-        if not selected_model:
-            raise ValueError("model required")
+        """
+        Kick off model preparation. If `model` is given, pull just that one.
+        Otherwise pull every model in `state.selected_models` (default behaviour
+        post-Option A — wizard pre-fills all three tier models).
+        """
+        if model.strip():
+            target: str | list[str] = model.strip()
+            label = model.strip()
+        else:
+            target = list(self._state.selected_models or [])
+            if not target:
+                raise ValueError("no models selected")
+            label = ", ".join(target)
         if self._model_task and not self._model_task.done():
             return {"ok": True, "status": "running"}
         loop = asyncio.get_running_loop()
-        self._model_task = loop.create_task(self._prepare_model(selected_model))
-        return {"ok": True, "status": "started", "model": selected_model}
+        self._model_task = loop.create_task(self._prepare_model(target))
+        return {"ok": True, "status": "started", "model": label}
 
     async def run_voice_test(self, sample_text: str = "") -> dict[str, Any]:
         state = self._state
@@ -695,7 +747,12 @@ class SetupService:
 
         state = self._state
         persona = get_setup_persona(state.selected_persona or "general")
-        selected_model = state.selected_models[0] if state.selected_models else ""
+        # Pull EVERY model the user selected — Option A (April 2026) — so the
+        # runtime's dynamic router (FAST/SMART/CODER) always has its tier
+        # models available. Falls back to single-model behaviour if the user
+        # narrowed the selection in the wizard.
+        selected_models = list(state.selected_models or [])
+        selected_model = selected_models[0] if selected_models else ""
         state.progress_stage = "applying"
         state.last_error = ""
         state.retry_state = ""
@@ -713,11 +770,12 @@ class SetupService:
             )
             await self.broadcast()
 
-            if selected_model:
-                self._log(f"Preparing primary model {selected_model}")
-                ok = await self._prepare_model(selected_model)
+            if selected_models:
+                models_label = ", ".join(selected_models)
+                self._log(f"Preparing {len(selected_models)} model(s): {models_label}")
+                ok = await self._prepare_model(selected_models)
                 if not ok:
-                    raise RuntimeError(f"Failed to prepare model {selected_model}")
+                    raise RuntimeError(f"Failed to prepare models: {models_label}")
                 state.progress_stage = "applying"
                 await self.broadcast()
 
