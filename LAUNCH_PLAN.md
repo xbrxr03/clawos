@@ -369,7 +369,7 @@ memory editable.
 File: `README.md`. New structure:
 1. Hero: one-line tagline ("Local AI agent for your machine. Zero cloud, zero API keys, zero telemetry.")
 2. Three demo GIFs at top (created in 5.3)
-3. One-line install: `curl -fsSL https://install.clawos.io | bash`
+3. One-line install: `curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash`
 4. "What makes this different" — 4 bullets max
 5. "How it works" — diagram (text-art is fine)
 6. Roadmap teaser

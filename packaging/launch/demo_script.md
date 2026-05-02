@@ -8,7 +8,7 @@
 ### Shot 1 — The install (10 seconds)
 Show terminal:
 ```
-curl -fsSL https://install.clawos.io | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 ```
 Let the progress scroll for a few seconds. Cut.
 

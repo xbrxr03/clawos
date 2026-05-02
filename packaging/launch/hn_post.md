@@ -19,7 +19,7 @@ I built ClawOS — a local AI agent that installs on your existing Linux machine
 One command to install:
 
 ```bash
-curl -fsSL https://install.clawos.io | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 ```
 
 Or flash the ISO and boot from USB:
