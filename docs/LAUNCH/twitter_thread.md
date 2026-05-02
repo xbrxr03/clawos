@@ -6,7 +6,7 @@
 One command. No cloud. No API keys. No telemetry.
 
 ```bash
-curl -fsSL https://install.clawos.io | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 ```
 
 🧵 Thread below 👇
@@ -62,7 +62,7 @@ Built in 3 months. Open source. Zero telemetry.
 ## Tweet 6 (CTA)
 Try it:
 ```bash
-curl -fsSL https://install.clawos.io | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 ```
 
 ⭐ Star us on GitHub: https://github.com/xbrxr03/clawos

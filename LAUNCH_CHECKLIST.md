@@ -42,7 +42,7 @@ Steps documented in `docs/INSTALL_URL_SETUP.md`. Cheapest path:
 2. Cloudflare Workers free tier (or any redirector) → set `install`
    subdomain to redirect to:
    `https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh`
-3. Test: `curl -fsSL https://install.clawos.io | head -5` should print
+3. Test: `curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | head -5` should print
    the `#!/usr/bin/env bash` shebang line of `install.sh`
 
 ---

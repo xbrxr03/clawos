@@ -9,7 +9,7 @@
 ClawOS is a local AI agent for your existing Linux machine. One curl command, no cloud, no API keys, no telemetry.
 
 ```bash
-curl -fsSL https://install.clawos.io | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 ```
 
 **What it does:**

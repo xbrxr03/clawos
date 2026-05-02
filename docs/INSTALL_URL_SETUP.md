@@ -1,6 +1,6 @@
 # Install URL Setup
 
-The install URL `https://install.clawos.io` redirects to the GitHub raw URL of `install.sh`.
+The install URL `https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh` redirects to the GitHub raw URL of `install.sh`.
 
 ## Cloudflare Worker Setup
 
@@ -35,7 +35,7 @@ If you need to change the underlying URL:
 ## Testing
 
 ```bash
-curl -I https://install.clawos.io
+curl -I https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh
 # Should return 302 redirect to raw GitHub URL
 ```
 

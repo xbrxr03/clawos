@@ -12,7 +12,7 @@ assistant. Voice activation, multi-step tool use, system control, memory —
 all running locally on your hardware via [Ollama](https://ollama.com).
 
 ```bash
-curl -fsSL https://install.clawos.io | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 ```
 
 ---
@@ -50,7 +50,7 @@ clawctl demos approval-test          # floating popup for sensitive ops
 ### Recommended: install on your existing Linux
 
 ```bash
-curl -fsSL https://install.clawos.io | bash
+curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
 clawctl health
 ```
 

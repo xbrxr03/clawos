@@ -56,7 +56,7 @@ These are the corrections to the previous agent's drift. Don't reopen them.
 
 | Decision | Choice |
 |----------|--------|
-| **Primary install method** | `curl -fsSL https://install.clawos.io \| bash` — same as `LAUNCH_PLAN.md`. The agent pivoted to "bootable ISO is the headline." That's wrong. ISO is an OPTIONAL secondary distribution. |
+| **Primary install method** | `curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh \| bash` — same as `LAUNCH_PLAN.md`. The agent pivoted to "bootable ISO is the headline." That's wrong. ISO is an OPTIONAL secondary distribution. |
 | **Product framing** | "Local AI agent for your existing machine." NOT "bootable Linux distro." A user keeps their existing OS and adds JARVIS — they don't wipe their laptop. |
 | **Wake word** | "Hey Claw" — the codebase uses this. The README says "Hey JARVIS" — that's wrong, fix the README, not the code. |
 | **WhatsApp / Telegram** | **Removed earlier in the project. The README adding them back is a regression.** Strip every mention. |
@@ -105,7 +105,7 @@ grep -i "whatsapp\|telegram\|13.700\|13,700\|hey jarvis" README.md
 
 ## 4. Distribution model — restore curl|bash as primary
 
-The plan was `curl -fsSL https://install.clawos.io | bash`. The previous
+The plan was `curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash`. The previous
 agent built a full bootable ISO instead and made it the primary install
 path. **The ISO is fine as an optional distribution. It is NOT the primary
 install path.** Most users want to add JARVIS to their existing machine,
@@ -354,7 +354,7 @@ clear justification, fixes you can verify yourself.
 ### Sanity
 - [ ] `grep -i "whatsapp\|telegram\|13.700\|13,700\|hey jarvis" README.md`
       prints nothing
-- [ ] README hero leads with `curl -fsSL https://install.clawos.io | bash`
+- [ ] README hero leads with `curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash`
 - [ ] Wake word everywhere is "Hey Claw"
 
 ### Install + autostart
