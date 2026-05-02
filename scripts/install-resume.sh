@@ -20,7 +20,8 @@ echo ""
 if [ ! -d "$INSTALL_DIR" ]; then
     echo -e "  ${R}No existing installation found at $INSTALL_DIR${RESET}"
     echo "  Run the full installer first:"
-    echo "  curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash"
+    echo "  curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh \\"
+    echo "      | bash"
     exit 1
 fi
 
