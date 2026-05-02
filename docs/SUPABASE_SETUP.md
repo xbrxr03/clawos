@@ -1,7 +1,16 @@
-# ClawOS — Supabase Setup (dummy-proof)
+# ClawOS — Supabase Setup (draft — not shipped)
 
-This guide sets up the Supabase database that ClawOS uses for license validation.  
-No programming knowledge needed. Takes about 5 minutes.
+> **Note:** ClawOS has no paid tier and ships no license validation system.
+> This document is a draft that was never integrated into the product.
+> It is kept for reference only. Do not implement or ship any of this.
+> The product commitment is: AGPL-3.0, no paid tier, no telemetry, forever.
+
+---
+
+This guide describes how a Supabase-backed license system *would* work,
+retained only as a reference in case the project ever needs it.
+
+---
 
 ---
 

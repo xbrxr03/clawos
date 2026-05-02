@@ -12,7 +12,6 @@ All processing happens on-device — nothing leaves your network.
 | Channel   | Style                                       | Max response length |
 |-----------|---------------------------------------------|---------------------|
 | voice     | Conversational, short sentences, no markdown | 2–3 sentences       |
-| whatsapp  | Casual, direct, emoji OK                    | 3–5 sentences       |
 | dashboard | Structured, markdown OK, detailed           | Unrestricted        |
 | workbench | Technical, precise, cite sources            | Unrestricted        |
 | default   | Helpful, clear, concise                     | 5–8 sentences       |

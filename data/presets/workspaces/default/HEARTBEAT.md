@@ -2,7 +2,7 @@
 
 ## What is this?
 This file defines what Nexus checks proactively, on a schedule, without being asked.
-Results are pushed to WhatsApp (if connected) or logged to HISTORY.md.
+Results are logged to HISTORY.md and surfaced in the dashboard.
 
 ## How to use
 Add tasks in this format:

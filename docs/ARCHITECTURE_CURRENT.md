@@ -6,7 +6,7 @@ ClawOS is best understood as a local-first agent platform with service-shaped mo
 
 ## Canonical Runtime Path
 
-1. User input enters through `nexus`, `clawctl`, dashboard APIs, WhatsApp, or A2A.
+1. User input enters through `nexus`, `clawctl`, dashboard APIs, voice, or A2A.
 2. `agentd` owns task submission, session reuse, and the local HTTP API.
 3. `AgentRuntime` builds context, chooses tools, and talks to Ollama.
 4. `toolbridge` runs tools after a `policyd` check.
@@ -34,7 +34,6 @@ input/channel -> agentd -> AgentRuntime -> policyd -> toolbridge -> local system
 ## Supporting Components
 
 - `services/modeld/service.py`: model inventory, health, profile selection, and VRAM helpers.
-- `services/gatewayd/service.py`: WhatsApp bridge and peer delegation entry points.
 - `services/a2ad/service.py`: agent card, peer discovery, and trusted-peer A2A API.
 - `workflows/`: a mix of agent-backed prompts and direct Python helpers with platform metadata.
 - `openclaw_integration/`: installer and configuration bridge for the OpenClaw ecosystem.

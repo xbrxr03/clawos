@@ -431,5 +431,5 @@ Complete list of all implemented features in ClawOS.
 
 ---
 
-**Last Updated**: 2026-04-27
-**Version**: 0.1.0-beta
+**Last Updated**: 2026-04-30
+**Version**: 0.1.1

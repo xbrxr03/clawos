@@ -5,31 +5,31 @@
 
 ## What to record
 
-### Shot 1 — The flash (10 seconds)
+### Shot 1 — The install (10 seconds)
 Show terminal:
 ```
-sudo dd if=clawos-0.1.0-amd64.iso of=/dev/sdb bs=4M status=progress oflag=sync
+curl -fsSL https://install.clawos.io | bash
 ```
-Let the progress bar run for a few seconds. Cut.
+Let the progress scroll for a few seconds. Cut.
 
 ### Shot 2 — The boot (15 seconds)
-Show BIOS boot screen → ClawOS MOTD appearing in terminal.
-The MOTD with the ASCII art logo is the visual hook.
+Show dashboard opening at http://localhost:7070 — dark theme, Overview page.
+The command center appearing is the visual hook.
 Let it sit for 2 seconds.
 
-### Shot 3 — First chat (20 seconds)
+### Shot 3 — Morning briefing (20 seconds)
 ```
-clawctl chat
+clawctl demos morning-briefing
 ```
-Type: `summarise the files in my workspace`
-Show Jarvis responding.
-Type: `remember that i prefer dark mode`
-Show: `[MEMORY] Saved`
+Show the spoken briefing playing through Piper TTS.
+Show the five parallel tool calls in the terminal output.
 
-### Shot 4 — WhatsApp (15 seconds)
-Show phone — message sent to Jarvis number.
-Cut to terminal showing incoming message.
-Cut back to phone — Jarvis reply appearing.
+### Shot 4 — Approval popup (15 seconds)
+```
+clawctl demos approval-test
+```
+Show the floating borderless Tauri window appearing over the desktop.
+Click Approve. Show confirmation.
 
 ---
 
@@ -55,10 +55,10 @@ ffmpeg -i demo.mp4 -vf "fps=12,scale=800:-1:flags=lanczos" \
 
 ## Caption for social
 
-> Flash a USB. Boot. Your AI is ready.
+> One command. No cloud. Your AI is ready.
 >
-> ClawOS — OpenClaw + Ollama on any machine.
-> No API keys. No setup. No monthly bill.
+> ClawOS — local AI agent on your Linux machine.
+> No API keys. No setup complexity. No monthly bill.
 >
-> github.com/you/clawos
-> #ai #selfhosted #homelab #openclaw #ollama
+> github.com/xbrxr03/clawos
+> #ai #selfhosted #homelab #ollama #localai

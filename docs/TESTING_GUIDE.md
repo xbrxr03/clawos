@@ -9,7 +9,7 @@ Complete testing procedures for ClawOS development and deployment.
 Run all tests in one command:
 
 ```bash
-cd /home/jarvis/clawos-analysis
+cd ~/clawos
 
 # Run comprehensive test suite
 python3 -c "

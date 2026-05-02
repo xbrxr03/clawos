@@ -6,7 +6,7 @@ Complete guide for deploying ClawOS in various environments.
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/openclaw/clawos.git
+git clone https://github.com/xbrxr03/clawos.git
 cd clawos
 
 # 2. Install dependencies

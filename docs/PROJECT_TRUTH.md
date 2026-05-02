@@ -1,13 +1,19 @@
 # ClawOS — Project Truth
 ## Version 0.1.0 Prototype | March 2026
 
+> **Historical document.** This was written in March 2026 during initial design.
+> The file tree and session plan below reflect the original intended structure, not the
+> current codebase. For current canonical architecture see `docs/ARCHITECTURE_CURRENT.md`.
+> WhatsApp/gatewayd was planned here but was never shipped — those paths do not exist.
+> Model defaults have changed: Tier A uses qwen2.5:3b, not gemma3:4b (fixed in v0.1.1).
+
 ---
 
 ## One sentence definition
 
 ClawOS is a preconfigured, low-RAM, local-first agent OS that boots into a
 working AI environment — with policy-gated tools, workspace isolation, memory,
-voice, WhatsApp, and optional OpenClaw — on consumer hardware, offline, free.
+voice, and optional OpenClaw — on consumer hardware, offline, free.
 
 ---
 
@@ -19,7 +25,6 @@ voice, WhatsApp, and optional OpenClaw — on consumer hardware, offline, free.
 - Local-first: all data on device, no cloud, no API keys
 - Safe: every tool call gated through policyd
 - Voice: Whisper STT + Piper TTS, offline
-- WhatsApp: message Jarvis from your phone, approve tool calls by replying
 - Dashboard: operations console at :7070
 - One-command startup, first-run wizard, opinionated defaults
 
@@ -36,12 +41,11 @@ voice, WhatsApp, and optional OpenClaw — on consumer hardware, offline, free.
 ## Two runtimes
 
 ### Claw Core (default)
-- Our native Python ReAct agent
-- Works on 8GB RAM, gemma3:4b, CPU-only
-- 56/56 tests passing
+- Our native Python agent with native Ollama function calling
+- Works on 8GB RAM, qwen2.5:3b, CPU-only
+- 61/61 tests passing
 - 4-layer memory (PINNED + WORKFLOW + ChromaDB + FTS5 + HISTORY)
 - Merkle audit trail, lifecycle hooks, asyncio.Event per call
-- WhatsApp via our gatewayd
 - Voice via voiced
 
 ### OpenClaw (optional, installed on request)
@@ -49,9 +53,8 @@ voice, WhatsApp, and optional OpenClaw — on consumer hardware, offline, free.
 - Pre-configured for Ollama offline (no API keys, no cloud)
 - Pre-patched with known Linux fixes (auth-profiles bug, etc.)
 - Config: openclaw.json points at localhost:11434, api: openai-completions
-- Needs qwen2.5:7b or better (not gemma3:4b — needs tool calling support)
-- User scans WhatsApp QR once, then it just works
-- Installed via: clawctl openclaw install
+- Needs qwen2.5:7b or better (needs tool calling support)
+- Installed via: clawctl openclaw install (or: ollama launch openclaw)
 - Started via: clawctl openclaw start
 
 ### Runtime selection
@@ -79,15 +82,14 @@ Primary dev hardware: ROG Ally RC71L (Tier B, balanced profile)
 ## Canonical internal flow (Claw Core)
 
 ```
-User input (CLI / WhatsApp / Voice / Dashboard)
-  → gatewayd (route to workspace)
+User input (CLI / Voice / Dashboard)
   → agentd (task queue)
   → context_builder (SOUL + AGENTS + memory recall)
   → modeld (Ollama inference)
   → tool request
   → policyd (ALLOW / DENY / QUEUE)
   → toolbridge (execute)
-  → event bus (broadcast to dashboard + WhatsApp)
+  → event bus (broadcast to dashboard)
   → response synthesis
   → output (same channel as input)
 ```
@@ -104,7 +106,6 @@ User input (CLI / WhatsApp / Voice / Dashboard)
 6. voiced   (optional)
 7. clawd    — orchestration, hardware detection, scheduler
 8. dashd    — observes everything
-9. gatewayd — WhatsApp bridge (optional, after clawd)
 
 ---
 
