@@ -104,7 +104,7 @@ def ram_snapshot_gb() -> dict[str, float]:
             free = round(meminfo["MemAvailable"] * 1024 / 1e9, 1)
             used = round(total - free, 1)
             return {"total_gb": total, "free_gb": free, "used_gb": used}
-        except Exception:
+        except (OSError, PermissionError):
             pass
 
     if is_macos():
@@ -132,7 +132,7 @@ def ram_snapshot_gb() -> dict[str, float]:
             free = round(free_bytes / 1e9, 1)
             used = round(max(total_bytes - free_bytes, 0) / 1e9, 1)
             return {"total_gb": total, "free_gb": free, "used_gb": used}
-        except Exception:
+        except (OSError, subprocess.SubprocessError):
             pass
 
     if is_windows():
@@ -159,7 +159,8 @@ def ram_snapshot_gb() -> dict[str, float]:
                 free = round(stat.ullAvailPhys / 1e9, 1)
                 used = round((stat.ullTotalPhys - stat.ullAvailPhys) / 1e9, 1)
                 return {"total_gb": total, "free_gb": free, "used_gb": used}
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
+            pass
             pass
 
     return {"total_gb": 0.0, "free_gb": 0.0, "used_gb": 0.0}
@@ -183,7 +184,7 @@ def load_snapshot() -> dict[str, float]:
             "load_5m": round(five, 2),
             "load_15m": round(fifteen, 2),
         }
-    except Exception:
+    except (OSError, RuntimeError, AttributeError):
         return {}
 
 
@@ -198,7 +199,7 @@ def gpu_info() -> tuple[str, float]:
         if result.returncode == 0 and result.stdout.strip():
             name, memory_mb = [part.strip() for part in result.stdout.split(",", 1)]
             return name, round(int(memory_mb) / 1024, 1)
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         pass
 
     if is_macos():
@@ -219,7 +220,8 @@ def gpu_info() -> tuple[str, float]:
                 if match:
                     return name, round(int(match.group(1)) / 1024, 1)
                 return name, 0.0
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
 
     return "none", 0.0
@@ -232,7 +234,8 @@ def audio_info() -> tuple[bool, int, int]:
             if "card" in result.stdout.lower():
                 cards = re.findall(r"card (\d+):", result.stdout)
                 return True, 44100, int(cards[0]) if cards else 0
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
+            pass
             pass
 
     if is_macos():
@@ -240,7 +243,7 @@ def audio_info() -> tuple[bool, int, int]:
             raw = _run_text(["system_profiler", "SPAudioDataType"], timeout=10)
             if raw:
                 return True, 44100, 0
-        except Exception:
+        except (OSError, RuntimeError):
             pass
 
     return True, 44100, 0

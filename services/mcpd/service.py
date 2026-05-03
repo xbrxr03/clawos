@@ -23,7 +23,7 @@ log = logging.getLogger("mcpd")
 try:
     from clawos_core.constants import CONFIG_DIR
     MCP_CONFIG_PATH = CONFIG_DIR / "mcp_servers.json"
-except Exception:
+except (OSError, RuntimeError, AttributeError):
     MCP_CONFIG_PATH = Path.home() / ".clawos" / "mcp_servers.json"
 
 
@@ -79,7 +79,7 @@ def _load_configs() -> List[MCPServerConfig]:
     try:
         data = json.loads(MCP_CONFIG_PATH.read_text(encoding="utf-8"))
         return [MCPServerConfig(**s) for s in data]
-    except Exception as exc:
+    except (json.JSONDecodeError, ValueError) as exc:
         log.warning("Failed to load MCP server configs: %s", exc)
         return []
 
@@ -178,7 +178,7 @@ class MCPService:
             cfg.status = "connected"
             cfg.error = ""
             cfg.connected_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        except Exception as exc:
+        except (OSError, RuntimeError, TimeoutError) as exc:
             cfg.status = "error"
             cfg.error = str(exc)
             log.warning("HTTP MCP connect failed for %s: %s", cfg.name, exc)
@@ -204,7 +204,7 @@ class MCPService:
             cfg.error = ""
             cfg.connected_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             self._stdio_clients[cfg.id] = client
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             cfg.status = "error"
             cfg.error = str(exc)
             await client.stop()

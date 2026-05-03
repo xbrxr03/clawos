@@ -69,7 +69,7 @@ class BrainService:
                 }
                 stats = self._graph.stats()
                 log.info(f"Kizuna loaded: {stats['node_count']} nodes, {stats['edge_count']} edges, {stats['community_count']} communities")
-        except Exception as e:
+        except (OSError, ValueError) as e:
             log.warning(f"Could not load persisted graph: {e}")
 
     # ── WebSocket progress ─────────────────────────────────────────────────────
@@ -89,7 +89,8 @@ class BrainService:
                     asyncio.create_task(cb(event, data))
                 else:
                     cb(event, data)
-            except Exception:
+            except (OSError, RuntimeError, AttributeError) as e:
+                log.debug(f"unexpected: {e}")
                 pass
 
     # ── ZIP ingestion ──────────────────────────────────────────────────────────
@@ -184,7 +185,7 @@ class BrainService:
                 "error": "",
             }
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.error(f"Brain ingestion failed: {e}")
             self._emit_progress("error", {"status": "error", "message": str(e)})
             return {"ok": False, "error": str(e)}

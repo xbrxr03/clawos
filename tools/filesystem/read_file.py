@@ -17,7 +17,7 @@ def run(target: str, workspace_root: Path) -> str:
         return f"[ERROR] File too large ({size // 1024}KB). Max 50KB. Use fs.search to find specific content."
     try:
         return path.read_text(errors="replace")
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         return f"[ERROR] Could not read {target}: {e}"
 
 

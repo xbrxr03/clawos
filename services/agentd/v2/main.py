@@ -222,7 +222,7 @@ class Agent:
             task.status = TaskStatus.COMPLETED
             task.completed_at = time.time()
             
-        except Exception as e:
+        except (OSError, ValueError) as e:
             task.error = str(e)
             task.status = TaskStatus.FAILED
             task.completed_at = time.time()
@@ -293,7 +293,7 @@ class Agent:
                 
             except asyncio.TimeoutError:
                 continue
-            except Exception as e:
+            except (OSError, RuntimeError, AttributeError) as e:
                 log.error(f"Message processing error: {e}")
     
     def to_dict(self) -> Dict[str, Any]:

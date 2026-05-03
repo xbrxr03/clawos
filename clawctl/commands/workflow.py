@@ -20,7 +20,7 @@ def run_list(category: Optional[str] = None, search: Optional[str] = None) -> No
     print()
     try:
         eng = _engine()
-    except Exception as exc:
+    except Exception as exc:  # broad catch — cannot narrow automatically
         error(f"Could not load workflow registry: {exc}")
         print()
         return
@@ -48,7 +48,7 @@ def run_info(workflow_id: str) -> None:
     print()
     try:
         eng = _engine()
-    except Exception as exc:
+    except Exception as exc:  # broad catch — cannot narrow automatically
         error(f"Could not load workflow registry: {exc}")
         print()
         return
@@ -104,7 +104,7 @@ def run_run(
 
     try:
         eng = _engine()
-    except Exception as exc:
+    except (OSError, RuntimeError, AttributeError) as exc:
         error(f"Could not load workflow registry: {exc}")
         print()
         sys.exit(1)
@@ -119,7 +119,7 @@ def run_run(
         info("Run 'clawctl wf list' to see available workflows.")
         print()
         sys.exit(1)
-    except Exception as exc:
+    except (OSError, ConnectionError, TimeoutError) as exc:
         error(f"Workflow execution error: {exc}")
         print()
         sys.exit(1)

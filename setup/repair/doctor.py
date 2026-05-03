@@ -93,6 +93,15 @@ def run_all() -> list[dict]:
             result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
             has_model = any(token in result.stdout for token in ("gemma", "qwen", "llama"))
             results.append(_check("At least one model available", has_model, "ollama pull qwen2.5:3b"))
+
+            # Check if DEFAULT_MODEL is actually installed
+            from clawos_core.constants import DEFAULT_MODEL
+            default_present = DEFAULT_MODEL.split(":")[0] in result.stdout
+            results.append(_check(
+                f"Default model installed ({DEFAULT_MODEL})",
+                default_present,
+                f"ollama pull {DEFAULT_MODEL}",
+            ))
         except Exception:
             pass
 
@@ -157,6 +166,32 @@ def run_all() -> list[dict]:
         ))
     except Exception as e:
         results.append(_check("Agent tool registry", False, str(e)))
+
+    # Model routing consistency — ensure router.py is the single authority
+    try:
+        from runtimes.agent.router import pick_model, SMART_MODEL
+        from clawos_core.constants import DEFAULT_MODEL
+        router_default = pick_model("hello world").model
+        consistent = (DEFAULT_MODEL == SMART_MODEL or DEFAULT_MODEL == router_default)
+        results.append(_check(
+            f"Model defaults consistent (DEFAULT_MODEL={DEFAULT_MODEL}, router smart={SMART_MODEL})",
+            consistent,
+            f"Set DEFAULT_MODEL in constants.py to match SMART_MODEL ({SMART_MODEL})",
+        ))
+    except Exception as e:
+        results.append(_check("Model routing consistency", False, str(e)))
+
+    # Disk space warning
+    import shutil as _shutil
+    try:
+        disk = _shutil.disk_usage(str(Path.home()))
+        results.append(_check(
+            f"Disk space ({round(disk.free/1e9, 1)}GB free)",
+            disk.free > 1_000_000_000,  # 1GB minimum
+            "Free up disk space — models need room to load",
+        ))
+    except OSError:
+        pass
 
     if manager == "launchd":
         print("  ○  launchd user agents")

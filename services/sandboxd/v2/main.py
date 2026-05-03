@@ -241,7 +241,7 @@ timeout {self.config.timeout_seconds} bash -c "$code" 2>&1
                     "execution_time_ms": int((time.time() - start_time) * 1000)
                 }
         
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError, RuntimeError) as e:
             return {
                 "success": False,
                 "stdout": "",
@@ -263,7 +263,7 @@ timeout {self.config.timeout_seconds} bash -c "$code" 2>&1
         if not self.config.persistence_enabled:
             try:
                 shutil.rmtree(self.sandbox_path)
-            except Exception as exc:
+            except (OSError, PermissionError) as exc:
                 log.warning("Failed to clean up sandbox %s: %s", self.sandbox_id, exc)
     
     def write_file(self, filename: str, content: str):

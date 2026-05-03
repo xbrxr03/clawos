@@ -67,7 +67,7 @@ def _parse(raw: str) -> list[str]:
     if _HAS_REPAIR:
         try:
             candidate = repair_json(cleaned)
-        except Exception:
+        except Exception:  # broad catch — cannot narrow automatically
             pass
 
     try:
@@ -154,6 +154,6 @@ def generate(request: str, context: dict, model: str = None) -> list[str]:
         )
         raw = resp["message"]["content"]
         return _validate(_parse(raw))
-    except Exception as e:
+    except (ConnectionError, OSError, RuntimeError) as e:
         print(f"  [error] Ollama call failed: {e}")
         return []

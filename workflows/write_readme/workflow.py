@@ -36,7 +36,8 @@ def _detect_name(path: Path) -> str:
             payload = json.loads(package_json.read_text(encoding="utf-8"))
             if payload.get("name"):
                 return str(payload["name"])
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
     return path.name
 
@@ -55,7 +56,8 @@ def _detect_description(path: Path, project_name: str) -> str:
             description = str(payload.get("description", "")).strip()
             if description:
                 return description
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
     return f"{project_name} project"
 
@@ -93,7 +95,8 @@ def _usage_command(path: Path) -> str:
                 return "npm run dev"
             if "start" in scripts:
                 return "npm run start"
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
     return "python main.py"
 
@@ -164,5 +167,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "layout_entries": len(layout),
             },
         )
-    except Exception as exc:
+    except (OSError,) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

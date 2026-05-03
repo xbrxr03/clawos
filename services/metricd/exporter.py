@@ -18,7 +18,7 @@ def export_local(span: TokenUsage):
         OTEL_JSONL.parent.mkdir(parents=True, exist_ok=True)
         with OTEL_JSONL.open("a") as f:
             f.write(json.dumps(span.to_dict()) + "\n")
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         log.warning(f"OTel JSONL export failed: {e}")
 
 
@@ -54,5 +54,5 @@ def export_otlp(span: TokenUsage, endpoint: str):
             headers={"Content-Type": "application/json"},
         )
         urllib.request.urlopen(req, timeout=3)
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         log.debug(f"OTLP export failed: {e}")

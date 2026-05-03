@@ -24,7 +24,8 @@ def run_list():
                     "SELECT COUNT(*) FROM memories_meta WHERE workspace_id=?", (ws,)
                 ).fetchone()[0]
                 db.close()
-            except Exception:
+            except (sqlite3.Error, OSError):
+                pass
                 pass
         pinned = (mem_dir / "PINNED.md").exists()
         rows.append((ws, str(mem_count) + " memories", "✓" if pinned else "○"))

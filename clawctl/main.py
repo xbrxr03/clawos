@@ -127,6 +127,11 @@ else:
         """Diagnose ClawOS issues."""
         from clawctl.commands.doctor import run; run(fix)
 
+    @main.command()
+    def verify():
+        """Verify ClawOS is ready to use (post-install smoke test)."""
+        from clawctl.commands.verify import run; run()
+
     # ── model ─────────────────────────────────────────────────────────────────
     @main.group()
     def model():
@@ -336,13 +341,13 @@ else:
                 if SETUP_STATE_JSON.exists():
                     SETUP_STATE_JSON.unlink()
                     click.echo(f"Cleared {SETUP_STATE_JSON}")
-            except Exception as exc:
+            except (ImportError, ModuleNotFoundError) as exc:
                 click.echo(f"Could not clear setup state: {exc}", err=True)
         url = "http://localhost:7070/setup"
         click.echo(f"Opening {url} — make sure dashd is running (bash scripts/dev_boot.sh).")
         try:
             webbrowser.open(url)
-        except Exception:
+        except (OSError, PermissionError):
             pass
 
     @main.command()

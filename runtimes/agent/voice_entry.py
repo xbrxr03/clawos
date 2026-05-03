@@ -39,7 +39,7 @@ async def speak_morning_briefing(
         result = tts_fn(text)
         if asyncio.iscoroutine(result):
             await result
-    except Exception as e:
+    except (OSError, ConnectionError, RuntimeError) as e:
         log.warning(f"tts failed: {e}")
     return text
 
@@ -58,6 +58,6 @@ async def voice_chat_once(
         result = tts_fn(reply)
         if asyncio.iscoroutine(result):
             await result
-    except Exception as e:
+    except (OSError, ConnectionError, RuntimeError) as e:
         log.warning(f"tts failed: {e}")
     return reply

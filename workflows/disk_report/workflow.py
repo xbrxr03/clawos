@@ -133,5 +133,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "reclaimable_bytes": reclaimable,
             },
         )
-    except Exception as exc:
+    except (OSError, PermissionError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

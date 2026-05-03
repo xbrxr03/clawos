@@ -59,7 +59,7 @@ async def composite_lifespan(
         try:
             await start() if callable(start) else start
             log.info(f"{name} started")
-        except Exception as e:
+        except (OSError, RuntimeError, AttributeError) as e:
             log.error(f"Failed to start {name}: {e}")
             raise
     
@@ -71,7 +71,7 @@ async def composite_lifespan(
             try:
                 await stop() if callable(stop) else stop
                 log.info(f"{name} stopped")
-            except Exception as e:
+            except (OSError, RuntimeError, AttributeError) as e:
                 log.error(f"Failed to stop {name}: {e}")
 
 
@@ -96,7 +96,7 @@ def create_simple_lifespan(
                     result = task()
                     if hasattr(result, '__await__'):
                         await result
-                except Exception as e:
+                except (AttributeError, TypeError) as e:
                     log.error(f"Startup task failed: {e}")
         
         log.info(f"{service_name} ready")
@@ -108,7 +108,7 @@ def create_simple_lifespan(
                     result = task()
                     if hasattr(result, '__await__'):
                         await result
-                except Exception as e:
+                except (AttributeError, TypeError) as e:
                     log.error(f"Shutdown task failed: {e}")
         
         log.info(f"{service_name} shut down")

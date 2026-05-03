@@ -113,7 +113,7 @@ def _normalize_peer_url(url: str) -> str:
 def _request_is_loopback(request: Request) -> bool:
     try:
         return _is_loopback_host(request.client.host if request.client else "")
-    except Exception:
+    except Exception:  # broad catch — cannot narrow automatically
         return False
 
 
@@ -132,7 +132,7 @@ def _require_trusted_peer(request: Request):
 
     try:
         parsed = urlparse(peer_url)
-    except Exception as exc:
+    except (ValueError, OSError, AttributeError) as exc:
         raise HTTPException(status_code=403, detail=f"Invalid peer URL: {exc}")
 
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
@@ -179,7 +179,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             if _zeroconf is not None:
                 try:
                     _zeroconf.close()
-                except Exception:
+                except (OSError, ValueError) as e:
+                    log.debug(f"unexpected: {e}")
                     pass
                 _zeroconf = None
 
@@ -253,7 +254,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                         return
                     yield f"data: {json.dumps({'status': task.status.value})}\n\n"
                 yield f"data: {json.dumps({'status': 'timeout'})}\n\n"
-            except Exception as exc:
+            except (TypeError, ValueError) as exc:
                 yield f"data: {json.dumps({'error': str(exc)})}\n\n"
 
         return StreamingResponse(_gen(), media_type="text/event-stream")

@@ -250,7 +250,7 @@ class MCPClient:
             for name, server_config in servers.items():
                 await self.connect_server(name, server_config)
                 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.error(f"Failed to load MCP config: {e}")
     
     async def connect_server(self, name: str, config: dict):
@@ -286,7 +286,7 @@ class MCPClient:
             
             log.info(f"Connected to MCP server '{name}' with {len(connection.tools)} tools")
             
-        except Exception as e:
+        except (OSError, ConnectionError, RuntimeError) as e:
             log.error(f"Failed to connect to MCP server '{name}': {e}")
     
     def get_all_tools(self) -> dict[str, str]:
@@ -331,7 +331,7 @@ class MCPClient:
             else:
                 return str(content)
                 
-        except Exception as e:
+        except (OSError, RuntimeError, TypeError) as e:
             log.error(f"MCP tool execution failed: {e}")
             return f"Error executing {tool_name}: {str(e)}"
     
@@ -341,7 +341,7 @@ class MCPClient:
             try:
                 await connection.close()
                 log.info(f"Closed MCP connection '{name}'")
-            except Exception as e:
+            except (OSError, ConnectionError, RuntimeError) as e:
                 log.error(f"Error closing MCP connection '{name}': {e}")
         
         self.connections.clear()

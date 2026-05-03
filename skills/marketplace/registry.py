@@ -52,7 +52,7 @@ def _http_get(url: str, timeout: int = 10) -> dict | list | None:
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         log.debug(f"HTTP GET {url}: {e}")
         return None
 
@@ -65,7 +65,9 @@ def _load_sig_index() -> dict:
             data = json.loads(SIG_INDEX_CACHE.read_text())
             if time.time() - data.get("_cached_at", 0) < 86400:  # 24h cache
                 return data.get("skills", {})
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            log.debug(f"failed: {e}")
+            pass
             pass
 
     # Fetch fresh
@@ -179,7 +181,7 @@ def _load_installed_db() -> dict:
         return {}
     try:
         return json.loads(INSTALLED_DB.read_text())
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         return {}
 
 

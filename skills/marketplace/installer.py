@@ -99,7 +99,7 @@ def install_skill(
             )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 zip_path.write_bytes(resp.read())
-        except Exception as e:
+        except (OSError, ConnectionRefusedError, TimeoutError) as e:
             return {"ok": False, "skill_id": skill_id, "trust_tier": trust_tier,
                     "error": f"Download failed: {e}"}
 

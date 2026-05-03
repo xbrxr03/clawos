@@ -62,7 +62,7 @@ def load_schedules() -> list[dict]:
         enabled = [s for s in schedules if s.get("enabled", False)]
         log.info(f"Loaded {len(enabled)} enabled schedules (of {len(schedules)} total)")
         return enabled
-    except Exception as e:
+    except (OSError, PermissionError) as e:
         log.error(f"Failed to load schedules: {e}")
         return []
 
@@ -88,7 +88,7 @@ def cron_matches(cron_expr: str, now: datetime) -> bool:
             if expr != "*" and int(expr) != val:
                 return False
         return True
-    except Exception:
+    except (ValueError, OSError, RuntimeError):
         return False
 
 
@@ -119,7 +119,7 @@ async def dispatch_task(schedule: dict) -> None:
                 log.info(f"Task {task_id} queued — task_id: {data.get('task_id')}")
             else:
                 log.error(f"Task {task_id} rejected by agentd: {resp.status_code} {resp.text}")
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         log.error(f"Failed to dispatch task {task_id}: {e}")
 
 
@@ -154,7 +154,7 @@ async def _run_ambient_checks() -> None:
         from clawos_core.ambient import run_checks
         results = run_checks(force=True)
         log.info(f"Ambient checks: {len(results)} suggestion(s) generated")
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.debug(f"Ambient checks skipped: {e}")
 
 
@@ -175,7 +175,7 @@ async def _maybe_send_morning_briefing(now: datetime) -> None:
         await get_jarvis().speak_morning_briefing()
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text(today)
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         log.debug(f"Morning briefing check skipped: {e}")
 
 
@@ -187,7 +187,7 @@ async def _fire_session_start_briefing() -> None:
     try:
         from services.jarvisd.service import get_service as get_jarvis
         await get_jarvis().speak_morning_briefing()
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         log.debug("session_start briefing skipped: %s", exc)
 
 
@@ -267,7 +267,7 @@ schedules:
 
     try:
         await health_server()
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         log.warning(f"Health server unavailable (aiohttp not installed?): {e}")
 
     await scheduler_loop()

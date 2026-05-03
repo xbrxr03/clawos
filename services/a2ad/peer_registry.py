@@ -29,7 +29,7 @@ try:
     from clawos_core.constants import CONFIG_DIR
     PEER_REGISTRY_PATH = CONFIG_DIR / "a2a_peers.json"
     PEER_SIGNING_KEY_PATH = CONFIG_DIR / "a2a_signing.key"
-except Exception:
+except (ImportError, ModuleNotFoundError):
     PEER_REGISTRY_PATH = Path.home() / ".clawos" / "a2a_peers.json"
     PEER_SIGNING_KEY_PATH = Path.home() / ".clawos" / "a2a_signing.key"
 
@@ -44,8 +44,8 @@ def _load_or_create_signing_key() -> str:
         PEER_SIGNING_KEY_PATH.write_text(key, encoding="utf-8")
         try:
             PEER_SIGNING_KEY_PATH.chmod(0o600)
-        except OSError:
-            pass
+        except OSError as e:
+            log.debug(f"suppressed: {e}")
         return key
     return PEER_SIGNING_KEY_PATH.read_text(encoding="utf-8").strip()
 
@@ -62,7 +62,7 @@ def verify_agent_card(card_dict: dict, signature: str) -> bool:
     expected = sign_agent_card(card_dict)
     try:
         return hmac.compare_digest(expected, signature)
-    except Exception:
+    except (OSError, ValueError, AttributeError):
         return False
 
 
@@ -94,7 +94,7 @@ def _load_peers() -> List[PeerRecord]:
     try:
         data = json.loads(PEER_REGISTRY_PATH.read_text(encoding="utf-8"))
         return [PeerRecord(**p) for p in data]
-    except Exception as exc:
+    except (json.JSONDecodeError, ValueError) as exc:
         log.warning("Failed to load peer registry: %s", exc)
         return []
 
@@ -116,7 +116,7 @@ def _fetch_agent_card(url: str, timeout: int = 8) -> Optional[dict]:
         req = urllib.request.Request(card_url, headers={"User-Agent": "ClawOS-A2A/1.0"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
             return json.loads(resp.read())
-    except Exception as exc:
+    except (json.JSONDecodeError, ValueError) as exc:
         log.debug("Failed to fetch agent card from %s: %s", url, exc)
         return None
 

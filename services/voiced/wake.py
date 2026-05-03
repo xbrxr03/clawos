@@ -37,7 +37,7 @@ class WakeWordDetector:
         except ImportError:
             log.warning("openwakeword not installed — wake word disabled")
             return False
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             log.warning(f"Wake word init failed: {e}")
             return False
 
@@ -61,7 +61,7 @@ class WakeWordDetector:
             stream.stop_stream()
             stream.close()
             pa.terminate()
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.error(f"Wake word listen loop error: {e}")
 
     def stop(self):

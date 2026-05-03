@@ -259,7 +259,7 @@ class NotebookExecutor:
                 "error": "Execution timeout (30s)",
                 "exit_code": -1
             }
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             return {
                 "success": False,
                 "output": "",
@@ -300,7 +300,7 @@ class NotebookExecutor:
                 "exit_code": 0
             }
         
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return {
                 "success": False,
                 "output": sys.stdout.getvalue(),

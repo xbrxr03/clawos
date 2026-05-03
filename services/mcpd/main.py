@@ -307,7 +307,7 @@ class ClawOSMCPServer:
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
                 
-        except Exception as e:
+        except Exception as e:  # tool dispatch — may raise arbitrary errors
             log.error(f"Tool execution failed: {e}")
             return {
                 "content": [
@@ -341,7 +341,7 @@ class ClawOSMCPServer:
                     }
                 ]
             }
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {
                 "content": [
                     {
@@ -370,7 +370,7 @@ class ClawOSMCPServer:
                     }
                 ]
             }
-        except Exception as e:
+        except (OSError, AttributeError, RuntimeError) as e:
             return {
                 "content": [
                     {
@@ -395,7 +395,7 @@ class ClawOSMCPServer:
                     }
                 ]
             }
-        except Exception as e:
+        except (OSError, RuntimeError, AttributeError) as e:
             return {
                 "content": [
                     {
@@ -421,7 +421,7 @@ class ClawOSMCPServer:
                     }
                 ]
             }
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {
                 "content": [
                     {
@@ -462,7 +462,7 @@ class ClawOSMCPServer:
                     }
                 ]
             }
-        except Exception as e:
+        except (OSError, PermissionError) as e:
             return {
                 "content": [
                     {
@@ -492,7 +492,7 @@ class ClawOSMCPServer:
                     }
                 ]
             }
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {
                 "content": [
                     {
@@ -582,7 +582,7 @@ class ClawOSMCPServer:
             else:
                 raise ValueError(f"Unknown resource URI: {uri}")
                 
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             log.error(f"Resource read failed: {e}")
             raise
     
@@ -730,7 +730,7 @@ async def mcp_endpoint(request: Request):
                 }
             }, status_code=404)
     
-    except Exception as e:
+    except Exception as e:  # top-level JSON-RPC handler
         log.error(f"MCP error: {e}")
         return JSONResponse({
             "jsonrpc": "2.0",

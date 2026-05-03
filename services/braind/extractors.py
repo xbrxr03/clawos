@@ -7,6 +7,7 @@ Returns list of {filename, content, type, chunk_index} dicts.
 import logging
 from pathlib import Path
 from typing import Iterator
+import subprocess
 
 log = logging.getLogger("braind.extractors")
 
@@ -43,7 +44,7 @@ def extract_file(path: Path) -> list[dict]:
         else:
             # Try plain text for unknown types
             return _extract_text(path, "unknown")
-    except Exception as e:
+    except (OSError, ValueError, ImportError) as e:
         log.warning(f"Failed to extract {path.name}: {e}")
         return []
 
@@ -97,9 +98,9 @@ def _extract_pdf(path: Path) -> list[dict]:
                     pages.append(t)
             text = "\n\n".join(pages)
         log.debug(f"pdfplumber extracted {len(text)} chars from {path.name}")
-    except ImportError:
-        pass
-    except Exception as e:
+    except ImportError as e:
+        log.debug(f"suppressed: {e}")
+    except (OSError, PermissionError) as e:
         log.debug(f"pdfplumber failed for {path.name}: {e}")
 
     if not text:
@@ -113,7 +114,7 @@ def _extract_pdf(path: Path) -> list[dict]:
                     pages.append(t)
             text = "\n\n".join(pages)
             log.debug(f"pypdf extracted {len(text)} chars from {path.name}")
-        except Exception as e:
+        except (OSError, ValueError, ImportError) as e:
             log.warning(f"PDF extraction failed for {path.name}: {e}")
             return []
 
@@ -131,7 +132,7 @@ def _extract_docx(path: Path) -> list[dict]:
     except ImportError:
         log.warning("python-docx not installed — pip install python-docx")
         return []
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError, RuntimeError) as e:
         log.warning(f"DOCX extraction failed for {path.name}: {e}")
         return []
 
@@ -141,7 +142,7 @@ def _extract_text(path: Path, file_type: str) -> list[dict]:
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
         return _chunk_text(text, path.name, str(path), file_type)
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         log.warning(f"Text extraction failed for {path.name}: {e}")
         return []
 
@@ -206,7 +207,7 @@ def iter_zip_chunks(zip_path: Path) -> Iterator[dict]:
                         for chunk in chunks:
                             chunk["filename"] = name
                         yield from chunks
-                    except Exception as e:
+                    except (OSError, zipfile.BadZipFile, RuntimeError) as e:
                         log.debug(f"Skipping {name}: {e}")
 
         except zipfile.BadZipFile as e:
@@ -230,6 +231,7 @@ def count_extractable(zip_path: Path) -> int:
                     continue
                 if fpath.suffix.lower() in extractable:
                     count += 1
-    except Exception:
+    except (OSError, zipfile.BadZipFile, ValueError) as e:
+        log.debug(f"unexpected: {e}")
         pass
     return count

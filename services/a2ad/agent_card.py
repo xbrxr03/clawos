@@ -25,7 +25,7 @@ def build_card(workspace_id: str = DEFAULT_WORKSPACE,
     try:
         from bootstrap.hardware_probe import load_saved, get_tier
         tier = get_tier(load_saved())
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         tier = "C"
 
     skills = [
@@ -37,7 +37,7 @@ def build_card(workspace_id: str = DEFAULT_WORKSPACE,
     try:
         from services.policyd.service import PolicyService
         skills.append(AgentSkill("shell", "Run allowlisted shell commands"))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     return AgentCard(

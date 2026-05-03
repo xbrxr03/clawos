@@ -126,7 +126,7 @@ class SkillSandbox:
             import yaml
             meta = yaml.safe_load(entry_file.read_text())
             entry_name = meta.get("entry", "entry.py")
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             entry_name = "entry.py"
 
         entry_path = self.skill_dir / entry_name
@@ -174,7 +174,7 @@ class SkillSandbox:
             log.warning(f"Skill blocked import [{self.skill_id}]: {e}")
             return {"ok": False, "output": None, "logs": context.get_result_log(),
                     "error": f"Blocked import: {e}"}
-        except Exception as e:
+        except (OSError, UnicodeDecodeError) as e:
             log.error(f"Skill execution error [{self.skill_id}]: {e}")
             return {"ok": False, "output": None, "logs": context.get_result_log(),
                     "error": f"Runtime error: {e}"}

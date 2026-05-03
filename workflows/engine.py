@@ -103,7 +103,7 @@ async def emit_workflow_progress(
         from clawos_core.events.bus import get_bus
 
         await get_bus().publish("workflow_progress", payload)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
 
 
@@ -129,7 +129,7 @@ class WorkflowEngine:
                     warnings.warn(f"[workflow] {module_name}: no valid META - skipped")
                     continue
                 self._registry[meta.id] = mod
-            except Exception as exc:
+            except (AttributeError, TypeError) as exc:
                 warnings.warn(f"[workflow] {module_name}: import error - {exc}")
         self._loaded = True
 
@@ -216,7 +216,7 @@ class WorkflowEngine:
                     output="",
                     error=f"Timed out after {meta.timeout_s}s",
                 )
-            except Exception as exc:
+            except (RuntimeError, OSError, TypeError) as exc:
                 result = WorkflowResult(
                     status=WorkflowStatus.FAILED,
                     output="",
@@ -255,7 +255,7 @@ class WorkflowEngine:
                 granted_tools=["workflow.destructive"],
             )
             return decision == Decision.ALLOW
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
 
     async def _get_agent(self, workspace_id: str):
@@ -264,7 +264,7 @@ class WorkflowEngine:
 
             manager = get_manager()
             return await manager._get_session(workspace_id)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             from clawos_core.constants import DEFAULT_MODEL
             from runtimes.agent.runtime import build_runtime
 
@@ -275,7 +275,8 @@ class WorkflowEngine:
             from clawos_core.events.bus import get_bus
 
             await get_bus().publish(event_type, data)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
+            pass
             pass
 
     def _current_platform(self) -> str:
@@ -297,7 +298,7 @@ class WorkflowEngine:
 
         try:
             urllib.request.urlopen("http://localhost:7072/health", timeout=2)
-        except Exception as exc:
+        except (OSError, ConnectionRefusedError, TimeoutError) as exc:
             raise RuntimeError(
                 "agentd is not running. Start ClawOS first: clawctl start"
             ) from exc

@@ -133,7 +133,7 @@ async def trigger_wake(
                 "reply": reply,
             }
             
-    except Exception as e:
+    except Exception as e:  # top-level request handler
         log.error(f"Wake word handling failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

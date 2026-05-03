@@ -100,7 +100,7 @@ class VoiceService:
                 result = listener(dict(session))
                 if asyncio.iscoroutine(result):
                     loop.create_task(result)
-            except Exception:
+            except (RuntimeError, TypeError, AttributeError):
                 continue
 
     def _ensure_runtime(self):
@@ -145,8 +145,8 @@ class VoiceService:
         if self._wake_detector:
             try:
                 self._wake_detector.stop()
-            except Exception:
-                pass
+            except (OSError, RuntimeError, AttributeError) as e:
+                log.debug(f"suppressed: {e}")
             self._wake_detector = None
 
     def _ensure_tray(self):
@@ -157,7 +157,7 @@ class VoiceService:
 
             self._tray = VoiceTray()
             self._tray.start()
-        except Exception:
+        except (ImportError, OSError):
             self._tray = None
 
     def _set_tray_state(self, state: str):
@@ -174,7 +174,7 @@ class VoiceService:
                 "speaking": VoiceState.SPEAKING,
             }
             self._tray.set_state(mapping.get(state, VoiceState.SLEEPING))
-        except Exception:
+        except (ImportError, AttributeError, KeyError):
             return
 
     async def start(self):
@@ -203,7 +203,7 @@ class VoiceService:
 
             self._wake_detector = WakeWordDetector(self._on_wake_word)
             return bool(self._wake_detector.start())
-        except Exception as exc:
+        except (ImportError, OSError, RuntimeError) as exc:
             log.warning("Wake detector unavailable: %s", exc)
             self._wake_detector = None
             return False
@@ -244,7 +244,7 @@ class VoiceService:
                 from adapters.audio.tts_router import speak as tts_speak, active_provider
                 provider = active_provider()
                 audio = await asyncio.to_thread(tts_speak, text)
-            except Exception as tts_exc:
+            except (OSError, RuntimeError, ImportError) as tts_exc:
                 log.warning("TTSRouter unavailable, falling back to Piper directly: %s", tts_exc)
                 audio = b""
                 provider = "piper"
@@ -289,7 +289,7 @@ class VoiceService:
                     capture_output=True,
                 )
             return play.returncode == 0
-        except Exception as exc:
+        except (OSError, subprocess.SubprocessError) as exc:
             log.error("TTS error: %s", exc)
             return False
         finally:
@@ -309,7 +309,7 @@ class VoiceService:
             transcript = await asyncio.to_thread(transcribe, audio_path, self.stt_model)
             self._sync_session(last_utterance=transcript or "", state="idle", follow_up_open=False)
             return transcript
-        except Exception as exc:
+        except (OSError, RuntimeError, TimeoutError) as exc:
             log.error("STT error: %s", exc)
             self._sync_session(state="idle", follow_up_open=False)
             return ""
@@ -406,7 +406,7 @@ class VoiceService:
                 from services.agentd.service import get_manager
                 self._sync_session(state="thinking")
                 response = await get_manager().chat_direct(transcript.strip(), channel="voice")
-            except Exception as exc:
+            except (OSError, RuntimeError) as exc:
                 log.warning("Voice agent call failed: %s", exc)
                 response = "Sorry, I couldn't process that request."
         else:
@@ -445,7 +445,7 @@ async def run_voice_session(agent, stt_fn, tts_fn, tray=None):
             tray.set_state(VoiceState.THINKING)
         try:
             reply = await agent.chat(text)
-        except Exception as exc:
+        except (OSError, RuntimeError, ConnectionError) as exc:
             reply = f"Sorry, I encountered an error: {exc}"
         if tray:
             tray.set_state(VoiceState.SPEAKING)

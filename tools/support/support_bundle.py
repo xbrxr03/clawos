@@ -54,7 +54,7 @@ def _write_text_or_raw(archive: zipfile.ZipFile, path: Path, arcname: str):
     if path.name == PRESENCE_STATE_JSON.name:
         try:
             payload = json.loads(text)
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             archive.writestr(arcname, _redact_text(text))
             return
         voice = payload.get("voice_session") or {}

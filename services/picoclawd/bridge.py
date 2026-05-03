@@ -25,6 +25,6 @@ def send(message: str, sender: str = "") -> str:
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read())
         return data.get("response", data.get("text", "[no response]"))
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         log.warning(f"PicoClaw bridge error: {e}")
         return f"[PICOCLAW OFFLINE] {e}"

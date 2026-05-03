@@ -50,7 +50,7 @@ class HttpMCPClient:
             if "error" in result:
                 raise RuntimeError(f"MCP error {result['error'].get('code')}: {result['error'].get('message')}")
             return result.get("result", {})
-        except Exception as exc:
+        except (json.JSONDecodeError, ValueError) as exc:
             raise RuntimeError(f"HTTP MCP call failed ({method}): {exc}") from exc
 
     def initialize(self) -> dict:
@@ -71,7 +71,7 @@ class HttpMCPClient:
         try:
             result = self.call("resources/list")
             return result.get("resources", [])
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             return []
 
     def read_resource(self, uri: str) -> dict:
@@ -81,7 +81,7 @@ class HttpMCPClient:
         try:
             result = self.call("prompts/list")
             return result.get("prompts", [])
-        except Exception:
+        except (EOFError, KeyboardInterrupt, OSError):
             return []
 
 
@@ -157,14 +157,14 @@ class StdioMCPClient:
         try:
             result = await self.call("resources/list")
             return result.get("resources", [])
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             return []
 
     async def list_prompts(self) -> list[dict]:
         try:
             result = await self.call("prompts/list")
             return result.get("prompts", [])
-        except Exception:
+        except (EOFError, KeyboardInterrupt, OSError):
             return []
 
     async def stop(self) -> None:
@@ -172,5 +172,7 @@ class StdioMCPClient:
             try:
                 self._proc.terminate()
                 await asyncio.wait_for(self._proc.wait(), timeout=3)
-            except Exception:
+            except (OSError, RuntimeError, AttributeError) as e:
+                log.debug(f"unexpected: {e}")
+                pass
                 pass

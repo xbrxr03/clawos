@@ -179,16 +179,17 @@ class AgentRuntime:
             p = memory_path(self.workspace_id) / "IDENTITY.md"
             if p.exists():
                 return p.read_text(encoding="utf-8")
-        except Exception:
+        except (OSError, UnicodeDecodeError):
+            log.debug("failed to read IDENTITY.md")
             pass
-        return ""
 
     def _get_memory_context(self, user_input: str) -> str:
         if not self.memory or self._is_trivial(user_input):
             return ""
         try:
             return self.memory.build_context_block(user_input, self.workspace_id)
-        except Exception:
+        except (OSError, AttributeError, RuntimeError) as e:
+            log.debug(f"memory context failed: {e}")
             return ""
 
     def _get_skills_block(self, user_input: str) -> str:
@@ -197,14 +198,16 @@ class AgentRuntime:
         try:
             top = self._skills.top(user_input)
             return format_skills_block(top)
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError) as e:
+            log.debug(f"skills block failed: {e}")
             return ""
 
     def _get_learned_context(self) -> str:
         try:
             from services.memd.service import get_learned
             return get_learned(self.workspace_id)
-        except Exception:
+        except (ImportError, AttributeError, RuntimeError) as e:
+            log.debug(f"learned context failed: {e}")
             return ""
 
     def _get_rag_context(self, user_input: str) -> str:
@@ -223,7 +226,8 @@ class AgentRuntime:
             for i, r in enumerate(results, 1):
                 lines.append(f"[{i}] {r['title']} p.{r['page']} ({r['chunk_type']}): {r['content'][:300]}")
             return "\n".join(lines)
-        except Exception:
+        except (ImportError, AttributeError, OSError) as e:
+            log.debug(f"rag context failed: {e}")
             return ""
 
     def _get_kizuna_context(self, user_input: str) -> str:
@@ -241,12 +245,14 @@ class AgentRuntime:
             for w in words[:2]:
                 try:
                     g = query_graph(w.strip(".,!?"), self.workspace_id, depth=1)
-                except Exception:
+                except (OSError, AttributeError, KeyError) as e:
+                    log.debug(f"graph query failed for {w}: {e}")
                     g = ""
                 if g and g.strip():
                     chunks.append(g.strip())
             return ("[Knowledge Graph]\n" + "\n".join(chunks)) if chunks else ""
-        except Exception:
+        except (ImportError, AttributeError, OSError) as e:
+            log.debug(f"kizuna context failed: {e}")
             return ""
 
     def _history_tokens(self) -> int:
@@ -268,7 +274,8 @@ class AgentRuntime:
         topic = match.args.get("topic", "")
         try:
             hits = self.memory.recall(topic, self.workspace_id, n=3)
-        except Exception:
+        except (OSError, AttributeError, KeyError) as e:
+            log.debug(f"memory recall failed: {e}")
             return None
         if not hits:
             return None
@@ -303,7 +310,8 @@ class AgentRuntime:
             req_id = pending.get("request_id")
             if req_id and self.policy and hasattr(self.policy, "resolve"):
                 await self.policy.resolve(req_id, allow=True)
-        except Exception:
+        except (OSError, AttributeError, RuntimeError):
+            log.debug("policy resolve failed")
             pass
         # Re-execute the tool with the bridge — it should now pass policy.
         tool = pending["tool"]
@@ -342,7 +350,7 @@ class AgentRuntime:
                 cur = await self._exec_tool("get_volume", {})
                 try:
                     cur_level = int(str(cur).strip().rstrip("%"))
-                except Exception:
+                except (ValueError, TypeError):
                     cur_level = 50
                 step = 10 if direction == "up" else -10
                 new_level = max(0, min(100, cur_level + step))
@@ -468,7 +476,7 @@ class AgentRuntime:
                 args = fn.get("arguments") or {}
                 if isinstance(args, str):
                     try: args = json.loads(args)
-                    except Exception: args = {}
+                    except (json.JSONDecodeError, ValueError): args = {}
                 executed.append({"tool": name, "args": args, "result": result})
                 # Track pending approvals so the next turn can resolve them
                 if isinstance(result, str) and result.startswith("[PENDING APPROVAL]"):
@@ -544,10 +552,10 @@ class AgentRuntime:
             args = fn.get("arguments") or {}
             if isinstance(args, str):
                 try: args = json.loads(args)
-                except Exception: args = {}
+                except (json.JSONDecodeError, ValueError): args = {}
             try:
                 return await self._exec_tool(name, args)
-            except Exception as e:
+            except Exception as e:  # tool execution may raise arbitrary errors
                 return f"[ERROR] {name}: {e}"
         return await asyncio.gather(*[_one(c) for c in tool_calls])
 
@@ -605,7 +613,7 @@ class AgentRuntime:
         self._awaiting_confirmation = None
         if self.memory:
             try: self.memory.clear_workflow(self.workspace_id)
-            except Exception: pass
+            except (OSError, AttributeError): pass
 
     async def _run_ace(self, task_result: str):
         """
@@ -617,12 +625,14 @@ class AgentRuntime:
         try:
             from services.memd.service import run_ace_loop
             await run_ace_loop(task_result, self.workspace_id)
-        except Exception:
+        except (ImportError, OSError, AttributeError):
+            log.debug("ACE loop failed")
             pass
         try:
             from services.memd.service import add_to_graph
             add_to_graph(task_result, self.workspace_id, source="agent_task")
-        except Exception:
+        except (ImportError, OSError, AttributeError):
+            log.debug("graph write-back failed")
             pass
 
 

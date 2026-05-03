@@ -23,7 +23,7 @@ def get_local_ip() -> str:
         ip = s.getsockname()[0]
         s.close()
         return ip
-    except Exception:
+    except (OSError, ValueError):
         return "127.0.0.1"
 
 
@@ -78,7 +78,7 @@ def _scan():
     except ImportError:
         log.debug("zeroconf not installed — mDNS discovery unavailable. "
                   "pip install zeroconf to enable.")
-    except Exception as e:
+    except (RuntimeError, TypeError, AttributeError) as e:
         log.debug(f"mDNS scan error: {e}")
 
 
@@ -105,6 +105,6 @@ def publish(workspace_id: str = "nexus_default"):
     except ImportError:
         log.debug("zeroconf not available — mDNS publish skipped")
         return None
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         log.warning(f"mDNS publish failed: {e}")
         return None

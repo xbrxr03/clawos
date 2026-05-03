@@ -46,7 +46,8 @@ def close_db():
     if _db is not None:
         try:
             _db.close()
-        except Exception:
+        except (OSError, ValueError) as e:
+            log.debug(f"unexpected: {e}")
             pass
         _db = None
 
@@ -58,7 +59,7 @@ def _load_last_hash() -> str:
             "SELECT entry_hash FROM audit_log ORDER BY timestamp DESC LIMIT 1"
         ).fetchone()
         return row[0] if row else ""
-    except Exception:
+    except (sqlite3.Error, OSError):
         return ""
 
 
@@ -85,7 +86,7 @@ def write(entry: AuditEntry) -> AuditEntry:
              entry.timestamp, entry.prev_hash, entry.entry_hash)
         )
         db.commit()
-    except Exception as e:
+    except (sqlite3.Error, OSError) as e:
         log.warning(f"Audit DB write failed: {e}")
 
     return entry
@@ -102,10 +103,12 @@ def tail(n: int = 50) -> list[dict]:
             if line.strip():
                 try:
                     result.append(json.loads(line))
-                except Exception:
+                except (json.JSONDecodeError, ValueError):
+                    log.debug(f"failed: {e}")
+                    pass
                     pass
         return list(reversed(result))
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         return []
 
 

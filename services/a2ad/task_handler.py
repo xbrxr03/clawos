@@ -25,6 +25,6 @@ async def handle_task(a2a_task: A2ATask) -> str:
             if t and t.status.value in ("completed", "failed", "cancelled"):
                 return t.result or t.error or "[completed]"
         return "[TIMEOUT] Task did not complete within 120s"
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.error(f"A2A task handler error: {e}")
         return f"[ERROR] {e}"

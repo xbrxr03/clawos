@@ -102,7 +102,7 @@ def _workbench_fetch(url: str, timeout: int = 12) -> dict:
 
     try:
         html = raw.decode("utf-8", errors="replace")
-    except Exception:
+    except (OSError, RuntimeError, AttributeError):
         html = raw.decode("latin-1", errors="replace")
 
     title_m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
@@ -155,7 +155,7 @@ class ConnectionManager:
         for ws in self._ws:
             try:
                 await ws.send_json(data)
-            except Exception:
+            except (OSError, ConnectionError, TimeoutError):
                 dead.append(ws)
         for ws in dead:
             self.disconnect(ws)
@@ -181,7 +181,7 @@ def _origin_is_trusted(origin: str) -> bool:
         return True
     try:
         parsed = urlparse(origin)
-    except Exception:
+    except (ValueError, OSError, AttributeError):
         return False
     return parsed.scheme in {"http", "https"} and _is_loopback_host(parsed.hostname or "")
 
@@ -190,7 +190,8 @@ def _request_targets_loopback(request: Request) -> bool:
     try:
         if _is_loopback_host(request.url.hostname or ""):
             return True
-    except Exception:
+    except (OSError, RuntimeError, AttributeError) as e:
+        log.debug(f"unexpected: {e}")
         pass
     client = getattr(request, "client", None)
     return _is_loopback_host(getattr(client, "host", ""))
@@ -200,7 +201,8 @@ def _websocket_targets_loopback(websocket: WebSocket) -> bool:
     try:
         if _is_loopback_host(websocket.url.hostname or ""):
             return True
-    except Exception:
+    except (OSError, ConnectionError, TimeoutError) as e:
+        log.debug(f"failed: {e}")
         pass
     client = getattr(websocket, "client", None)
     return _is_loopback_host(getattr(client, "host", ""))
@@ -277,8 +279,8 @@ def _load_or_create_secret(path: Path) -> str:
             path.write_text(secret, encoding="utf-8")
             try:
                 path.chmod(0o600)
-            except OSError:
-                pass
+            except OSError as e:
+                log.debug(f"suppressed: {e}")
             _VOLATILE_SECRETS[cache_key] = secret
             return secret
         secret = path.read_text(encoding="utf-8").strip()
@@ -312,10 +314,10 @@ def rotate_dashboard_session_token() -> str:
         path.write_text(token, encoding="utf-8")
         try:
             path.chmod(0o600)
-        except OSError:
-            pass
-    except OSError:
-        pass
+        except OSError as e:
+            log.debug(f"suppressed: {e}")
+    except OSError as e:
+        log.debug(f"suppressed: {e}")
     return token
 
 
@@ -432,6 +434,81 @@ def _normalize_service_status(name: str, raw: Any, data: dict) -> str:
     return status or "unknown"
 
 
+def _deep_health_check() -> dict:
+    """Run a deep health check beyond just 'are services up?'.
+
+    Checks: Ollama running, default model present, disk space,
+    ChromaDB availability, voice deps (whisper/piper).
+    Returns a dict with booleans and human-readable warnings.
+    """
+    from clawos_core.constants import DEFAULT_MODEL, CLAWOS_DIR
+    result: dict = {}
+
+    # Ollama
+    try:
+        from services.modeld.ollama_client import is_running, model_exists
+        result["ollama_running"] = is_running()
+        if result["ollama_running"]:
+            result["default_model_present"] = model_exists(DEFAULT_MODEL)
+            if not result["default_model_present"]:
+                result["default_model_warning"] = f"Default model {DEFAULT_MODEL} not found in Ollama"
+    except ImportError:
+        result["ollama_running"] = False
+        result["default_model_present"] = False
+
+    # Disk space
+    import shutil
+    try:
+        disk = shutil.disk_usage(str(CLAWOS_DIR.parent) if CLAWOS_DIR.exists() else "/")
+        result["disk_free_gb"] = round(disk.free / 1e9, 1)
+        result["disk_total_gb"] = round(disk.total / 1e9, 1)
+        if disk.free < 500_000_000:
+            result["disk_warning"] = f"Only {result['disk_free_gb']}GB free"
+    except OSError:
+        result["disk_free_gb"] = -1
+
+    # ChromaDB
+    try:
+        import chromadb  # noqa: F401
+        result["chromadb_available"] = True
+    except ImportError:
+        result["chromadb_available"] = False
+        result["chromadb_warning"] = "Semantic search disabled — install chromadb for full memory"
+
+    # Whisper (STT)
+    try:
+        import whisper  # noqa: F401
+        result["whisper_available"] = True
+    except ImportError:
+        result["whisper_available"] = False
+        result["whisper_warning"] = "Voice STT disabled — install openai-whisper"
+
+    # Piper (TTS)
+    try:
+        import piper  # noqa: F401
+        result["piper_available"] = True
+    except ImportError:
+        # piper might be a CLI binary, not a Python package
+        import shutil as _sh
+        result["piper_available"] = bool(_sh.which("piper"))
+        if not result["piper_available"]:
+            result["piper_warning"] = "Voice TTS disabled — install piper-tts"
+
+    # Playwright (browser)
+    try:
+        from playwright.sync_api import sync_playwright  # noqa: F401
+        result["playwright_available"] = True
+    except ImportError:
+        result["playwright_available"] = False
+        result["playwright_warning"] = "Browser tools disabled — install playwright"
+
+    # Warnings summary
+    warnings = [k.replace("_warning", "") for k in result if k.endswith("_warning")]
+    result["warnings"] = warnings
+
+    return result
+
+
 def _collect_service_health() -> dict[str, dict]:
     services: dict[str, dict] = {
         "dashd": {"status": "up", "latency_ms": 0},
@@ -442,74 +519,74 @@ def _collect_service_health() -> dict[str, dict]:
         from services.agentd.health import health as agentd_health
 
         checks["agentd"] = agentd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.clawd.health import health as clawd_health
 
         checks["clawd"] = clawd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.mcpd.health import health as mcpd_health
 
         checks["mcpd"] = mcpd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.observd.health import health as observd_health
 
         checks["observd"] = observd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.voiced.health import health as voiced_health
 
         checks["voiced"] = voiced_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.desktopd.health import health as desktopd_health
 
         checks["desktopd"] = desktopd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.memd.health import health as memd_health
 
         checks["memd"] = memd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.modeld.health import health as modeld_health
 
         checks["modeld"] = modeld_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.policyd.health import health as policyd_health
 
         checks["policyd"] = policyd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.setupd.health import health as setupd_health
 
         checks["setupd"] = setupd_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     try:
         from services.voiced.health import health as voiced_health
 
         checks["voiced"] = voiced_health
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     # PicoClaw — check if process is running via port
     try:
         import urllib.request as _ur
         _r = _ur.urlopen("http://127.0.0.1:18800/health", timeout=1)
         checks["picoclaw"] = lambda: {"status": "up"}
-    except Exception:
+    except (OSError, ConnectionRefusedError, TimeoutError):
         import shutil as _sh
         checks["picoclaw"] = lambda: {"status": "installed" if _sh.which("picoclaw") else "not_installed"}
     # OpenClaw — check if binary exists and gateway is reachable
@@ -517,7 +594,7 @@ def _collect_service_health() -> dict[str, dict]:
         import urllib.request as _ur2
         _r2 = _ur2.urlopen("http://127.0.0.1:18789/health", timeout=1)
         checks["openclaw"] = lambda: {"status": "up"}
-    except Exception:
+    except (OSError, ConnectionRefusedError, TimeoutError):
         import shutil as _sh2
         checks["openclaw"] = lambda: {"status": "installed" if _sh2.which("openclaw") else "not_installed"}
 
@@ -530,7 +607,7 @@ def _collect_service_health() -> dict[str, dict]:
                 "status": _normalize_service_status(name, data.get("status"), data),
                 "latency_ms": latency_ms,
             }
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             latency_ms = max(1, int((time.perf_counter() - started) * 1000))
             services[name] = {
                 "status": "down",
@@ -573,7 +650,7 @@ def _collect_models() -> list[dict]:
                 },
             )
         return models
-    except Exception as exc:
+    except (ImportError, ConnectionError, OSError, RuntimeError) as exc:
         log.debug("model snapshot unavailable: %s", exc)
         return []
 
@@ -592,7 +669,7 @@ def _memory_summary(workspace: str) -> dict:
         if CHROMA_OK:
             try:
                 chroma_count = _chroma.get_or_create_collection(f"ws_{workspace}").count()
-            except Exception:
+            except (OSError, AttributeError, RuntimeError):
                 chroma_count = 0
 
         return {
@@ -603,7 +680,7 @@ def _memory_summary(workspace: str) -> dict:
             "fts_count": len(entries),
             "entries": entries,
         }
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         log.debug("memory summary unavailable: %s", exc)
         return {
             "workspace": workspace,
@@ -640,7 +717,7 @@ def _list_workspaces() -> list[dict]:
                 }
             )
         return workspaces
-    except Exception as exc:
+    except (OSError, PermissionError) as exc:
         log.debug("workspace listing unavailable: %s", exc)
         return [
             {"name": DEFAULT_WORKSPACE, "has_pinned": False, "memory_count": 0, "history_count": 0}
@@ -652,7 +729,7 @@ def _setup_state():
         from services.setupd.state import SetupState
 
         return SetupState.load()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -746,7 +823,7 @@ def _approval_payloads() -> list[dict]:
         from services.policyd.service import get_engine
 
         return list(get_engine().get_pending_approvals() or [])
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
 
@@ -871,8 +948,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 task.cancel()
                 try:
                     await task
-                except asyncio.CancelledError:
-                    pass
+                except asyncio.CancelledError as e:
+                    log.debug(f"suppressed: {e}")
 
     app = FastAPI(
         title="ClawOS Dashboard API",
@@ -928,14 +1005,34 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     @app.get("/api/health")
     async def health():
         settings_obj: DashboardSettings = app.state.settings
+        service_health = _collect_service_health()
+        model_info = _collect_models()
+
+        # Deep health: Ollama + default model + disk space
+        deep = _deep_health_check()
+
+        overall = "ok"
+        if deep.get("ollama_running") is False:
+            overall = "degraded"
+        if deep.get("default_model_present") is False:
+            overall = "degraded"
+        if deep.get("disk_free_gb", 999) < 1:
+            overall = "degraded"
+
+        # Any core service down?
+        for svc_name, svc_data in service_health.items():
+            if svc_data.get("status") == "down" and svc_name in ("memd", "policyd", "modeld"):
+                overall = "degraded"
+
         return {
-            "status": "ok",
+            "status": overall,
             "auth_required": settings_obj.auth_required,
             "host": settings_obj.host,
             "port": settings_obj.port,
             "local_only": _is_loopback_host(settings_obj.host),
-            "services": _collect_service_health(),
-            "models": _collect_models(),
+            "services": service_health,
+            "models": model_info,
+            "deep": deep,
         }
 
     @app.get("/api/session")
@@ -993,7 +1090,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                     timeout=2.0,
                 )
                 return resp.json()
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             from services.agentd.service import get_manager
 
             return get_manager().list_tasks(limit)
@@ -1010,7 +1107,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                     timeout=5.0,
                 )
                 return resp.json()
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             from services.agentd.service import get_manager
 
             intent = str((body or {}).get("intent", "")).strip()
@@ -1243,8 +1340,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             usage = shutil.disk_usage("/")
             disk_pct = round(usage.used / usage.total * 100)
-        except Exception:
-            pass
+        except (OSError, PermissionError) as e:
+            log.debug(f"suppressed: {e}")
 
         # RAM usage
         ram_total_gb = 0
@@ -1254,8 +1351,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             m = psutil.virtual_memory()
             ram_total_gb = round(m.total / 1e9, 1)
             ram_used_gb = round(m.used / 1e9, 1)
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
 
         # Approvals
         approvals = _approval_payloads()
@@ -1269,14 +1366,14 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             g = brain_svc.graph()
             node_count = len(g.get("nodes", []))
             edge_count = len(g.get("links", []))
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
 
         # Jarvis briefing sources (weather text + source status)
         jarvis = _jarvis_service()
         try:
             briefing_payload, source_status = jarvis._briefing_sources()
-        except Exception:
+        except (OSError, ValueError):
             briefing_payload, source_status = {}, {}
 
         # Structured calendar events
@@ -1307,8 +1404,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                     ev_list.append((time_str, summary))
                 ev_list.sort()
                 calendar_items = [{"time": t, "title": s} for t, s in ev_list[:6]]
-        except Exception:
-            pass
+        except (OSError, ConnectionRefusedError, TimeoutError) as e:
+            log.debug(f"suppressed: {e}")
 
         # Structured weather (temp + description)
         weather_temp = None
@@ -1333,10 +1430,10 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 try:
                     from services.jarvisd.service import WEATHER_CODES
                     weather_desc = WEATHER_CODES.get(code, "settled")
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     weather_desc = "settled"
-        except Exception:
-            pass
+        except (json.JSONDecodeError, ValueError) as e:
+            log.debug(f"suppressed: {e}")
 
         return {
             "weather": {
@@ -1491,8 +1588,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from adapters.audio import elevenlabs_adapter
             elevenlabs_adapter.reset()
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
 
         # Quick test synthesis to validate key
         tested = False
@@ -1500,8 +1597,8 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             from adapters.audio.elevenlabs_adapter import speak as xi_speak
             audio = xi_speak("JARVIS online.")
             tested = bool(audio)
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
 
         if not tested:
             raise HTTPException(status_code=400, detail="ElevenLabs key saved but test synthesis failed — check your key")
@@ -1632,7 +1729,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             with _ur.urlopen(req, timeout=30) as resp:  # noqa: S310
                 result = _json.loads(resp.read().decode())
-        except Exception as exc:
+        except (json.JSONDecodeError, ValueError) as exc:
             raise HTTPException(status_code=502, detail=f"Peer unreachable: {exc}")
         record_trace(
             make_trace(
@@ -1805,7 +1902,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             from frameworks.registry import get_registry
 
             items = get_registry().list_for_tier(pid or "unknown")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             items = []
         return {"profile_id": pid, "frameworks": items}
 
@@ -1836,7 +1933,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
         try:
             changed_path = enable_launch_on_login(command) if enabled else disable_launch_on_login()
-        except Exception as exc:
+        except (OSError, RuntimeError) as exc:
             raise HTTPException(status_code=500, detail=str(exc))
 
         response = desktop_posture()
@@ -1872,7 +1969,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 }
                 for workflow in workflows
             ]
-        except Exception as exc:
+        except (ImportError, ModuleNotFoundError) as exc:
             raise HTTPException(status_code=500, detail=str(exc))
 
     @app.post("/api/workflows/{workflow_id}/run", dependencies=[Depends(require_auth)])
@@ -1893,7 +1990,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             }
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
-        except Exception as exc:
+        except (OSError, ConnectionError, TimeoutError) as exc:
             await mgr.broadcast(
                 {
                     "type": "workflow_error",
@@ -1911,7 +2008,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             page = await asyncio.get_event_loop().run_in_executor(None, _workbench_fetch, url)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        except Exception as exc:
+        except (OSError, RuntimeError, TimeoutError) as exc:
             raise HTTPException(status_code=502, detail=f"Fetch failed: {exc}")
         return page
 
@@ -1928,7 +2025,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         if url:
             try:
                 page = await asyncio.get_event_loop().run_in_executor(None, _workbench_fetch, url)
-            except Exception:
+            except (OSError, RuntimeError, TimeoutError):
                 page = None
 
         context_parts = []
@@ -1957,7 +2054,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             task = await get_manager().submit(intent, workspace_id=workspace, channel="workbench")
             session["task_id"] = task.task_id
             session["status"] = "analyzing"
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             session["status"] = "error"
 
         _WORKBENCH_SESSIONS.appendleft(session)
@@ -2001,7 +2098,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             intent = eng.build_agent_intent(session)
             task = await get_manager().submit(intent, workspace_id=workspace, channel="research")
             eng.mark_done(session, task_id=task.task_id)
-        except Exception as exc:
+        except (ImportError, ModuleNotFoundError) as exc:
             log.warning("Research agent submit failed: %s", exc)
             eng.mark_error(session, str(exc))
 
@@ -2047,7 +2144,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             intent = eng.build_agent_intent(session)
             task = await get_manager().submit(intent, workspace_id=workspace, channel="research")
             eng.mark_done(session, task_id=task.task_id)
-        except Exception as exc:
+        except (ImportError, ModuleNotFoundError) as exc:
             eng.mark_error(session, str(exc))
         return session.to_dict()
 
@@ -2114,7 +2211,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             from services.agentd.service import get_manager
             task = await get_manager().submit(intent, workspace_id=DEFAULT_WORKSPACE, channel="studio")
             return {"ok": True, "task_id": task.task_id, "program": program.to_dict()}
-        except Exception as exc:
+        except (ImportError, ModuleNotFoundError) as exc:
             raise HTTPException(status_code=500, detail=str(exc))
 
     # ── Framework Store ───────────────────────────────────────────────────────
@@ -2126,7 +2223,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             from bootstrap.hardware_probe import load_saved
             hw = load_saved()
             profile_id = hw.profile_id
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             profile_id = "x86-cpu-16gb"
         rows = list_frameworks(profile_id)
         active = get_active_framework()
@@ -2262,7 +2359,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             )
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
-        except Exception as exc:
+        except (OSError, RuntimeError, TimeoutError) as exc:
             raise HTTPException(status_code=502, detail=str(exc))
         return peer.to_dict()
 
@@ -2326,7 +2423,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             cfg = await get_mcp().connect(server_id)
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             raise HTTPException(status_code=502, detail=str(exc))
         record_trace(
             make_trace(
@@ -2397,7 +2494,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from services.braind.service import get_brain
             return get_brain().get_status()
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"node_count": 0, "edge_count": 0, "ingesting": False, "error": str(e)}
 
     @app.get("/api/brain/graph", dependencies=[Depends(require_auth)])
@@ -2406,7 +2503,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from services.braind.service import get_brain
             return get_brain().get_graph()
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"nodes": [], "links": [], "error": str(e)}
 
     @app.get("/api/brain/node/{node_id}", dependencies=[Depends(require_auth)])
@@ -2420,7 +2517,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             return node
         except HTTPException:
             raise
-        except Exception as e:
+        except (OSError, ValueError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/api/brain/context", dependencies=[Depends(require_auth)])
@@ -2431,7 +2528,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from services.braind.service import get_brain
             return get_brain().get_context(q)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"nodes": [], "context_text": "", "error": str(e)}
 
     @app.get("/api/brain/gaps", dependencies=[Depends(require_auth)])
@@ -2440,7 +2537,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from services.braind.service import get_brain
             return {"gaps": get_brain().get_gaps()}
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"gaps": [], "error": str(e)}
 
     @app.post("/api/brain/expand", dependencies=[Depends(require_auth)])
@@ -2455,7 +2552,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from services.braind.service import get_brain
             return await get_brain().expand_from_agent(text, source=source, task_id=task_id)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/api/brain/upload", dependencies=[Depends(require_auth)])
@@ -2487,7 +2584,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             return {"ok": True, "message": "Ingestion started — watch /api/brain/status for progress"}
         except HTTPException:
             raise
-        except Exception as e:
+        except (OSError, ValueError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.websocket("/ws/brain")
@@ -2506,7 +2603,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             async def send_progress(event: str, data: dict):
                 try:
                     await websocket.send_json({"event": event, **data})
-                except Exception:
+                except (OSError, ConnectionError, TimeoutError) as e:
+                    log.debug(f"unexpected: {e}")
+                    pass
                     pass
 
             brain.register_ws_callback(send_progress)
@@ -2522,18 +2621,21 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                         await websocket.send_json({"event": "pong"})
                 except asyncio.TimeoutError:
                     await websocket.send_json({"event": "heartbeat"})
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     break
 
-        except WebSocketDisconnect:
-            pass
-        except Exception:
+        except WebSocketDisconnect as e:
+            log.debug(f"suppressed: {e}")
+        except (OSError, ConnectionError, TimeoutError) as e:
+            log.debug(f"failed: {e}")
             pass
         finally:
             try:
                 from services.braind.service import get_brain
                 get_brain().unregister_ws_callback(send_progress)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
+                log.debug(f"failed: {e}")
+                pass
                 pass
 
     # ── License & Feature Gate (Phase 16) ─────────────────────────────────────
@@ -2545,7 +2647,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             from clawos_core.license import get_license_manager
             mgr = get_license_manager()
             return mgr.get_status()
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"tier": "free", "valid": False, "error": str(e)}
 
     @app.post("/api/license/activate", dependencies=[Depends(require_auth)])
@@ -2563,7 +2665,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             return result
         except HTTPException:
             raise
-        except Exception as e:
+        except (OSError, ValueError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/api/license/deactivate", dependencies=[Depends(require_auth)])
@@ -2572,7 +2674,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from clawos_core.license import get_license_manager
             return get_license_manager().deactivate()
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     # ── Proactive Ambient Intelligence (Phase 8) ─────────────────────────────
@@ -2583,7 +2685,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from clawos_core.ambient import get_suggestions
             return {"suggestions": get_suggestions()}
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.warning(f"Suggestions check failed: {e}")
             return {"suggestions": []}
 
@@ -2594,7 +2696,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             from clawos_core.ambient import dismiss_suggestion
             ok = dismiss_suggestion(suggestion_id)
             return {"ok": ok}
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/api/suggestions/refresh", dependencies=[Depends(require_auth)])
@@ -2604,7 +2706,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             from clawos_core.ambient import run_checks
             results = run_checks(force=True)
             return {"suggestions": [s.to_dict() for s in results]}
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     # ── Skill Marketplace (Phase 15) ──────────────────────────────────────────
@@ -2615,7 +2717,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from skills.marketplace.registry import search_skills
             return search_skills(query=q, page=page, limit=limit)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"results": [], "total": 0, "error": str(e)}
 
     @app.get("/api/skills/installed", dependencies=[Depends(require_auth)])
@@ -2624,7 +2726,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         try:
             from skills.marketplace.registry import get_installed_skills
             return {"skills": get_installed_skills()}
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"skills": [], "error": str(e)}
 
     @app.post("/api/skills/install", dependencies=[Depends(require_auth)])
@@ -2644,7 +2746,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             return result
         except HTTPException:
             raise
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError, RuntimeError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.delete("/api/skills/{skill_id}", dependencies=[Depends(require_auth)])
@@ -2658,7 +2760,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             return result
         except HTTPException:
             raise
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError, RuntimeError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     # ── Evolution Log (Learning Log) ─────────────────────────────────────────
@@ -2672,7 +2774,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             return {"entries": [], "total": 0}
         try:
             text = EVOLUTION_PATH.read_text(encoding="utf-8")
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return {"entries": [], "total": 0}
 
         entries = []
@@ -2723,7 +2825,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 await websocket.receive_text()
         except WebSocketDisconnect:
             mgr.disconnect(websocket)
-        except Exception:
+        except (OSError, ConnectionError, TimeoutError):
             mgr.disconnect(websocket)
 
     @app.websocket("/ws/setup")
@@ -2743,7 +2845,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 await websocket.receive_text()
         except WebSocketDisconnect:
             service._listeners.discard(websocket)
-        except Exception:
+        except (OSError, ConnectionError, TimeoutError):
             service._listeners.discard(websocket)
 
     @app.websocket("/ws/jarvis")
@@ -2758,7 +2860,9 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         async def on_session(session: dict) -> None:
             try:
                 await websocket.send_json({"type": "jarvis_session", "data": session})
-            except Exception:
+            except (OSError, ConnectionError, TimeoutError) as e:
+                log.debug(f"unexpected: {e}")
+                pass
                 pass
 
         service.add_session_listener(on_session)
@@ -2768,7 +2872,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 await websocket.receive_text()
         except WebSocketDisconnect:
             service.remove_session_listener(on_session)
-        except Exception:
+        except (OSError, ConnectionError, TimeoutError):
             service.remove_session_listener(on_session)
 
     if DASHBOARD_STATIC_DIR.exists():

@@ -46,7 +46,7 @@ def install_openclaude() -> tuple[bool, str]:
     except subprocess.CalledProcessError as exc:
         detail = exc.stderr.strip() or exc.stdout.strip() or str(exc)
         return False, f"OpenClaude install failed: {detail}"
-    except Exception as exc:
+    except (OSError, subprocess.SubprocessError) as exc:
         return False, f"OpenClaude install failed: {exc}"
 
     env_path = Path.home() / ".clawos_dev_env"
@@ -112,12 +112,12 @@ def install_picoclaw() -> tuple[bool, str]:
                     return False, "PicoClaw archive could not be extracted"
                 shutil.copyfileobj(source, target)
         destination.chmod(0o755)
-    except Exception as exc:
+    except (OSError, ConnectionRefusedError, TimeoutError) as exc:
         return False, f"PicoClaw download failed: {exc}"
     finally:
         try:
             archive_path.unlink(missing_ok=True)  # type: ignore[name-defined]
-        except Exception:
+        except (OSError, ValueError):
             pass
 
     _write_picoclaw_config()

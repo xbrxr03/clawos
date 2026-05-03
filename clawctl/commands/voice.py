@@ -35,7 +35,7 @@ def run_status():
             result = subprocess.run(probe, capture_output=True, text=True, timeout=3, check=False)
             output = f"{result.stdout}\n{result.stderr}".lower()
             mic_status = "detected" if any(token in output for token in ["microphone", "input", "card"]) else "not found"
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
             mic_status = "unknown"
     info(f"Microphone:    {mic_status}")
     print()
@@ -63,7 +63,7 @@ def run_test():
             success("TTS working")
         else:
             error(f"TTS error: {result.stderr[:100]}")
-    except Exception as exc:
+    except (OSError, subprocess.SubprocessError) as exc:
         error(f"TTS test failed: {exc}")
     print()
 

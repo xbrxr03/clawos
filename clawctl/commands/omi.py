@@ -17,7 +17,7 @@ def run_status():
     try:
         from services.omid.service import get_service
         stats = get_service().get_stats()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"OMI service not available: {e}")
         return
 
@@ -47,7 +47,7 @@ def run_history(limit: int = 20):
     try:
         from services.omid.service import get_service
         conversations = get_service().list_conversations(limit)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"OMI service not available: {e}")
         return
 
@@ -74,7 +74,7 @@ def run_show(conv_id: str):
     try:
         from services.omid.service import get_service
         conv = get_service().get_conversation(conv_id)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"OMI service not available: {e}")
         return
 
@@ -91,7 +91,8 @@ def run_show(conv_id: str):
                 for m in matches:
                     print(f"  {m['id']}")
                 return
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
+            pass
             pass
 
     if not conv:
@@ -123,7 +124,7 @@ def run_setup():
     try:
         from clawos_core.config.loader import get as get_config
         base_url = get_config("omi.webhook_base_url", "http://localhost:7070")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         base_url = "http://localhost:7070"
 
     print()

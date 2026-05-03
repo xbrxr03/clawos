@@ -18,7 +18,7 @@ def run_activate(key: str):
         from clawos_core.license import get_license_manager
         mgr = get_license_manager()
         result = mgr.activate(key)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Activation error: {e}", file=sys.stderr)
         return
 
@@ -44,7 +44,7 @@ def run_status():
         from clawos_core.license import get_license_manager, FREE_FEATURES, PREMIUM_FEATURES
         mgr = get_license_manager()
         status = mgr.get_status()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Status error: {e}", file=sys.stderr)
         return
 
@@ -99,7 +99,7 @@ def run_deactivate():
         from clawos_core.license import get_license_manager
         mgr = get_license_manager()
         result = mgr.deactivate()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Error: {e}", file=sys.stderr)
         return
 

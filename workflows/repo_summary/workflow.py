@@ -56,7 +56,8 @@ def _project_description(path: Path) -> str:
             description = str(payload.get("description", "")).strip()
             if description:
                 return description
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
     readme = _read_readme(path)
     if readme:
@@ -118,7 +119,8 @@ def _entry_point(path: Path) -> str:
                 return f"npm run start ({scripts['start']})"
             if "dev" in scripts:
                 return f"npm run dev ({scripts['dev']})"
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
     return "See README or top-level scripts for the preferred entry path."
 
@@ -168,5 +170,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "structure_entries": len(structure),
             },
         )
-    except Exception as exc:
+    except (OSError,) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

@@ -45,5 +45,5 @@ async def run(args: dict, agent) -> WorkflowResult:
     try:
         output = await agent.chat(prompt)
         return WorkflowResult(status=WorkflowStatus.OK, output=output, metadata={"file": str(path), "output": str(out)})
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

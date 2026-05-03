@@ -12,7 +12,7 @@ log = logging.getLogger("agent.tools.workflows")
 async def list_workflows(args: dict, ctx: dict) -> str:
     try:
         from workflows.engine import get_engine
-    except Exception as e:
+    except ImportError as e:
         return f"[ERROR] workflows engine unavailable: {e}"
     try:
         engine = get_engine()
@@ -34,7 +34,7 @@ async def list_workflows(args: dict, ctx: dict) -> str:
                 p.name for p in wf_root.iterdir()
                 if p.is_dir() and not p.name.startswith("_") and not p.name.startswith(".")
             )
-    except Exception as e:
+    except (AttributeError, TypeError, OSError) as e:
         return f"[ERROR] {e}"
     if not names:
         return "(no workflows registered)"
@@ -51,7 +51,7 @@ async def run_workflow(args: dict, ctx: dict) -> str:
 
     try:
         from workflows.engine import get_engine
-    except Exception as e:
+    except ImportError as e:
         return f"[ERROR] workflows engine unavailable: {e}"
 
     try:
@@ -74,5 +74,5 @@ async def run_workflow(args: dict, ctx: dict) -> str:
         return "[ERROR] workflow engine has no run/execute/invoke method"
     except KeyError:
         return f"[ERROR] unknown workflow: {name}"
-    except Exception as e:
+    except Exception as e:  # workflow execution may raise arbitrary errors
         return f"[ERROR] {name}: {e}"

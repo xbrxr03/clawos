@@ -35,7 +35,7 @@ def place_all(keys: dict) -> dict:
                 loc = _place_one(key_id, str(value).strip(), placement)
                 if loc:
                     written.append(loc)
-            except Exception:
+            except (OSError, RuntimeError, AttributeError):
                 pass  # non-fatal
         results[key_id] = written
 
@@ -83,7 +83,7 @@ def _place_json(value: str, filepath: str, key_path: list) -> str:
         return ""
     try:
         data = json.loads(path.read_text())
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         return ""
     obj = data
     for part in key_path[:-1]:
@@ -101,7 +101,7 @@ def _place_secretd(secret_key: str, value: str) -> str:
         store = get_store()
         store.set(secret_key, value)
         return f"secretd:{secret_key}"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return ""
 
 
@@ -121,6 +121,6 @@ def get_existing_keys() -> dict:
                     if val:
                         result[entry["id"]] = val
                         break
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return result

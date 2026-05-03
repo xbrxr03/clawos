@@ -225,7 +225,7 @@ class DurableWorkflowEngine:
             result = await self._execute_workflow(run_id, wf_def, args, workspace)
             self._complete_run(run_id, "completed", result=result)
             return {"status": "completed", "result": result, "run_id": run_id}
-        except Exception as e:
+        except (RuntimeError, OSError, TypeError) as e:
             error_msg = str(e)
             log.error(f"Workflow {workflow_id} failed: {error_msg}")
             self._complete_run(run_id, "failed", error=error_msg)
@@ -303,7 +303,7 @@ class DurableWorkflowEngine:
             result = await self._execute_workflow(run_id, wf_def, args, workspace)
             self._complete_run(run_id, "completed", result=result)
             return {"status": "completed", "result": result, "run_id": run_id, "resumed": True}
-        except Exception as e:
+        except (RuntimeError, OSError, TypeError) as e:
             error_msg = str(e)
             self._complete_run(run_id, "failed", error=error_msg)
             return {"status": "failed", "error": error_msg, "run_id": run_id}
@@ -355,7 +355,7 @@ class DurableWorkflowEngine:
                     self._update_step_status(run_id, step.id, "retrying", retry_count=retry_count)
                     await asyncio.sleep(backoff)
             
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 last_error = str(e)
                 retry_count += 1
                 

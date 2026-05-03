@@ -18,8 +18,8 @@ _PLAYWRIGHT_OK = False
 try:
     from playwright.async_api import async_playwright, Browser, Page, Playwright
     _PLAYWRIGHT_OK = True
-except ImportError:
-    pass
+except ImportError as e:
+    log.debug(f"suppressed: {e}")
 
 
 def is_available() -> bool:
@@ -89,7 +89,7 @@ class PlaywrightAdapter:
                 "timeout_ms": get("browser.timeout_ms", 30000),
                 "url_allowlist": get("browser.url_allowlist", []),
             }
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return {"headless": True, "timeout_ms": 30000, "url_allowlist": []}
 
     async def open(self, url: str) -> str:
@@ -107,7 +107,7 @@ class PlaywrightAdapter:
             status = response.status if response else "?"
             log.debug(f"browser.open {url} → {status} '{title}'")
             return f"[OK] Opened: {title} (status {status}) | URL: {self._current_url}"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             log.warning(f"browser.open failed: {e}")
             return f"[BROWSER ERROR] {e}"
 
@@ -129,7 +129,7 @@ class PlaywrightAdapter:
             if len(text) > 6000:
                 text = text[:6000] + f"\n...[truncated, {len(text)} total chars]"
             return text or "[BROWSER] Page appears empty"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return f"[BROWSER ERROR] read failed: {e}"
 
     async def click(self, selector: str) -> str:
@@ -141,7 +141,7 @@ class PlaywrightAdapter:
             await self._page.wait_for_load_state("domcontentloaded", timeout=5000)
             self._current_url = self._page.url
             return f"[OK] Clicked '{selector}' | Now at: {self._current_url}"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return f"[BROWSER ERROR] click('{selector}'): {e}"
 
     async def type_text(self, selector_and_text: str) -> str:
@@ -158,7 +158,7 @@ class PlaywrightAdapter:
         try:
             await self._page.fill(selector.strip(), text.strip())
             return f"[OK] Typed into '{selector.strip()}'"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return f"[BROWSER ERROR] type('{selector}'): {e}"
 
     async def screenshot(self, filename: str = "") -> str:
@@ -176,7 +176,7 @@ class PlaywrightAdapter:
             path = self._screenshot_dir / safe_name
             await self._page.screenshot(path=str(path), full_page=False)
             return f"[OK] Screenshot saved: {path}"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return f"[BROWSER ERROR] screenshot: {e}"
 
     async def scroll(self, direction: str = "down") -> str:
@@ -193,7 +193,7 @@ class PlaywrightAdapter:
         try:
             await self._page.evaluate(script)
             return f"[OK] Scrolled {direction}"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return f"[BROWSER ERROR] scroll: {e}"
 
     async def wait(self, selector_or_ms: str = "1000") -> str:
@@ -209,7 +209,7 @@ class PlaywrightAdapter:
             try:
                 await self._page.wait_for_selector(selector_or_ms, timeout=self.timeout_ms)
                 return f"[OK] Selector appeared: {selector_or_ms}"
-            except Exception as e:
+            except (OSError, RuntimeError, TimeoutError) as e:
                 return f"[BROWSER ERROR] wait for '{selector_or_ms}': {e}"
 
     async def close(self) -> str:
@@ -219,7 +219,7 @@ class PlaywrightAdapter:
                 await self._page.close()
                 self._page = None
             return "[OK] Browser page closed"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return f"[BROWSER ERROR] close: {e}"
 
     async def shutdown(self):
@@ -227,18 +227,21 @@ class PlaywrightAdapter:
         try:
             if self._page and not self._page.is_closed():
                 await self._page.close()
-        except Exception:
+        except (OSError, RuntimeError, TimeoutError) as e:
+            log.debug(f"unexpected: {e}")
             pass
         try:
             if self._browser:
                 await self._browser.close()
                 self._browser = None
-        except Exception:
+        except (OSError, RuntimeError, TimeoutError) as e:
+            log.debug(f"unexpected: {e}")
             pass
         try:
             if self._playwright:
                 await self._playwright.stop()
                 self._playwright = None
-        except Exception:
+        except (OSError, RuntimeError, TimeoutError) as e:
+            log.debug(f"unexpected: {e}")
             pass
         log.info(f"Browser adapter shut down for workspace {self.workspace_id}")

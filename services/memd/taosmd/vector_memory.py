@@ -56,7 +56,7 @@ class VectorMemory:
                     ids=[memory_id],
                     metadatas=[meta],
                 )
-            except Exception as exc:
+            except (OSError, AttributeError, RuntimeError) as exc:
                 log.debug("chroma add error: %s", exc)
 
         return memory_id
@@ -83,7 +83,7 @@ class VectorMemory:
                         semantic_results.append(
                             {"id": mid, "text": doc, "rank": i, "source": "semantic"}
                         )
-            except Exception as exc:
+            except (OSError, AttributeError, RuntimeError) as exc:
                 log.debug("chroma search: %s", exc)
 
         # Keyword FTS5 search
@@ -108,7 +108,9 @@ class VectorMemory:
         if self._chroma_col is not None:
             try:
                 self._chroma_col.delete(ids=[memory_id])
-            except Exception:
+            except (OSError, AttributeError, RuntimeError) as e:
+                log.debug(f"unexpected: {e}")
+                pass
                 pass
 
     # ── Internals ─────────────────────────────────────────────────────────────
@@ -120,7 +122,7 @@ class VectorMemory:
             self._chroma_col = self._chroma.get_or_create_collection(
                 "vm_memories", metadata={"hnsw:space": "cosine"}
             )
-        except Exception as exc:
+        except (ImportError, ModuleNotFoundError) as exc:
             log.debug("ChromaDB unavailable: %s — using FTS5 only", exc)
             self._chroma = None
             self._chroma_col = None
@@ -166,7 +168,7 @@ class VectorMemory:
                 (memory_id, text),
             )
             db.commit()
-        except Exception as exc:
+        except (TypeError, ValueError) as exc:
             log.debug("fts_add: %s", exc)
         finally:
             db.close()
@@ -182,7 +184,7 @@ class VectorMemory:
                 "WHERE vm_fts MATCH ? ORDER BY rank LIMIT ?",
                 (clean_q, n),
             ).fetchall()
-        except Exception as exc:
+        except (sqlite3.Error, OSError) as exc:
             log.debug("fts_search: %s", exc)
             return []
         finally:

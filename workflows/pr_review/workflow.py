@@ -128,5 +128,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "verdict": verdict,
             },
         )
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

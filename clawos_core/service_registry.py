@@ -327,7 +327,7 @@ class ServiceRegistry:
         for watcher in self._watchers:
             try:
                 watcher(name, status)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.error(f"Watcher failed: {e}")
     
     def shutdown(self):

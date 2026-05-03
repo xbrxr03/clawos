@@ -75,7 +75,7 @@ def _check_downloads_clutter() -> Optional[AttentionEvent]:
                 priority=40,
                 expires_at=time.time() + 86400,  # 24h
             )
-    except Exception as e:
+    except (OSError, PermissionError) as e:
         log.debug(f"Downloads check failed: {e}")
     return None
 
@@ -97,7 +97,7 @@ def _check_disk_usage() -> Optional[AttentionEvent]:
                 priority=70,
                 expires_at=time.time() + 3600,  # 1h
             )
-    except Exception as e:
+    except (OSError, PermissionError) as e:
         log.debug(f"Disk check failed: {e}")
     return None
 
@@ -117,7 +117,7 @@ def _check_pending_approvals() -> Optional[AttentionEvent]:
                 try:
                     dt = datetime.datetime.fromisoformat(created.replace("Z", "+00:00"))
                     created = dt.timestamp()
-                except Exception:
+                except (OSError, RuntimeError, AttributeError):
                     continue
             if created < cutoff:
                 old_approvals.append(a)
@@ -134,7 +134,7 @@ def _check_pending_approvals() -> Optional[AttentionEvent]:
                 priority=90,
                 expires_at=0,  # Never expire until dismissed
             )
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.debug(f"Approvals check failed: {e}")
     return None
 
@@ -162,7 +162,7 @@ def _check_morning_briefing() -> Optional[AttentionEvent]:
                 priority=60,
                 expires_at=time.time() + 7200,  # Expires after 2h
             )
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         log.debug(f"Briefing check failed: {e}")
     return None
 
@@ -187,7 +187,7 @@ def _check_workflow_nudge() -> Optional[AttentionEvent]:
                 priority=20,
                 expires_at=time.time() + 86400,
             )
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.debug(f"Workflow nudge check failed: {e}")
     return None
 
@@ -222,7 +222,7 @@ def _check_brain_connections() -> Optional[AttentionEvent]:
                 priority=55,
                 expires_at=time.time() + 86400,
             )
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         log.debug(f"Brain connections check failed: {e}")
     return None
 
@@ -263,7 +263,7 @@ def run_checks(force: bool = False) -> list[AttentionEvent]:
                 # Skip if expired
                 if result.expires_at == 0 or result.expires_at > now:
                     suggestions.append(result)
-        except Exception as e:
+        except (ValueError, TypeError, OSError) as e:
             log.warning(f"Ambient check {check.__name__} failed: {e}")
 
     # Sort by priority descending

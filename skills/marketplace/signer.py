@@ -40,7 +40,7 @@ def sign_skill(skill_dir: Path, private_key_hex: Optional[str] = None) -> dict:
     try:
         key_bytes = bytes.fromhex(key_hex.strip())
         private_key = Ed25519PrivateKey.from_private_bytes(key_bytes)
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         return {"ok": False, "signature": "", "skill_hash": "",
                 "error": f"Invalid private key: {e}"}
 
@@ -65,7 +65,7 @@ def sign_skill(skill_dir: Path, private_key_hex: Optional[str] = None) -> dict:
             "skill_hash": skill_hash,
             "error": "",
         }
-    except Exception as e:
+    except (OSError, ValueError, AttributeError) as e:
         return {"ok": False, "signature": "", "skill_hash": "",
                 "error": f"Signing failed: {e}"}
 

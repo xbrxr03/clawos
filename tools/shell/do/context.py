@@ -19,7 +19,7 @@ def _git_branch(cwd: Path) -> Optional[str]:
         )
         branch = r.stdout.strip()
         return branch if branch and branch != "HEAD" else None
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         return None
 
 
@@ -33,7 +33,7 @@ def _git_status_short(cwd: Path) -> Optional[str]:
         if not lines:
             return "clean"
         return f"{len(lines)} changed file(s)"
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         return None
 
 
@@ -45,7 +45,7 @@ def _recent_files(cwd: Path, limit: int = 5) -> list[str]:
             reverse=True,
         )
         return [e.name for e in entries[:limit]]
-    except Exception:
+    except (OSError, PermissionError):
         return []
 
 
@@ -69,7 +69,7 @@ def _bash_history(limit: int = 5) -> list[str]:
             if len(result) >= limit:
                 break
         return list(reversed(result))
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         return []
 
 
@@ -83,7 +83,7 @@ def _pinned_facts(workspace: str = "jarvis_default") -> str:
             # Strip comment lines, return first 300 chars
             lines = [l for l in content.splitlines() if not l.startswith("#")]
             return " | ".join(l.strip() for l in lines if l.strip())[:300]
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         pass
     return ""
 

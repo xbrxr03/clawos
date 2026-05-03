@@ -15,6 +15,6 @@ def health() -> dict:
             "active_research_jobs": active_jobs,
             "engine_ready": True,
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"Researchd health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

@@ -37,7 +37,7 @@ async def read_file(args: dict, ctx: dict) -> str:
         return f"[ERROR] not a file: {p}"
     try:
         text = p.read_text(encoding="utf-8", errors="replace")
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         return f"[ERROR] {e}"
     if len(text) > 8000:
         text = text[:8000] + f"\n…[truncated; {len(text)} total chars]"
@@ -52,7 +52,7 @@ async def write_file(args: dict, ctx: dict) -> str:
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content, encoding="utf-8")
-    except Exception as e:
+    except (OSError, PermissionError) as e:
         return f"[ERROR] {e}"
     return f"[OK] wrote {len(content)} chars to {p}"
 
@@ -67,7 +67,7 @@ async def list_files(args: dict, ctx: dict) -> str:
         return f"[ERROR] not a directory: {p}"
     try:
         entries = sorted(p.iterdir())[:50]
-    except Exception as e:
+    except (OSError, PermissionError) as e:
         return f"[ERROR] {e}"
     lines = [
         ("/" if e.is_dir() else "") + e.name + (f" ({e.stat().st_size}B)" if e.is_file() else "")

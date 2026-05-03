@@ -71,12 +71,12 @@ class CapabilityScanner:
         # File type scan
         try:
             p.file_types = self._scan_file_types()
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             pass
         # Running services
         try:
             p.running_services = self._check_ports()
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             pass
         # Interesting dirs
         p.has_downloads = (self._home / "Downloads").is_dir()
@@ -101,7 +101,7 @@ class CapabilityScanner:
             eng = get_engine()
             eng.load_registry()
             workflows = eng.list_workflows()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return []
 
         suggestions = []
@@ -166,7 +166,7 @@ class CapabilityScanner:
             try:
                 with socket.create_connection(("127.0.0.1", port), timeout=0.2):
                     active.append(name)
-            except Exception:
+            except (OSError, RuntimeError, AttributeError):
                 pass
         return active
 

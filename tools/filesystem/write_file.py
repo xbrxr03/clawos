@@ -11,7 +11,7 @@ def run(target: str, content: str, workspace_root: Path, append: bool = False) -
         path.write_text(content) if not append else path.open("a").write(content)
         action = "Appended to" if append else "Written"
         return f"[OK] {action} {target} ({len(content)} chars)"
-    except Exception as e:
+    except (OSError, PermissionError) as e:
         return f"[ERROR] Could not write {target}: {e}"
 
 

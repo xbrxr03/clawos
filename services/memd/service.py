@@ -47,7 +47,7 @@ try:
     import chromadb
     _chroma = chromadb.PersistentClient(path=str(MEMORY_DIR / "chroma"))
     CHROMA_OK = True
-except Exception as e:
+except (ImportError, ModuleNotFoundError) as e:
     log.warning(f"ChromaDB unavailable: {e}")
     CHROMA_OK = False
     _chroma = None
@@ -209,7 +209,7 @@ class MemoryService:
             vector = _get_vector()
             if vector:
                 vector.add(text, memory_id=memory_id, metadata={"workspace": workspace_id, "source": source})
-        except Exception as _e:
+        except (OSError, sqlite3.Error, AttributeError) as _e:
             log.debug("taosmd write error (non-fatal): %s", _e)
 
         return memory_id
@@ -249,7 +249,7 @@ class MemoryService:
                             kg_text = tkg.format_for_context(entity)
                             if kg_text:
                                 results.append(kg_text)
-            except Exception as _e:
+            except (OSError, sqlite3.Error, AttributeError) as _e:
                 log.debug("taosmd intent recall error (non-fatal): %s", _e)
 
         # Layer 1: PINNED.md
@@ -275,7 +275,7 @@ class MemoryService:
                     for doc, mid in zip(cr["documents"][0], cr["ids"][0]):
                         results.append(doc)
                         chroma_ids.add(mid)
-            except Exception as e:
+            except (OSError, AttributeError, RuntimeError) as e:
                 log.debug(f"ChromaDB recall: {e}")
 
         # Layer 4: SQLite FTS5
@@ -294,7 +294,7 @@ class MemoryService:
                     if mid not in chroma_ids:
                         results.append(text)
                         chroma_ids.add(mid)
-        except Exception as e:
+        except (sqlite3.Error, OSError) as e:
             log.debug(f"FTS5 recall: {e}")
         finally:
             if db is not None:
@@ -331,7 +331,7 @@ class MemoryService:
                        (memory_id,))
             db.execute("DELETE FROM memories WHERE memory_id=?", (memory_id,))
             db.commit()
-        except Exception as e:
+        except (sqlite3.Error, OSError) as e:
             log.warning(f"forget() failed: {e}")
         finally:
             if db is not None:
@@ -340,7 +340,9 @@ class MemoryService:
             try:
                 col = _chroma.get_collection(f"ws_{workspace_id}")
                 col.delete(ids=[memory_id])
-            except Exception:
+            except (OSError, AttributeError, RuntimeError) as e:
+                log.debug(f"unexpected: {e}")
+                pass
                 pass
 
     def get_all(self, workspace_id: str, limit: int = 100) -> list[dict]:
@@ -355,7 +357,7 @@ class MemoryService:
             ).fetchall()
             return [{"memory_id": r[0], "text": r[1], "source": r[2], "created_at": r[3]}
                     for r in rows]
-        except Exception:
+        except (sqlite3.Error, OSError):
             return []
         finally:
             if db is not None:
@@ -383,8 +385,8 @@ class MemoryService:
                 overlap = len(words & ew) / max(len(words), len(ew))
                 if overlap >= threshold:
                     return {"memory_id": mid, "text": existing}
-        except Exception:
-            pass
+        except (sqlite3.Error, OSError) as e:
+            log.debug(f"suppressed: {e}")
         finally:
             if db is not None:
                 db.close()
@@ -400,7 +402,7 @@ class MemoryService:
             db.execute("UPDATE memories_meta SET text=?, lifecycle='ACTIVE' WHERE memory_id=?",
                        (new_text, memory_id))
             db.commit()
-        except Exception as e:
+        except (sqlite3.Error, OSError) as e:
             log.warning(f"FTS update failed: {e}")
         finally:
             if db is not None:
@@ -414,7 +416,7 @@ class MemoryService:
             )
             col.add(documents=[text], ids=[memory_id],
                     metadatas=[{"source": source, "workspace": workspace_id}])
-        except Exception as e:
+        except (OSError, AttributeError, RuntimeError) as e:
             log.debug(f"ChromaDB async write: {e}")
 
     # ── Session continuity (AIPass pattern) ───────────────────────────────────
@@ -438,7 +440,7 @@ class MemoryService:
             return {}
         try:
             return json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             return {}
 
     def push_pending(self, workspace_id: str, task: str) -> None:
@@ -452,7 +454,7 @@ class MemoryService:
         if q_path.exists():
             try:
                 queue = json.loads(q_path.read_text(encoding="utf-8"))
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 queue = []
         if task not in queue:
             queue.append(task)
@@ -467,7 +469,7 @@ class MemoryService:
             return []
         try:
             return json.loads(q_path.read_text(encoding="utf-8"))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             return []
 
     def clear_pending_queue(self, workspace_id: str) -> None:
@@ -522,7 +524,7 @@ async def start_ragd_a2a_server():
                     text += "\n\n" + "\n".join(
                         f"[{c['file']} p.{c.get('page', '?')}]" for c in citations
                     )
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError) as e:
                 text = f"[RAGd error: {e}]"
             return {
                 "id": body.get("id", ""),
@@ -533,7 +535,7 @@ async def start_ragd_a2a_server():
         config = uvicorn.Config(app, host="127.0.0.1",
                                 port=A2A_PORT_RAGD, log_level="warning")
         await uvicorn.Server(config).serve()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.warning(f"RAGd A2A server not started: {e}")
 
 
@@ -620,7 +622,7 @@ class LearnedLayer:
             max_kb = get("memory.learned_md_max_kb", LEARNED_MAX_KB)
             self._prune_if_over(p, max_kb)
             log.debug(f"LEARNED.md updated for workspace: {workspace_id}")
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.debug(f"ACE extract failed (non-fatal): {e}")
 
 
@@ -746,5 +748,5 @@ def query_graph(entity_name: str, workspace_id: str, depth: int = 1) -> str:
         for rel, related, source in rows:
             lines.append(f"  - {rel} → {related}  (from: {source[:60]})")
         return "\n".join(lines)
-    except Exception:
+    except (sqlite3.Error, OSError):
         return ""

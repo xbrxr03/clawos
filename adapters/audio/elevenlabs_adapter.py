@@ -50,8 +50,8 @@ def _get_api_key() -> str:
     try:
         from services.secretd.service import get_secret
         key = get_secret("elevenlabs_api_key") or ""
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     return key
 
 
@@ -60,7 +60,7 @@ def _get_voice_id() -> str:
     try:
         from clawos_core.config import get
         return get("voice.elevenlabs_voice_id", DEFAULT_VOICE_ID)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return DEFAULT_VOICE_ID
 
 
@@ -126,7 +126,7 @@ def speak(text: str, voice_id: str = "") -> bytes:
             else:
                 log.warning(f"ElevenLabs HTTP {response.status_code}: {response.text[:100]}")
                 return b""
-    except Exception as e:
+    except (httpx.HTTPError, OSError, ConnectionError) as e:
         log.warning(f"ElevenLabs speak failed: {e} — falling back to Piper")
         return b""
 

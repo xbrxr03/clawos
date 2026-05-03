@@ -25,6 +25,6 @@ def run():
             rows.append((wid, f"{today:,}", f"{week:,}", f"{pct}%{over}"))
         table(rows, headers=("workspace", "tokens today", "tokens this week", "budget %"))
         print(f"\n  Daily limit: {DEFAULT_DAILY_TOKEN_BUDGET:,} tokens per workspace\n")
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         error(f"metricd unavailable: {e}")
     print()

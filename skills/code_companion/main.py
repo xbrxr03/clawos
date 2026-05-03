@@ -123,7 +123,7 @@ class LSPClient:
             log.info(f"Started {self.language} LSP server")
             return True
             
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError) as e:
             log.error(f"Failed to start LSP server: {e}")
             return False
     
@@ -230,7 +230,7 @@ class TreeSitterParser:
             
         except ImportError as e:
             log.warning(f"Tree-sitter not available for {self.language}: {e}")
-        except Exception as e:
+        except (ValueError, OSError, AttributeError) as e:
             log.error(f"Failed to initialize parser: {e}")
     
     def parse_file(self, file_path: Path) -> List[CodeSymbol]:
@@ -251,7 +251,7 @@ class TreeSitterParser:
             
             return symbols
             
-        except Exception as e:
+        except (OSError, UnicodeDecodeError) as e:
             log.error(f"Failed to parse {file_path}: {e}")
             return []
     
@@ -532,7 +532,7 @@ class CodeCompanion:
                     if progress_callback:
                         progress_callback(indexed, total, str(file_path))
                     
-                except Exception as e:
+                except (OSError, UnicodeDecodeError) as e:
                     log.warning(f"Failed to index {file_path}: {e}")
         
         log.info(f"Indexed {indexed}/{total} files")

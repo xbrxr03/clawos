@@ -21,7 +21,7 @@ def _run(argv: list[str]) -> str:
         return r.stdout.strip() or r.stderr.strip()
     except FileNotFoundError:
         return "(command unavailable)"
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         return f"(error: {e})"
 
 
@@ -55,5 +55,5 @@ async def run(args: dict, agent) -> WorkflowResult:
         output = await agent.chat(prompt)
         return WorkflowResult(status=WorkflowStatus.OK, output=output,
                               metadata={"uptime": uptime_out})
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

@@ -43,7 +43,7 @@ async def _run(cmd: list[str], timeout: float = 8.0) -> tuple[int, str, str]:
             return 124, "", f"timed out after {timeout}s"
         except FileNotFoundError:
             return 127, "", f"not found: {cmd[0]}"
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             return 1, "", str(e)
     return await loop.run_in_executor(None, _sync)
 
@@ -166,7 +166,7 @@ async def open_app(args: dict, ctx: dict) -> str:
                         start_new_session=True,
                     )
                     return f"opened {c}"
-                except Exception as e:
+                except (OSError, subprocess.SubprocessError) as e:
                     return f"[ERROR] launch {c}: {e}"
         # Last resort: gtk-launch with .desktop file
         if _which("gtk-launch"):

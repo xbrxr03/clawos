@@ -19,6 +19,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional
+import subprocess
 
 log = logging.getLogger("skill_verifier")
 
@@ -46,7 +47,7 @@ def _get_public_key():
         log.warning("cryptography library not installed — Ed25519 verification disabled. "
                     "pip install cryptography")
         return None
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError, RuntimeError) as e:
         log.error(f"Failed to load ClawOS public key: {e}")
         return None
 
@@ -76,7 +77,7 @@ def verify_signature(skill_dir: Path, signature_b64: str) -> tuple[bool, str]:
 
     try:
         sig_bytes = base64.b64decode(signature_b64)
-    except Exception:
+    except (OSError, ValueError, AttributeError):
         return False, "invalid signature encoding (expected base64)"
 
     skill_hash = compute_skill_hash(skill_dir)
@@ -86,7 +87,7 @@ def verify_signature(skill_dir: Path, signature_b64: str) -> tuple[bool, str]:
         pub_key.verify(sig_bytes, message)
         log.info(f"Signature valid for {skill_dir.name}")
         return True, "valid ClawOS signature"
-    except Exception:
+    except (OSError, ValueError, AttributeError):
         return False, "signature verification failed — skill may have been tampered with"
 
 
@@ -102,7 +103,7 @@ def verify_skill_yaml(skill_dir: Path) -> tuple[bool, str, dict]:
     try:
         import yaml
         data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         return False, f"skill.yaml parse error: {e}", {}
 
     required_fields = ["name", "version", "author", "description", "entry"]

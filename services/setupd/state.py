@@ -88,7 +88,8 @@ class SetupState:
             try:
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 return cls(**{k: v for k, v in raw.items() if k in cls.__dataclass_fields__})
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
+                pass
                 pass
         return cls.from_machine()
 
@@ -158,5 +159,5 @@ class SetupState:
             state.policy_mode = legacy.policy_mode or state.policy_mode
             state.completion_marker = legacy.completed
             return state
-        except Exception:
+        except (ImportError, ConnectionError, OSError, RuntimeError):
             return cls.from_machine()

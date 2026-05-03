@@ -136,7 +136,7 @@ class ConnectionPool:
                 f"Database error: {e}",
                 context=ErrorContext(service="database", operation="acquire"),
             ) from e
-        except Exception as e:
+        except (sqlite3.Error, OSError) as e:
             if self._circuit_breaker:
                 self._circuit_breaker.record_failure(e)
             raise

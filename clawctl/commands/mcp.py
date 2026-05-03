@@ -61,7 +61,7 @@ def load_config():
     try:
         with open(CONFIG_PATH) as f:
             return json.load(f)
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         click.echo(f"Error loading config: {e}")
         return {"servers": {}, "settings": {"auto_discover": True}}
 
@@ -277,7 +277,7 @@ def mcp_test(name):
             req = urllib.request.Request(url, method="HEAD")
             with urllib.request.urlopen(req, timeout=5) as resp:
                 click.echo(f"  ✓ HTTP {resp.status}")
-        except Exception as e:
+        except (OSError, ConnectionRefusedError, TimeoutError) as e:
             click.echo(f"  ✗ Connection failed: {e}")
 
 

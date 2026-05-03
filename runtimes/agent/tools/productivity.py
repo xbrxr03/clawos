@@ -96,8 +96,8 @@ def _parse_when(text: str) -> datetime:
         try:
             base = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
             if base < now: base += timedelta(days=1)
-        except ValueError:
-            pass
+        except ValueError as e:
+            log.debug(f"suppressed: {e}")
 
     if base <= now:
         base = now + timedelta(hours=1)
@@ -126,7 +126,7 @@ async def add_reminder(args: dict, ctx: dict) -> str:
         db.close()
     try:
         await loop.run_in_executor(None, _save)
-    except Exception as e:
+    except (sqlite3.Error, OSError) as e:
         return f"[ERROR] {e}"
     return f"[OK] reminder set: \"{task}\" at {due.strftime('%a %b %d, %I:%M %p')} (id {rid})"
 
@@ -147,7 +147,7 @@ async def list_reminders(args: dict, ctx: dict) -> str:
         return rows
     try:
         rows = await loop.run_in_executor(None, _read)
-    except Exception as e:
+    except (sqlite3.Error, OSError) as e:
         return f"[ERROR] {e}"
 
     if not rows:
@@ -157,7 +157,7 @@ async def list_reminders(args: dict, ctx: dict) -> str:
         try:
             dt = datetime.fromisoformat(due_at)
             when_str = dt.strftime("%a %b %d, %I:%M %p")
-        except Exception:
+        except (ValueError, TypeError):
             when_str = due_at
         suffix = f" (repeats {repeat})" if repeat and repeat != "none" else ""
         lines.append(f"- [{rid}] {when_str} — {task}{suffix}")
@@ -178,7 +178,7 @@ async def remove_reminder(args: dict, ctx: dict) -> str:
         return deleted
     try:
         n = await loop.run_in_executor(None, _del)
-    except Exception as e:
+    except (sqlite3.Error, OSError) as e:
         return f"[ERROR] {e}"
     return f"[OK] removed reminder {rid}" if n else f"[ERROR] no reminder with id {rid}"
 
@@ -212,7 +212,7 @@ async def get_weather(args: dict, ctx: dict) -> str:
             r = await c.get(url, headers={"User-Agent": "curl/8.0"})
             r.raise_for_status()
             text = r.text.strip()
-    except Exception as e:
+    except (httpx.HTTPError, OSError, ConnectionError) as e:
         log.debug(f"weather fetch failed: {e}")
         return "[OFFLINE] weather unavailable (no internet)"
     _WEATHER_CACHE[key] = (now, text)
@@ -233,7 +233,8 @@ def _parse_ics(path: Path) -> list[dict]:
     """Minimal ICS parser — enough for VEVENT summaries + start times."""
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
-    except Exception:
+    except (OSError, UnicodeDecodeError):
+        log.debug(f"failed to read ICS: {path}")
         return []
     events: list[dict] = []
     cur: dict | None = None
@@ -322,7 +323,7 @@ async def _fetch_one_feed(client: httpx.AsyncClient, url: str, limit: int) -> li
         r = await client.get(url, timeout=4.0)
         r.raise_for_status()
         text = r.text
-    except Exception:
+    except (httpx.HTTPError, OSError, ConnectionError):
         return []
     # Extremely lightweight title extraction — works for RSS 2.0 + Atom
     titles = re.findall(r"<title[^>]*>(.*?)</title>", text, re.S | re.I)
@@ -347,7 +348,7 @@ async def get_news(args: dict, ctx: dict) -> str:
     try:
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(*[_fetch_one_feed(client, u, limit) for u in feeds])
-    except Exception as e:
+    except (httpx.HTTPError, OSError, ConnectionError) as e:
         return f"[OFFLINE] news unavailable: {e}"
     headlines: list[str] = []
     for h in results:

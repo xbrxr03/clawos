@@ -37,7 +37,7 @@ def is_tier_a() -> bool:
         from bootstrap.hardware_probe import load_saved
         hw = load_saved()
         return hw.ram_gb <= 10.0
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return is_arm()   # fallback: trust ARM arch
 
 
@@ -61,7 +61,9 @@ class PicoClawd:
             try:
                 _process.terminate()
                 _process.wait(timeout=5)
-            except Exception:
+            except (OSError, RuntimeError, AttributeError) as e:
+                log.debug(f"unexpected: {e}")
+                pass
                 pass
 
     async def _ensure_installed(self):
@@ -87,7 +89,7 @@ class PicoClawd:
                 stderr=subprocess.DEVNULL,
             )
             log.info(f"picoclawd: PicoClaw started (pid={_process.pid})")
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError) as e:
             log.error(f"picoclawd: failed to start PicoClaw: {e}")
 
 

@@ -287,13 +287,21 @@ def test_no_malformed_dir():
         fail("malformed dashboard dir: still exists")
 
 
-# ── modeld: task routing present ─────────────────────────────────────────────
-def test_modeld_routing():
+# ── modeld: routing lives in router.py, not modeld ───────────────────────────
+def test_modeld_no_duplicate_routing():
     f = read_text(ROOT / "services" / "modeld" / "service.py")
-    if "TASK_ROUTING" in f and "classify_task" in f:
-        ok("modeld: task-aware routing present")
+    if "TASK_ROUTING" not in f and "classify_task" not in f:
+        ok("modeld: no duplicate routing (router.py owns this)")
     else:
-        fail("modeld: task routing missing")
+        fail("modeld: still contains dead routing code (TASK_ROUTING/classify_task)")
+
+
+def test_router_has_pick_model():
+    f = read_text(ROOT / "runtimes" / "agent" / "router.py")
+    if "def pick_model" in f:
+        ok("router.py: pick_model present (single routing authority)")
+    else:
+        fail("router.py: pick_model missing")
 
 
 # ── Run all tests ─────────────────────────────────────────────────────────────
@@ -326,7 +334,8 @@ if __name__ == "__main__":
         test_nexus_command_cli,
         test_iso_chroot,
         test_no_malformed_dir,
-        test_modeld_routing,
+        test_modeld_no_duplicate_routing,
+        test_router_has_pick_model,
     ]
 
     for t in tests:

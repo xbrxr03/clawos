@@ -126,5 +126,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "deletion_errors": len(removal_errors),
             },
         )
-    except Exception as exc:
+    except (RuntimeError, OSError, TypeError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

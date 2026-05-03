@@ -30,7 +30,7 @@ log = logging.getLogger("researchd")
 try:
     from clawos_core.constants import CONFIG_DIR
     RESEARCH_DIR = CONFIG_DIR / "research" / "sessions"
-except Exception:
+except (ImportError, ModuleNotFoundError):
     RESEARCH_DIR = Path.home() / ".clawos" / "research" / "sessions"
 
 
@@ -97,7 +97,7 @@ class ResearchSession:
             session.sources = sources
             session.citations = citations
             return session
-        except Exception as exc:
+        except (json.JSONDecodeError, ValueError) as exc:
             log.warning("Failed to load research session %s: %s", session_id, exc)
             return None
 
@@ -121,7 +121,7 @@ class ResearchSession:
                     "created_at": data.get("created_at"),
                     "updated_at": data.get("updated_at"),
                 })
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 continue
         return sessions
 
@@ -137,7 +137,7 @@ def _fetch_page(url: str, timeout: int = 10) -> ResearchSource:
             raw = resp.read(512 * 1024)
         try:
             html = raw.decode("utf-8", errors="replace")
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             html = raw.decode("latin-1", errors="replace")
 
         title_m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
@@ -152,7 +152,7 @@ def _fetch_page(url: str, timeout: int = 10) -> ResearchSource:
 
         snippet = " ".join(clean.split()[:60])
         return ResearchSource(url=url, title=title, snippet=snippet, text=clean[:8000], fetched=True)
-    except Exception as exc:
+    except (OSError, ConnectionRefusedError, TimeoutError) as exc:
         return ResearchSource(url=url, title=url, snippet="", error=str(exc))
 
 
@@ -205,8 +205,8 @@ def _detect_provider() -> tuple[str, str]:
         tavily_key = str(get_config("research.tavily_api_key", "")).strip()
         if tavily_key:
             return "tavily", tavily_key
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        log.debug(f"suppressed: {e}")
     return "none", ""
 
 
@@ -267,13 +267,13 @@ class ResearchEngine:
         if provider == "brave" and api_key:
             try:
                 session.sources = _brave_search(query, api_key)
-            except Exception as exc:
+            except (OSError, RuntimeError, AttributeError) as exc:
                 log.warning("Brave search failed: %s", exc)
                 session.sources = []
         elif provider == "tavily" and api_key:
             try:
                 session.sources = _tavily_search(query, api_key)
-            except Exception as exc:
+            except (OSError, RuntimeError, AttributeError) as exc:
                 log.warning("Tavily search failed: %s", exc)
                 session.sources = []
         else:

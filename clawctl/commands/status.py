@@ -39,7 +39,7 @@ def _http_ok(url):
     try:
         urllib.request.urlopen(url, timeout=2)
         return True
-    except Exception:
+    except (OSError, ConnectionRefusedError, TimeoutError):
         return False
 
 
@@ -67,7 +67,8 @@ def run():
             models = [line.split()[0] for line in result.stdout.strip().splitlines()[1:] if line.strip()]
             if models:
                 print(f"     {_dim('models:')} {AMBER}{', '.join(models[:3])}{RESET}")
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
+            pass
             pass
 
     print()
@@ -136,7 +137,7 @@ def run():
                 print("  " + _ok(f"rtk          CLI compression  {detail}"))
             else:
                 print("  " + _dim("-  rtk          not installed  (clawctl openclaw install)"))
-        except Exception:
+        except (OSError, subprocess.SubprocessError, RuntimeError):
             pass
 
     print()

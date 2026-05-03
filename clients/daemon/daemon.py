@@ -45,7 +45,7 @@ async def _start_dashboard() -> None:
         server = uvicorn.Server(config)
         asyncio.create_task(server.serve())
         log.info(f"Dashboard started: http://localhost:{PORT_DASHD}")
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         log.warning(f"Dashboard not started: canonical dashd failed ({exc})")
 
 
@@ -63,7 +63,7 @@ async def _start_setupd() -> None:
         setup_server = uvicorn.Server(setup_config)
         asyncio.create_task(setup_server.serve())
         log.info(f"Setup service started: http://127.0.0.1:{PORT_SETUPD}")
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         log.warning(f"Setup service not started: {exc}")
 
 
@@ -107,7 +107,7 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
         store = get_store()
         store.export_to_env()
         log.info(f"secretd: {store.count()} secret(s) loaded into environment")
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.warning(f"secretd export failed (non-fatal): {e}")
 
     # Start browser surfaces first so first-run setup is available even if the
@@ -134,7 +134,7 @@ async def run_daemon(workspace: str = DEFAULT_WORKSPACE):
         brain = get_brain()
         stats = brain.stats()
         log.info(f"Kizuna (絆) ready: {stats['node_count']} nodes, {stats['edge_count']} edges")
-    except Exception as brain_error:
+    except (ImportError, ModuleNotFoundError) as brain_error:
         log.warning(f"Kizuna not started (non-fatal): {brain_error}")
 
     log.info("Daemon holding. Send SIGTERM to stop.")

@@ -28,7 +28,7 @@ def run(target: str) -> str:
             text = text[:MAX_BYTES] + "\n... [truncated]"
 
         return text.strip() or "[EMPTY] No text content"
-    except Exception as e:
+    except (OSError, ConnectionRefusedError, TimeoutError) as e:
         return f"[OFFLINE] Could not fetch {url}: {e}"
 
 

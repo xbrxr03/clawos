@@ -58,7 +58,7 @@ def install(ollama_host: str = "http://localhost:11434",
         log.info(f"PicoClaw installed to {INSTALL_PATH}")
         _write_config(ollama_host, timeout)
         return True
-    except Exception as e:
+    except (OSError, ConnectionRefusedError, TimeoutError) as e:
         log.error(f"PicoClaw install failed: {e}")
         return False
 

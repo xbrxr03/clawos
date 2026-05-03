@@ -90,7 +90,7 @@ def _load_setup_defaults() -> dict[str, Any]:
             "provider_profile": state.selected_provider_profile,
             "workspace": state.workspace,
         }
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {
             "assistant_identity": "Nexus",
             "primary_pack": "daily-briefing-os",
@@ -131,7 +131,7 @@ def load_presence_state(path: Path | None = None) -> dict[str, Any]:
     if path.exists():
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             raw = {}
     else:
         raw = {}

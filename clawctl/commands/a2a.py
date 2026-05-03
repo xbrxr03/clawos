@@ -15,7 +15,7 @@ def run_peers():
         rows = [(p.get("name", "?"), p.get("ip", "?"),
                  str(p.get("port", "?")), p.get("url", "?")) for p in peers]
         table(rows, headers=("name", "ip", "port", "url"))
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         error(f"A2A peer discovery unavailable: {e}")
     print()
 
@@ -28,7 +28,7 @@ def run_card():
         from services.a2ad.discovery import get_local_ip
         card = build_card(local_ip=get_local_ip())
         print(json.dumps(card.to_dict(), indent=2))
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         error(f"Could not build Agent Card: {e}")
 
 
@@ -50,7 +50,7 @@ def run_delegate(task: str, peer_ip: str, workspace: str = "nexus_default"):
             result = _json.loads(resp.read().decode()).get("result", "ok")
         success("Result:")
         print(f"\n  {result}\n")
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         error(f"Delegation failed: {e}")
     print()
 

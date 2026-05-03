@@ -33,7 +33,7 @@ def dashboard_base_url() -> str:
         settings = load_dashboard_settings()
         port = int(settings.port)
         host = _canonical_local_host(str(settings.host))
-    except Exception:
+    except Exception:  # broad catch — cannot narrow automatically
         port = PORT_DASHD
         host = "localhost"
     return f"http://{host}:{port}"
@@ -72,35 +72,39 @@ def open_in_browser(url: str) -> bool:
     try:
         if webbrowser.open(url, new=1, autoraise=True):
             return True
-    except Exception:
+    except (OSError, PermissionError):
         pass
 
     if shutil.which("gio"):
         try:
             subprocess.Popen(["gio", "open", url])
             return True
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
+            pass
             pass
 
     if sys.platform == "darwin" and shutil.which("open"):
         try:
             subprocess.Popen(["open", url])
             return True
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
+            pass
             pass
 
     if shutil.which("xdg-open"):
         try:
             subprocess.Popen(["xdg-open", url])
             return True
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
+            pass
             pass
 
     if shutil.which("sensible-browser"):
         try:
             subprocess.Popen(["sensible-browser", url])
             return True
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
+            pass
             pass
 
     return False

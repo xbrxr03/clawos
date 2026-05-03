@@ -413,7 +413,7 @@ async def record_call(request: dict):
         return {"status": "ok", "id": call_id}
     except TypeError as e:
         raise HTTPException(status_code=422, detail=f"Invalid call payload: {e}")
-    except Exception as e:
+    except (OSError, RuntimeError, TimeoutError) as e:
         log.error("Failed to record call: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 

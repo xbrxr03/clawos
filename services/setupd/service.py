@@ -98,8 +98,8 @@ class SetupService:
         self._listeners: set[WebSocket] = set()
         try:
             sync_presence_from_setup(self._state)
-        except Exception:
-            pass
+        except (OSError, RuntimeError, AttributeError) as e:
+            log.debug(f"suppressed: {e}")
 
     def get_state(self) -> SetupState:
         return self._state
@@ -120,7 +120,7 @@ class SetupService:
         for listener in self._listeners:
             try:
                 await listener.send_json({"type": "setup_state", "data": payload})
-            except Exception:
+            except (OSError, RuntimeError, ConnectionError):
                 dead.add(listener)
         for listener in dead:
             self._listeners.discard(listener)
@@ -537,7 +537,7 @@ class SetupService:
             self._persist()
             await self.broadcast()
             return True
-        except Exception as exc:
+        except (ImportError, OSError, RuntimeError) as exc:
             state.progress_stage = "error"
             state.last_error = str(exc)
             _publish(model_list[0], str(exc))
@@ -615,7 +615,7 @@ class SetupService:
             self._persist()
             await self.broadcast()
             return self.to_dict()
-        except Exception as exc:
+        except (ImportError, OSError, AttributeError) as exc:
             state.progress_stage = "error"
             state.last_error = str(exc)
             state.voice_test = {
@@ -652,7 +652,7 @@ class SetupService:
             voice_service = get_voice_service()
             ok = await voice_service.speak(line)
             return {"ok": bool(ok), "line": line, "assistant": assistant, "owner": owner}
-        except Exception as exc:
+        except (ImportError, OSError, AttributeError) as exc:
             self._log(f"Greeting playback skipped: {exc}")
             return {"ok": False, "line": line, "error": str(exc)}
 
@@ -678,8 +678,8 @@ class SetupService:
                 existing = json.loads(path.read_text(encoding="utf-8"))
                 if existing.get("first_run_ts"):
                     payload["first_run_ts"] = existing["first_run_ts"]
-            except Exception:
-                pass
+            except (json.JSONDecodeError, OSError, ValueError) as e:
+                log.debug(f"suppressed: {e}")
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def _pin_identity_memory(self) -> None:
@@ -698,11 +698,11 @@ class SetupService:
 
         try:
             from services.memd.service import MemoryService
-        except Exception:
+        except (ImportError, OSError):
             return
         try:
             memd = MemoryService()
-        except Exception:
+        except (OSError, RuntimeError):
             return
 
         ws = self._state.workspace or DEFAULT_WORKSPACE
@@ -722,7 +722,7 @@ class SetupService:
 
         try:
             existing = memd.read_pinned(ws) or ""
-        except Exception:
+        except (OSError, AttributeError):
             existing = ""
 
         # Strip any previous identity block so we can replace it cleanly.
@@ -737,7 +737,7 @@ class SetupService:
         merged = (scrubbed + "\n\n" + block + "\n") if scrubbed else (block + "\n")
         try:
             memd.write_pinned(ws, merged)
-        except Exception:
+        except (OSError, PermissionError, AttributeError):
             return
 
     async def _apply(self):
@@ -821,20 +821,20 @@ class SetupService:
             try:
                 ok, detail = await asyncio.to_thread(start_service, "clawos.service")
                 self._log(detail or ("ClawOS service started" if ok else "Service start requested"))
-            except Exception as exc:
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
                 self._log(f"Service start skipped: {exc}")
 
             if state.launch_on_login and autostart_supported():
                 try:
                     path = await asyncio.to_thread(enable_launch_on_login)
                     self._log(f"Launch on login enabled at {path}")
-                except Exception as exc:
+                except (OSError, RuntimeError) as exc:
                     self._log(f"Launch on login skipped: {exc}")
 
             try:
                 await asyncio.to_thread(sync_presence_from_setup, state)
                 self._log("Nexus presence synchronized")
-            except Exception as exc:
+            except (OSError, RuntimeError, AttributeError) as exc:
                 self._log(f"Nexus presence sync skipped: {exc}")
 
             # Persist the owner + assistant identity so every daemon (gatewayd,
@@ -842,13 +842,13 @@ class SetupService:
             try:
                 await asyncio.to_thread(self._write_user_json)
                 self._log("Wrote owner identity to ~/clawos/config/user.json")
-            except Exception as exc:
+            except (OSError, PermissionError) as exc:
                 self._log(f"user.json write skipped: {exc}")
 
             try:
                 await asyncio.to_thread(self._pin_identity_memory)
                 self._log("Pinned owner identity to memory")
-            except Exception as exc:
+            except (OSError, AttributeError) as exc:
                 self._log(f"Identity memory pin skipped: {exc}")
 
             if state.voice_enabled:
@@ -865,7 +865,7 @@ class SetupService:
 
                 rotate_dashboard_session_token()
                 self._log("Dashboard session rotated after setup completion")
-            except Exception as exc:
+            except (ImportError, OSError, AttributeError) as exc:
                 self._log(f"Dashboard session rotation skipped: {exc}")
             record_trace(
                 make_trace(
@@ -879,7 +879,7 @@ class SetupService:
                 )
             )
             await self.broadcast()
-        except Exception as exc:
+        except (ImportError, OSError, AttributeError) as exc:
             state.progress_stage = "error"
             state.last_error = str(exc)
             state.retry_state = "last_step_failed"
@@ -923,20 +923,20 @@ class SetupService:
             try:
                 sync_presence_from_setup(state)
                 self._log("Verified Nexus presence state")
-            except Exception as exc:
+            except (OSError, RuntimeError, AttributeError) as exc:
                 self._log(f"Presence verification skipped: {exc}")
 
             try:
                 ok, detail = await asyncio.to_thread(start_service, "clawos.service")
                 self._log(detail or ("ClawOS service started during repair" if ok else "Service start requested"))
-            except Exception as exc:
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
                 self._log(f"Service repair skipped: {exc}")
 
             if state.launch_on_login and autostart_supported():
                 try:
                     path = await asyncio.to_thread(enable_launch_on_login)
                     self._log(f"Launch on login verified at {path}")
-                except Exception as exc:
+                except (OSError, RuntimeError) as exc:
                     self._log(f"Launch on login repair skipped: {exc}")
 
             state.progress_stage = "complete" if state.completion_marker else "planned"
@@ -953,7 +953,7 @@ class SetupService:
                 )
             )
             await self.broadcast()
-        except Exception as exc:
+        except (OSError, RuntimeError) as exc:
             state.progress_stage = "error"
             state.last_error = str(exc)
             state.retry_state = "repair_failed"
@@ -1012,7 +1012,7 @@ class SetupService:
             from services.voiced.service import get_service as get_voice_service
 
             voice_status = get_voice_service().health()
-        except Exception:
+        except (ImportError, OSError, AttributeError):
             voice_status = {}
         return {
             "platform": platform.platform(),
@@ -1036,8 +1036,8 @@ class SetupService:
                 token_file = CONFIG_DIR / "dashboard.token"
                 if token_file.exists():
                     payload["dashboard_token"] = token_file.read_text().strip()
-            except Exception:
-                pass
+            except (OSError, PermissionError, json.JSONDecodeError) as e:
+                log.debug(f"suppressed: {e}")
         return payload
 
     def health(self) -> dict[str, Any]:
@@ -1077,7 +1077,7 @@ def create_app() -> "FastAPI":
             return True
         try:
             parsed = urlparse(origin)
-        except Exception:
+        except (ValueError, AttributeError):
             return False
         return parsed.scheme in {"http", "https"} and (parsed.hostname or "").lower() in {"127.0.0.1", "localhost", "::1"}
 
@@ -1239,7 +1239,7 @@ def create_app() -> "FastAPI":
         try:
             from frameworks.registry import get_registry
             items = get_registry().list_for_tier(profile_id or "unknown")
-        except Exception:
+        except (ImportError, OSError, AttributeError):
             items = []
         return {"profile_id": profile_id, "frameworks": items}
 
@@ -1344,8 +1344,8 @@ def create_app() -> "FastAPI":
             try:
                 _ur.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=2)
                 return True, f"Gateway already running on port {port}"
-            except Exception:
-                pass
+            except (OSError, ConnectionRefusedError, TimeoutError) as e:
+                log.debug(f"suppressed: {e}")
             subprocess.Popen(
                 [openclaw_bin, "gateway", "--port", str(port)],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -1366,7 +1366,7 @@ def create_app() -> "FastAPI":
         try:
             _ur.urlopen(f"{url}/healthz", timeout=3)
             running = True
-        except Exception:
+        except (OSError, ConnectionRefusedError, TimeoutError):
             running = False
         return {"running": running, "url": url, "port": port}
 
@@ -1392,7 +1392,7 @@ def create_app() -> "FastAPI":
                     if "✓" in line or "installed" in line.lower()
                 ]
                 return result.returncode == 0, installed or ["recommended skills"]
-            except Exception as exc:
+            except (OSError, subprocess.SubprocessError) as exc:
                 return False, [str(exc)]
 
         ok, installed = await asyncio.to_thread(_install_skills)
@@ -1418,7 +1418,7 @@ def create_app() -> "FastAPI":
                 await websocket.receive_text()
         except WebSocketDisconnect:
             service._listeners.discard(websocket)
-        except Exception:
+        except (OSError, RuntimeError, ConnectionError):
             service._listeners.discard(websocket)
 
     return app

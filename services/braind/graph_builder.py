@@ -144,9 +144,11 @@ def extract_triples_llm(text: str, source_file: str = "") -> list[dict]:
                                         "source": source_file, "method": "llm",
                                     })
                         return triples
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
+                    log.debug(f"failed: {e}")
                     pass
-    except Exception as e:
+                    pass
+    except (json.JSONDecodeError, ValueError) as e:
         log.debug(f"LLM triple extraction failed: {e}")
 
     return extract_triples_heuristic(text, source_file)
@@ -249,7 +251,7 @@ class BrainGraph:
                 # Fallback: Louvain/greedy modularity
                 try:
                     communities = list(nxc.greedy_modularity_communities(ug))
-                except Exception:
+                except (OSError, RuntimeError, AttributeError):
                     communities = [list(self._graph.nodes)]
 
             self._community_map = {}
@@ -259,7 +261,7 @@ class BrainGraph:
 
             log.debug(f"Community detection: {len(communities)} communities, {len(self._graph.nodes)} nodes")
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.debug(f"Community detection failed: {e}")
             # Assign all to community 0
             self._community_map = {n: 0 for n in self._graph.nodes}
@@ -275,7 +277,7 @@ class BrainGraph:
             else:
                 self._pagerank = {n: 1.0 / len(self._graph.nodes)
                                   for n in self._graph.nodes}
-        except Exception as e:
+        except (OSError, RuntimeError, AttributeError) as e:
             log.debug(f"PageRank failed: {e}")
             self._pagerank = {}
 
@@ -395,8 +397,8 @@ class BrainGraph:
                         "labels": labels,
                         "message": f"Isolated cluster: {', '.join(labels[:3])}",
                     })
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
 
         return gaps[:20]
 

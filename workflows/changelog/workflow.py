@@ -77,5 +77,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "categories": {key: len(value) for key, value in groups.items()},
             },
         )
-    except Exception as exc:
+    except (RuntimeError, OSError, TypeError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

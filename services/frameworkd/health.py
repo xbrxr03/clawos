@@ -15,6 +15,6 @@ def health() -> dict:
             "frameworks_available": len(frameworks),
             "store_initialized": True,
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"Frameworkd health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

@@ -408,16 +408,16 @@ class ClipboardManager:
         try:
             import pyperclip
             return "pyperclip"
-        except ImportError:
-            pass
+        except ImportError as e:
+            log.debug(f"suppressed: {e}")
         
         if IS_LINUX:
             try:
                 import subprocess
                 subprocess.run(["xclip", "-version"], capture_output=True)
                 return "xclip"
-            except:
-                pass
+            except (ImportError, OSError) as e:
+                log.debug(f"suppressed: {e}")
         
         return "none"
     
@@ -569,7 +569,7 @@ Return JSON:
                 except:
                     return {"raw": data.get("response", "")}
         
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.error(f"Vision analysis failed: {e}")
             return {"error": str(e)}
 
@@ -665,7 +665,7 @@ class DesktopAutomation:
             else:
                 return {"success": False, "error": f"Unknown action type: {action.type}"}
         
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {
                 "success": False,
                 "error": str(e),

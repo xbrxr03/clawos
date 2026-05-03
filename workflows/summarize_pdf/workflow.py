@@ -100,7 +100,7 @@ async def run(args: dict, agent) -> WorkflowResult:
                 f"PDF text extraction is unavailable: {exc}",
                 "extract_unavailable",
             )
-        except Exception as exc:
+        except (OSError, ValueError, ImportError) as exc:
             return _failure_result(
                 path,
                 f"Unable to read extractable text from {path.name}: {exc}",
@@ -184,5 +184,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "failure_reason": None,
             },
         )
-    except Exception as exc:
+    except (RuntimeError, OSError, TypeError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

@@ -96,7 +96,9 @@ def _decrypt(ciphertext: str, key: bytes) -> str:
         try:
             raw = base64.urlsafe_b64decode(ciphertext)
             return f.decrypt(raw).decode()
-        except Exception:
+        except (OSError, RuntimeError, AttributeError) as e:
+            log.debug(f"unexpected: {e}")
+            pass
             pass
     # Try XOR fallback
     raw = base64.urlsafe_b64decode(ciphertext)
@@ -126,7 +128,7 @@ class SecretsStore:
                 k: _decrypt(v, self._key)
                 for k, v in data.items()
             }
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.warning(f"Failed to load secrets: {e}")
             return {}
 

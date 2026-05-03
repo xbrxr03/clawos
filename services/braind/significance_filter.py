@@ -12,6 +12,7 @@ Two-pass approach:
 """
 import logging
 import re
+import json
 
 log = logging.getLogger("braind.significance")
 
@@ -154,7 +155,7 @@ def _llm_score(text: str, context: dict | None = None) -> float:
             if match:
                 score = float(match.group())
                 return min(max(score, 0.0), 1.0)
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         log.debug(f"LLM significance score failed: {e}")
 
     return _heuristic_score(text)

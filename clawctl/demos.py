@@ -110,7 +110,7 @@ def approval_test():
                 click.echo(f"\n📝 Found {len(approvals)} pending approval(s):")
                 for a in approvals:
                     click.echo(f"  - {a.get('tool')}: {a.get('target', 'N/A')}")
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         pass  # Auth or connection error, ignore
 
 
@@ -155,6 +155,7 @@ def quirky_combo():
     click.echo("Testing multi-tool orchestration...")
     
     from runtimes.agent.runtime import build_runtime
+    import json
     
     async def run_combo():
         runtime = await build_runtime()
@@ -173,7 +174,7 @@ def quirky_combo():
                 result = await runtime.toolbridge.run_native(tool_name, args)
                 results.append((tool_name, result))
                 click.echo(f"  ✅ {str(result)[:100]}...")
-            except Exception as e:
+            except (SystemExit, OSError, RuntimeError) as e:
                 click.echo(f"  ❌ Error: {e}")
                 results.append((tool_name, f"[ERROR] {e}"))
         
@@ -183,6 +184,6 @@ def quirky_combo():
     try:
         asyncio.run(run_combo())
         click.echo("\n✅ Quirky combo complete!")
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         click.echo(f"\n❌ Combo failed: {e}")
         sys.exit(1)

@@ -100,7 +100,8 @@ def _print_compression_status():
             tag = f" {_d(m.group(0))}" if m else ""
             print("  " + _p(GREEN, "✓") + f"  rtk       CLI compression{tag}")
         print()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
+        pass
         pass
 
 
@@ -141,7 +142,7 @@ def cmd_audit(args: list):
             icon     = _p(GREEN, "✓") if decision == "ALLOW" else _p(RED, "✗")
             print(f"  {icon}  {_d(ts)}  {_p(CYAN, tool):<30}  {_d(target)}")
         print()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  {_p(RED, 'error:')} {e}\n")
 
 
@@ -179,7 +180,7 @@ def cmd_memory(args: list):
                     if line.strip():
                         print(f"    {_d(line[:100])}")
         print()
-    except Exception as e:
+    except (OSError, AttributeError, RuntimeError) as e:
         print(f"  {_p(RED, 'error:')} {e}\n")
 
 
@@ -242,7 +243,7 @@ def cmd_policy():
             if req:
                 print(f"    {_d('approval required:')} {', '.join(req)}")
         print()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  {_p(RED, 'error:')} {e}\n")
 
 
@@ -255,7 +256,7 @@ def cmd_approve(request_id: str):
             print(f"\n  {_p(GREEN, '✓')}  Approved: {request_id}\n")
         else:
             print(f"\n  {_p(RED, '✗')}  Not found: {request_id}\n")
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         print(f"  {_p(RED, 'error:')} {e}\n")
 
 
@@ -267,7 +268,7 @@ def cmd_deny(request_id: str):
             print(f"\n  {_p(AMBER, '○')}  Denied: {request_id}\n")
         else:
             print(f"\n  {_p(RED, '✗')}  Not found: {request_id}\n")
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         print(f"  {_p(RED, 'error:')} {e}\n")
 
 
@@ -311,7 +312,7 @@ def cmd_use_kimi():
         cfg.setdefault("agents", {}).setdefault("defaults", {}).setdefault("model", {})["primary"] = "ollama/kimi-k2.5:cloud"
         config_path.write_text(json.dumps(cfg, indent=2))
         print(f"  {_p(GREEN, '✓')}  OpenClaw reconfigured → kimi-k2.5:cloud\n")
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         print(f"\n  {_p(RED, '✗')}  Could not update openclaw.json: {e}\n")
         return
 
@@ -319,7 +320,7 @@ def cmd_use_kimi():
     try:
         from clawos_core.service_manager import restart as restart_service
         restart_service("openclaw-gateway.service")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     import time; time.sleep(2)
 
@@ -418,7 +419,7 @@ def _run_plan_mode(spec: str, agent):
     print(f"\n  Generating plan...")
     try:
         raw = asyncio.run(agent.chat(plan_prompt))
-    except Exception as e:
+    except (EOFError, KeyboardInterrupt, OSError) as e:
         print(f"  Plan generation error: {e}\n")
         return
 
@@ -432,7 +433,7 @@ def _run_plan_mode(spec: str, agent):
         options = json.loads(clean)
         if not isinstance(options, list):
             raise ValueError("not a list")
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         print("  Plan generation failed — falling back to direct execution\n")
         return
 
@@ -511,10 +512,11 @@ def _active_workspace() -> str:
                 ws  = cfg.get("workspace", {}).get("default", "")
                 if ws:
                     return ws
-            except Exception:
+            except (OSError, UnicodeDecodeError):
+                pass
                 pass
         return DEFAULT_WORKSPACE
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         return "nexus_default"
 
 
@@ -533,7 +535,8 @@ def _set_active_workspace(name: str):
         except ImportError:
             text = CLAWOS_CONFIG.read_text() if CLAWOS_CONFIG.exists() else ""
             CLAWOS_CONFIG.write_text(text + f"\nworkspace:\n  default: {name}\n")
-    except Exception:
+    except (OSError, UnicodeDecodeError):
+        pass
         pass
 
 
@@ -654,7 +657,7 @@ def cmd_project(args: list):
     def _ws_dir(name):
         try:
             return _Path(str(WORKSPACE_DIR)) / name
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             return _Path.home() / "clawos" / "workspace" / name
 
     def _current_ws():
@@ -710,7 +713,7 @@ def cmd_project(args: list):
     elif sub == "list":
         try:
             ws_root = _Path(str(WORKSPACE_DIR))
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             ws_root = _Path.home() / "clawos" / "workspace"
         current = _current_ws()
         projects = [d for d in sorted(ws_root.iterdir()) if d.is_dir()] if ws_root.exists() else []
@@ -752,7 +755,7 @@ def cmd_project(args: list):
                 if types:
                     summary = ", ".join(f"{k}={v}" for k, v in sorted(types.items()))
                     print(f"  {_d(summary)}")
-        except Exception as e:
+        except (OSError, ValueError) as e:
             print(f"  {_p(RED, '✗')}  Ingest failed: {e}")
         print()
 
@@ -763,7 +766,7 @@ def cmd_project(args: list):
             from services.ragd.service import get_rag
             rag   = get_rag(current, ws)
             files = rag.list_files()
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"\n  {_p(RED, '✗')}  {e}\n")
             return
         print()
@@ -791,7 +794,7 @@ def cmd_project(args: list):
                 print(f"\n  " + _p(GREEN, "✓") + f"  Removed {filename} from index\n")
             else:
                 print(f"\n  " + _p(RED, "✗") + f"  Not found: {filename}\n")
-        except Exception as e:
+        except (OSError, RuntimeError, AttributeError) as e:
             print(f"\n  {_p(RED, '✗')}  {e}\n")
 
     else:

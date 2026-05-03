@@ -8,5 +8,5 @@ def check() -> dict:
         import urllib.request
         urllib.request.urlopen(f"http://localhost:{PORT_A2AD}/health", timeout=2)
         return {"service": "a2ad", "status": "ok"}
-    except Exception:
+    except (OSError, ConnectionRefusedError, TimeoutError):
         return {"service": "a2ad", "status": "down"}

@@ -76,7 +76,7 @@ class BrainStorage:
                 GRAPH_JSON.write_text(json.dumps(graph_data, ensure_ascii=False))
                 self._sync_to_db(graph_data)
                 log.debug(f"Graph saved: {len(graph_data.get('nodes', []))} nodes, {len(graph_data.get('links', []))} links")
-            except Exception as e:
+            except (TypeError, ValueError) as e:
                 log.error(f"Failed to save graph: {e}")
 
     def _sync_to_db(self, graph_data: dict):
@@ -120,7 +120,7 @@ class BrainStorage:
             return {"nodes": [], "links": []}
         try:
             return json.loads(GRAPH_JSON.read_text())
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.error(f"Failed to load graph: {e}")
             return {"nodes": [], "links": []}
 
@@ -138,7 +138,7 @@ class BrainStorage:
                  "pagerank": r[3], "agent_added": bool(r[4])}
                 for r in rows
             ]
-        except Exception as e:
+        except (sqlite3.Error, OSError) as e:
             log.error(f"Node search failed: {e}")
             return []
 
@@ -156,7 +156,7 @@ class BrainStorage:
                 "pagerank": row[3], "agent_added": bool(row[4]),
                 "mention_count": row[5], "sources": json.loads(row[6] or "[]"),
             }
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             return None
 
     def log_ingestion(self, filename: str, chunks: int, triples: int):
@@ -167,7 +167,9 @@ class BrainStorage:
                 (filename, chunks, triples, time.time())
             )
             self._db.commit()
-        except Exception:
+        except (sqlite3.Error, OSError):
+            log.debug(f"failed: {e}")
+            pass
             pass
 
     def stats(self) -> dict:
@@ -176,7 +178,7 @@ class BrainStorage:
             edge_count = self._db.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
             community_count = self._db.execute("SELECT COUNT(DISTINCT community) FROM nodes").fetchone()[0]
             return {"node_count": node_count, "edge_count": edge_count, "community_count": community_count}
-        except Exception:
+        except (sqlite3.Error, OSError):
             return {"node_count": 0, "edge_count": 0, "community_count": 0}
 
 

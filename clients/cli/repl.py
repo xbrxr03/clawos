@@ -92,14 +92,14 @@ def _resolve_workspace(arg: str) -> str:
                 ws = cfg.get("workspace", {}).get("default", "")
                 if ws and ws.strip():
                     return ws.strip()
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 for line in CLAWOS_CONFIG.read_text().splitlines():
                     line = line.strip()
                     if line.startswith("default:"):
                         val = line.split(":", 1)[1].strip().strip('"').strip("'")
                         if val:
                             return val
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         pass
 
     return DEFAULT_WORKSPACE
@@ -144,7 +144,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
     try:
         agent  = await build_runtime(workspace)
         memory = MemoryService()
-    except Exception as e:
+    except Exception as e:  # broad catch — cannot narrow automatically
         print(f"\n\n  {_p(RED, '✗')} Could not start: {_p(RED, str(e))}")
         print(f"  {_d('Make sure Ollama is running: ollama serve')}\n")
         return
@@ -221,7 +221,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
                     try:
                         from nexus.cli import _run_plan_mode
                         _run_plan_mode(arg, agent)
-                    except Exception as e:
+                    except (ImportError, ModuleNotFoundError) as e:
                         print(f"  plan error: {e}\n")
                 else:
                     print("  Usage: /plan <task description>\n")
@@ -232,7 +232,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
                     import shlex
                     try:
                         _do_run(shlex.split(arg))
-                    except Exception as _e:
+                    except (OSError, RuntimeError, AttributeError) as _e:
                         print(f"  {_d(str(_e))}\n")
                 else:
                     print(f"  {_d('Usage: /do <request> [--dry] [--yes] [--history] [--undo] [--explain] [--step]')}\n")
@@ -302,7 +302,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
         t0 = time.time()
         try:
             reply = await agent.chat(raw)
-        except Exception as e:
+        except Exception as e:  # broad catch — cannot narrow automatically
             await spinner.stop()
             print(f"  {_p(RED, '✗')} {_p(RED, str(e))}\n")
             continue
@@ -317,7 +317,7 @@ async def run_repl(workspace: str = DEFAULT_WORKSPACE):
             _asyncio.create_task(get_bus().emit_task(
                 f"repl-{turn}", "completed", raw[:80]
             ))
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         print(f"  {_b(GREEN, 'nexus')} {_d('›')}", end=" ")

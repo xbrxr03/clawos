@@ -120,7 +120,7 @@ def observ_calls(workspace, service, model, hours, limit, as_json):
             
             click.echo(f"{time_str:<20} {service_name:<12} {model_name:<25} {tokens:<10} {latency:<10} {status_icon} {status}")
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error fetching calls: {e}")
 
 
@@ -182,7 +182,7 @@ def observ_stats(workspace, hours, as_json):
             for s in top_services:
                 click.echo(f"  {s['service'][:30]:<32} {s['count']:>6} calls")
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error fetching stats: {e}")
 
 
@@ -234,7 +234,7 @@ def observ_cost(workspace, days):
                 cost = day.get('cost_usd', 0)
                 click.echo(f"{date:<15} {calls:>8} {tokens:>12,} ${cost:>9.4f}")
         
-    except Exception as e:
+    except (OSError, ValueError, AttributeError) as e:
         click.echo(f"✗ Error fetching cost data: {e}")
 
 
@@ -277,7 +277,7 @@ def observ_latency(workspace, hours):
         click.echo(f"  Min:     {stats.get('min_latency_ms', 0):.0f}ms")
         click.echo(f"  Max:     {stats.get('max_latency_ms', 0):.0f}ms")
         
-    except Exception as e:
+    except (OSError, ValueError) as e:
         click.echo(f"✗ Error fetching latency data: {e}")
 
 
@@ -313,7 +313,7 @@ def observ_workspaces():
                     pass
             click.echo(f"{name:<30} {calls:>10} {last}")
         
-    except Exception as e:
+    except (OSError, ConnectionError, RuntimeError) as e:
         click.echo(f"✗ Error fetching workspaces: {e}")
 
 
@@ -374,5 +374,5 @@ def observ_export(fmt, output, hours, workspace):
         else:
             click.echo(content)
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error exporting data: {e}")

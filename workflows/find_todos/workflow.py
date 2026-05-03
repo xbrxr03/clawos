@@ -105,5 +105,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 "note": len(buckets["note"]),
             },
         )
-    except Exception as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

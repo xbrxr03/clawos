@@ -15,6 +15,6 @@ def health() -> dict:
             "documents_indexed": stats.get("document_count", 0),
             "chunks_indexed": stats.get("chunk_count", 0),
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"RAGd health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

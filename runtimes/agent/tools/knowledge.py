@@ -19,7 +19,7 @@ async def remember(args: dict, ctx: dict) -> str:
     ws = ctx.get("workspace_id") or "default"
     try:
         await memory.remember_async(text, ws, source="agent_remember")
-    except Exception as e:
+    except (ConnectionError, OSError, AttributeError) as e:
         return f"[ERROR] {e}"
     return f"[OK] remembered: {text[:120]}"
 
@@ -34,7 +34,7 @@ async def recall(args: dict, ctx: dict) -> str:
     ws = ctx.get("workspace_id") or "default"
     try:
         hits = memory.recall(query, ws, n=5)
-    except Exception as e:
+    except (ConnectionError, OSError, AttributeError) as e:
         return f"[ERROR] {e}"
     if not hits:
         return "(no matches)"
@@ -51,6 +51,6 @@ async def pin_fact(args: dict, ctx: dict) -> str:
     ws = ctx.get("workspace_id") or "default"
     try:
         memory.append_pinned(ws, fact)
-    except Exception as e:
+    except (ConnectionError, OSError, AttributeError) as e:
         return f"[ERROR] {e}"
     return f"[OK] pinned: {fact[:120]}"

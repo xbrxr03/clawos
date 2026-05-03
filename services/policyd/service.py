@@ -91,7 +91,7 @@ class HookRegistry:
                 if result is False:
                     return False
                 hook["failures"] = 0
-            except Exception as e:
+            except Exception as e:  # hook callback — may raise arbitrary errors — keep broad
                 hook["failures"] += 1
                 log.error(f"Hook '{hook['name']}' error: {e}")
                 if hook["failures"] >= 3:  # circuit breaker
@@ -107,9 +107,7 @@ class HookRegistry:
                 if asyncio.iscoroutine(r):
                     await r
                 hook["failures"] = 0
-            except Exception as e:
-                hook["failures"] += 1
-                if hook["failures"] >= 3:
+            except Exception as e:  # async hook callback — keep broad
                     hook["enabled"] = False
 
 
@@ -145,9 +143,9 @@ class PolicyEngine:
         if self._db is not None:
             try:
                 self._db.close()
-            except Exception:
+            except (OSError, sqlite3.Error):
+                log.debug("db close failed")
                 pass
-            self._db = None
 
     def _is_blocked_path(self, target: str) -> bool:
         expanded = target.replace("~", str(Path.home()))
@@ -159,13 +157,14 @@ class PolicyEngine:
         try:
             tp = Path(target).expanduser().resolve()
             return str(tp).startswith(str(ws_root.resolve()))
-        except Exception:
+        except (ValueError, OSError):
+            # Path resolution failed — treat as within workspace for safety
             return True
 
     def _blocked_url_reason(self, target: str) -> str:
         try:
             parsed = urlparse((target or "").strip())
-        except Exception:
+        except (ValueError, AttributeError):
             return "invalid url"
 
         if parsed.scheme not in {"http", "https"}:
@@ -283,8 +282,8 @@ class PolicyEngine:
         try:
             from clawos_core.events.bus import get_bus
             await get_bus().emit_approval(req.request_id, tool, target, workspace_id)
-        except Exception:
-            pass
+        except (ImportError, AttributeError, RuntimeError) as e:
+            log.debug(f"suppressed: {e}")
 
         # Log approval request — decision comes from dashboard UI or terminal
         log.info(f"Approval required [{req.request_id}] {tool} on '{target[:60]}'")
@@ -360,7 +359,7 @@ def check_gpu_guard(session_id: str, model: str = "") -> tuple[bool, str]:
         from services.modeld.service import get_vram_scheduler
         scheduler = get_vram_scheduler()
         return scheduler.can_start(session_id, model)
-    except Exception:
+    except (ImportError, AttributeError, RuntimeError, OSError):
         return True, ""   # Non-fatal: allow if modeld not available
 
 
@@ -381,6 +380,6 @@ def check_budget(workspace_id: str) -> tuple[bool, str]:
             else:   # warn or pause
                 log.warning(f"Budget {action}: {workspace_id} — {today} tokens")
                 return True, reason
-    except Exception:
-        pass
+    except (ImportError, AttributeError, ValueError, RuntimeError) as e:
+        log.debug(f"suppressed: {e}")
     return True, ""

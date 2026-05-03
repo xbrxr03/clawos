@@ -16,6 +16,6 @@ def health() -> dict:
             "voice_enabled": config.get("voice_enabled", False),
             "gateway_connected": config.get("gateway_connected", False),
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"Jarvisd health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

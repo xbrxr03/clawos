@@ -1,5 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""modeld — model routing + profile management."""
+"""
+modeld — model health, profile management, and VRAM scheduling.
+
+Routing decisions live in runtimes/agent/router.py (pick_model). modeld
+owns infrastructure: which models are installed, what the current default is,
+and whether VRAM allows a new parallel session on Tier D hardware.
+"""
 import logging
 from clawos_core.constants import MODEL_PROFILES, DEFAULT_MODEL
 from clawos_core.config.loader import get
@@ -8,52 +14,14 @@ from services.modeld.ollama_client import is_running, list_models, model_exists
 log = logging.getLogger("modeld")
 
 
-
-# ── Task-aware routing ────────────────────────────────────────────────────────
-TASK_ROUTING = {
-    # basic tier — fast, no tools needed
-    "greeting":    "qwen2.5:1.5b",
-    "simple_qa":   "qwen2.5:1.5b",
-    "acknowledge": "qwen2.5:1.5b",
-    # standard tier — writing quality matters, no heavy tool use
-    "write":       "qwen2.5:3b",
-    "summarize":   "qwen2.5:3b",
-    "draft":       "qwen2.5:3b",
-    "explain":     "qwen2.5:3b",
-    # full tier — default for everything with tools
-    "chat":        "qwen2.5:7b",
-    "code":        "qwen2.5:7b",
-    "rag":         "qwen2.5:7b",
-    "plan":        "qwen2.5:7b",
-    "shell":       "qwen2.5:7b",
-    "voice":       "qwen2.5:7b",
-    # openclaw tier — only when OpenClaw gateway is routing
-    "openclaw":    "kimi-k2.5:cloud",
-}
-
-
-def classify_task(user_input: str) -> str:
-    """Classify task type for model routing. No LLM call — keyword heuristics only."""
-    text = user_input.lower().strip()
-    n = len(text.split())
-
-    # Greetings / acks — never need a big model
-    if n <= 5 and any(text.startswith(w) for w in
-                      ("hi", "hello", "hey", "ok", "okay", "thanks",
-                       "sure", "yes", "no", "got it", "understood")):
-        return "greeting"
-
-    # Writing / summarization triggers
-    if any(w in text for w in ("write", "draft", "compose", "summarize",
-                                "summarise", "rephrase", "explain", "describe")):
-        return "write"
-    if any(w in text for w in ("summary", "tldr", "brief", "overview", "condense")):
-        return "summarize"
-
-    # Everything else → full tier (tools, code, files, shell)
-    return "chat"
-
 class ModelService:
+    """Manages model defaults, health checks, and profile configuration.
+
+    Per-turn routing is handled by runtimes.agent.router.pick_model().
+    This service answers: what's the default model, what's installed, what
+    profile are we on, and (on Tier D) can we start another parallel session?
+    """
+
     def __init__(self):
         self.profile  = get("_profile", "balanced")
         self.cfg      = MODEL_PROFILES.get(self.profile, MODEL_PROFILES["balanced"])
@@ -71,31 +39,25 @@ class ModelService:
         }
 
     def get_model(self) -> str:
+        """Return the current default model name."""
         return self.model
 
     def set_model(self, name: str):
+        """Override the default model (persists for this process lifetime)."""
         self.model = name
         log.info(f"Model set to {name}")
 
     def ctx_window(self) -> int:
         return get("model.ctx_window", self.cfg.get("ctx", 4096))
 
-
-    def route(self, task_type: str = "chat") -> str:
-        """Pick the best available model for this task type."""
-        preferred = TASK_ROUTING.get(task_type, "qwen2.5:7b")
+    def available_models(self) -> list[str]:
+        """Return model names currently loaded in Ollama."""
+        if not is_running():
+            return []
         try:
-            available = [m.get("name", "") for m in list_models()]
-        except Exception:
-            available = []
-        if preferred in available:
-            return preferred
-        # Fallback chain: go up one tier if preferred not available
-        fallback_chain = ["qwen2.5:1.5b", "qwen2.5:3b", "qwen2.5:7b"]
-        for model in fallback_chain:
-            if model in available:
-                return model
-        return self.model  # last resort: current default
+            return [m.get("name", "") for m in list_models()]
+        except (ConnectionError, OSError, RuntimeError):
+            return []
 
 
 _svc: ModelService = None
@@ -134,8 +96,8 @@ class VRAMScheduler:
             hw = load_saved()
             self._is_tier_d  = is_tier_d(hw)
             self._vram_total = hw.gpu_vram_gb
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
 
         log.info(
             f"VRAMScheduler: tier_d={self._is_tier_d} "

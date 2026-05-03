@@ -41,14 +41,14 @@ async def _gather_briefing_data(runtime) -> dict[str, str]:
         try:
             from clawos_core.util.paths import workspace_path
             ws_root = workspace_path(ws_id)
-        except Exception:
-            pass
+        except (ImportError, OSError, AttributeError) as e:
+            log.debug(f"suppressed: {e}")
     ctx = {"workspace_id": ws_id, "memory": memory, "ws_root": ws_root, "bridge": runtime.bridge}
 
     async def _call(name: str, args: dict) -> str:
         try:
             return await dispatch_tool(name, args, ctx)
-        except Exception as e:
+        except Exception as e:  # dispatch_tool may fail in many ways
             return f"[ERROR] {e}"
 
     results = await asyncio.gather(
@@ -99,7 +99,7 @@ async def _synthesise(data: dict[str, str]) -> str:
 
     try:
         text = await loop.run_in_executor(None, _sync)
-    except Exception as e:
+    except (OSError, ConnectionError, RuntimeError) as e:
         log.debug(f"briefing synth fell back: {e}")
         return _fallback_text(data)
     return text.strip() or _fallback_text(data)

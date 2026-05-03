@@ -125,8 +125,8 @@ class NotificationService:
             )
             self._play_sound()
             return True
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+            log.debug(f"suppressed: {e}")
         
         # Try zenity as fallback (Linux)
         try:
@@ -136,8 +136,8 @@ class NotificationService:
                 timeout=5,
             )
             return True
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+            log.debug(f"suppressed: {e}")
         
         log.warning(f"Could not send notification: {title} - {message}")
         return False
@@ -152,8 +152,8 @@ class NotificationService:
                     capture_output=True,
                     timeout=5,
                 )
-            except (FileNotFoundError, subprocess.TimeoutExpired):
-                pass
+            except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+                log.debug(f"suppressed: {e}")
 
 
 class ReminderDaemon:
@@ -178,8 +178,8 @@ class ReminderDaemon:
             self._task.cancel()
             try:
                 await self._task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as e:
+                log.debug(f"suppressed: {e}")
         log.info("Reminder daemon stopped")
     
     async def _loop(self):
@@ -187,7 +187,7 @@ class ReminderDaemon:
         while self.running:
             try:
                 await self._check_reminders()
-            except Exception as e:
+            except (ValueError, TypeError, OSError) as e:
                 log.error(f"Error checking reminders: {e}")
             await asyncio.sleep(CHECK_INTERVAL)
     

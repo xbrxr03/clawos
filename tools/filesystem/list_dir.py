@@ -20,7 +20,7 @@ def run(target: str, workspace_root: Path) -> str:
                 "size_bytes": size,
             })
         return json.dumps(entries, indent=2)
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         return f"[ERROR] Could not list {target}: {e}"
 
 

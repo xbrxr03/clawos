@@ -145,7 +145,7 @@ Only include elements directly relevant to the task. Be precise with coordinates
                     return elements if isinstance(elements, list) else [elements]
                 return []
         
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.error(f"Vision detection failed: {e}")
             return []
     
@@ -224,7 +224,7 @@ Choose the most logical next step toward the goal."""
                 reasoning=decision.get("reasoning")
             )
         
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.error(f"Action decision failed: {e}")
             return BrowserAction(
                 type=ActionType.WAIT,
@@ -573,7 +573,7 @@ class VisionBrowserAgent:
             duration = (time.time() - start_time) * 1000
             return ActionResult(success=True, duration_ms=duration)
         
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             duration = (time.time() - start_time) * 1000
             return ActionResult(
                 success=False,
@@ -625,7 +625,7 @@ class VisionBrowserAgent:
             
             return "yes" in answer and "no" not in answer
         
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.error(f"Goal check failed: {e}")
             return False
 

@@ -39,7 +39,7 @@ class MetricsService:
         try:
             from bootstrap.hardware_probe import load_saved, get_tier
             self._tier = get_tier(load_saved())
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             self._tier = "C"
         log.info(f"metricd started (tier={self._tier} budget={'on' if self._budget_on else 'off'})")
 

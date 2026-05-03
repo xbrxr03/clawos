@@ -26,7 +26,7 @@ async def check_health(timeout: float = 5.0) -> dict:
                 "service": "reminderd",
                 "error": f"HTTP {response.status_code}",
             }
-    except Exception as e:
+    except (httpx.HTTPError, OSError, ConnectionError, TimeoutError) as e:
         return {
             "status": "unhealthy",
             "service": "reminderd",

@@ -73,5 +73,5 @@ async def run(args: dict, agent) -> WorkflowResult:
             output="\n".join(lines),
             metadata={"found": len(empty_dirs), "removed": removed, "dry_run": dry_run},
         )
-    except Exception as exc:
+    except (RuntimeError, OSError, TypeError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

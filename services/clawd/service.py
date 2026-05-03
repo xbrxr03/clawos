@@ -37,7 +37,7 @@ class OrchestrationDaemon:
                 hb_file = WORKSPACE_DIR / DEFAULT_WORKSPACE / "HEARTBEAT.md"
                 if hb_file.exists():
                     await get_bus().emit_log("info", "clawd", "heartbeat check")
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError) as e:
                 log.warning(f"heartbeat error: {e}")
             await asyncio.sleep(300)
 
@@ -101,7 +101,7 @@ async def start_a2a_server(daemon: "OrchestrationDaemon"):
                 from services.agentd.service import get_manager
                 reply = await get_manager().chat_direct(intent, workspace_id=workspace,
                                                         source="a2a:openclaw")
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError) as e:
                 reply = f"[Error] {e}"
             return {
                 "id": body.get("id", ""),
@@ -112,6 +112,6 @@ async def start_a2a_server(daemon: "OrchestrationDaemon"):
         config = uvicorn.Config(app, host="127.0.0.1",
                                 port=A2A_PORT_NEXUS, log_level="warning")
         await uvicorn.Server(config).serve()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.warning(f"Nexus A2A server not started: {e}")
 

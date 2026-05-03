@@ -91,7 +91,7 @@ class ArchiveStore:
                     "WHERE archive_fts MATCH ? ORDER BY rank LIMIT ?",
                     (clean_q, limit),
                 ).fetchall()
-        except Exception as exc:
+        except (sqlite3.Error, OSError) as exc:
             log.debug("archive FTS search error: %s", exc)
             return []
         finally:
@@ -129,7 +129,7 @@ class ArchiveStore:
                     "ORDER BY ts DESC LIMIT ?",
                     (limit,),
                 ).fetchall()
-        except Exception as exc:
+        except (sqlite3.Error, OSError) as exc:
             log.debug("archive recent error: %s", exc)
             return []
         finally:
@@ -157,7 +157,7 @@ class ArchiveStore:
                             f_out.write(f_in.read())
                     jsonl_path.unlink()
                     compressed += 1
-            except Exception as exc:
+            except (OSError, PermissionError) as exc:
                 log.warning("compress_old_files: %s: %s", jsonl_path.name, exc)
         return compressed
 
@@ -194,7 +194,7 @@ class ArchiveStore:
                 (event_id, event_type, agent, ts, iso, snippet),
             )
             db.commit()
-        except Exception as exc:
+        except (sqlite3.Error, OSError) as exc:
             log.debug("archive index error: %s", exc)
         finally:
             db.close()

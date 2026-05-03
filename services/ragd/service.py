@@ -24,6 +24,7 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from typing import Optional
+import subprocess
 
 log = logging.getLogger("ragd")
 
@@ -65,7 +66,7 @@ def _get_cross_encoder():
         from sentence_transformers import CrossEncoder
         _cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
         log.info("ragd: CrossEncoder reranker loaded")
-    except Exception as exc:
+    except (ImportError, OSError, RuntimeError) as exc:
         log.debug("ragd: CrossEncoder unavailable (%s) — using vector-only ranking", exc)
         _cross_encoder = None
     return _cross_encoder
@@ -93,7 +94,7 @@ def _crossencoder_rerank(query: str, results: list, top_k: int = 5) -> list:
             # Nothing passed threshold — return top by score regardless
             reranked = [r for _, r in scored]
         return reranked[:top_k]
-    except Exception as exc:
+    except (OSError, RuntimeError, AttributeError) as exc:
         log.debug("ragd: CrossEncoder rerank error: %s", exc)
         return results
 
@@ -388,7 +389,7 @@ class RAGService:
         pages = []
         try:
             reader = PdfReader(str(path), strict=False)
-        except Exception as e:
+        except (OSError, ValueError, ImportError) as e:
             log.error(f"Cannot open PDF {path.name}: {e}")
             return []
 
@@ -396,7 +397,7 @@ class RAGService:
             page_num = i + 1
             try:
                 raw = page.extract_text() or ""
-            except Exception as e:
+            except (OSError, ValueError, AttributeError) as e:
                 log.warning(f"Page {page_num} extraction error: {e}")
                 continue
             text = self._normalize(raw)
@@ -424,7 +425,7 @@ class RAGService:
                 if chunk_text.strip():
                     pages.append((i // page_size + 1, chunk_text))
             return pages
-        except Exception as e:
+        except (OSError, UnicodeDecodeError) as e:
             log.error(f"Cannot read {path.name}: {e}")
             return []
 
@@ -437,7 +438,7 @@ class RAGService:
         except ImportError:
             log.warning("python-docx not installed, reading .docx as zip text")
             return self._extract_text(path)
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError, RuntimeError) as e:
             log.error(f"Cannot read docx {path.name}: {e}")
             return []
 
@@ -472,7 +473,7 @@ class RAGService:
                 with urllib.request.urlopen(req, timeout=30) as r:
                     data = json.loads(r.read())
                 embeddings.append(data["embedding"])
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError) as e:
                 log.warning(f"Embed error: {e}")
                 embeddings.append(None)
         return embeddings
@@ -499,7 +500,7 @@ class RAGService:
             with urllib.request.urlopen(req, timeout=120) as r:
                 r.read()
             return True
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.warning(f"Could not ensure embed model: {e}")
             return False
 
@@ -659,7 +660,7 @@ class RAGService:
         if col and chunk_ids:
             try:
                 col.delete(ids=chunk_ids)
-            except Exception as e:
+            except (OSError, AttributeError, RuntimeError) as e:
                 log.warning(f"ChromaDB delete error: {e}")
 
         log.info(f"Removed {filename} from RAG index")
@@ -692,7 +693,7 @@ class RAGService:
                                headers={"Content-Type": "application/json"})
             with _ur.urlopen(_req, timeout=30) as _r:
                 query_emb = _json.loads(_r.read())["embedding"]
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.warning(f"Embed query failed: {e}")
             return []
 
@@ -702,7 +703,7 @@ class RAGService:
                 n_results=top_k * 3,
                 include=["documents", "metadatas", "distances"],
             )
-        except Exception as e:
+        except (OSError, AttributeError, RuntimeError) as e:
             log.warning(f"ChromaDB query error: {e}")
             return []
 
@@ -858,7 +859,7 @@ class RAGService:
             )
             with urllib.request.urlopen(req, timeout=60) as r:
                 return json.loads(r.read()).get("response", "").strip()
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.warning(f"Ollama call failed: {e}")
             return None
 
@@ -957,7 +958,8 @@ class RAGService:
         try:
             if col:
                 vec_count = col.count()
-        except Exception:
+        except (OSError, AttributeError, RuntimeError) as e:
+            log.debug(f"unexpected: {e}")
             pass
         return {
             "workspace":   self.workspace,

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from clawos_core.constants import CLAWOS_DIR
 from clawos_core.platform import ram_snapshot_gb
+from clawos_core.tool_result import ToolResult
 from clawos_core.util.paths import workspace_path
 
 log = logging.getLogger("toolbridge")
@@ -26,33 +27,69 @@ SHELL_ALLOWLIST = [
     r'^python3?\s+[^-]', r'^pip\s', r'^git\s',
 ]
 
-TOOL_ALIASES = {}
-
-ALL_TOOL_DESCRIPTIONS = {
-    "fs.read":          "Read a file. Input: path relative to workspace.",
-    "fs.write":         "Write content to a file. Input: filename + content field.",
-    "fs.list":          "List files in a directory. Input: directory path.",
-    "fs.delete":        "Delete a file. Requires approval.",
-    "fs.search":        "Search files by content. Input: query string.",
-    "web.search":       "Search the web. Input: search query.",
-    "web.fetch":        "Fetch a URL. Input: full URL.",
-    "shell.restricted": "Run allowlisted shell command. Input: command string.",
-    "memory.read":      "Search memory. Input: query string.",
-    "memory.write":     "Save to memory. Input: text to remember.",
-    "memory.delete":    "Delete a memory. Input: memory_id.",
-    "system.info":      "Get system info: disk, RAM, services.",
-    "workspace.create": "Create a new workspace. Input: workspace name.",
-    "workspace.inspect":"Inspect workspace contents and memory summary.",
-    # Browser tools (Playwright) — disabled by default, enabled by config
-    "browser.open":     "Open a URL in a sandboxed browser session. Input: url.",
-    "browser.read":     "Read the visible text content of the current page.",
-    "browser.click":    "Click an element on the current page. Input: CSS selector or text.",
-    "browser.type":     "Type text into a focused input field. Input: text string.",
-    "browser.screenshot": "Take a screenshot of the current page. Returns image path.",
-    "browser.close":    "Close the current browser session.",
-    "browser.scroll":   "Scroll the page. Input: 'up', 'down', or a CSS selector.",
-    "browser.wait":     "Wait for an element or condition. Input: CSS selector or milliseconds.",
+# Mapping from legacy tool names (used in _execute dispatch) to their
+# canonical names in the NATIVE_TOOLS / tool_schemas registry.
+TOOL_ALIASES = {
+    "fs.read":          "read_file",
+    "fs.write":         "write_file",
+    "fs.list":          "list_files",
+    "fs.delete":        "fs.delete",         # legacy-only, no native tool
+    "fs.search":        "fs.search",          # legacy-only
+    "web.search":       "web_search",
+    "web.fetch":        "web.fetch",          # legacy-only
+    "shell.restricted": "run_command",
+    "memory.read":      "recall",
+    "memory.write":     "remember",
+    "memory.delete":    "memory.delete",      # legacy-only
+    "system.info":      "system_stats",
+    "workspace.create":  "workspace.create",   # legacy-only
+    "workspace.inspect": "workspace.inspect",  # legacy-only
 }
+
+
+def _build_tool_descriptions() -> dict[str, str]:
+    """Derive tool descriptions from tool_schemas (single source of truth).
+
+    Falls back to NATIVE_TOOLS names when tool_schemas hasn't been imported.
+    Browser tools and legacy-only tools are appended separately since they
+    don't live in NATIVE_TOOLS.
+    """
+    from runtimes.agent.tool_schemas import ALL_SCHEMAS
+    descs: dict[str, str] = {}
+    for schema in ALL_SCHEMAS:
+        fn = schema["function"]
+        descs[fn["name"]] = fn["description"]
+
+    # Legacy-only tools that exist in _execute but not in NATIVE_TOOLS
+    descs["fs.delete"]        = "Delete a file. Requires approval."
+    descs["fs.search"]        = "Search files by content. Input: query string."
+    descs["web.fetch"]         = "Fetch a URL. Input: full URL."
+    descs["memory.delete"]    = "Delete a memory. Input: memory_id."
+    descs["workspace.create"]  = "Create a new workspace. Input: workspace name."
+    descs["workspace.inspect"] = "Inspect workspace contents and memory summary."
+
+    # Browser tools (Playwright) — disabled by default, enabled by config
+    descs["browser.open"]      = "Open a URL in a sandboxed browser session. Input: url."
+    descs["browser.read"]      = "Read the visible text content of the current page."
+    descs["browser.click"]     = "Click an element on the current page. Input: CSS selector or text."
+    descs["browser.type"]     = "Type text into a focused input field. Input: text string."
+    descs["browser.screenshot"] = "Take a screenshot of the current page. Returns image path."
+    descs["browser.close"]    = "Close the current browser session."
+    descs["browser.scroll"]    = "Scroll the page. Input: 'up', 'down', or a CSS selector."
+    descs["browser.wait"]      = "Wait for an element or condition. Input: CSS selector or milliseconds."
+
+    return descs
+
+
+# Lazy-loaded so we don't pay import cost until someone builds a prompt.
+ALL_TOOL_DESCRIPTIONS: dict[str, str] | None = None
+
+
+def _get_tool_descriptions() -> dict[str, str]:
+    global ALL_TOOL_DESCRIPTIONS
+    if ALL_TOOL_DESCRIPTIONS is None:
+        ALL_TOOL_DESCRIPTIONS = _build_tool_descriptions()
+    return ALL_TOOL_DESCRIPTIONS
 
 
 class ToolBridge:
@@ -72,7 +109,8 @@ class ToolBridge:
     def get_tool_list_for_prompt(self) -> str:
         """Only inject granted tools — reduces tokens by 30-60%."""
         granted = set(self.policy.granted_tools)
-        available = {k: v for k, v in ALL_TOOL_DESCRIPTIONS.items() if k in granted}
+        descs = _get_tool_descriptions()
+        available = {k: v for k, v in descs.items() if k in granted}
         
         # Add MCP tools if available
         if self.mcp_client:
@@ -117,19 +155,22 @@ class ToolBridge:
 
         # Resolve fs paths before policy
         check_target = policy_target
-        if normalized_tool in ("fs.read", "fs.write", "fs.list", "fs.delete", "fs.search",
-                               "read_file", "write_file", "list_files", "open_file"):
+        fs_tools = {"fs.read", "fs.write", "fs.list", "fs.delete", "fs.search",
+                     "read_file", "write_file", "list_files", "open_file"}
+        if normalized_tool in fs_tools:
             try:
                 check_target = str(self._resolve_path(policy_target or "."))
-            except Exception:
+            except (OSError, RuntimeError, AttributeError) as e:
+                log.debug(f"unexpected: {e}")
+                pass
                 pass
 
         decision, reason = await self.policy.check(normalized_tool, check_target, content)
         if decision == "DENY":
             log.warning(f"Tool blocked: {normalized_tool} — {reason}")
-            return f"[DENIED] {reason}"
+            return str(ToolResult.denied(reason))
         if decision == "QUEUE":
-            return f"[PENDING APPROVAL] {normalized_tool}"
+            return str(ToolResult.pending(normalized_tool))
 
         try:
             if normalized_tool in NATIVE_TOOLS:
@@ -144,15 +185,16 @@ class ToolBridge:
             else:
                 # Fall back to the legacy (target, content) dispatch
                 result = await self._execute(normalized_tool, policy_target, content)
-        except Exception as e:
-            result = f"[ERROR] {normalized_tool} failed: {e}"
+        except (OSError, RuntimeError, TypeError) as e:
+            result = str(ToolResult.error(f"{normalized_tool} failed: {e}", error=type(e).__name__))
             log.error(f"Tool error: {normalized_tool}: {e}")
 
         # Run after-hooks
         try:
             ctx = {"workspace_id": self.workspace, "task_id": self.policy.task_id}
             await self.policy._get_engine().hooks.run_after(normalized_tool, policy_target, str(result), ctx)
-        except Exception:
+        except (OSError, RuntimeError, AttributeError) as e:
+            log.debug(f"unexpected: {e}")
             pass
 
         return result if isinstance(result, str) else str(result)
@@ -171,21 +213,22 @@ class ToolBridge:
 
         if decision == "DENY":
             log.warning(f"Tool blocked: {normalized_tool}({target[:50]}) — {reason}")
-            return f"[DENIED] {reason}"
+            return str(ToolResult.denied(reason))
         if decision == "QUEUE":
-            return f"[PENDING APPROVAL] {normalized_tool}({target})"
+            return str(ToolResult.pending(f"{normalized_tool}({target})"))
 
         try:
             result = await self._execute(normalized_tool, target, content)
-        except Exception as e:
-            result = f"[ERROR] {normalized_tool} failed: {e}"
+        except (OSError, RuntimeError, TypeError) as e:
+            result = str(ToolResult.error(f"{normalized_tool} failed: {e}", error=type(e).__name__))
             log.error(f"Tool error: {normalized_tool}({target[:40]}): {e}")
 
         # AfterToolCall hooks
         try:
             ctx = {"workspace_id": self.workspace, "task_id": self.policy.task_id}
             await self.policy._get_engine().hooks.run_after(normalized_tool, target, result, ctx)
-        except Exception:
+        except (OSError, RuntimeError, AttributeError) as e:
+            log.debug(f"unexpected: {e}")
             pass
 
         return result
@@ -221,7 +264,7 @@ class ToolBridge:
             # Check if it's an MCP tool
             if self.mcp_client and tool.startswith("mcp."):
                 return await self._execute_mcp_tool(tool, target, content)
-            return f"[ERROR] Unknown tool: {tool}"
+            return str(ToolResult.error(f"Unknown tool: {tool}", error="unknown_tool"))
         result = fn()
         if asyncio.iscoroutine(result):
             return await result
@@ -241,12 +284,12 @@ class ToolBridge:
             if target and target.strip().startswith("{"):
                 try:
                     arguments = json.loads(target)
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+                    log.debug(f"suppressed: {e}")
             
             result = await self.mcp_client.execute_tool(tool_name, arguments)
             return result
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.error(f"MCP tool execution failed: {e}")
             return f"[MCP ERROR] {tool_name}: {str(e)}"
 
@@ -258,25 +301,25 @@ class ToolBridge:
     def _fs_read(self, target: str) -> str:
         path = self._resolve_path(target)
         if not path.exists():
-            return f"[ERROR] File not found: {target}"
+            return str(ToolResult.error(f"File not found: {target}", error="not_found"))
         if not path.is_file():
-            return f"[ERROR] Not a file: {target}"
+            return str(ToolResult.error(f"Not a file: {target}", error="not_file"))
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
             if len(text) > 8000:
                 text = text[:8000] + f"\n...[truncated, {len(text)} total chars]"
-            return text
-        except Exception as e:
-            return f"[ERROR] {e}"
+            return str(ToolResult.ok(text))
+        except (IOError, OSError) as e:
+            return str(ToolResult.error(str(e), error=type(e).__name__))
 
     def _fs_write(self, target: str, content: str) -> str:
         path = self._resolve_path(target)
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
-            return f"[OK] Written {len(content)} chars to {path.name}"
-        except Exception as e:
-            return f"[ERROR] {e}"
+            return str(ToolResult.ok(f"Written {len(content)} chars to {path.name}"))
+        except (IOError, OSError) as e:
+            return str(ToolResult.error(str(e), error=type(e).__name__))
 
     def _fs_list(self, target: str) -> str:
         path = self._ws_root if not target or target in (".", "") else self._resolve_path(target)
@@ -288,15 +331,15 @@ class ToolBridge:
                      (f" ({e.stat().st_size}B)" if e.is_file() else "")
                      for e in entries]
             return "\n".join(lines) or "(empty)"
-        except Exception as e:
+        except (OSError, PermissionError) as e:
             return f"[ERROR] {e}"
 
     def _fs_delete(self, target: str) -> str:
         path = self._resolve_path(target)
         if not path.exists():
-            return f"[ERROR] Not found: {target}"
+            return str(ToolResult.error(f"Not found: {target}", error="not_found"))
         path.unlink()
-        return f"[OK] Deleted {path.name}"
+        return str(ToolResult.ok(f"Deleted {path.name}"))
 
     def _fs_search(self, query: str) -> str:
         try:
@@ -318,10 +361,10 @@ class ToolBridge:
                 try:
                     if query in path.read_text(encoding="utf-8", errors="replace"):
                         matches.append(str(path))
-                except Exception:
+                except (OSError, UnicodeDecodeError):
                     continue
             return "\n".join(matches) if matches else "[SEARCH] No matches"
-        except Exception as e:
+        except (OSError, UnicodeDecodeError) as e:
             return f"[ERROR] {e}"
 
     async def _web_search(self, query: str) -> str:
@@ -339,7 +382,7 @@ class ToolBridge:
                     return "\n".join(clean) if clean else "[SEARCH] No results"
         except OSError:
             return "[OFFLINE] No internet connection"
-        except Exception as e:
+        except (aiohttp.ClientError, OSError, ConnectionError) as e:
             return f"[SEARCH ERROR] {e}"
 
     async def _web_fetch(self, url: str) -> str:
@@ -352,25 +395,25 @@ class ToolBridge:
                     return clean[:4000]
         except OSError:
             return "[OFFLINE] Cannot fetch URL"
-        except Exception as e:
+        except (aiohttp.ClientError, OSError, ConnectionError) as e:
             return f"[FETCH ERROR] {e}"
 
     def _shell(self, command: str) -> str:
         if not any(re.match(p, command.strip()) for p in SHELL_ALLOWLIST):
-            return f"[DENIED] Command not in allowlist: {command}"
+            return str(ToolResult.error(f"Command not in allowlist: {command}", error="denied"))
         try:
             import shlex
             try:
                 argv = shlex.split(command)
             except ValueError:
-                return "[DENIED] Could not parse command"
+                return str(ToolResult.denied("Could not parse command"))
             r = subprocess.run(argv, capture_output=True,
                                text=True, timeout=15, cwd=str(self._ws_root))
             out = (r.stdout + r.stderr)[:4000]
             return out.strip() or "[OK] No output"
         except subprocess.TimeoutExpired:
-            return "[ERROR] Command timed out"
-        except Exception as e:
+            return str(ToolResult.error("Command timed out", error="timeout"))
+        except (OSError, subprocess.SubprocessError) as e:
             return f"[ERROR] {e}"
 
     def _memory_read(self, query: str) -> str:
@@ -435,5 +478,5 @@ class ToolBridge:
                 return "[browser] session closed"
             else:
                 return f"[ERROR] Unknown browser action: {action}"
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return f"[browser error] {e}"

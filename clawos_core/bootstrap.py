@@ -118,7 +118,7 @@ class Bootstrap:
                 self._initialized.append(name)
                 logger.info(f"✓ {name} initialized")
                 
-            except Exception as e:
+            except (ValueError, TypeError, OSError) as e:
                 logger.error(f"✗ Failed to initialize {name}: {e}")
                 self._registry.register(
                     name=name,
@@ -187,7 +187,7 @@ class Bootstrap:
                     else:
                         results[name] = {"status": "unknown"}
                         
-            except Exception as e:
+            except (ImportError, OSError, AttributeError, RuntimeError) as e:
                 logger.error(f"Health check failed for {name}: {e}")
                 results[name] = {"status": "error", "error": str(e)}
         
@@ -210,7 +210,7 @@ class Bootstrap:
         for handler in reversed(self._shutdown_handlers):
             try:
                 handler()
-            except Exception as e:
+            except (OSError, RuntimeError, AttributeError) as e:
                 logger.error(f"Shutdown handler failed: {e}")
         
         # Shutdown registry

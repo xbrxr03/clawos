@@ -70,5 +70,5 @@ async def run(args: dict, agent) -> WorkflowResult:
             output=output_text,
             metadata={"output": str(output_path), "files": len(input_paths), "size_bytes": size},
         )
-    except Exception as exc:
+    except (OSError, PermissionError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

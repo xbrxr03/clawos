@@ -16,6 +16,6 @@ def health() -> dict:
             "models_loaded": len(models),
             "active_model": active.get("name") if active else None,
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"LLMd health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

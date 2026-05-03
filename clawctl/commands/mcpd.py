@@ -76,7 +76,7 @@ def mcpd_status():
                 click.echo(f"✓ MCP server is running on port {PORT_MCPD}")
                 click.echo(f"  Protocol version: {data.get('protocol_version', 'unknown')}")
                 click.echo(f"  Service: {data.get('service', 'unknown')}")
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             click.echo(f"⚠ MCP server responded but with error: {e}")
     else:
         click.echo(f"✗ MCP server is not running on port {PORT_MCPD}")
@@ -100,7 +100,7 @@ def mcpd_start():
         )
         click.echo("✓ MCP server starting...")
         click.echo(f"  Check status: clawctl mcpd status")
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError) as e:
         click.echo(f"✗ Failed to start MCP server: {e}")
 
 
@@ -122,7 +122,7 @@ def mcpd_stop():
             click.echo("✓ MCP server stopped")
         else:
             click.echo("⚠ Could not stop MCP server (may require manual kill)")
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         click.echo(f"✗ Error stopping MCP server: {e}")
 
 
@@ -175,7 +175,7 @@ def mcpd_info():
         click.echo(f"\n📡 Endpoint: {MCP_ENDPOINT}")
         click.echo(f"   Health:   {HEALTH_ENDPOINT}")
         
-    except Exception as e:
+    except (EOFError, KeyboardInterrupt, OSError) as e:
         click.echo(f"✗ Error querying MCP server: {e}")
 
 
@@ -203,7 +203,7 @@ def mcpd_test(tool):
                 if item.get("type") == "text":
                     click.echo(f"\nResult:\n{item['text']}")
         
-    except Exception as e:
+    except (SystemExit, OSError, RuntimeError) as e:
         click.echo(f"✗ Test failed: {e}")
 
 

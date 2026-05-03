@@ -10,7 +10,8 @@ def add(text: str, workspace_id: str, source: str = "memory"):
     try:
         from services.memd.service import add_to_graph
         add_to_graph(text, workspace_id, source)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
+        pass
         pass
 
 
@@ -19,5 +20,5 @@ def query(entity: str, workspace_id: str) -> str:
     try:
         from services.memd.service import query_graph
         return query_graph(entity, workspace_id)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return ""

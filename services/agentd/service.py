@@ -42,8 +42,8 @@ class AgentManager:
                     log.warning(f"VRAM guard blocked new session: {reason}")
                     raise RuntimeError(f"VRAM limit: {reason}")
                 sched.register(workspace_id, "")
-            except ImportError:
-                pass
+            except ImportError as e:
+                log.debug(f"suppressed: {e}")
 
             from runtimes.agent.runtime import build_runtime
             self._sessions[workspace_id] = await build_runtime(workspace_id)
@@ -84,7 +84,7 @@ class AgentManager:
                     if ctx.get("context_text"):
                         enriched_intent = f"{ctx['context_text']}\n\n{task.intent}"
                         log.debug(f"Kizuna context injected: {len(ctx['nodes'])} nodes")
-            except Exception as brain_err:
+            except (ImportError, ModuleNotFoundError) as brain_err:
                 log.debug(f"Kizuna context skipped: {brain_err}")
 
             result = await session.chat(enriched_intent)
@@ -100,10 +100,10 @@ class AgentManager:
                 asyncio.create_task(
                     brain.expand_from_agent(result, source="agentd", task_id=task.task_id)
                 )
-            except Exception as expand_err:
+            except (ImportError, ModuleNotFoundError) as expand_err:
                 log.debug(f"Kizuna expand skipped: {expand_err}")
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             task.error       = str(e)
             task.status      = TaskStatus.FAILED
             task.finished_at = now_iso()
@@ -130,7 +130,9 @@ class AgentManager:
             session.session.channel = self._derive_channel(channel, source)
             if source:
                 session.session.contact_id = source
-        except Exception:
+        except (OSError, RuntimeError, AttributeError) as e:
+            log.debug(f"unexpected: {e}")
+            pass
             pass
 
     async def chat_direct(self, message: str,
@@ -166,7 +168,7 @@ class AgentManager:
             config = uvicorn.Config(api, host="127.0.0.1", port=PORT_AGENTD,
                                     log_level="warning")
             await uvicorn.Server(config).serve()
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.warning(f"agentd API not started: {e}")
 
 

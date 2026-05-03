@@ -49,7 +49,7 @@ def find_gaps(graph_builder) -> list[dict]:
                             f"({', '.join(list(overlap)[:3])}) but are not connected"
                         ),
                     })
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.debug(f"Cross-community analysis failed: {e}")
 
     return base_gaps[:25]

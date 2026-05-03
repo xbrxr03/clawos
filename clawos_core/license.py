@@ -101,8 +101,8 @@ def _get_machine_id() -> str:
             key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
                                  r"SOFTWARE\Microsoft\Cryptography")
             raw_id = winreg.QueryValueEx(key, "MachineGuid")[0]
-    except Exception:
-        pass
+    except (subprocess.SubprocessError, OSError) as e:
+        log.debug(f"suppressed: {e}")
 
     if not raw_id:
         raw_id = platform.node()  # hostname fallback
@@ -129,7 +129,7 @@ def _supabase_get(path: str, params: str = "") -> Optional[list]:
         req = urllib.request.Request(url, headers=_supabase_headers())
         with urllib.request.urlopen(req, timeout=10) as resp:
             return json.loads(resp.read().decode("utf-8"))
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         log.debug(f"Supabase GET {path}: {e}")
         return None
 
@@ -144,7 +144,7 @@ def _supabase_patch(path: str, data: dict) -> bool:
         req = urllib.request.Request(url, data=body, headers=headers, method="PATCH")
         with urllib.request.urlopen(req, timeout=10) as resp:
             return resp.status < 300
-    except Exception as e:
+    except (OSError, ConnectionRefusedError, TimeoutError) as e:
         log.debug(f"Supabase PATCH {path}: {e}")
         return False
 
@@ -154,7 +154,7 @@ def _load_cache() -> dict:
         return {}
     try:
         return json.loads(LICENSE_CACHE_FILE.read_text())
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         return {}
 
 

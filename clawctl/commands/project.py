@@ -37,7 +37,7 @@ def run_upload(filepath: str, workspace: str = "nexus_default"):
         result = rag.ingest(dest)
         chunks = result.get("chunks", "?")
         success(f"Indexed {src.name} — {chunks} chunks ready for RAG")
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         error(f"Ingestion failed: {exc}")
         info(f"File was copied to workspace. Try: {service_hint('restart', 'clawos.service')}")
     print()
@@ -58,7 +58,7 @@ def run_list(workspace: str = "nexus_default"):
             return
         rows = [(doc["title"], doc["type"], str(doc["chunks"]), doc["added"][:10]) for doc in docs]
         table(rows, headers=("document", "type", "chunks", "added"))
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         error(f"Could not list documents: {exc}")
     print()
 
@@ -84,7 +84,7 @@ def run_query(question: str, workspace: str = "nexus_default"):
             for source in sources:
                 print(f"    {source['ref']} {source['title']} p.{source['page']}")
         print(f"\n  [{trust}]\n")
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         error(f"Query failed: {exc}")
     print()
 
@@ -103,6 +103,6 @@ def run_stats(workspace: str = "nexus_default"):
         print(f"  Chunks:     {stats['chunks']}")
         print(f"  Vectors:    {stats['vectors']}")
         print(f"  Embed model:{stats['embed_model']}")
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         error(f"Stats unavailable: {exc}")
     print()

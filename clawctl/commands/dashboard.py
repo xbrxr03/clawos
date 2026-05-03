@@ -66,7 +66,7 @@ def get_health(name: str, port: int) -> Tuple[str, Optional[Dict]]:
         return f"http_{e.code}", None
     except urllib.error.URLError:
         return "down", None
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         return "error", None
 
 

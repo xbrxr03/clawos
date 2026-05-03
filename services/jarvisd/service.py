@@ -77,7 +77,9 @@ def _load_state() -> dict[str, Any]:
     if JARVIS_STATE_JSON.exists():
         try:
             return json.loads(JARVIS_STATE_JSON.read_text(encoding="utf-8"))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            log.debug(f"failed: {e}")
+            pass
             pass
     return {"threads": {}, "shared_memory": {}}
 
@@ -195,7 +197,7 @@ class JarvisService:
                 result = listener(dict(session))
                 if asyncio.iscoroutine(result):
                     loop.create_task(result)
-            except Exception:
+            except (OSError, RuntimeError, AttributeError):
                 continue
 
     def _ensure_loop(self) -> None:
@@ -321,8 +323,8 @@ class JarvisService:
                 from services.secretd.service import get_store
 
                 get_store().set("elevenlabs_api_key", api_key)
-            except Exception:
-                pass
+            except (ImportError, ModuleNotFoundError) as e:
+                log.debug(f"suppressed: {e}")
             os.environ["ELEVENLABS_API_KEY"] = api_key
 
         calendar_ics_url = str(updates.get("calendar_ics_url", "")).strip()
@@ -422,7 +424,7 @@ class JarvisService:
             code = int(current.get("weather_code", 0))
             condition = WEATHER_CODES.get(code, "settled")
             return {"status": "live", "text": f"In {location}, it's {condition} at {temp}°C."}
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             return {"status": "demo", "text": "It's bright and sunny at 22°C with a light breeze."}
 
     def _headline_snapshot(self) -> dict[str, Any]:
@@ -432,7 +434,7 @@ class JarvisService:
                 from services.secretd.service import get_store
 
                 brave_key = get_store().get("brave_api_key") or ""
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 brave_key = ""
         if not brave_key:
             return {
@@ -454,8 +456,8 @@ class JarvisService:
             titles = [str(item.get("title", "")).strip() for item in results if str(item.get("title", "")).strip()]
             if titles:
                 return {"status": "live", "items": titles[:3]}
-        except Exception:
-            pass
+        except (json.JSONDecodeError, ValueError) as e:
+            log.debug(f"suppressed: {e}")
         return {
             "status": "demo",
             "items": [
@@ -503,7 +505,7 @@ class JarvisService:
             items = [label for _, label in events[:5]]
             if items:
                 return {"status": "live", "items": items}
-        except Exception as exc:
+        except (OSError, ConnectionRefusedError, TimeoutError) as exc:
             log.debug("Calendar ICS fetch failed: %s", exc)
         return {"status": "demo", "items": ["a product meeting at 3 PM", "a webinar at 7 PM"]}
 
@@ -516,8 +518,8 @@ class JarvisService:
                 items = [str(item.get("title", "")).strip() for item in missions[:3] if str(item.get("title", "")).strip()]
                 if items:
                     return {"status": "live", "items": items}
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
         return {"status": "demo", "items": ["keep the JARVIS room moving", "finish the OpenClaw bridge", "tighten the demo script"]}
 
     def _project_snapshot(self, shared_memory: dict[str, Any]) -> dict[str, Any]:
@@ -572,7 +574,7 @@ class JarvisService:
                 text = str(result.get("text", "")).strip()
                 if text:
                     return text, source_status
-            except Exception as exc:
+            except (OSError, RuntimeError, TimeoutError) as exc:
                 log.warning("OpenClaw briefing generation failed, using local formatter: %s", exc)
         return self._format_briefing_text(context), source_status
 
@@ -594,7 +596,7 @@ class JarvisService:
                 live_caption=transcript or "",
             )
             return transcript
-        except Exception as exc:
+        except (OSError, RuntimeError, TimeoutError) as exc:
             log.error("JARVIS STT error: %s", exc)
             self._update_thread(thread_key, state="idle", follow_up_open=False, live_caption="")
             return ""
@@ -639,7 +641,7 @@ class JarvisService:
                     capture_output=True,
                 )
             return play.returncode == 0
-        except Exception as exc:
+        except (OSError, subprocess.SubprocessError) as exc:
             log.error("JARVIS TTS error: %s", exc)
             return False
 
@@ -752,7 +754,7 @@ class JarvisService:
             mem = MemoryService()
             state = mem.load_session_state(ws)
             pending = mem.get_pending_queue(ws)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return {"ok": False, "spoken": False, "reason": "memd unavailable"}
 
         if not state and not pending:
@@ -776,7 +778,9 @@ class JarvisService:
         if config.get("voice_enabled"):
             try:
                 spoken = await self.speak(briefing_text)
-            except Exception:
+            except (OSError, RuntimeError, ImportError) as e:
+                log.debug(f"unexpected: {e}")
+                pass
                 pass
         self._update_thread(JARVIS_UI_THREAD, last_response=briefing_text, live_caption=briefing_text)
         return {"ok": True, "spoken": spoken, "briefing": briefing_text}

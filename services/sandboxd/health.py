@@ -15,6 +15,6 @@ def health() -> dict:
             "active_sandboxes": active_sandboxes,
             "sandbox_v2_ready": True,
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"Sandboxd health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

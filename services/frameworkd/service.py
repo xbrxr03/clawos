@@ -31,7 +31,7 @@ def list_frameworks(profile_id: Optional[str] = None) -> list[dict]:
             from bootstrap.hardware_probe import load_saved
             hw = load_saved()
             profile_id = hw.profile_id
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             profile_id = "x86-cpu-16gb"
     return get_registry().list_for_tier(profile_id)
 
@@ -137,7 +137,7 @@ async def _sync_states_loop(interval: int = 30) -> None:
                     reg.set_state(name, AppState.RUNNING)
                 elif installed:
                     reg.set_state(name, AppState.INSTALLED)
-        except Exception as e:
+        except (AttributeError, TypeError, RuntimeError) as e:
             log.debug(f"frameworkd: state sync error: {e}")
         await asyncio.sleep(interval)
 
@@ -150,5 +150,5 @@ def start_background_sync() -> None:
             loop.create_task(_sync_states_loop())
         else:
             asyncio.ensure_future(_sync_states_loop())
-    except Exception as e:
+    except (OSError, ValueError) as e:
         log.warning(f"frameworkd: could not start background sync: {e}")

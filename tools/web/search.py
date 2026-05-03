@@ -41,5 +41,5 @@ def run(target: str) -> str:
         if not results:
             return f"[NO RESULTS] No results found for: {query}"
         return json.dumps(results, indent=2)
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         return f"[OFFLINE] Web search unavailable: {e}"

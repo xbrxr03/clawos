@@ -122,8 +122,8 @@ class VADProcessor:
             # WebRTC VAD
             try:
                 return self.vad.is_speech(audio_chunk, self.sample_rate)
-            except:
-                pass
+            except (OSError, AttributeError) as e:
+                log.debug(f"suppressed: {e}")
         
         # Fallback: Simple energy-based VAD
         audio_data = np.frombuffer(audio_chunk, dtype=np.int16)
@@ -184,7 +184,7 @@ class WakeWordDetector:
                     keywords=keywords
                 )
                 log.info(f"Wake word detector initialized with: {keywords}")
-            except Exception as e:
+            except (ImportError, OSError, RuntimeError) as e:
                 log.error(f"Failed to initialize Porcupine: {e}")
                 self.porcupine = None
         else:
@@ -206,7 +206,7 @@ class WakeWordDetector:
             if len(pcm) >= frame_length:
                 result = self.porcupine.process(pcm[:frame_length])
                 return result >= 0  # Wake word detected
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             log.error(f"Wake word processing error: {e}")
         
         return False
@@ -239,7 +239,7 @@ class StreamingTTS:
                     log.info(f"Loaded Piper voice: {voice_model}")
                 else:
                     log.warning(f"Piper voice files not found: {model_path}")
-            except Exception as e:
+            except (OSError, RuntimeError) as e:
                 log.error(f"Failed to load Piper voice: {e}")
         else:
             log.warning("Piper not available, streaming TTS disabled")
@@ -288,7 +288,7 @@ class StreamingTTS:
                         yield chunk
                         await asyncio.sleep(0.01)  # Small delay for streaming effect
         
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             log.error(f"TTS synthesis error: {e}")
     
     def _split_sentences(self, text: str) -> list[str]:
@@ -315,7 +315,7 @@ class STTProcessor:
                 log.info(f"Loading Whisper model: {model_size}")
                 self.model = whisper.load_model(model_size)
                 log.info("Whisper model loaded")
-            except Exception as e:
+            except (ImportError, OSError, RuntimeError) as e:
                 log.error(f"Failed to load Whisper: {e}")
         else:
             log.warning("Whisper not available, STT disabled")
@@ -343,7 +343,7 @@ class STTProcessor:
             
             return result.get("text", "").strip()
         
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             log.error(f"Transcription error: {e}")
             return None
 
@@ -393,7 +393,7 @@ class VoicePipeline:
             if self.on_state_change:
                 try:
                     self.on_state_change(new_state)
-                except Exception as e:
+                except (RuntimeError, TypeError, AttributeError) as e:
                     log.error(f"State change callback error: {e}")
     
     async def process_audio_chunk(self, audio_chunk: bytes) -> Optional[bytes]:
@@ -423,7 +423,7 @@ class VoicePipeline:
                 if self.on_wake_word:
                     try:
                         self.on_wake_word()
-                    except Exception as e:
+                    except (RuntimeError, TypeError, AttributeError) as e:
                         log.error(f"Wake word callback error: {e}")
             
             # Also buffer audio for context
@@ -465,7 +465,7 @@ class VoicePipeline:
                                         break
                                     return tts_chunk
                             
-                            except Exception as e:
+                            except (OSError, RuntimeError) as e:
                                 log.error(f"Command processing error: {e}")
                     
                     # Return to idle
@@ -515,7 +515,7 @@ async def startup():
             from clawos_core.constants import PORT_WAKETRD
             async with httpx.AsyncClient(timeout=10.0) as client:
                 await client.post(f"http://127.0.0.1:{PORT_WAKETRD}/trigger")
-        except Exception as e:
+        except (httpx.HTTPError, OSError, ConnectionError) as e:
             log.warning(f"Failed to call waketrd: {e}")
     
     def on_wake_sync():
@@ -573,7 +573,7 @@ async def voice_websocket(websocket: WebSocket):
     
     except WebSocketDisconnect:
         log.info("Voice WebSocket disconnected")
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         log.error(f"WebSocket error: {e}")
 
 

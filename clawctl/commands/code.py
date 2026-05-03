@@ -49,7 +49,7 @@ def code_index(path, workspace, verbose):
         click.echo(f"✓ Indexed {indexed} files")
         click.echo(f"  Search with: clawctl code search '<query>' --workspace {workspace}")
         
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         click.echo(f"✗ Error indexing: {e}")
 
 
@@ -97,7 +97,7 @@ def code_search(query, workspace, limit, as_json):
             
             click.echo("")
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error searching: {e}")
 
 
@@ -126,7 +126,7 @@ def code_explain(location, workspace):
         
         click.echo(explanation)
         
-    except Exception as e:
+    except (ValueError, OSError, AttributeError) as e:
         click.echo(f"✗ Error explaining: {e}")
 
 
@@ -162,7 +162,7 @@ def code_review(file_path, as_json):
             click.echo(f"   {s['message']}")
             click.echo("")
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error reviewing: {e}")
 
 
@@ -183,7 +183,7 @@ def code_test(symbol, file, workspace):
         click.echo(tests)
         click.echo("```")
         
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         click.echo(f"✗ Error generating tests: {e}")
 
 
@@ -213,8 +213,8 @@ def code_status(workspace):
                 click.echo(f"\n⚠ No files indexed")
                 click.echo(f"  Run: clawctl code index <path>")
         
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             click.echo(f"✗ Error getting status: {e}")
         
-    except Exception as e:
+    except (OSError, ValueError) as e:
         click.echo(f"✗ Error: {e}")

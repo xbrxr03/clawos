@@ -27,7 +27,7 @@ async def web_search(args: dict, ctx: dict) -> str:
             })
             r.raise_for_status()
             html = r.text
-    except Exception as e:
+    except (httpx.HTTPError, OSError, ConnectionError) as e:
         log.debug(f"ddg search failed: {e}")
         return "[OFFLINE] web search unavailable"
 

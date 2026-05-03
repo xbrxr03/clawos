@@ -333,6 +333,8 @@ ALL_TOOLS: dict[str, dict] = {
     "run_command":         RUN_COMMAND,
 }
 
+ALL_SCHEMAS = list(ALL_TOOLS.values())
+
 # Tools that always require approval before executing.
 SENSITIVE_TOOLS = frozenset({
     "close_app",

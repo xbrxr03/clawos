@@ -14,6 +14,7 @@ import logging
 import wave
 from pathlib import Path
 from clawos_core.constants import WHISPER_MODEL, WHISPER_RATE
+import subprocess
 
 log = logging.getLogger("whisper_adapter")
 
@@ -35,7 +36,7 @@ def _load():
         return
     except ImportError:
         log.debug("faster-whisper not installed — falling back to openai-whisper")
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError, RuntimeError) as e:
         log.warning(f"faster-whisper load failed: {e}")
 
     # Fallback: openai-whisper
@@ -48,7 +49,7 @@ def _load():
     except ImportError:
         log.warning("Neither faster-whisper nor openai-whisper installed. "
                     "pip install faster-whisper")
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         log.error(f"Whisper load failed: {e}")
 
     _backend = None
@@ -85,13 +86,14 @@ def transcribe(audio_bytes: bytes, rate: int = 44100) -> str:
             text = result.get("text", "").strip()
         log.debug(f"Transcribed ({_backend}): {text[:80]}")
         return text
-    except Exception as e:
+    except (OSError, RuntimeError, AttributeError) as e:
         log.warning(f"Transcription failed: {e}")
         return ""
     finally:
         try:
             os.unlink(tmp_path)
-        except Exception:
+        except (OSError, PermissionError) as e:
+            log.debug(f"unexpected: {e}")
             pass
 
 

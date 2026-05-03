@@ -31,7 +31,7 @@ from clawos_core.util.time import now_iso
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         return {}
 
 
@@ -421,7 +421,7 @@ def _load_user_programs() -> list[WorkflowProgram]:
                 k: v for k, v in data.items()
                 if k in WorkflowProgram.__dataclass_fields__
             }))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             continue
     return programs
 
@@ -503,7 +503,7 @@ def _read_jsonl(path: Path, limit: int) -> list[dict[str, Any]]:
         return []
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         return []
     records: list[dict[str, Any]] = []
     for line in reversed(lines):
@@ -511,7 +511,7 @@ def _read_jsonl(path: Path, limit: int) -> list[dict[str, Any]]:
             continue
         try:
             records.append(json.loads(line))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             continue
         if len(records) >= limit:
             break
@@ -552,7 +552,7 @@ def _openclaw_dir(path_hint: str = "") -> Path:
         from openclaw_integration.config_gen import OPENCLAW_DIR
 
         return OPENCLAW_DIR
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return Path.home() / ".openclaw"
 
 
@@ -574,7 +574,7 @@ def detect_openclaw_install(path_hint: str = "") -> OpenClawImportManifest:
                 check=False,
             )
             manifest.detected_version = result.stdout.strip() or result.stderr.strip()
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
             manifest.detected_version = "installed"
     else:
         manifest.warnings.append("OpenClaw binary was not found on PATH.")
@@ -630,7 +630,7 @@ def test_provider_profile(profile_id: str) -> dict[str, Any]:
             from services.modeld.ollama_client import is_running
 
             running = bool(is_running())
-        except Exception:
+        except (ImportError, ConnectionError, OSError, RuntimeError):
             running = False
         return {
             "ok": running,

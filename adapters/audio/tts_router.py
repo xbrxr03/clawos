@@ -18,7 +18,7 @@ def _get_provider() -> str:
     try:
         from clawos_core.config import get
         return get("voice.tts_provider", "piper").lower().strip()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "piper"
 
 
@@ -49,7 +49,7 @@ def _speak_elevenlabs(text: str, voice_id: str = "") -> bytes:
         if backend() == "unavailable":
             return b""
         return xi_speak(text, voice_id=voice_id)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         log.warning(f"ElevenLabs TTS error: {e}")
         return b""
 
@@ -84,7 +84,7 @@ def _speak_piper(text: str) -> bytes:
     except subprocess.TimeoutExpired:
         log.warning("Piper TTS timed out")
         return b""
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         log.warning(f"Piper TTS error: {e}")
         return b""
 
@@ -97,7 +97,7 @@ def active_provider(provider_preference: str = "") -> str:
             from adapters.audio.elevenlabs_adapter import backend
             if backend() == "elevenlabs":
                 return "elevenlabs"
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError) as e:
+            log.debug(f"suppressed: {e}")
         return "piper (elevenlabs unavailable)"
     return "piper"

@@ -75,7 +75,7 @@ async def write_text(args: dict, ctx: dict) -> str:
 
     try:
         text = await loop.run_in_executor(None, _sync)
-    except Exception as e:
+    except (ConnectionError, OSError, KeyError, TypeError) as e:
         return f"[ERROR] write_text: {e}"
 
     return text.strip() or "[ERROR] empty generation"

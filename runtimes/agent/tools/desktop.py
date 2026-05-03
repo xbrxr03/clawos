@@ -34,7 +34,7 @@ async def _desktopd_action(payload: dict, timeout: float = 5.0) -> dict | None:
             r = await c.post(f"{DESKTOPD_URL}/api/v1/action", json=payload)
             r.raise_for_status()
             return r.json()
-    except Exception as e:
+    except (httpx.HTTPError, OSError, ConnectionError) as e:
         log.debug(f"desktopd unreachable, will fall back: {e}")
         return None
 
@@ -52,7 +52,8 @@ async def set_clipboard(args: dict, ctx: dict) -> str:
         import pyperclip
         pyperclip.copy(text)
         return f"[OK] clipboard set ({len(text)} chars)"
-    except Exception:
+    except (ImportError, OSError):
+        log.debug("pyperclip copy failed, trying CLI fallback")
         pass
     if is_linux():
         if shutil.which("wl-copy"):
@@ -90,7 +91,8 @@ async def get_clipboard(args: dict, ctx: dict) -> str:
         import pyperclip
         text = pyperclip.paste()
         return text or "(empty)"
-    except Exception:
+    except (ImportError, OSError):
+        log.debug("pyperclip paste failed, trying CLI fallback")
         pass
     if is_linux():
         if shutil.which("wl-paste"):
@@ -178,7 +180,8 @@ async def screenshot(args: dict, ctx: dict) -> str:
             if r.status_code == 200 and r.content:
                 out_path.write_bytes(r.content)
                 return f"[OK] screenshot saved: {out_path}"
-    except Exception:
+    except (httpx.HTTPError, OSError, ConnectionError):
+        log.debug("desktopd screenshot failed, trying fallback")
         pass
 
     # Linux fallbacks

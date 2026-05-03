@@ -17,6 +17,6 @@ def health() -> dict:
             "communities": stats.get("community_count", 0),
             "ingesting": stats.get("ingesting", False),
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"Kizuna health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

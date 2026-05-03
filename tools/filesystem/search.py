@@ -27,7 +27,7 @@ def run(target: str, workspace_root: Path) -> str:
                 continue
             try:
                 text = path.read_text(errors="replace")
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 continue
             for i, line in enumerate(text.splitlines(), 1):
                 if pattern.search(line):
@@ -36,7 +36,7 @@ def run(target: str, workspace_root: Path) -> str:
                     if len(results) >= MAX_RESULTS:
                         results.append(f"... (truncated at {MAX_RESULTS} results)")
                         return "\n".join(results)
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         return f"[ERROR] Search failed: {e}"
 
     if not results:

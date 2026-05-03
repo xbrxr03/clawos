@@ -50,7 +50,7 @@ class EventBus:
                 result = fn(event)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception as e:
+            except (OSError, RuntimeError, AttributeError) as e:
                 log.debug(f"EventBus subscriber error: {e}")
                 dead.append(fn)
         for fn in dead:

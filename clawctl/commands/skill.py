@@ -19,7 +19,7 @@ def run_search(query: str, page: int = 1):
     try:
         from skills.marketplace.registry import search_skills
         result = search_skills(query=query, page=page, limit=20)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Search error: {e}", file=sys.stderr)
         return
 
@@ -80,7 +80,7 @@ def run_install(skill_id: str, force: bool = False, allow_community: bool = True
         else:
             print(f"  ✗ Install error: {e}", file=sys.stderr)
             return
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError, RuntimeError) as e:
         print(f"  ✗ Install error: {e}", file=sys.stderr)
         return
 
@@ -101,7 +101,7 @@ def run_remove(skill_id: str):
     try:
         from skills.marketplace.installer import uninstall_skill
         result = uninstall_skill(skill_id)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Remove error: {e}", file=sys.stderr)
         return
 
@@ -116,7 +116,7 @@ def run_list():
     try:
         from skills.marketplace.registry import get_installed_skills
         skills = get_installed_skills()
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Error: {e}", file=sys.stderr)
         return
 
@@ -169,7 +169,7 @@ def run_verify(skill_path: str):
                 print(f"  ~ No signature (community tier)")
         else:
             print(f"  ~ No _clawos_meta.json — community or unsigned skill")
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         print(f"  ✗ Verify error: {e}", file=sys.stderr)
 
 
@@ -179,7 +179,7 @@ def run_local(skill_path: str, skill_id: str = ""):
     try:
         from skills.marketplace.installer import install_local
         result = install_local(skill_path, skill_id or None)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Error: {e}", file=sys.stderr)
         return
 
@@ -201,7 +201,7 @@ def run_sign(skill_path: str):
     try:
         from skills.marketplace.signer import sign_skill
         result = sign_skill(path)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ✗ Sign error: {e}", file=sys.stderr)
         return
 

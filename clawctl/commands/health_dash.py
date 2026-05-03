@@ -6,6 +6,8 @@ from datetime import datetime
 
 import httpx
 
+import json
+
 from clawos_core.constants import (
     PORT_DASHD, PORT_CLAWD, PORT_AGENTD, PORT_MEMD,
     PORT_POLICYD, PORT_MODELD, PORT_VOICED, PORT_DESKTOPD,
@@ -54,7 +56,7 @@ async def check_service(name: str, port: int, path: str) -> dict:
             "status": "down",
             "details": None,
         }
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         return {
             "name": name,
             "port": port,

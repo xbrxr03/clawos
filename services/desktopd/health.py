@@ -14,7 +14,7 @@ def health() -> dict:
             if resp.status == 200:
                 return {"status": "up"}
             return {"status": "degraded", "http_status": resp.status}
-    except Exception as e:
+    except (OSError, ConnectionRefusedError, TimeoutError) as e:
         return {"status": "down", "error": str(e)}
 
 

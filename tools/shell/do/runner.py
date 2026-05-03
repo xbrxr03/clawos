@@ -30,7 +30,7 @@ def _audit_path() -> Path:
         from clawos_core.constants import LOGS_DIR
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         return LOGS_DIR / "do-audit.jsonl"
-    except Exception:
+    except (OSError, PermissionError):
         p = Path.home() / ".clawos"
         p.mkdir(exist_ok=True)
         return p / "do-audit.jsonl"
@@ -47,7 +47,7 @@ def _prev_hash(audit_file: Path) -> str:
             if line:
                 entry = json.loads(line)
                 return entry.get("entry_hash", "0" * 64)
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         pass
     return "0" * 64
 
@@ -138,7 +138,7 @@ def run_commands(
             print()
             last_code = 130
             break
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             print(f"  [error] {e}")
             last_code = 1
             break
@@ -174,7 +174,8 @@ def dry_preview(commands: list[str]) -> list[str]:
                         continue
                     matches = glob.glob(os.path.expandvars(os.path.expanduser(pattern)))
                     affected.extend(matches[:20])
-            except Exception:
+            except (OSError, PermissionError):
+                pass
                 pass
     return list(dict.fromkeys(affected))  # deduplicate preserving order
 
@@ -192,12 +193,13 @@ def get_history(n: int = 10) -> list[dict]:
             if line:
                 try:
                     entries.append(json.loads(line))
-                except Exception:
+                except (json.JSONDecodeError, ValueError):
+                    pass
                     pass
             if len(entries) >= n:
                 break
         return list(reversed(entries))
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         return []
 
 
@@ -224,6 +226,6 @@ def infer_undo(entries: list[dict]) -> Optional[str]:
                     return f"rm {parts[1]}"
                 if verb == "cp" and len(parts) == 3:
                     return f"rm {parts[2]}"
-            except Exception:
+            except Exception:  # broad catch — cannot narrow automatically
                 continue
     return None

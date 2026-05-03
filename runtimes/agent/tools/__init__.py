@@ -89,7 +89,7 @@ async def dispatch_tool(name: str, args: dict, ctx: dict) -> str:
 
     try:
         result = await fn(args or {}, ctx or {})
-    except Exception as e:
+    except Exception as e:  # top-level tool dispatch — must catch all tool failures
         log.exception(f"tool {name} crashed")
         return f"[ERROR] {name}: {e}"
 

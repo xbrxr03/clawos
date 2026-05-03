@@ -32,7 +32,7 @@ def service_manager_name() -> str:
             result = _run(["systemctl", "--user", "show-environment"], timeout=5)
             if result.returncode == 0:
                 return "systemd"
-        except Exception:
+        except Exception:  # broad catch — cannot narrow automatically
             pass
     if is_macos() and shutil.which("launchctl"):
         return "launchd"
@@ -189,14 +189,14 @@ def is_active(service_name: str) -> bool:
         try:
             result = _run(["systemctl", "--user", "is-active", service_name], timeout=5)
             return result.stdout.strip() == "active"
-        except Exception:
+        except (OSError, RuntimeError, AttributeError):
             return False
     if manager == "launchd":
         label = launch_agent_label(service_name)
         try:
             result = _run(["launchctl", "print", f"{user_domain_target()}/{label}"], timeout=5)
             return result.returncode == 0
-        except Exception:
+        except (OSError, RuntimeError):
             return False
     return False
 

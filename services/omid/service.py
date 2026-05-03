@@ -203,7 +203,7 @@ class OmiService:
             from services.memd.service import MemoryService
             mem = MemoryService()
             mem.remember(f"[OMI transcript from {uid}] {text[:500]}", self.workspace_id)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.debug("Failed to store OMI transcript: %s", e)
 
     def _store_conversation(self, conv_id: str, conversation: dict, text: str) -> None:
@@ -224,7 +224,7 @@ class OmiService:
                     },
                     agent_name="omid",
                 )
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.debug("Failed to archive OMI conversation: %s", e)
 
     def _store_triples(self, triples: list[dict]) -> None:
@@ -235,7 +235,7 @@ class OmiService:
             if tkg and triples:
                 for t in triples:
                     tkg.add_triple(t["subject"], t["predicate"], t["object"])
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.debug("Failed to store OMI KG triples: %s", e)
 
     def _store_vector(self, text: str, memory_id: str, metadata: dict) -> None:
@@ -245,7 +245,7 @@ class OmiService:
             vec = _get_vector()
             if vec:
                 vec.add(text[:2000], memory_id=memory_id, metadata=metadata)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             log.debug("Failed to store OMI vector memory: %s", e)
 
     # ── Internal: Nexus routing ───────────────────────────────────────────────
@@ -274,7 +274,7 @@ class OmiService:
             with urllib.request.urlopen(req, timeout=8) as resp:
                 data = json.loads(resp.read())
                 return data.get("reply") or data.get("result") or str(data)
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             log.warning("Nexus routing failed for OMI command: %s", e)
             return None
 
@@ -286,7 +286,7 @@ class OmiService:
         try:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, self._route_to_nexus_sync, prompt)
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             log.warning("Async Nexus routing failed: %s", e)
             return None
 

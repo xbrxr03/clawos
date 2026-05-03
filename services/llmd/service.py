@@ -71,7 +71,7 @@ def _discover_ollama_models(host: str) -> list[dict]:
         with urllib.request.urlopen(req, timeout=5) as r:
             data = json.loads(r.read())
         return data.get("models", [])
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         log.debug(f"llmd: Ollama model discovery failed: {e}")
         return []
 
@@ -168,7 +168,9 @@ def _load_keys() -> dict:
     if KEY_FILE.exists():
         try:
             return json.loads(KEY_FILE.read_text())
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            log.debug(f"failed: {e}")
+            pass
             pass
     return {}
 
@@ -258,8 +260,8 @@ class LLMProxy:
                     if r.status == 200:
                         log.info(f"llmd: proxy healthy at {self.base_url}")
                         return True
-            except Exception:
-                pass
+            except (OSError, ConnectionRefusedError, TimeoutError) as e:
+                log.debug(f"suppressed: {e}")
             time.sleep(HEALTH_INTERVAL)
         log.error(f"llmd: proxy did not become healthy within {HEALTH_TIMEOUT}s")
         return False
@@ -303,7 +305,9 @@ class LLMProxy:
                     f"http://localhost:{self.port}/health", timeout=2
                 ) as r:
                     reachable = r.status == 200
-            except Exception:
+            except (OSError, ConnectionRefusedError, TimeoutError):
+                log.debug(f"failed: {e}")
+                pass
                 pass
         return {
             "running": running,

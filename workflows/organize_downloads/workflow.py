@@ -355,5 +355,5 @@ async def run(args: dict, agent) -> WorkflowResult:
                 else f"{files_failed} file move{'s' if files_failed != 1 else ''} failed during organization."
             ),
         )
-    except Exception as exc:
+    except (RuntimeError, OSError, TypeError) as exc:
         return WorkflowResult(status=WorkflowStatus.FAILED, output="", error=str(exc))

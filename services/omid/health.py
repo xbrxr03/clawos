@@ -13,6 +13,6 @@ def health() -> dict:
             "status": "ok",
             "omi_connected": service.is_connected() if hasattr(service, 'is_connected') else False,
         }
-    except Exception as e:
+    except (ImportError, OSError, AttributeError) as e:
         log.warning(f"OMId health check failed: {e}")
         return {"status": "degraded", "error": str(e)}

@@ -22,7 +22,7 @@ def is_running() -> bool:
         import urllib.request
         urllib.request.urlopen(f"{OLLAMA_HOST}/api/tags", timeout=2)
         return True
-    except Exception:
+    except (OSError, ConnectionRefusedError, TimeoutError):
         return False
 
 
@@ -31,7 +31,7 @@ def list_models() -> list[dict]:
         return []
     try:
         return _client().list()["models"]
-    except Exception:
+    except (ConnectionError, OSError, RuntimeError):
         return []
 
 
@@ -48,7 +48,7 @@ async def pull(model: str = DEFAULT_MODEL) -> bool:
         try:
             _client().pull(model)
             return True
-        except Exception as e:
+        except (ConnectionError, OSError, RuntimeError) as e:
             log.error(f"Pull failed: {e}")
             return False
     return await loop.run_in_executor(None, _sync)
@@ -74,6 +74,6 @@ async def embed(text: str, model: str = "nomic-embed-text") -> list[float]:
         try:
             r = _client().embeddings(model=model, prompt=text)
             return r["embedding"]
-        except Exception:
+        except (ConnectionError, OSError, RuntimeError):
             return []
     return await loop.run_in_executor(None, _sync)

@@ -56,7 +56,7 @@ class FeatureGate:
                 from clawos_core.license import get_license_manager, PREMIUM_FEATURES, PRO_FEATURES
                 mgr = get_license_manager()
                 self._tier = mgr.get_tier()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 self._tier = "free"
             self._last_check = now
         return self._tier
@@ -84,7 +84,7 @@ class FeatureGate:
             elif tier == "premium":
                 return feature in PREMIUM_FEATURES
             return feature in FREE_FEATURES
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
 
     def require(self, feature: str) -> None:

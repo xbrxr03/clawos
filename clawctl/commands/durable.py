@@ -78,7 +78,7 @@ def durable_runs(workflow, status, limit, as_json):
             
             click.echo(f"{run_id:<36} {wf_id:<25} {icon} {status:<10} {time_str:<20} {duration_str}")
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error listing runs: {e}")
 
 
@@ -145,7 +145,7 @@ def durable_show(run_id, as_json):
                 
                 click.echo(f"{step_id:<20} {icon} {status:<10} {retries:<8} {duration:<12} {error}")
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error showing run: {e}")
 
 
@@ -190,7 +190,7 @@ def durable_resume(run_id):
         else:
             click.echo(f"✗ Workflow failed: {result.get('error', 'Unknown error')}")
         
-    except Exception as e:
+    except (RuntimeError, OSError, TypeError) as e:
         click.echo(f"✗ Error resuming run: {e}")
 
 
@@ -222,7 +222,7 @@ def durable_cancel(run_id):
         
         click.echo(f"✓ Workflow run {run_id[:8]}... cancelled")
         
-    except Exception as e:
+    except (sqlite3.Error, OSError) as e:
         click.echo(f"✗ Error cancelling run: {e}")
 
 
@@ -249,7 +249,7 @@ def durable_stats(as_json):
                 pct = (count / stats['total_runs'] * 100) if stats['total_runs'] > 0 else 0
                 click.echo(f"  {icon} {status:<12} {count:>6} ({pct:.1f}%)")
         
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         click.echo(f"✗ Error getting stats: {e}")
 
 
@@ -292,5 +292,5 @@ def durable_cleanup(days, yes):
         
         click.echo(f"✓ Deleted {count} old workflow runs")
         
-    except Exception as e:
+    except (sqlite3.Error, OSError) as e:
         click.echo(f"✗ Error cleaning up: {e}")

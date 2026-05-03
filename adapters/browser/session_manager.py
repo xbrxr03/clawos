@@ -14,7 +14,7 @@ log = logging.getLogger("browser_sessions")
 # Module-level imports so tests can patch them cleanly
 try:
     from adapters.browser.playwright_adapter import PlaywrightAdapter, is_available
-except Exception:
+except (ImportError, ModuleNotFoundError):
     PlaywrightAdapter = None  # type: ignore[assignment,misc]
     def is_available() -> bool:
         return False
@@ -89,7 +89,9 @@ class SessionManager:
             for ws_id, session in list(self._sessions.items()):
                 try:
                     await session["adapter"].shutdown()
-                except Exception:
+                except (OSError, RuntimeError) as e:
+                    log.debug(f"unexpected: {e}")
+                    pass
                     pass
             self._sessions.clear()
             log.info("All browser sessions closed")

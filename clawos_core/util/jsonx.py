@@ -22,7 +22,8 @@ def safe_parse(raw: str) -> dict | None:
                 data = json.loads(repaired)
                 if isinstance(data, dict):
                     return data
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
     # Stdlib fallback
     candidates = [raw]
@@ -34,7 +35,8 @@ def safe_parse(raw: str) -> dict | None:
             data = json.loads(c)
             if isinstance(data, dict):
                 return data
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
+            pass
             pass
     # Plain text → final_answer
     if len(raw) < 500 and not raw.startswith("{"):
