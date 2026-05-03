@@ -2,7 +2,7 @@
 Description=ClawOS agentd — task queue and agent session manager
 Documentation=https://github.com/xbrxr03/clawos
 After=clawos-policyd.service clawos-memd.service clawos-modeld.service clawos-toolbridge.service
-Requires=clawos-policyd.service clawos-memd.service clawos-modeld.service clawos-toolbridge.service
+Wants=clawos-policyd.service clawos-memd.service clawos-modeld.service clawos-toolbridge.service
 
 [Service]
 Type=simple

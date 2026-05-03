@@ -6,7 +6,7 @@
 
 set -uo pipefail
 
-CLAWOS_HOME="${CLAWOS_HOME:-$HOME/clawos}"
+CLAWOS_HOME="${CLAWOS_HOME:-$HOME/.clawos-runtime}"
 LOG_DIR="$CLAWOS_HOME/logs"
 PIDS_DIR="$CLAWOS_HOME/run"
 mkdir -p "$LOG_DIR" "$PIDS_DIR"
@@ -33,7 +33,7 @@ start_svc() {
     CLAWOS_HOME="$CLAWOS_HOME" \
     CLAWOS_SERVICE="$name" \
     OLLAMA_HOST="http://localhost:11434" \
-        /usr/bin/python3 "$CLAWOS_HOME/$script" \
+    "$CLAWOS_HOME/venv/bin/python3" "$CLAWOS_HOME/$script" \
         >> "$LOG_DIR/$name.log" 2>&1 &
 
     local pid=$!

@@ -2,7 +2,7 @@
 # All other profiles inherit and override these values
 
 clawos:
-  version: "0.1.0"
+  version: "0.1.1"
   edition: "desktop"       # desktop | server
 
 model:

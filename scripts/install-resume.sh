@@ -43,7 +43,7 @@ else
 fi
 
 # Step 2: Check bootstrap config
-if [ ! -f "$HOME/clawos/config/clawos.yaml" ]; then
+if [ ! -f "$HOME/.clawos-runtime/config/clawos.yaml" ]; then
     echo -e "  ${Y}⚠ Bootstrap not complete - running...${RESET}"
     python3 -m bootstrap.bootstrap --yes --skip-model
 else

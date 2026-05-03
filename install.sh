@@ -238,9 +238,16 @@ install_node() {
   else
     # Remove any old system nodejs (Ubuntu 24.04 ships v18, openclaw needs v22+)
     sudo apt-get remove -y nodejs npm 2>/dev/null || true
+    # Download NodeSource setup script first, then run — avoids pipe swallowing curl errors
+    NODESOURCE_SCRIPT="$(mktemp /tmp/clawos-nodesource.XXXXXX.sh)"
+    if ! curl -fsSL https://deb.nodesource.com/setup_22.x -o "$NODESOURCE_SCRIPT"; then
+      rm -f "$NODESOURCE_SCRIPT"
+      die "Failed to download NodeSource setup script (network error or URL changed)"
+    fi
     run_with_spinner "Installing Node.js 22 via NodeSource" \
-      bash -lc 'curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs' \
+      bash -lc "sudo -E bash '$NODESOURCE_SCRIPT' && sudo apt-get install -y nodejs" \
       || die "Node.js install failed"
+    rm -f "$NODESOURCE_SCRIPT"
   fi
 
   refresh_shell_env
@@ -256,8 +263,16 @@ install_node() {
 
 install_openclaw() {
   step "Installing OpenClaw"
+  # Prefer ollama launch (first-class since April 2026) if available
+  if command -v ollama >/dev/null 2>&1 && ollama --help 2>/dev/null | grep -q "launch"; then
+    if ollama launch openclaw 2>/dev/null; then
+      ok "OpenClaw installed via ollama launch"
+      return 0
+    fi
+    info "ollama launch openclaw failed — falling back to npm"
+  fi
   if sudo npm install -g openclaw 2>/dev/null; then
-    ok "OpenClaw installed"
+    ok "OpenClaw installed via npm"
   else
     warn "OpenClaw install failed — run: sudo npm install -g openclaw"
   fi
@@ -660,7 +675,15 @@ CHECKPOINT_FILE="${CLAWOS_STATE_DIR}/install_checkpoint"
 
 save_checkpoint() {
   local step="$1"
-  echo "$step" > "$CHECKPOINT_FILE" 2>/dev/null || true
+  # Append step to checkpoint (not overwrite) so all completed steps are tracked
+  if [ -f "$CHECKPOINT_FILE" ]; then
+    # Avoid duplicates
+    if ! grep -q "^${step}_done$" "$CHECKPOINT_FILE" 2>/dev/null; then
+      echo "${step}_done" >> "$CHECKPOINT_FILE" 2>/dev/null || true
+    fi
+  else
+    echo "${step}_done" > "$CHECKPOINT_FILE" 2>/dev/null || true
+  fi
 }
 
 get_checkpoint() {
@@ -677,13 +700,14 @@ clear_checkpoint() {
 
 should_skip_step() {
   local current_step="$1"
-  local checkpoint="$(get_checkpoint)"
+  local checkpoint_data
+  checkpoint_data="$(get_checkpoint)"
   
-  # If no checkpoint, don't skip anything
-  [ -z "$checkpoint" ] && return 1
+  # If no checkpoint data, don't skip anything
+  [ -z "$checkpoint_data" ] && return 1
   
-  # If current step was already completed, skip it
-  if [ "$current_step" = "$checkpoint" ] || echo "$checkpoint" | grep -q "^${current_step}_done$"; then
+  # Check if this step appears in the completed list
+  if echo "$checkpoint_data" | grep -q "^${current_step}_done$"; then
     return 0
   fi
   
@@ -692,7 +716,7 @@ should_skip_step() {
 
 mark_step_done() {
   local step="$1"
-  save_checkpoint "${step}_done"
+  save_checkpoint "${step}"
 }
 
 # ── Parse flags ───────────────────────────────────────────────────────────────

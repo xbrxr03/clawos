@@ -34,6 +34,7 @@ ALL_UNITS=(
     clawos-scheduler.service
     clawos-reminderd.service
     clawos-waketrd.service
+    clawos-metricd.service
     clawos.service
 )
 
