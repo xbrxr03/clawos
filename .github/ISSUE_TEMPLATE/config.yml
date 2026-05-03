@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/xbrxr03/clawos/discussions
+    about: Ask questions, share ideas, and connect with other ClawOS users.
+  - name: Security Vulnerability
+    url: https://github.com/xbrxr03/clawos/security/advisories/new
+    about: Report security issues privately through GitHub Security Advisories.

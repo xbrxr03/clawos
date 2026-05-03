@@ -1,116 +1,114 @@
+<div align="center">
+
 # ClawOS
+
+**Your laptop. Your AI. Your rules.**
+
+A JARVIS-style AI assistant that runs entirely on your machine —  
+voice activation, multi-step tool use, 7-layer memory, zero cloud.
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Status](https://img.shields.io/badge/status-v0.1.1-green.svg)](https://github.com/xbrxr03/clawos/releases)
 [![Telemetry: zero](https://img.shields.io/badge/telemetry-zero-brightgreen.svg)](#zero-telemetry)
 
-> **Local AI agent for your laptop. One curl command. No cloud. No API keys. No telemetry.**
+[Install in 2 minutes](#-quick-start) · [Watch the demos](#-see-it-in-action) · [Read the docs](docs/) · [Join the discussion](https://github.com/xbrxr03/clawos/discussions)
 
-ClawOS turns your existing Linux machine into a JARVIS-style personal AI
-assistant. Voice activation, multi-step tool use, system control, memory —
-all running locally on your hardware via [Ollama](https://ollama.com).
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
-```
+</div>
 
 ---
 
-## ⚡ What it does
+## Why ClawOS?
 
-- 🤖 **Native agent loop** — qwen2.5:7b with native Ollama function calling, parallel tool execution, dynamic model routing
-- 🗣️ **Voice activation** — "Hey Claw" wakes the agent. Whisper for STT, Piper for TTS
-- 🔒 **Zero telemetry** — nothing leaves your machine, ever. Verify it yourself in the source
-- 🧠 **7-layer memory** — pinned facts, semantic recall, knowledge graph, ACE self-improving learnings
-- 🛡️ **Human-in-the-loop** — sensitive actions (file delete, shell commands) trigger a floating approval popup
-- 🎨 **Beautiful dashboard** — full SPA at `http://localhost:7070`
-- 🔌 **Bring your own brain** — Nexus (built-in), OpenClaw, or any framework with plugin hooks
+**Ollama gave you a local model. ClawOS gives you a local agent.**
+
+Most local AI tools are chatbots in a terminal. ClawOS is different:
+
+- 🗣️ **Talk to it** — "Hey Claw, good morning" and it gives you a voiced briefing of your day
+- ⚡ **It does things** — "Write me a 1000-word essay and paste it into my editor" — and it actually happens
+- 🛡️ **It asks first** — sensitive actions trigger a floating approval popup before execution
+- 🔒 **Nothing leaves your machine** — zero telemetry, zero cloud, zero API keys. [Verify it yourself.](#zero-telemetry)
+- 🧠 **It remembers** — 7-layer memory that persists across sessions, not a goldfish chatbot
+- 💰 **It's free** — runs on Ollama, on your hardware. No subscription, no token counting, no surprises
+
+> *ClawOS is what you'd get if Apple built Iron Man's JARVIS and gave it away for free.*
 
 ---
 
-## 🎬 Demos
+## ✨ See it in action
 
-> Demo videos: **not yet recorded.** Placeholder slots reserved at
-> `docs/media/demos/` for v0.1.2. The demos run live today — see
-> [docs/DEMOS.md](docs/DEMOS.md) for exact phrasing and expected output.
-
-**Try them yourself after install:**
+### 🌅 Morning Briefing
+Say *"Hey Claw, good morning"* and hear a synthesized briefing — time, weather, calendar, reminders, and what you worked on yesterday. Five tool calls fire in parallel. Fully offline-capable.
 
 ```bash
-clawctl demos morning-briefing       # parallel tool gather + Piper voice
-clawctl demos essay-editor           # multi-step: write → clipboard → editor
-clawctl demos approval-test          # floating popup for sensitive ops
+clawctl demos morning-briefing
 ```
+
+### 📝 Multi-Step Composition
+*"Write me a 1000-word essay about AI ethics and paste it into the text editor."* Watch the 4-tool chain execute: write → clipboard → open editor → paste. Done in seconds.
+
+```bash
+clawctl demos essay-editor
+```
+
+### 🛡️ Floating Approval Popup
+When the agent wants to run a shell command, delete a file, or close an app — a borderless always-on-top window appears. You approve or deny. Built on Tauri, native to your OS.
+
+```bash
+clawctl demos approval-test
+```
+
+> 🎬 **Demo videos coming in v0.1.2** — see [docs/DEMOS.md](docs/DEMOS.md) for exact phrasing and expected output. Try them yourself after install!
 
 ---
 
 ## 🚀 Quick start
 
-### Recommended: install on your existing Linux
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash
-clawctl health
 ```
 
-The installer takes ~2 minutes on a warm system. Walks you through a 9-step
-browser wizard (hardware detection, profile, model pull, voice setup,
-permissions). When done your dashboard opens at `http://localhost:7070`.
+The installer takes ~2 minutes. Walks you through a 9-step browser wizard — hardware detection, model pull, voice setup, permissions. When done, your dashboard opens at `http://localhost:7070`.
 
-### Alternative: bootable ISO (dedicated machine)
+```bash
+clawctl health    # verify everything's running
+```
 
-For a clean machine or AI appliance, flash the ISO and boot from USB:
+### Bootable ISO
+
+Got an old laptop? Flash ClawOS onto it and dedicate it to being your JARVIS:
 
 ```bash
 sudo dd if=clawos-amd64.iso of=/dev/sdX bs=4M status=progress
 ```
 
-The ISO ships with the same setup wizard pre-installed. Useful for old
-laptops you want to dedicate to JARVIS.
-
 ---
 
 ## 💻 Hardware tiers
 
-| Tier | RAM | Recommended model | Experience |
-|------|-----|-------------------|------------|
+| Tier | RAM | Model | Experience |
+|:----:|:---:|:-----|:-----------|
 | **A** | 8 GB | qwen2.5:3b | Basic — works on old laptops, mini PCs |
 | **B** | 16 GB | qwen2.5:7b | Full — multi-step tool use, fast briefings |
 | **C** | 32 GB+ | qwen2.5:7b + qwen2.5-coder:7b | Power — coder model for file/shell tasks |
 
-**Minimum:** x86_64 CPU, 8 GB RAM, 20 GB storage, Linux (Ubuntu 22.04+, Fedora 39+, Arch). NVIDIA GPU optional but accelerates inference.
-
-macOS support: arriving in v0.2 (most platform code is already in place).
+**Minimum:** x86_64 CPU, 8 GB RAM, 20 GB storage, Linux (Ubuntu 22.04+, Fedora 39+, Arch).  
+NVIDIA GPU optional but accelerates inference.  
+macOS support arriving in v0.2.
 
 ---
 
-## ✨ Flagship demos
+## ⚡ What's inside
 
-### 🌅 Morning briefing
-Say *"Hey Claw, good morning"* and get a spoken briefing of your day:
-time, weather, calendar, reminders, and what you were working on yesterday.
-Five tool calls fire in parallel; qwen2.5:7b synthesizes; Piper voices it.
-Fully offline-capable — weather/news degrade gracefully if you're disconnected.
-
-### 📝 Multi-step composition
-Tell the agent *"Write me a 1000-word essay about AI ethics and paste it
-into the text editor"* and watch the four-tool chain execute: `write_text`
-generates the content, `set_clipboard` copies it, `open_app` launches
-gedit, `paste_to_app` drops it in. The agent confirms with *"Done. Your
-essay's in the editor — 1,024 words."*
-
-### 🛡️ Floating approval popup
-When the agent wants to do something sensitive (`run_command`, `write_file`,
-`close_app`), a borderless always-on-top window appears over your desktop
-with the proposed action and Approve/Deny buttons. Y/N keyboard shortcuts.
-Built on Tauri, native to each OS — not a browser tab.
-
-### ⚡ Quirky combos
-*"Set volume to 30 and play Spotify"*, *"What's eating my CPU?"*,
-*"Screenshot my screen and save it to today's folder"*. Two- or three-tool
-chains run in 2-3 seconds. The intent classifier catches 60-70% of
-real inputs before the LLM ever fires.
+| | |
+|:---|:---|
+| 🤖 **Native agent loop** | qwen2.5:7b with native Ollama function calling, parallel tool execution, dynamic model routing (3b → 7b → coder) |
+| 🗣️ **Voice activation** | "Hey Claw" wake word. Whisper STT, Piper TTS. Push-to-talk mode. |
+| 🧠 **7-layer memory** | Pinned facts, semantic recall (ChromaDB), full-text search, knowledge graph, archive, ACE self-improving learnings, workflow state |
+| 🛡️ **Human-in-the-loop** | Sensitive actions trigger a native approval popup. You say yes or no. Every time. |
+| 🎨 **Dashboard** | Full React SPA at :7070. Workflows, packs, traces, memory, settings — all in one place. |
+| 🔌 **Bring your own brain** | Nexus (built-in), OpenClaw, or any framework with plugin hooks |
+| 📦 **28 built-in workflows** | Summarize PDFs, organize downloads, bulk rename, daily digests, and more |
+| 🛠️ **31 tools** | System control, file ops, web search, reminders, calendar, desktop automation |
 
 ---
 
@@ -139,24 +137,26 @@ real inputs before the LLM ever fires.
    └──────────────────────────────────────────────────┘
 ```
 
-**Core daemons** (29 microservices total, ~10 critical at runtime):
-- `dashd:7070` — dashboard API
-- `agentd` — agent runtime
-- `voiced` — Whisper + Piper voice pipeline
-- `memd` — 7-layer memory (PINNED, ChromaDB, FTS5, KG, archive, LEARNED, WORKFLOW)
-- `policyd` — approval engine + audit log
-- `reminderd:7087` — desktop notifications
-- `waketrd:7088` — wake word → briefing bridge
-- `desktopd:7080` — input automation (clipboard, paste, type, screenshot)
-- `skilld` — BM25 skill retrieval
-- `workfd` — 28+ built-in workflows
+**Core daemons** (29 microservices, ~10 critical at runtime):
+
+| Daemon | Port | What it does |
+|:-------|:-----|:-------------|
+| `dashd` | 7070 | Dashboard API |
+| `agentd` | — | Agent runtime |
+| `voiced` | — | Whisper + Piper voice pipeline |
+| `memd` | 7073 | 7-layer memory |
+| `policyd` | 7074 | Approval engine + audit log |
+| `desktopd` | 7080 | Input automation (clipboard, paste, screenshot) |
+| `reminderd` | 7087 | Desktop notifications |
+| `waketrd` | 7088 | Wake word → briefing bridge |
+| `skilld` | — | BM25 skill retrieval |
+| `workfd` | — | 28+ built-in workflows |
 
 ---
 
 ## <a id="zero-telemetry"></a>🔒 Zero telemetry — verify it yourself
 
-We don't collect anything. There's no analytics SDK, no error reporting,
-no usage stats, no phone-home. Run this to verify:
+No analytics. No error reporting. No usage stats. No phone-home. Run this:
 
 ```bash
 grep -rn "posthog\|sentry\|google-analytics\|mixpanel\|amplitude" \
@@ -164,9 +164,19 @@ grep -rn "posthog\|sentry\|google-analytics\|mixpanel\|amplitude" \
 # returns nothing
 ```
 
-The only network calls ClawOS makes are: Ollama (localhost), DuckDuckGo
-(only when you call `web_search`), wttr.in (only when you call
-`get_weather`), RSS feeds you've configured. All optional. All disableable.
+The only network calls ClawOS makes: Ollama (localhost), DuckDuckGo (web search), wttr.in (weather), your RSS feeds. All optional. All disableable.
+
+---
+
+## 🔐 Security
+
+- **Policy engine** — every tool call gated; sensitive ops queue for human approval
+- **Workspace sandbox** — file ops can't escape `~/clawos/workspace/`
+- **Shell allowlist** — `run_command` restricted to safe binaries; blocks `python3 -c <code>` injection
+- **Merkle audit trail** — tamper-proof execution log in policyd
+- **No SSRF** — `web_search` blocks private/loopback IPs
+
+See [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
 
 ---
 
@@ -177,18 +187,20 @@ git clone https://github.com/xbrxr03/clawos.git
 cd clawos
 pip install -e ".[dev]"
 
-# Run agent unit tests (60 tests, no live LLM)
+# Run tests (no live LLM needed)
 pytest tests/unit/test_agent_*.py -q
 
 # Boot dev services
 bash scripts/dev_boot.sh --full
 
-# Service health
+# Check health
 clawctl health
 
-# Tail any daemon's logs
+# Tail logs
 clawctl logs dashd
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
@@ -196,13 +208,13 @@ clawctl logs dashd
 
 ```
 clawos/
-├── runtimes/agent/         # Nexus agent loop
-│   ├── runtime.py          # 4-tier priority pipeline
-│   ├── intents.py          # deterministic regex classifier
-│   ├── router.py           # 3b/7b/coder model router
-│   ├── tool_schemas.py     # 31 tool JSON Schemas
-│   ├── briefing.py         # morning briefing
-│   └── tools/              # 8 tool modules (Linux+macOS)
+├── runtimes/agent/         # Nexus agent loop (4-tier pipeline)
+│   ├── runtime.py          #   Priority pipeline: memory → confirm → intent → LLM
+│   ├── intents.py          #   Deterministic regex classifier
+│   ├── router.py           #   3b/7b/coder dynamic model router
+│   ├── tool_schemas.py     #   31 tool JSON schemas for Ollama function calling
+│   ├── briefing.py         #   Morning briefing
+│   └── tools/              #   8 tool modules (Linux + macOS)
 ├── services/               # 29 daemons (FastAPI + SQLite)
 ├── workflows/              # 28 built-in workflows
 ├── desktop/command-center/ # Tauri shell + approval overlay
@@ -216,43 +228,41 @@ clawos/
 
 ## 📚 Documentation
 
-- [Demos walk-through](docs/DEMOS.md)
-- [Architecture overview](docs/ARCHITECTURE_CURRENT.md)
-- [API reference](docs/API_REFERENCE.md)
-- [Security audit](docs/SECURITY_AUDIT.md)
-- [Product vision](docs/PRODUCT_VISION.md)
+| Doc | What's inside |
+|:----|:--------------|
+| [Demos walk-through](docs/DEMOS.md) | Exact phrasing and expected output for each demo |
+| [Architecture overview](docs/ARCHITECTURE_CURRENT.md) | How the pieces fit together |
+| [API reference](docs/API_REFERENCE.md) | Service endpoints and contracts |
+| [Security audit](docs/SECURITY_AUDIT.md) | Threat model and mitigations |
+| [Product vision](docs/PRODUCT_VISION.md) | Where we're headed |
+| [Roadmap](docs/ROADMAP.md) | Milestones and current status |
 
 ---
 
-## 🔐 Security
+## ⭐ Star this repo
 
-- **Policy engine** — every tool call gated; sensitive ops queue for human approval
-- **Workspace sandbox** — file ops can't escape `~/clawos/workspace/`
-- **Shell allowlist** — `run_command` restricted to safe binaries; tightened to block `python3 -c <code>` injection
-- **Merkle audit trail** — tamper-proof execution log in policyd
-- **No SSRF** — `web_search` blocks private/loopback IPs
+If you want local AI that actually *does things* — not just chat — star ClawOS and follow the progress. macOS support and demo videos coming soon.
 
-See [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
+**⭐ Star = "I want this on my machine"**
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
 git checkout -b feature/my-feature
 git commit -m "feat: add awesome feature"
 git push origin feature/my-feature
-# Open PR
+# Open a PR
 ```
 
 ---
 
 ## 📜 License
 
-[AGPL-3.0](LICENSE) — free to use, modify, and distribute. Forks must
-remain open source.
+[AGPL-3.0](LICENSE) — free to use, modify, and distribute. Forks must remain open source.
 
 ---
 
@@ -265,9 +275,10 @@ remain open source.
 
 ---
 
-## 📞 Community
+<div align="center">
 
-- 🐛 [Issues](https://github.com/xbrxr03/clawos/issues)
-- 💬 Discussions on the GitHub repo
+**The future of AI is local, private, and yours to control.**
 
-> **The future of AI is local, private, and yours to control.**
+[Get started](#-quick-start) · [Read the docs](docs/) · [Join the discussion](https://github.com/xbrxr03/clawos/discussions)
+
+</div>
