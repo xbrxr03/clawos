@@ -86,14 +86,10 @@ export function VoiceScreen(props: ScreenProps) {
 
   const startTest = async () => {
     setPhase('listening')
-    // Animate phases client-side while the backend runs the real check
-    window.setTimeout(() => setPhase('recognized'), 1500)
-    window.setTimeout(() => setPhase('speaking'), 2800)
     await runVoiceTest()
-    // ack from backend comes through voiceTest effect
-    window.setTimeout(() => {
-      if (voiceTest.ok !== false) setPhase('done')
-    }, 5200)
+    // Phase transition to 'done' or 'idle' is driven by the voiceTest useEffect.
+    // If the test failed and voiceTest.state didn't update, fall back to idle.
+    setPhase((prev) => (prev === 'listening' ? 'idle' : prev))
   }
 
   const heard = phase === 'done' || voiceTest.ok === true
@@ -104,10 +100,10 @@ export function VoiceScreen(props: ScreenProps) {
   return (
     <>
       <div className="stage-inner">
-        <div className="eyebrow">07 · Voice · Meet Jarvis</div>
+        <div className="eyebrow">07 · Voice</div>
         <h1 className="wiz-title">Say hello.</h1>
         <p className="wiz-subtitle">
-          Jarvis runs entirely on this machine — Whisper for listening, Piper for speaking. No
+          Claw runs entirely on this machine — Whisper for listening, Piper for speaking. No
           audio ever leaves the device. Wake on &ldquo;
           <span style={{ color: 'var(--accent-text)', fontFamily: 'var(--mono)' }}>
             {wakePhrase}
@@ -152,7 +148,7 @@ export function VoiceScreen(props: ScreenProps) {
                 </>
               )}
               {phase === 'recognized' && (
-                <>heard &ldquo;{wakePhrase}&rdquo; — confidence 0.97</>
+                <>heard &ldquo;{(voiceTest.transcript as string) || wakePhrase}&rdquo; — recognized</>
               )}
               {phase === 'speaking' && <>piper en_US-lessac · 22.05 kHz</>}
               {phase === 'done' && (
@@ -216,7 +212,7 @@ export function VoiceScreen(props: ScreenProps) {
                         letterSpacing: '0.08em',
                       }}
                     >
-                      JARVIS
+                      CLAW
                     </div>
                     <div
                       style={{
@@ -340,7 +336,7 @@ export function VoiceScreen(props: ScreenProps) {
         {(heard || mode === 'off') && (
           <IdentityRow
             ownerInitial={state.owner_name || ''}
-            assistantInitial={state.assistant_identity || ui.assistant_name || 'Jarvis'}
+            assistantInitial={state.assistant_identity || ui.assistant_name || 'Claw'}
             busy={busy === 'presence'}
             onSave={async (owner, assistant) => {
               setUi({ assistant_name: assistant })
@@ -402,7 +398,7 @@ function IdentityRow({
     if (!o && !a) return
     if (o === ownerInitial.trim() && a === assistantInitial.trim()) return
     const t = window.setTimeout(() => {
-      onSave(o, a || 'Jarvis').then(() => setSavedAt(Date.now())).catch(() => null)
+      onSave(o, a || 'Claw').then(() => setSavedAt(Date.now())).catch(() => null)
     }, 700)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -471,7 +467,7 @@ function IdentityRow({
           type="text"
           value={assistant}
           onChange={(e) => setAssistant(e.target.value)}
-          placeholder="Jarvis"
+          placeholder="Claw"
           maxLength={24}
           spellCheck={false}
           autoComplete="off"

@@ -36,7 +36,7 @@ const STEPS: StepDef[] = [
   { id: 'runtimes', label: 'Runtimes', Component: RuntimesScreen },
   { id: 'framework', label: 'Agent', Component: FrameworkScreen },
   { id: 'model', label: 'Model', Component: ModelScreen },
-  { id: 'voice', label: 'Meet Jarvis', Component: VoiceScreen },
+  { id: 'voice', label: 'Voice', Component: VoiceScreen },
   { id: 'policy', label: 'Policy', Component: PolicyScreen },
   { id: 'summary', label: 'Summary', Component: SummaryScreen },
 ]
@@ -380,12 +380,12 @@ export function SetupPage() {
   }, [runAction])
 
   const prepareModel = useCallback(async () => {
-    const selectedModel = state?.selected_models?.[0] || 'qwen2.5:7b'
+    // Pass '' so the backend pulls all selected_models (FAST + SMART + CODER tier models)
     const response = await runAction('model', () =>
-      commandCenterApi.prepareSetupModel(selectedModel),
+      commandCenterApi.prepareSetupModel(''),
     )
     if (response) await loadState()
-  }, [runAction, loadState, state?.selected_models])
+  }, [runAction, loadState])
 
   const runVoiceTest = useCallback(async () => {
     const next = await runAction('voice-test', () =>
@@ -532,7 +532,7 @@ export function SetupPage() {
           <span className="m-item">File</span>
           <span className="m-item">Edit</span>
           <span className="m-item">View</span>
-          <span className="m-item">Jarvis</span>
+          <span className="m-item">Claw</span>
           <span className="m-item">Help</span>
           <div className="right">
             <span className="dot" /> <span>nexus online</span>
@@ -652,7 +652,7 @@ export function SetupPage() {
                   checked={tweaks.flourishes}
                   onChange={(e) => setTweaks({ ...tweaks, flourishes: e.target.checked })}
                 />
-                <span>JARVIS flourishes</span>
+                <span>HUD flourishes</span>
                 <span
                   style={{
                     marginLeft: 'auto',
