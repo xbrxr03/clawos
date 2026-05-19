@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { commandCenterApi } from '../../../lib/commandCenterApi'
 import { Footer, Orb, ProgressBar } from '../atoms'
 import type { ScreenProps } from '../types'
@@ -28,7 +28,7 @@ function launchStageLabel(pct: number, stage: string | undefined): string {
   if (pct < 40) return 'loading memory layer…'
   if (pct < 60) return 'wiring policy and toolbridge…'
   if (pct < 80) return 'mounting agent and workflows…'
-  if (pct < 95) return 'JARVIS coming online…'
+  if (pct < 95) return 'Claw coming online…'
   return 'ready'
 }
 
@@ -49,6 +49,19 @@ export function SummaryScreen(props: ScreenProps) {
   useEffect(() => {
     if (!state.plan_steps?.length) planSetup().catch(() => null)
   }, [planSetup, state.plan_steps?.length])
+
+  // Auto-redirect to dashboard 3 seconds after setup completes
+  const redirected = useRef(false)
+  useEffect(() => {
+    if (!state.completion_marker || redirected.current) return
+    redirected.current = true
+    commandCenterApi.speakSetupGreeting().catch(() => null)
+    const t = window.setTimeout(() => {
+      try { window.localStorage.setItem('clawos:getting-started:pending', '1') } catch { /* ignore */ }
+      window.location.assign('/')
+    }, 3000)
+    return () => window.clearTimeout(t)
+  }, [state.completion_marker])
 
   const runtimes = (state.selected_runtimes || ['nexus']).join(' + ')
   const personaCatalog = personas.length ? personas : PROFILE_PERSONAS
@@ -103,13 +116,15 @@ export function SummaryScreen(props: ScreenProps) {
         <h1 className="wiz-title" style={{ fontSize: 42 }}>
           Welcome home.
         </h1>
+        <p className="hint" style={{ marginTop: 8, color: 'var(--ink-3)' }}>
+          Redirecting to dashboard in 3 seconds…
+        </p>
         <p className="wiz-subtitle" style={{ margin: '8px auto 0' }}>
           ClawOS is live on this machine. Your private assistant, your hardware, your rules.
         </p>
 
         <div className="jarvis-say" style={{ marginTop: 28, maxWidth: 520 }}>
-          Everything is running. Your dashboard is at localhost:7070 — I&rsquo;ve pinned it to your
-          menu bar. Just say the word.
+          Everything is running. Your dashboard is at localhost:7070 — redirecting you now.
         </div>
 
         <div style={{ display: 'flex', gap: 12, marginTop: 36, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -122,10 +137,6 @@ export function SummaryScreen(props: ScreenProps) {
               } catch {
                 /* ignore storage errors */
               }
-              // Fire JARVIS greeting through Piper — fire-and-forget so we don't
-              // hold up navigation if TTS is slow or the voice model is missing.
-              // voiced.speak handles the whole pipeline (ElevenLabs → Piper → null).
-              commandCenterApi.speakSetupGreeting().catch(() => null)
               window.location.assign('/')
             }}
           >
@@ -155,7 +166,7 @@ export function SummaryScreen(props: ScreenProps) {
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
             {[
-              { cmd: 'clawos', desc: 'Start talking to JARVIS' },
+              { cmd: 'clawos', desc: 'Start talking to Claw' },
               { cmd: 'clawctl wf list', desc: 'Browse 29 built-in workflows' },
               { cmd: 'clawctl framework list', desc: 'Swap or add agent brains' },
             ].map(({ cmd, desc }) => (
@@ -250,7 +261,7 @@ export function SummaryScreen(props: ScreenProps) {
                 restart required. Safe to re-run.
               </div>
             </div>
-            {!launching && (
+            {!launching && stage !== 'error' && (
               <button
                 type="button"
                 className="wiz-btn wiz-btn-primary"
@@ -260,7 +271,22 @@ export function SummaryScreen(props: ScreenProps) {
                 ⏻ Bring online
               </button>
             )}
+            {stage === 'error' && (
+              <button
+                type="button"
+                className="wiz-btn wiz-btn-primary"
+                onClick={launch}
+                disabled={busy === 'apply'}
+              >
+                ↺ Retry
+              </button>
+            )}
           </div>
+          {stage === 'error' && state.last_error && (
+            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: 'rgba(255,60,60,0.07)', border: '1px solid rgba(255,60,60,0.2)', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--err, #ff6b6b)', lineHeight: 1.6 }}>
+              <strong>Error:</strong> {state.last_error}
+            </div>
+          )}
           {launching && (
             <div style={{ marginTop: 18 }}>
               <ProgressBar pct={pct} />
@@ -277,6 +303,13 @@ export function SummaryScreen(props: ScreenProps) {
                 <span>{launchStageLabel(pct, stage)}</span>
                 <span>{pct.toFixed(0)}%</span>
               </div>
+              {(state.logs?.length ?? 0) > 0 && (
+                <div style={{ marginTop: 10, maxHeight: 80, overflowY: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', lineHeight: 1.7 }}>
+                  {(state.logs as string[]).slice(-6).map((l, i) => (
+                    <div key={i}>&gt; {l}</div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
