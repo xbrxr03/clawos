@@ -117,6 +117,8 @@ macOS support arriving in v0.2.
 
 ## 🏗️ Architecture
 
+> 📊 [View the interactive Mermaid diagram](docs/ARCHITECTURE_DIAGRAM.md) — renders natively on GitHub.
+
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                   User Interfaces                         │
