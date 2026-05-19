@@ -1,28 +1,30 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """web.search — DuckDuckGo search. No API key. Returns top 5 results as JSON."""
+from __future__ import annotations
+
 import json
 import urllib.request
 import urllib.parse
 
 
-MAX_RESULTS = 5
-TIMEOUT     = 10
+MAX_RESULTS: int = 5
+TIMEOUT: int = 10
 
 
 def run(target: str) -> str:
     """target is the search query string."""
-    query = target.strip()
+    query: str = target.strip()
     if not query:
         return "[ERROR] Empty search query"
     try:
         # DuckDuckGo Instant Answer API — no key required
-        params = urllib.parse.urlencode({"q": query, "format": "json", "no_html": "1"})
-        url    = f"https://api.duckduckgo.com/?{params}"
-        req    = urllib.request.Request(url, headers={"User-Agent": "ClawOS/0.1"})
+        params: str = urllib.parse.urlencode({"q": query, "format": "json", "no_html": "1"})
+        url: str = f"https://api.duckduckgo.com/?{params}"
+        req = urllib.request.Request(url, headers={"User-Agent": "ClawOS/0.1"})
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            data = json.loads(resp.read())
+            data: dict = json.loads(resp.read())
 
-        results = []
+        results: list[dict[str, str]] = []
         # AbstractText — instant answer
         if data.get("AbstractText"):
             results.append({"title": data.get("Heading", "Answer"),
