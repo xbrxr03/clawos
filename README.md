@@ -7,6 +7,7 @@
 A JARVIS-style AI assistant that runs entirely on your machine —  
 voice activation, multi-step tool use, 7-layer memory, zero cloud.
 
+[![CI](https://github.com/xbrxr03/clawos/actions/workflows/ci.yml/badge.svg)](https://github.com/xbrxr03/clawos/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Telemetry: zero](https://img.shields.io/badge/telemetry-zero-brightgreen.svg)](#zero-telemetry)
