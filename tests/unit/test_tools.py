@@ -125,7 +125,7 @@ class TestResolve:
         assert write_resolve(rel, tmp_path) == read_resolve(rel, tmp_path)
 
 
-# ── Tool dispatch (existing tests from test_agent_tools) ─────────────────────
+# ── Tool dispatch ─────────────────────────────────────────────────────────────
 
 class TestToolDispatch:
     def test_dispatch_unknown_tool(self):

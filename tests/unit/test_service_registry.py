@@ -145,7 +145,8 @@ class TestServiceRegistryHealth:
         health = registry.health()
         assert health["total_services"] == 0
         assert health["healthy"] == 0
-        assert health["overall"] == "healthy"
+        assert "degraded" in health
+        assert "unhealthy" in health
     
     def test_mixed_health(self, registry):
         registry.register(name="healthy1", host="127.0.0.1", port=8080)

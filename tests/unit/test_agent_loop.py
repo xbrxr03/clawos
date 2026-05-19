@@ -30,7 +30,6 @@ async def test_submit_creates_task():
     from services.agentd.service import AgentManager
     mgr = AgentManager()
 
-    # Patch the event bus so we don't need a real one
     with patch("services.agentd.service.get_bus") as mock_bus:
         mock_bus.return_value.emit_task = AsyncMock()
         task = await mgr.submit("hello world", workspace_id="test-ws", channel="cli")
@@ -79,7 +78,6 @@ async def test_list_tasks():
 
     tasks = mgr.list_tasks(limit=10)
     assert len(tasks) == 2
-    # Both should be dicts with task_id
     for t in tasks:
         assert "task_id" in t
         assert "intent" in t
@@ -138,7 +136,6 @@ async def test_run_task_completes():
     from services.agentd.service import AgentManager
     mgr = AgentManager()
 
-    # Build a mock runtime session
     mock_session = AsyncMock()
     mock_session.chat = AsyncMock(return_value="Hello, I am Nexus.")
 
@@ -151,7 +148,6 @@ async def test_run_task_completes():
             mb.return_value = mock_bus_instance
             task = await mgr.submit("greet", workspace_id="ws1")
 
-        # Manually run the task (normally done by _worker)
         await mgr._run_task(task)
 
     assert task.status == TaskStatus.COMPLETED

@@ -55,13 +55,10 @@ class TestVoiceServiceHealth:
         """STT reports unavailable when whisper is not installed."""
         from services.voiced.service import VoiceService
         svc = VoiceService()
+        svc._stt_available = lambda: False
         with patch("services.voiced.service.get_voice_session", return_value={"mode": "push_to_talk"}), \
-             patch("services.voiced.service.shutil") as mock_shutil, \
              patch("services.voiced.service.available_recorder", return_value=""), \
              patch("services.voiced.service.default_device_label", return_value="none"):
-            mock_shutil.which.return_value = None
-            # Force _stt_available to return False by patching the import check
-            svc._stt_available = lambda: False
             h = svc.health()
         assert h["stt_ok"] is False
 
@@ -69,8 +66,8 @@ class TestVoiceServiceHealth:
         """health() reports which microphone backend is available."""
         from services.voiced.service import VoiceService
         svc = VoiceService()
+        svc._microphone_backend = lambda: "sounddevice"
         with patch("services.voiced.service.get_voice_session", return_value={"mode": "push_to_talk"}):
-            svc._microphone_backend = lambda: "sounddevice"
             h = svc.health()
         assert h["microphone_backend"] == "sounddevice"
 

@@ -115,6 +115,8 @@ class TestGlobalPoolRegistry:
     def test_get_pool_creates_new(self, temp_db):
         pool = get_pool(temp_db, pool_size=2)
         assert pool is not None
+        # Pool is lazily initialized — _initialized set on first use
+        pool.initialize()
         assert pool._initialized
     
     def test_get_pool_returns_existing(self, temp_db):

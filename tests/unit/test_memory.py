@@ -92,7 +92,6 @@ class TestWorkflowMemory:
         ws = "ws1"
         mem_service.write_workflow(ws, "some content")
         mem_service.clear_workflow(ws)
-        # After clear, reading returns empty (file removed)
         result = mem_service.read_workflow(ws)
         assert result == ""
 
@@ -130,7 +129,6 @@ class TestFTSMemory:
         mem_service.remember("Rust is fast and safe", "ws1", force_add=True)
 
         results = mem_service.recall("Python data", "ws1", n=5)
-        # Should get at least one result mentioning Python
         assert len(results) > 0
         combined = " ".join(results)
         assert "Python" in combined
@@ -138,14 +136,12 @@ class TestFTSMemory:
     def test_recall_empty_workspace(self, mem_service):
         """recall() on empty workspace returns empty or only PINNED/WORKFLOW."""
         results = mem_service.recall("anything", "empty-ws", n=5)
-        # May be empty or just context layers
         assert isinstance(results, list)
 
     def test_forget_removes_memory(self, mem_service):
         """forget() removes a memory from FTS."""
         mid = mem_service.remember("temporary info", "ws1", force_add=True)
         mem_service.forget(mid, "ws1")
-        # After forget, the memory should not appear in recall
         results = mem_service.recall("temporary info", "ws1", n=5)
         fts_texts = [r for r in results if "temporary info" in r]
         assert len(fts_texts) == 0
@@ -163,11 +159,8 @@ class TestFTSMemory:
     def test_remember_updates_similar(self, mem_service):
         """remember() with similar text updates existing instead of adding new."""
         mid1 = mem_service.remember("I love Python programming language", "ws1", force_add=True)
-        # Similar text should update, not create new
         mid2 = mem_service.remember("I love Python programming languages", "ws1")
-        # Either same ID (update) or the existing is updated
         all_mems = mem_service.get_all("ws1")
-        # Should have at most 2 (the original + possible new), not duplicates
         assert len(all_mems) <= 2
 
 
@@ -191,7 +184,7 @@ class TestHistory:
 
 class TestSessionState:
     def test_save_and_load_session_state(self, mem_service, temp_workspace):
-        ws = "ws2"  # use fresh workspace to avoid collision
+        ws = "ws2"
         state = {"last_intent": "deploy app", "turn": 5}
         mem_service.save_session_state(ws, state)
         loaded = mem_service.load_session_state(ws)
@@ -203,7 +196,7 @@ class TestSessionState:
         assert loaded == {}
 
     def test_pending_queue(self, mem_service, temp_workspace):
-        ws = "ws3"  # fresh workspace
+        ws = "ws3"
         mem_service.push_pending(ws, "Review PR #42")
         mem_service.push_pending(ws, "Fix auth bug")
         queue = mem_service.get_pending_queue(ws)
@@ -211,14 +204,14 @@ class TestSessionState:
         assert "Review PR #42" in queue
 
     def test_pending_queue_no_duplicates(self, mem_service, temp_workspace):
-        ws = "ws4"  # fresh workspace
+        ws = "ws4"
         mem_service.push_pending(ws, "Same task")
         mem_service.push_pending(ws, "Same task")
         queue = mem_service.get_pending_queue(ws)
         assert len(queue) == 1
 
     def test_clear_pending_queue(self, mem_service, temp_workspace):
-        ws = "ws5"  # fresh workspace
+        ws = "ws5"
         mem_service.push_pending(ws, "Task A")
         mem_service.clear_pending_queue(ws)
         queue = mem_service.get_pending_queue(ws)
@@ -231,15 +224,12 @@ class TestLearnedLayer:
     def test_read_empty(self, temp_workspace):
         from services.memd.service import LearnedLayer
         layer = LearnedLayer()
-        result = layer.read("ws1")
-        # Empty or uninitialized workspace returns default content, not ""
-        assert isinstance(result, str)
+        assert layer.read("ws1") == ""
 
     def test_read_with_content(self, temp_workspace):
         from services.memd.service import LearnedLayer
         from clawos_core.constants import WORKSPACE_DIR
         layer = LearnedLayer()
-        # Write LEARNED.md directly
         p = layer.path("ws1")
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("- Prefer fast models for simple queries\n- Always check memory first")
