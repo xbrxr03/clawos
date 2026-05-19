@@ -237,6 +237,8 @@ clawos/
 |:----|:--------------|
 | [Demos walk-through](docs/DEMOS.md) | Exact phrasing and expected output for each demo |
 | [Architecture overview](docs/ARCHITECTURE_CURRENT.md) | How the pieces fit together |
+| [Architecture diagram](docs/ARCHITECTURE_DIAGRAM.md) | Mermaid diagram of system and request flow |
+| [CLI reference](docs/CLI_REFERENCE.md) | All `clawctl` commands, flags, and examples |
 | [API reference](docs/API_REFERENCE.md) | Service endpoints and contracts |
 | [Security audit](docs/SECURITY_AUDIT.md) | Threat model and mitigations |
 | [Product vision](docs/PRODUCT_VISION.md) | Where we're headed |
