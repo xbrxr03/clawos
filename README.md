@@ -11,6 +11,7 @@ voice activation, multi-step tool use, 7-layer memory, zero cloud.
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Telemetry: zero](https://img.shields.io/badge/telemetry-zero-brightgreen.svg)](#zero-telemetry)
+[![Coverage](https://img.shields.io/badge/coverage-30%25-yellow)]
 
 [Install in 2 minutes](#-quick-start) · [Watch the demos](#-see-it-in-action) · [Read the docs](docs/) · [Join the discussion](https://github.com/xbrxr03/clawos/discussions)
 

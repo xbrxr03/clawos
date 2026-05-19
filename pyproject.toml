@@ -104,6 +104,8 @@ source = [
     "services/voiced",
     "tools/filesystem",
     "tools/shell",
+    "runtimes/agent/tools",
+    "runtimes/agent/tool_schemas",
 ]
 omit = [
     "tests/*",
