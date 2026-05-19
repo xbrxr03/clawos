@@ -7,6 +7,7 @@ Thanks for your interest in contributing! ClawOS is a local-first AI agent OS �
 - [Good First Issues](https://github.com/xbrxr03/clawos/labels/good%20first%20issue) — beginner-friendly tasks
 - [Discussions](https://github.com/xbrxr03/clawos/discussions) — questions, ideas, RFCs
 - [Roadmap](docs/ROADMAP.md) — where the project is headed
+- [CLI Reference](docs/CLI_REFERENCE.md) — all `clawctl` commands and flags
 
 ---
 
