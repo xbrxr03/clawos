@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """web.fetch — fetch URL content. Returns text, strips HTML. Max 100KB."""
+from __future__ import annotations
+
 import re
 import urllib.request
 
-MAX_BYTES = 100 * 1024
-TIMEOUT   = 15
+MAX_BYTES: int = 100 * 1024
+TIMEOUT: int = 15
 
 
 def run(target: str) -> str:
@@ -14,10 +16,10 @@ def run(target: str) -> str:
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "ClawOS/0.1"})
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            content_type = resp.headers.get("Content-Type", "")
-            raw = resp.read(MAX_BYTES)
+            content_type: str = resp.headers.get("Content-Type", "")
+            raw: bytes = resp.read(MAX_BYTES)
 
-        text = raw.decode("utf-8", errors="replace")
+        text: str = raw.decode("utf-8", errors="replace")
 
         # Strip HTML tags if content is HTML
         if "html" in content_type.lower() or text.strip().startswith("<"):
