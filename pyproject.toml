@@ -59,6 +59,11 @@ full = [
     "clawos[browser]",
     "clawos[brain]",
 ]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+]
 
 [project.scripts]
 clawctl = "clawctl.main:main"
@@ -90,6 +95,25 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
 python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = [
+    "clawos_core",
+    "services/agentd",
+    "services/memd",
+    "services/voiced",
+    "tools/filesystem",
+    "tools/shell",
+]
+omit = [
+    "tests/*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+fail_under = 30
+show_missing = true
 
 [tool.ruff]
 line-length = 100
