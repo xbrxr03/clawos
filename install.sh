@@ -199,6 +199,17 @@ install_ollama() {
     fi
     refresh_shell_env
     OLLAMA_BIN="$(detect_ollama_bin || true)"
+    # On fresh macOS, Homebrew ollama may not be on PATH yet
+    if [ -z "$OLLAMA_BIN" ] && [ "$PLATFORM" = "macos" ]; then
+      for _ollama_candidate in /opt/homebrew/bin/ollama /usr/local/bin/ollama; do
+        if [ -x "$_ollama_candidate" ]; then
+          OLLAMA_BIN="$_ollama_candidate"
+          PATH="$(dirname "$_ollama_candidate"):$PATH"
+          export PATH
+          break
+        fi
+      done
+    fi
   fi
 
   [ -n "$OLLAMA_BIN" ] || die "Ollama install finished but binary was not found"
@@ -251,13 +262,29 @@ install_node() {
   fi
 
   refresh_shell_env
+  # On fresh macOS, Homebrew's node may not be on PATH yet — check common locations
+  if ! command -v node >/dev/null 2>&1; then
+    for _node_candidate in /opt/homebrew/bin/node /usr/local/bin/node; do
+      if [ -x "$_node_candidate" ]; then
+        PATH="$(dirname "$_node_candidate"):$PATH"
+        export PATH
+        break
+      fi
+    done
+  fi
   command -v node >/dev/null 2>&1 || die "Node.js install finished but node is missing"
   ok "Node.js $(node --version)"
 
-  # Ensure npm is available — NodeSource includes it but Ubuntu apt node may not
+  # Ensure npm is available
   if ! command -v npm >/dev/null 2>&1; then
-    run_with_spinner "Installing npm" \
-      sudo apt-get install -y npm || warn "npm install failed — frontend build may be skipped"
+    if [ "$PLATFORM" = "macos" ]; then
+      # Homebrew node bundles npm — if missing, reinstall the whole package
+      run_with_spinner "Re-installing node (includes npm)" "$BREW_BIN" reinstall node \
+        || warn "npm install failed — frontend build may be skipped"
+    else
+      run_with_spinner "Installing npm" \
+        sudo apt-get install -y npm || warn "npm install failed — frontend build may be skipped"
+    fi
   fi
 }
 
@@ -271,10 +298,29 @@ install_openclaw() {
     fi
     info "ollama launch openclaw failed — falling back to npm"
   fi
-  if sudo npm install -g openclaw 2>/dev/null; then
-    ok "OpenClaw installed via npm"
+
+  # On fresh macOS, npm may not be on PATH yet — check common Homebrew paths
+  local npm_bin="$(command -v npm 2>/dev/null || true)"
+  if [ -z "$npm_bin" ] && [ "$PLATFORM" = "macos" ]; then
+    for _npm_candidate in /opt/homebrew/bin/npm /usr/local/bin/npm; do
+      if [ -x "$_npm_candidate" ]; then
+        npm_bin="$_npm_candidate"
+        break
+      fi
+    done
+  fi
+
+  if [ -n "$npm_bin" ]; then
+    if [ "$PLATFORM" = "macos" ]; then
+      # macOS: avoid sudo with Homebrew npm (breaks permissions)
+      "$npm_bin" install -g openclaw 2>/dev/null && ok "OpenClaw installed via npm" \
+        || warn "OpenClaw install failed — run: npm install -g openclaw"
+    else
+      sudo "$npm_bin" install -g openclaw 2>/dev/null && ok "OpenClaw installed via npm" \
+        || warn "OpenClaw install failed — run: sudo npm install -g openclaw"
+    fi
   else
-    warn "OpenClaw install failed — run: sudo npm install -g openclaw"
+    warn "Skipping OpenClaw — npm not found. Install Node.js first, then: npm install -g openclaw"
   fi
 }
 
@@ -402,7 +448,11 @@ install_playwright() {
     return 0
   fi
   step "Installing Playwright browser engine"
-  if [ "$PLATFORM" = "macos" ]; then
+  # Prefer venv pip to avoid system pip issues on fresh macOS installs
+  local _pip_bin="${INSTALL_DIR}/venv/bin/pip"
+  if [ -x "$_pip_bin" ]; then
+    "$_pip_bin" install -q playwright 2>/dev/null || true
+  elif [ "$PLATFORM" = "macos" ]; then
     python3 -m pip install -q playwright --user 2>/dev/null || true
   else
     python3 -m pip install -q playwright --break-system-packages 2>/dev/null || \
@@ -757,7 +807,18 @@ if [ -f /proc/meminfo ]; then
   RAM_GB=$((RAM_KB / 1024 / 1024))
 elif command -v sysctl >/dev/null 2>&1; then
   RAM_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
-  RAM_GB=$((RAM_BYTES / 1024 / 1024 / 1024))
+  # Use awk for division — bash $(( )) can silently overflow on large
+  # values (64GB = 68719476736 bytes) on some shells/versions.
+  if [ "$RAM_BYTES" -gt 0 ] 2>/dev/null; then
+    RAM_GB=$(echo "$RAM_BYTES" | awk '{printf "%d", $1 / 1073741824}')
+  else
+    # Fallback: vm_stat on macOS (works even if hw.memsize fails)
+    RAM_GB=$(vm_stat 2>/dev/null | awk '/page size/{ps=$NF} /^Pages free/{free=$3} /^Pages active/{active=$3} /^Pages inactive/{inactive=$3} /^Pages speculative/{spec=$3} /^Pages wired down/{wired=$3} END{gsub(/\./,"",ps); total=(free+active+inactive+spec+wired); if(total+0>0 && ps+0>0) printf "%d", total*ps/1073741824}') || RAM_GB=0
+    if [ "$RAM_GB" -eq 0 ] 2>/dev/null; then
+      warn "Could not detect RAM via sysctl or vm_stat — assuming 8GB"
+      RAM_GB=8
+    fi
+  fi
 else
   warn "Could not detect RAM - assuming 8GB"
   RAM_GB=8
@@ -934,7 +995,11 @@ fi
 CLAWOS_YAML="${INSTALL_DIR}/config/clawos.yaml"
 if [ -f "$CLAWOS_YAML" ]; then
   if grep -q "^dashboard:" "$CLAWOS_YAML" 2>/dev/null; then
-    sed -i 's/^\([[:space:]]*host:[[:space:]]*\)0\.0\.0\.0$/\1127.0.0.1/' "$CLAWOS_YAML" 2>/dev/null || true
+    if [ "$PLATFORM" = "macos" ]; then
+      sed -i '' 's/^\([[:space:]]*host:[[:space:]]*\)0\.0\.0\.0$/\1127.0.0.1/' "$CLAWOS_YAML" 2>/dev/null || true
+    else
+      sed -i 's/^\([[:space:]]*host:[[:space:]]*\)0\.0\.0\.0$/\1127.0.0.1/' "$CLAWOS_YAML" 2>/dev/null || true
+    fi
   else
     printf '\ndashboard:\n  host: 127.0.0.1\n  port: 7070\n' >> "$CLAWOS_YAML"
   fi
