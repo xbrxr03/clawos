@@ -1971,6 +1971,39 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             "recommendations": [r.to_dict() for r in recs if r.fits][:15],
         }
 
+    # ── Research (Deep Research with citations) ─────────────────────────────
+    @app.post("/api/research/start", dependencies=[Depends(require_auth)])
+    async def research_start(body: dict):
+        """Start a deep research session."""
+        from services.researchd.engine import get_engine
+        engine = get_engine()
+        query = body.get("query", "")
+        if not query or len(query) < 3:
+            raise HTTPException(status_code=400, detail="Query too short")
+        session = engine.start_session(
+            query=query,
+            seed_urls=body.get("seed_urls"),
+            provider_override=body.get("provider"),
+            api_key_override=body.get("api_key"),
+        )
+        session = engine.fetch_sources(session)
+        return session.to_dict()
+
+    @app.get("/api/research/list", dependencies=[Depends(require_auth)])
+    async def research_list():
+        """List all research sessions."""
+        from services.researchd.engine import ResearchSession
+        return ResearchSession.list_all()
+
+    @app.get("/api/research/{session_id}", dependencies=[Depends(require_auth)])
+    async def research_get(session_id: str):
+        """Get a research session by ID."""
+        from services.researchd.engine import ResearchSession
+        session = ResearchSession.load(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session.to_dict()
+
     @app.get("/api/workflows/list", dependencies=[Depends(require_auth)])
     async def list_workflows(category: str = None, search: str = None):
         try:

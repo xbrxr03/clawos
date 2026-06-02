@@ -47,6 +47,7 @@ AI_SERVICES=(
     "modeld:7075:services.modeld.main:Model Management"
     "mcpd:7077:services.mcpd.protocol:MCP Protocol Service"
     "voiced:7079:services.voiced.main:Voice Pipeline"
+    "researchd:7089:services.researchd.main:Deep Research"
 )
 
 AGENT_SERVICES=(

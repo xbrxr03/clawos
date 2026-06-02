@@ -21,6 +21,12 @@ Commands:
   cookbook recommend        — score models, show top picks
   cookbook serve            — auto-pick best model, pull + serve
 
+  research start <query>   — start a deep research session
+  research list            — list research sessions
+  research get <id>        — show session details + citations
+  research fetch <id>       — re-fetch sources for session
+  research delete <id>      — delete a session
+
   workspace list            — list workspaces
   workspace create <name>   — create a workspace
   workspace delete <name>   — delete a workspace
@@ -182,6 +188,37 @@ else:
     @cookbook.command("json")
     def cookbook_json():
         from clawctl.commands.cookbook import run_json; run_json()
+
+    # ── research ──────────────────────────────────────────────────────────────
+    @main.group()
+    def research():
+        """Deep research with citations."""
+        pass
+
+    @research.command("start")
+    @click.argument("query")
+    @click.option("--urls", default="", help="Comma-separated seed URLs")
+    def research_start(query, urls):
+        from clawctl.commands.research import run_start; run_start(query, urls)
+
+    @research.command("list")
+    def research_list():
+        from clawctl.commands.research import run_list; run_list()
+
+    @research.command("get")
+    @click.argument("session_id")
+    def research_get(session_id):
+        from clawctl.commands.research import run_get; run_get(session_id)
+
+    @research.command("fetch")
+    @click.argument("session_id")
+    def research_fetch(session_id):
+        from clawctl.commands.research import run_fetch; run_fetch(session_id)
+
+    @research.command("delete")
+    @click.argument("session_id")
+    def research_delete(session_id):
+        from clawctl.commands.research import run_delete; run_delete(session_id)
 
     # ── workspace ─────────────────────────────────────────────────────────────
     @main.group()
