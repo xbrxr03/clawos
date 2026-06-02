@@ -11,7 +11,7 @@ voice activation, multi-step tool use, 7-layer memory, approval gates, zero clou
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![License: AGPL-3.0+](https://img.shields.io/badge/license-AGPL%203.0+-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Telemetry: zero](https://img.shields.io/badge/telemetry-zero-brightgreen)](#-zero-telemetry)
-[![Tests: 479 passing](https://img.shields.io/badge/tests-479%20passing-brightgreen)](https://github.com/xbrxr03/clawos/actions)
+[![Tests: 553 passing](https://img.shields.io/badge/tests-553%20passing-brightgreen)](https://github.com/xbrxr03/clawos/actions)
 [![Stars](https://img.shields.io/github/stars/xbrxr03/clawos?style=social)](https://github.com/xbrxr03/clawos/stargazers)
 
 **[Install in 2 minutes](#-quick-start)** · **[See it in action](#-see-it-in-action)** · **[Read the docs](docs/)** · **[Join the discussion](https://github.com/xbrxr03/clawos/discussions)**
@@ -35,8 +35,13 @@ ClawOS is a **full agent OS** — it talks, it does, it remembers, and it asks b
 | **Multi-agent (A2A)** | ✅ Agent mesh | ❌ Single agent | ❌ | ❌ |
 | **7-layer memory** | ✅ Knowledge graph | ⚠️ Flat vectors | ⚠️ Flat vectors | ⚠️ Flat |
 | **Bootable ISO** | ✅ Flash & go | ❌ | ❌ | ❌ |
-| **Model manager** | 🚧 Cookbook coming | ✅ Cookbook | ✅ | ✅ |
-| **Deep research** | 🚧 Phase 3 | ✅ | ❌ | ❌ |
+| **Model manager** | ✅ Cookbook | ✅ Cookbook | ✅ | ✅ |
+| **Deep research** | ✅ Citation tracking | ✅ | ❌ | ❌ |
+| **Model compare** | ✅ Side-by-side | ✅ Compare | ❌ | ❌ |
+| **Notes** | ✅ Markdown + tags | ✅ | ❌ | ❌ |
+| **Calendar** | ✅ iCal export | ✅ | ❌ | ❌ |
+| **Email** | ✅ IMAP + SMTP | ✅ | ❌ | ❌ |
+| **PWA / Mobile** | ✅ Installable | ✅ | ❌ | ⚠️ |
 | **Self-hosted** | ✅ Zero cloud | ✅ | ✅ | ✅ |
 | **Zero telemetry** | ✅ [Verify it](#-zero-telemetry) | ✅ | ✅ | ✅ |
 
@@ -192,6 +197,62 @@ clawctl memory pin "I prefer dark mode"
 - **Brain**: Inspect knowledge graph, search memory
 - **Settings**: Models, voice, permissions, auth — all in one place
 - **Mobile-responsive**: Works on phone and tablet (PWA coming)
+</details>
+
+<details>
+<summary><b>📖 Cookbook — Hardware-aware model recommendations</b></summary>
+
+- **Auto-detect**: Scans CPU, RAM, GPU vendor/VRAM/compute capability
+- **Smart scoring**: 25 models ranked for your exact hardware
+- **One-command serve**: `clawctl cookbook serve` — picks the best model, pulls, and starts it
+- **Tier system**: A (8GB), B (16GB), C (32GB+) — never recommend what won't fit
+
+```bash
+clawctl cookbook scan          # detect your hardware
+clawctl cookbook recommend    # top 10 models for your rig
+clawctl cookbook serve         # auto-pick + start the best model
+```
+</details>
+
+<details>
+<summary><b>🔬 Deep Research — Multi-source research with citations</b></summary>
+
+- **Search providers**: Brave API, Tavily API, or direct URL fetch
+- **Citation tracking**: Sources ranked primary/supporting/tangential
+- **Session persistence**: Research sessions saved to disk, resumable
+- **Agent integration**: Build research intent for agentd synthesis
+
+```bash
+clawctl research start "quantum computing applications 2026"
+clawctl research list
+clawctl research get <session-id>
+```
+</details>
+
+<details>
+<summary><b>⚖️ Compare — Side-by-side model evaluation</b></summary>
+
+- **Parallel execution**: Ask multiple models the same question simultaneously
+- **Per-model metrics**: Tokens/sec, total tokens, response time
+- **Auto-detect running models**: No config needed if Ollama is running
+
+```bash
+clawctl compare "Explain attention mechanisms" --models llama3:8b,qwen2.5:7b
+```
+</details>
+
+<details>
+<summary><b>📝 Notes + Calendar + Email — Productivity suite</b></summary>
+
+- **Notes**: Markdown with YAML front matter, tags, full-text search
+- **Calendar**: Event management, date range filtering, **iCal export** for external calendars
+- **Email**: IMAP inbox reader + SMTP sender, works with your existing account
+- **PWA**: Install ClawOS on your phone — offline support, push to home screen
+
+```bash
+clawctl research start "..."   # deep research
+# Notes, Calendar, and Email available via dashboard at localhost:7070
+```
 </details>
 
 <details>
