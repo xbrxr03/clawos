@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # ClawOS Service Status Checker
 # Usage: bash scripts/clawos-status.sh
 

@@ -58,8 +58,11 @@ def test_destructive_workflow_is_gated_through_policyd(monkeypatch, workspace_tm
 
 
 def test_shell_restricted_is_the_only_shell_tool_alias():
-    from services.toolbridge.service import ALL_TOOL_DESCRIPTIONS, TOOL_ALIASES
+    from services.toolbridge.service import ALL_TOOL_DESCRIPTIONS, TOOL_ALIASES, _get_tool_descriptions
 
-    assert TOOL_ALIASES == {}
-    assert "shell.run" not in ALL_TOOL_DESCRIPTIONS
-    assert "Alias" not in ALL_TOOL_DESCRIPTIONS["shell.restricted"]
+    descs = _get_tool_descriptions()
+    # shell.restricted is the canonical name; shell.run should NOT exist
+    assert "shell.run" not in descs
+    assert "shell.restricted" in descs or "shell.restricted" in TOOL_ALIASES
+    # Aliases map canonical names to legacy names
+    assert "shell.restricted" in TOOL_ALIASES

@@ -101,56 +101,50 @@ class NotebookParser:
     VARIABLE_PATTERN = re.compile(r'\$\{(\w+)\}')
     
     def parse(self, markdown: str) -> List[Cell]:
-        """Parse markdown into cells."""
+        """Parse markdown into cells.
+        
+        Uses finditer to walk through code blocks in order, producing
+        separate markdown cells for text between code blocks.
+        """
         cells = []
         cell_id = 0
+        last_end = 0
         
-        # Split by code blocks
-        parts = self.CODE_BLOCK_PATTERN.split(markdown)
-        
-        # parts will be: [text_before, lang, code, text_after, lang, code, ...]
-        i = 0
-        while i < len(parts):
-            if i == 0:
-                # First text part (before any code block)
-                text = parts[i].strip()
-                if text:
-                    cells.append(Cell(
-                        id=f"cell_{cell_id}",
-                        cell_type=CellType.MARKDOWN,
-                        content=text
-                    ))
-                    cell_id += 1
-                i += 1
-            elif i + 2 <= len(parts):
-                # Code block
-                lang_str = parts[i] if parts[i] else "bash"
-                code = parts[i + 1].strip()
-                
-                language = self._parse_language(lang_str)
-                
+        for match in self.CODE_BLOCK_PATTERN.finditer(markdown):
+            # Text before this code block
+            before = markdown[last_end:match.start()].strip()
+            if before:
                 cells.append(Cell(
                     id=f"cell_{cell_id}",
-                    cell_type=CellType.CODE,
-                    content=code,
-                    language=language
+                    cell_type=CellType.MARKDOWN,
+                    content=before
                 ))
                 cell_id += 1
-                
-                # Text after code block
-                if i + 2 < len(parts):
-                    text = parts[i + 2].strip()
-                    if text:
-                        cells.append(Cell(
-                            id=f"cell_{cell_id}",
-                            cell_type=CellType.MARKDOWN,
-                            content=text
-                        ))
-                        cell_id += 1
-                
-                i += 3
-            else:
-                break
+            
+            # The code block itself
+            lang_str = match.group(1) or "bash"
+            code = match.group(2).strip()
+            language = self._parse_language(lang_str)
+            
+            cells.append(Cell(
+                id=f"cell_{cell_id}",
+                cell_type=CellType.CODE,
+                content=code,
+                language=language
+            ))
+            cell_id += 1
+            
+            last_end = match.end()
+        
+        # Trailing text after last code block
+        trailing = markdown[last_end:].strip()
+        if trailing:
+            cells.append(Cell(
+                id=f"cell_{cell_id}",
+                cell_type=CellType.MARKDOWN,
+                content=trailing
+            ))
+            cell_id += 1
         
         return cells
     

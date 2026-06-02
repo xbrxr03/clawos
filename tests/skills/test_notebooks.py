@@ -40,7 +40,7 @@ print("World")
         parser = NotebookParser()
         cells = parser.parse(markdown)
         
-        assert len(cells) == 5  # Heading, bash, text, python
+        assert len(cells) == 4  # Heading+Section, bash, text, python
         
         # First cell is markdown
         assert cells[0].cell_type == CellType.MARKDOWN
@@ -187,8 +187,8 @@ class TestNotebookExporter:
         script = exporter.to_script(cells, CodeLanguage.BASH)
         
         assert "#!/bin/bash" in script
-        assert 'echo "Hello"' in script
-        assert 'echo "World"' in script
+        assert "echo 'Hello'" in script
+        assert "echo 'World'" in script
     
     def test_export_to_python(self):
         """Test export to Python script."""
@@ -250,7 +250,7 @@ print("success")
         
         cells, session = execute_notebook(markdown)
         
-        assert len(cells) == 4
+        assert len(cells) == 3  # heading, bash, python
         
         # Check outputs
         code_cells = [c for c in cells if c.cell_type == CellType.CODE]

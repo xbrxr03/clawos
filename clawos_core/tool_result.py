@@ -22,8 +22,8 @@ class ToolResult:
     status:   Machine-readable status code
     error:    Error detail (None unless status is error/denied)
     """
-    ok: bool
     text: str
+    ok: bool
     status: Status = "ok"
     error: str | None = None
 

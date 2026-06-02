@@ -269,7 +269,7 @@ git push origin feature/my-feature
 
 ## 📜 License
 
-[AGPL-3.0](LICENSE) — free to use, modify, and distribute. Forks must remain open source.
+This project is licensed under the [GNU Affero General Public License v3 or later (AGPL-3.0-or-later)](LICENSE). Forks must remain open source.
 
 ---
 

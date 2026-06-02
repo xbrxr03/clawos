@@ -6,6 +6,7 @@ REST + WebSocket dashboard with cookie-backed auth, safe bind defaults,
 and a snapshot contract that matches the bundled React frontend assets.
 """
 import asyncio
+import json
 import logging
 import os
 import re
@@ -1091,6 +1092,11 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
                 )
                 return resp.json()
         except (json.JSONDecodeError, ValueError):
+            from services.agentd.service import get_manager
+
+            return get_manager().list_tasks(limit)
+        except Exception:
+            # agentd not reachable — fall back to local manager
             from services.agentd.service import get_manager
 
             return get_manager().list_tasks(limit)

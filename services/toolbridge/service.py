@@ -110,7 +110,25 @@ class ToolBridge:
         """Only inject granted tools — reduces tokens by 30-60%."""
         granted = set(self.policy.granted_tools)
         descs = _get_tool_descriptions()
-        available = {k: v for k, v in descs.items() if k in granted}
+        
+        # Resolve canonical names to aliases and vice-versa
+        alias_to_canonical = {v: k for k, v in TOOL_ALIASES.items() if v != k}
+        
+        # Find matching descriptions for granted tools
+        available = {}
+        for tool in granted:
+            # Direct match in descriptions
+            if tool in descs:
+                available[tool] = descs[tool]
+            # Canonical name maps to an alias in descriptions
+            elif tool in TOOL_ALIASES and TOOL_ALIASES[tool] in descs:
+                available[tool] = descs[TOOL_ALIASES[tool]]
+            # Alias name maps to a canonical name
+            elif tool in alias_to_canonical and alias_to_canonical[tool] in descs:
+                available[tool] = descs[alias_to_canonical[tool]]
+            # Alias name that maps to itself
+            elif tool in TOOL_ALIASES and TOOL_ALIASES[tool] == tool and tool in descs:
+                available[tool] = descs[tool]
         
         # Add MCP tools if available
         if self.mcp_client:
@@ -458,23 +476,29 @@ class ToolBridge:
         disabled in config — the test suite exercises this path.
         """
         try:
-            from adapters.browser.session_manager import get as get_session
-            session = await get_session(self._workspace_id)
-            if session is None:
-                return "[browser disabled] Set browser.enabled=true in config to use browser tools."
+            from adapters.browser.session_manager import get_manager
+            from adapters.browser.playwright_adapter import is_available as playwright_available
+
+            if not playwright_available():
+                return "[browser UNAVAILABLE] Playwright not installed. Install with: pip install playwright && playwright install"
+
+            mgr = get_manager()
+            adapter = await mgr.get(self._workspace_id)
+            if adapter is None:
+                return "[browser DISABLED] Set browser.enabled=true in config to use browser tools."
             if action == "open":
-                return await session.goto(target)
+                return await adapter.goto(target)
             elif action == "read":
-                return await session.inner_text("body")
+                return await adapter.inner_text("body")
             elif action == "click":
-                return await session.click(target)
+                return await adapter.click(target)
             elif action == "type":
-                return await session.type(target)
+                return await adapter.type(target)
             elif action == "screenshot":
                 path = self._ws_root / "screenshot.png"
-                return await session.screenshot(str(path))
+                return await adapter.screenshot(str(path))
             elif action == "close":
-                await session.close()
+                await adapter.close()
                 return "[browser] session closed"
             else:
                 return f"[ERROR] Unknown browser action: {action}"
