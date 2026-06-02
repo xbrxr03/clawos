@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClawOS — Your Private JARVIS</title>
-  <meta name="description" content="The complete JARVIS stack built on the OpenClaw ecosystem — voice, memory, 3D knowledge brain, 29 automations, WhatsApp, and a command center dashboard." />
-  <meta property="og:title" content="ClawOS — Your Private JARVIS" />
-  <meta property="og:description" content="Take any spare PC and turn it into a private JARVIS. Voice, WhatsApp, 27+ automations — all local." />
+  <title>ClawOS — Your Laptop. Your AI. Your Rules.</title>
+  <meta name="description" content="The JARVIS-style AI agent that runs 100% on your hardware. Voice activation, multi-step tool use, 7-layer memory, approval gates, zero cloud." />
+  <meta property="og:title" content="ClawOS — Your Laptop. Your AI. Your Rules." />
+  <meta property="og:description" content="The local AI agent OS. Voice, workflows, memory, approval gates — all on your machine, zero cloud." />
   <meta property="og:image" content="https://raw.githubusercontent.com/xbrxr03/clawos/main/landing/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="favicon.ico" />
@@ -24,6 +24,7 @@
       --text-2: #9a8888;
       --text-3: #4a3a3a;
       --green: #22c55e;
+      --blue: #3b82f6;
       --glow: rgba(229,57,53,0.18);
     }
 
@@ -36,46 +37,17 @@
       overflow-x: hidden;
     }
 
-    /* ── Audience banner ── */
-    .audience-banner {
-      position: sticky;
-      top: 0;
-      z-index: 200;
-      background: linear-gradient(90deg, rgba(229,57,53,0.18) 0%, rgba(255,107,107,0.08) 100%);
-      border-bottom: 1px solid rgba(229,57,53,0.25);
-      text-align: center;
-      padding: 10px 20px;
-      font-size: 13px;
-      color: var(--text-2);
-      backdrop-filter: blur(8px);
-    }
-    .audience-banner a { color: var(--accent); text-decoration: none; font-weight: 600; }
-    .audience-banner a:hover { text-decoration: underline; }
-
-    /* ── Fixed side nav (PAPI pattern) ── */
+    /* ── Side nav ── */
     .sidenav {
-      position: fixed;
-      left: 28px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      z-index: 100;
+      position: fixed; left: 28px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 16px; z-index: 100;
     }
     .sidenav a {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--text-3);
-      display: block;
-      transition: all 0.3s ease;
-      text-decoration: none;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--text-3);
+      display: block; transition: all 0.3s; text-decoration: none;
     }
     .sidenav a.active, .sidenav a:hover {
-      background: var(--accent);
-      transform: scale(1.6);
-      box-shadow: 0 0 8px var(--accent);
+      background: var(--accent); transform: scale(1.6); box-shadow: 0 0 8px var(--accent);
     }
     @media (max-width: 900px) { .sidenav { display: none; } }
 
@@ -84,1113 +56,652 @@
 
     /* ── Hero ── */
     .hero {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      position: relative;
-      padding: 60px 24px;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+      position: relative; padding: 60px 24px;
     }
     .hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
+      content: ''; position: absolute; inset: 0;
       background:
         radial-gradient(ellipse 60% 40% at 50% 30%, rgba(229,57,53,0.14) 0%, transparent 70%),
         radial-gradient(ellipse 40% 30% at 70% 60%, rgba(255,107,107,0.06) 0%, transparent 60%);
-      pointer-events: none;
+      pointer-events: none; animation: glow-pulse 4s ease-in-out infinite;
     }
     .hero-eyebrow {
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 24px;
-      font-weight: 600;
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 24px; font-weight: 600;
     }
     .hero h1 {
-      font-size: clamp(2.4rem, 6vw, 4.4rem);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      margin-bottom: 24px;
+      font-size: clamp(2.4rem, 6vw, 4.4rem); font-weight: 800;
+      line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 24px;
     }
     .hero h1 em {
       font-style: normal;
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
     .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.2rem);
-      color: var(--text-2);
-      max-width: 560px;
-      margin: 0 auto 40px;
-      line-height: 1.7;
+      font-size: clamp(1rem, 2vw, 1.2rem); color: var(--text-2);
+      max-width: 580px; margin: 0 auto 40px; line-height: 1.7;
     }
     .install-block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px 24px;
-      display: inline-flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 32px;
-      max-width: 100%;
-      overflow: hidden;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 24px; display: inline-flex; align-items: center; gap: 16px;
+      margin-bottom: 32px; max-width: 100%; overflow: hidden;
     }
     .install-block code {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 13px;
-      color: var(--accent-2);
-      white-space: nowrap;
+      font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; color: var(--accent-2); white-space: nowrap;
     }
     .copy-btn {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 12px;
-      color: var(--text-2);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-      flex-shrink: 0;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px;
+      padding: 6px 12px; color: var(--text-2); font-size: 12px; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
     }
     .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .hero-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+    .hero-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 48px; }
     .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 12px 28px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      transition: all 0.2s;
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      padding: 12px 28px; font-size: 14px; font-weight: 600; cursor: pointer;
+      text-decoration: none; display: inline-block; transition: all 0.2s;
     }
     .btn-primary:hover { background: #c62828; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(229,57,53,0.35); }
     .btn-ghost {
-      background: transparent;
-      color: var(--text-2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 24px;
-      font-size: 14px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      transition: all 0.2s;
+      background: transparent; color: var(--text-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 24px; font-size: 14px; cursor: pointer;
+      text-decoration: none; display: inline-block; transition: all 0.2s;
     }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-    .hero-stats {
-      display: flex;
-      gap: 32px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
+    .hero-stats { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; }
     .stat { text-align: center; }
     .stat-num { font-size: 1.8rem; font-weight: 700; color: var(--text); }
     .stat-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; }
 
     /* ── Section headers ── */
     .section-eyebrow {
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 12px;
-      font-weight: 600;
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px; font-weight: 600;
     }
     .section-title {
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-      line-height: 1.2;
+      font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.2;
     }
-    .section-sub {
-      color: var(--text-2);
-      font-size: 1.05rem;
-      max-width: 520px;
-      line-height: 1.7;
-    }
+    .section-sub { color: var(--text-2); font-size: 1.05rem; max-width: 520px; line-height: 1.7; }
 
-    /* ── Why not just Ollama ── */
-    .compare-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      margin-top: 40px;
+    /* ── Comparison table ── */
+    .compare-table-wrap {
+      margin-top: 40px; overflow-x: auto;
     }
-    .compare-col { }
-    .compare-header {
-      padding: 16px 24px;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      border-bottom: 1px solid var(--border);
+    .compare-table {
+      width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--border); font-size: 13.5px;
     }
-    .compare-header.plain { background: var(--surface); color: var(--text-2); }
-    .compare-header.clawos { background: rgba(229,57,53,0.12); color: var(--accent); }
-    .compare-row {
-      display: contents;
+    .compare-table th {
+      padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid var(--border);
     }
-    .compare-cell {
-      padding: 14px 24px;
-      font-size: 13.5px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .compare-table th.clawos-header { background: rgba(229,57,53,0.12); color: var(--accent); }
+    .compare-table th.other-header { background: var(--surface); color: var(--text-2); }
+    .compare-table td {
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
     }
-    .compare-cell.plain { background: var(--surface); color: var(--text-2); }
-    .compare-cell.clawos { background: var(--surface-2); color: var(--text); }
-    .compare-cell:last-of-type { border-bottom: none; }
-    .check { color: var(--green); font-size: 15px; }
-    .cross { color: var(--text-3); font-size: 15px; }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table td.feature-name { color: var(--text-2); font-weight: 500; }
+    .compare-table td.clawos-col { background: rgba(229,57,53,0.04); }
+    .compare-table td.other-col { background: var(--surface); }
+    .yes { color: var(--green); font-weight: 600; }
+    .no { color: var(--text-3); }
+    .coming { color: var(--accent-2); font-style: italic; }
 
     /* ── Feature grid ── */
     .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
-      margin-top: 48px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px; margin-top: 48px;
     }
     .feature-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      transition: border-color 0.2s, transform 0.2s;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px; transition: border-color 0.2s, transform 0.2s; position: relative; cursor: default;
     }
     .feature-card:hover { border-color: rgba(229,57,53,0.35); transform: translateY(-2px); }
-    .feature-icon { font-size: 24px; margin-bottom: 12px; }
-    .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-    .feature-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+    .feature-card::before, .feature-card::after {
+      content:''; position:absolute; width:12px; height:12px;
+      border-color:var(--accent); border-style:solid; opacity:0; transition:opacity 0.3s;
+    }
+    .feature-card::before { top:8px; left:8px; border-width:1px 0 0 1px; }
+    .feature-card::after { bottom:8px; right:8px; border-width:0 1px 1px 0; }
+    .feature-card:hover::before, .feature-card:hover::after { opacity:1; }
+    .feature-icon { font-size: 28px; margin-bottom: 14px; }
+    .feature-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .feature-body { font-size: 13.5px; color: var(--text-2); line-height: 1.65; }
+    .feature-tech {
+      margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .feature-tech span {
+      font-size: 10.5px; padding: 2px 8px; border-radius: 4px;
+      background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
 
-    /* ── Savings calculator ── */
-    .calc-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
-      margin-top: 48px;
+    /* ── Demo block ── */
+    .demo-block {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 32px; margin-top: 48px; overflow: hidden;
     }
-    .calc-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; }
-    .calc-sub { color: var(--text-2); font-size: 13.5px; margin-bottom: 32px; }
-    .calc-items { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
-    .calc-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+    .demo-terminal {
+      background: #0d0d0d; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;
+      padding: 20px 24px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px;
+      line-height: 1.8; color: var(--text-2); overflow-x: auto; white-space: pre-wrap;
     }
-    .calc-item-left { display: flex; align-items: center; gap: 12px; }
-    .calc-checkbox {
-      width: 18px; height: 18px;
-      accent-color: var(--accent);
-      cursor: pointer;
-      flex-shrink: 0;
+    .demo-terminal .prompt { color: var(--accent); }
+    .demo-terminal .output { color: var(--green); }
+    .demo-terminal .dim { color: var(--text-3); }
+    .demo-label {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 16px; font-weight: 600;
     }
-    .calc-item-name { font-size: 14px; }
-    .calc-item-price { font-size: 13px; color: var(--text-2); white-space: nowrap; }
-    .calc-divider { height: 1px; background: var(--border); margin: 8px 0; }
-    .calc-result {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-    .calc-total-label { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
-    .calc-total-num { font-size: 2rem; font-weight: 700; color: var(--text); }
-    .calc-total-num span { color: var(--text-2); font-size: 1rem; font-weight: 400; margin-left: 8px; }
-    .calc-cta { text-align: right; }
-    .calc-cta-label { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
 
-    /* ── Security story ── */
+    /* ── Memory layers ── */
+    .memory-grid {
+      display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 40px;
+    }
+    .memory-layer {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px 24px; transition: all 0.2s;
+    }
+    .memory-layer:hover { border-color: rgba(229,57,53,0.3); }
+    .memory-depth {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); width: 80px; flex-shrink: 0;
+    }
+    .memory-name { font-size: 14px; font-weight: 600; width: 130px; flex-shrink: 0; }
+    .memory-desc { font-size: 13px; color: var(--text-2); flex: 1; }
+    .memory-tech { font-size: 10.5px; color: var(--text-3); font-family: 'SF Mono', monospace; flex-shrink: 0; }
+
+    /* ── Hardware tiers ── */
+    .hw-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px; margin-top: 40px;
+    }
+    .hw-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px; text-align: center; transition: all 0.2s;
+    }
+    .hw-card:hover { border-color: rgba(229,57,53,0.3); transform: translateY(-2px); }
+    .hw-tier {
+      font-size: 28px; font-weight: 800; margin-bottom: 4px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hw-label { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+    .hw-spec { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+    .hw-model { font-size: 11px; color: var(--text-3); font-family: 'SF Mono', monospace; margin-top: 8px; }
+
+    /* ── Security grid ── */
     .security-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px;
-      margin-top: 48px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px; margin-top: 48px;
     }
     .security-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
     }
     .security-badge {
-      display: inline-block;
-      background: rgba(34,197,94,0.12);
-      color: var(--green);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 3px 8px;
-      border-radius: 4px;
-      margin-bottom: 12px;
+      display: inline-block; background: rgba(34,197,94,0.12); color: var(--green);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 4px; margin-bottom: 12px;
     }
     .security-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
     .security-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
 
-    /* ── Metrics bar ── */
-    .metrics-bar {
-      display: flex;
-      gap: 40px;
-      justify-content: center;
-      flex-wrap: wrap;
-      padding: 48px 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      margin-top: 48px;
-    }
-    .metric { text-align: center; }
-    .metric-num { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .metric-label { font-size: 12px; color: var(--text-3); margin-top: 4px; }
-
-    /* ── Premium CTA ── */
-    .premium-card {
+    /* ── CTA section ── */
+    .cta-card {
       background: linear-gradient(135deg, rgba(229,57,53,0.10) 0%, rgba(255,107,107,0.05) 100%);
-      border: 1px solid rgba(229,57,53,0.30);
-      border-radius: 20px;
-      padding: 60px 40px;
-      text-align: center;
+      border: 1px solid rgba(229,57,53,0.30); border-radius: 20px;
+      padding: 60px 40px; text-align: center;
     }
-    .premium-price {
-      font-size: 3.5rem;
-      font-weight: 800;
-      margin: 16px 0 8px;
-      letter-spacing: -0.04em;
+    .cta-card h2 {
+      font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; margin-bottom: 16px;
     }
-    .premium-price sup { font-size: 1.5rem; vertical-align: super; }
-    .premium-tag {
-      display: inline-block;
-      background: var(--accent);
-      color: white;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 4px 10px;
-      border-radius: 6px;
-      margin-bottom: 24px;
-    }
-    /* ── Switch card ── */
-    .switch-card {
-      background: var(--surface);
-      border: 1px solid rgba(229,57,53,0.25);
-      border-radius: 16px;
-      padding: 48px;
-      max-width: 760px;
-      margin: 0 auto;
-    }
-    .switch-badge {
-      display: inline-block;
-      background: rgba(229,57,53,0.12);
-      color: var(--accent);
-      border: 1px solid rgba(229,57,53,0.25);
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 4px 14px;
-      margin-bottom: 20px;
-    }
-    .switch-title { font-size: 1.6rem; font-weight: 700; line-height: 1.25; margin-bottom: 16px; }
-    .switch-body { color: var(--text-2); font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
-    .switch-list { display: flex; flex-direction: column; gap: 10px; }
-    .switch-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14.5px; color: var(--text-2); }
-
-    .premium-features {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 10px;
-      text-align: left;
-      margin: 32px 0;
-    }
-    .premium-feature {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13.5px;
-      color: var(--text-2);
-    }
-    .premium-feature .check { font-size: 13px; }
+    .cta-card p { color: var(--text-2); font-size: 1.05rem; margin-bottom: 32px; max-width: 480px; margin-left: auto; margin-right: auto; }
 
     /* ── Footer ── */
     footer {
-      border-top: 1px solid var(--border);
-      padding: 48px 24px;
-      text-align: center;
-      color: var(--text-3);
-      font-size: 13px;
+      border-top: 1px solid var(--border); padding: 48px 24px;
+      text-align: center; color: var(--text-3); font-size: 13px;
     }
     footer a { color: var(--text-2); text-decoration: none; }
     footer a:hover { color: var(--accent); }
     .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
 
-    /* ── JARVIS animations ── */
+    /* ── Animations ── */
     @keyframes glow-pulse { 0%,100%{opacity:0.8} 50%{opacity:1.3} }
-    .hero::before { animation: glow-pulse 4s ease-in-out infinite; }
-
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
     #install-cmd::after { content:'█'; animation:blink 1s step-end infinite; color:var(--accent); font-size:0.85em; margin-left:2px; }
-
     @keyframes scan { 0%{top:0%} 100%{top:100%} }
     .hero-scan {
       position:absolute; left:0; right:0; height:1px;
       background:linear-gradient(90deg,transparent,rgba(229,57,53,0.35),transparent);
       animation:scan 6s linear infinite; pointer-events:none;
     }
-
     @keyframes ping { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.5} }
     .jarvis-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); animation:ping 2s ease-in-out infinite; margin-right:6px; vertical-align:middle; }
-
-    .feature-card { position:relative; }
-    .feature-card::before, .feature-card::after {
-      content:''; position:absolute; width:12px; height:12px;
-      border-color:var(--accent); border-style:solid; opacity:0; transition:opacity 0.3s;
-    }
-    .feature-card::before { top:8px; left:8px; border-width:1px 0 0 1px; }
-    .feature-card::after  { bottom:8px; right:8px; border-width:0 1px 1px 0; }
-    .feature-card:hover::before, .feature-card:hover::after { opacity:1; }
-
     @keyframes slide-up { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:none} }
-    .persona-card { animation:slide-up 0.5s ease both; }
-    .persona-card:nth-child(2){animation-delay:0.08s}
-    .persona-card:nth-child(3){animation-delay:0.16s}
-    .persona-card:nth-child(4){animation-delay:0.24s}
-    .persona-card:nth-child(5){animation-delay:0.32s}
+    .feature-card { animation: slide-up 0.4s ease both; }
+    .feature-card:nth-child(2){animation-delay:0.06s}
+    .feature-card:nth-child(3){animation-delay:0.12s}
+    .feature-card:nth-child(4){animation-delay:0.18s}
+    .feature-card:nth-child(5){animation-delay:0.24s}
+    .feature-card:nth-child(6){animation-delay:0.30s}
 
-    /* ── Persona section ── */
-    .persona-grid {
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-      gap:16px;
-      margin-top:48px;
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .install-block { flex-direction: column; align-items: stretch; }
+      .compare-table { font-size: 12px; }
+      .compare-table th, .compare-table td { padding: 10px 12px; }
+      .memory-layer { flex-wrap: wrap; }
+      .memory-depth, .memory-name { width: auto; }
+      section { padding: 60px 16px; }
     }
-    .persona-card {
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-left:3px solid var(--accent);
-      border-radius:12px;
-      padding:24px;
-      transition:border-color 0.2s, transform 0.2s;
-    }
-    .persona-card:hover { border-color:rgba(229,57,53,0.5); transform:translateY(-2px); }
-    .persona-icon { font-size:28px; margin-bottom:10px; }
-    .persona-title { font-size:16px; font-weight:700; margin-bottom:6px; }
-    .persona-hook { font-size:13px; color:var(--accent-2); margin-bottom:14px; font-style:italic; line-height:1.5; }
-    .persona-list { list-style:none; display:flex; flex-direction:column; gap:7px; margin-bottom:16px; }
-    .persona-list li { font-size:13px; color:var(--text-2); padding-left:14px; position:relative; line-height:1.5; }
-    .persona-list li::before { content:'·'; position:absolute; left:0; color:var(--accent); }
-    .persona-cmd { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-family:'SF Mono','Fira Code',monospace; font-size:11.5px; color:var(--text-2); }
-
-    /* ── Waitlist form ── */
-    .waitlist-form { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:32px; }
-    .waitlist-form input[type=email] {
-      background:var(--surface); border:1px solid rgba(229,57,53,0.3); border-radius:8px;
-      padding:10px 16px; color:var(--text); font-size:14px; outline:none;
-      transition:border-color 0.2s; width:240px; max-width:100%;
-    }
-    .waitlist-form input[type=email]:focus { border-color:var(--accent); }
-    .waitlist-form input::placeholder { color:var(--text-3); }
-    .waitlist-form button { background:transparent; border:1px solid var(--border); border-radius:8px; padding:10px 20px; color:var(--text-2); font-size:13px; cursor:pointer; transition:all 0.2s; }
-    .waitlist-form button:hover { border-color:var(--accent); color:var(--accent); }
   </style>
 </head>
 <body>
 
-<!-- Fixed side nav -->
+<!-- Side nav -->
 <nav class="sidenav" id="sidenav">
   <a href="#hero" class="active" title="Home"></a>
-  <a href="#why" title="Why not Ollama"></a>
+  <a href="#why" title="Why ClawOS"></a>
   <a href="#features" title="Features"></a>
-  <a href="#who" title="Who it's for"></a>
-  <a href="#savings" title="Savings"></a>
+  <a href="#voice" title="Voice"></a>
+  <a href="#memory" title="Memory"></a>
   <a href="#security" title="Security"></a>
-  <a href="#stack" title="The Stack"></a>
-  <a href="#cloud-compare" title="Cloud vs ClawOS"></a>
-  <a href="#faq" title="FAQ"></a>
-  <a href="#premium" title="Premium"></a>
+  <a href="#hardware" title="Hardware"></a>
+  <a href="#install" title="Install"></a>
 </nav>
 
-<!-- Hosted OpenClaw audience banner -->
-<div class="audience-banner">
-  💸 Paying $29–$59/mo for managed OpenClaw hosting?&nbsp; <a href="#savings">ClawOS sets it up in 4 minutes for $10 once. →</a>
-</div>
-
-<!-- Hero -->
+<!-- ═══════════════ HERO ═══════════════ -->
 <section class="hero" id="hero">
   <div class="hero-scan"></div>
-  <div class="hero-eyebrow"><span class="jarvis-dot"></span> JARVIS ONLINE &nbsp;·&nbsp; Open Source · AGPL-3.0</div>
-  <h1>The complete <em>JARVIS stack</em>.<br>One command.</h1>
-  <p class="hero-sub">OpenClaw agents forget. ClawOS doesn't. 14-layer memory with temporal knowledge graph, retention decay, and semantic fusion — so your JARVIS actually remembers what matters. Voice, brain, 29 automations, 9 frameworks. One command.</p>
+  <div class="hero-eyebrow"><span class="jarvis-dot"></span> CLAWOS ONLINE &nbsp;·&nbsp; Open Source · AGPL-3.0</div>
+  <h1>Your laptop.<br>Your AI.<br><em>Your rules.</em></h1>
+  <p class="hero-sub">The JARVIS-style AI agent that runs 100% on your hardware. Voice activation, multi-step tool use, 7-layer memory, approval gates, zero cloud.</p>
 
   <div class="install-block">
-    <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/xbrxr03/clawos/main/install.sh | bash</code>
+    <code id="install-cmd">curl -fsSL https://clawos.ai/install.sh | bash</code>
     <button class="copy-btn" onclick="copyInstall()">Copy</button>
   </div>
 
-  <!-- Waitlist form — replace REPLACE_ME with your Formspree form ID -->
-  <form class="waitlist-form" action="https://formspree.io/f/mojpggob" method="POST">
-    <input type="email" name="email" placeholder="your@email.com" required />
-    <button type="submit">Join waitlist</button>
-  </form>
-
   <div class="hero-cta-row">
-    <a href="https://github.com/xbrxr03/clawos" class="btn-primary">★ Star on GitHub →</a>
-    <a href="#why" class="btn-ghost">See how it works ↓</a>
+    <a href="https://github.com/xbrxr03/clawos" class="btn-primary">⭐ Star on GitHub</a>
+    <a href="#install" class="btn-ghost">Install in 2 min →</a>
   </div>
 
   <div class="hero-stats">
-    <div class="stat">
-      <div class="stat-num">29+</div>
-      <div class="stat-label">Automations</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">9</div>
-      <div class="stat-label">Frameworks</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">14</div>
-      <div class="stat-label">Memory Layers</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">$0</div>
-      <div class="stat-label">To get started</div>
-    </div>
+    <div class="stat"><div class="stat-num">479</div><div class="stat-label">Tests passing</div></div>
+    <div class="stat"><div class="stat-num">29</div><div class="stat-label">Workflows</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-label">Cloud calls</div></div>
+    <div class="stat"><div class="stat-num">7</div><div class="stat-label">Memory layers</div></div>
   </div>
 </section>
 
-<!-- Why not Ollama -->
+<!-- ═══════════════ WHY ═══════════════ -->
 <section id="why">
-  <div class="section-eyebrow">The curated stack</div>
-  <div class="section-title">Everything people stitch together from 7 different repos — integrated.</div>
-  <p class="section-sub">OpenClaw is powerful. But raw OpenClaw still needs a voice pipeline, a memory system, a knowledge graph, a dashboard, and an automation engine. People normally spend days assembling these from separate projects. ClawOS ships them as one coherent stack.</p>
+  <div class="section-eyebrow">Why ClawOS</div>
+  <div class="section-title">Ollama gave you a local model.<br>ClawOS gives you a <em>local agent</em>.</div>
+  <p class="section-sub">ChatGPT runs in the cloud. Jan is a chat wrapper. Open WebUI is a UI layer. ClawOS is a full agent OS — it talks, it does, it remembers, and it asks before it acts.</p>
 
-  <div class="compare-grid">
-    <div class="compare-header plain">DIY / OpenClaw alone</div>
-    <div class="compare-header clawos">ClawOS</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> whisper + piper + openwakeword (manual wiring)</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Wake word voice pipeline, ready out of the box</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> ChromaDB + vector search (build yourself)</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> 14-layer memory — temporal KG, retention decay, semantic + keyword fusion</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> Obsidian + plugins (separate app, no agent link)</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Nexus Brain — 3D knowledge graph agents write to</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> n8n or Zapier (another subscription)</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> 29 built-in automations, no config required</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> No safety layer — agents run tools unchecked</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> policyd — every call risk-scored, sensitive ops need approval</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> No dashboard — terminal only</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> 17-page command center at :7070</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> Cloud hosting: $16–133/month, data on their servers</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Your hardware — try free, own for $10 once</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> No premium voice — cloud TTS needs manual wiring</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Piper (free, offline) out of the box — paste ElevenLabs key for premium JARVIS voice</div>
-
-    <div class="compare-cell plain"><span class="cross">✗</span> Locked to one framework — no switching</div>
-    <div class="compare-cell clawos"><span class="check">✓</span> Framework Store — 9 agent frameworks, switch in one click</div>
-  </div>
-</section>
-
-<!-- Features -->
-<section id="features">
-  <div class="section-eyebrow">What's in the stack</div>
-  <div class="section-title">The OpenClaw ecosystem, fully assembled.</div>
-  <p class="section-sub">Each piece is best-in-class. Together they form something nobody else ships as a single install.</p>
-
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="feature-icon">🎙️</div>
-      <div class="feature-title">Wake Word Voice Pipeline</div>
-      <div class="feature-body">Say "Hey Jarvis" — Whisper transcribes, your LLM thinks, Piper speaks. Local by default, cloud quality on demand.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔮</div>
-      <div class="feature-title">Nexus Brain — 3D Knowledge Graph</div>
-      <div class="feature-body">Drop a folder of notes. ClawOS builds a living knowledge graph your agents can query, expand, and surface connections in — visualised in 3D.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">👁️</div>
-      <div class="feature-title">JARVIS Notices Things</div>
-      <div class="feature-body">Disk 82% full. PR open 5 days. Brain found a connection you missed. ClawOS watches in the background and surfaces what matters — before you think to ask.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <div class="feature-title">29 Built-in Automations</div>
-      <div class="feature-body">Organise downloads, summarise PDFs, review PRs, write READMEs, morning news brief — all pre-wired, one command to run.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🧠</div>
-      <div class="feature-title">14-Layer Persistent Memory</div>
-      <div class="feature-body">Temporal knowledge graph, Ebbinghaus retention decay, RRF fusion search, secret redaction, intent-routed recall. Your JARVIS remembers everything — and forgets what it should.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🌐</div>
-      <div class="feature-title">Browser Control</div>
-      <div class="feature-body">"Look up GPU prices and tell me if my 1060 is worth upgrading." Playwright-powered, policy-gated.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔒</div>
-      <div class="feature-title">Policy Gatekeeper</div>
-      <div class="feature-body">Every tool call logged. Sensitive actions need your approval. Tamper-evident audit trail. You have the kill switch — always.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🖥️</div>
-      <div class="feature-title">17-Page Command Center</div>
-      <div class="feature-body">Services, workflows, memory, traces, MCP manager, agent federation, skills — one dashboard at :7070.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🍎</div>
-      <div class="feature-title">Mac Bonus: OMI Integration</div>
-      <div class="feature-body">Running on macOS? Plug in the OMI app for ambient listening + wearable pendant support. Every conversation becomes searchable memory. Optional extra on top of the standard voice pipeline — Linux/Windows users get the full JARVIS without it.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔀</div>
-      <div class="feature-title">Framework Store</div>
-      <div class="feature-body">SmolAgents, AgentZero, PocketFlow, DSPy, CrewAI, AutoGen, LangGraph, Haystack, MetaGPT — 9 frameworks, switch in one click. Hermes Agent coming soon. Not locked to one.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔌</div>
-      <div class="feature-title">MCP + A2A Federation</div>
-      <div class="feature-body">Connect any Model Context Protocol server. Link multiple ClawOS instances on your LAN. Claude, OpenClaw, your own agents — all wired.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">📚</div>
-      <div class="feature-title">Research Wiki</div>
-      <div class="feature-body">Andrej Karpathy doesn't use RAG. Drop sources into raw/, JARVIS builds wiki/ automatically, answers live in outputs/. Structure that compounds over time.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🛤️</div>
-      <div class="feature-title">Smart Model Routing</div>
-      <div class="feature-body">Exploration → DeepSeek (pennies). Hard reasoning → Claude. Local coding → Ollama (free). One workflow, every frontier model. Cuts API costs 80%.</div>
-    </div>
-  </div>
-</section>
-
-<!-- Who it's for -->
-<section id="who">
-  <div class="section-eyebrow">For every kind of person</div>
-  <div class="section-title">You don't need to know what OpenClaw is.</div>
-  <p class="section-sub">You just need one of these to sound familiar.</p>
-
-  <div class="persona-grid">
-    <div class="persona-card">
-      <div class="persona-icon">👨‍💻</div>
-      <div class="persona-title">Developer</div>
-      <div class="persona-hook">OpenClaude pre-installed. Claude Code's interface. Your hardware. Zero API bill.</div>
-      <ul class="persona-list">
-        <li>Run <code style="font-size:11px;color:var(--accent-2)">openclaude</code> in terminal — no subscription</li>
-        <li>PR reviews, README gen, repo summaries out of the box</li>
-        <li>DeepSeek for cheap tasks, Claude for hard ones</li>
-        <li>qwen2.5-coder:7b wired to local Ollama</li>
-      </ul>
-      <div class="persona-cmd">nexus workflow run pr-review</div>
-    </div>
-
-    <div class="persona-card">
-      <div class="persona-icon">🎬</div>
-      <div class="persona-title">Content Creator</div>
-      <div class="persona-hook">Never run out of ideas. Batch-generate a week of content in an hour.</div>
-      <ul class="persona-list">
-        <li>Daily niche trend briefing via voice every morning</li>
-        <li>10 content ideas from one keyword</li>
-        <li>Repurpose blog → threads, scripts, captions</li>
-        <li>Batch caption your entire image library</li>
-      </ul>
-      <div class="persona-cmd">nexus workflow run daily-digest</div>
-    </div>
-
-    <div class="persona-card">
-      <div class="persona-icon">💼</div>
-      <div class="persona-title">Business Owner</div>
-      <div class="persona-hook">An AI operator that never sleeps and costs nothing per query.</div>
-      <ul class="persona-list">
-        <li>Lead research + market analysis workflows</li>
-        <li>Cold outreach and follow-up draft generation</li>
-        <li>Daily briefing: pipeline status, priority tasks</li>
-        <li>Competitor reports, CSV to readable summary</li>
-      </ul>
-      <div class="persona-cmd">nexus workflow run csv-to-report</div>
-    </div>
-
-    <div class="persona-card">
-      <div class="persona-icon">🎒</div>
-      <div class="persona-title">Student</div>
-      <div class="persona-hook">Summarise any lecture. Proofread privately — nothing leaves your laptop.</div>
-      <ul class="persona-list">
-        <li>PDF + lecture notes → concise study summaries</li>
-        <li>Personal study wiki that grows with your course</li>
-        <li>Private essay proofreading (local, not cloud)</li>
-        <li>Deadline briefing every morning</li>
-      </ul>
-      <div class="persona-cmd">nexus workflow run summarize-pdf</div>
-    </div>
-
-    <div class="persona-card">
-      <div class="persona-icon">🎓</div>
-      <div class="persona-title">Teacher</div>
-      <div class="persona-hook">Research any topic, build lesson wikis, never lose a document.</div>
-      <ul class="persona-list">
-        <li>Summarise research papers and textbooks</li>
-        <li>Build a living wiki of your subject matter</li>
-        <li>Draft lesson plans from curriculum guidelines</li>
-        <li>Morning briefing: today's schedule and priorities</li>
-      </ul>
-      <div class="persona-cmd">nexus workflow run batch-summarize</div>
-    </div>
-
-    <div class="persona-card">
-      <div class="persona-icon">🧑‍💻</div>
-      <div class="persona-title">Freelancer</div>
-      <div class="persona-hook">Proposals drafted, clients researched, follow-ups written. An operator that works while you sleep.</div>
-      <ul class="persona-list">
-        <li>Client research + competitor analysis in one run</li>
-        <li>Proposal and scope-of-work generation from notes</li>
-        <li>Weekly invoice summary and overdue chase drafts</li>
-        <li>Daily briefing: deadlines, open threads, priorities</li>
-      </ul>
-      <div class="persona-cmd">nexus workflow run daily-digest</div>
-    </div>
-  </div>
-</section>
-
-<!-- Savings Calculator -->
-<section id="savings">
-  <div class="section-eyebrow">The math is simple</div>
-  <div class="section-title">What you'd spend running OpenClaw without ClawOS.</div>
-  <p class="section-sub">These are the real costs people pay when they assemble this themselves. Select all that apply.</p>
-
-  <div class="calc-card">
-    <div class="calc-title">What would you pay without ClawOS?</div>
-    <div class="calc-sub">OpenClaw-specific costs only. ClawOS eliminates every one of these.</div>
-    <div class="calc-items" id="calc-items">
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="20" checked id="c1" />
-          <label class="calc-item-name" for="c1">Claude Code subscription <span style="color:var(--text-3);font-size:12px">(OpenClaude via ClawOS = free)</span></label>
-        </div>
-        <div class="calc-item-price">$20/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="35" checked id="c2" />
-          <label class="calc-item-name" for="c2">Claude / GPT-4o API for agent workflows</label>
-        </div>
-        <div class="calc-item-price">$35/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="29" checked id="c3" />
-          <label class="calc-item-name" for="c3">Managed OpenClaw hosting <span style="color:var(--text-3);font-size:12px">(cloud hosting services)</span></label>
-        </div>
-        <div class="calc-item-price">$29/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="10" checked id="c4" />
-          <label class="calc-item-name" for="c4">Personal knowledge base <span style="color:var(--text-3);font-size:12px">(Notion AI / Mem.ai)</span></label>
-        </div>
-        <div class="calc-item-price">$10/mo</div>
-      </div>
-      <div class="calc-item">
-        <div class="calc-item-left">
-          <input type="checkbox" class="calc-checkbox" data-cost="15" checked id="c5" />
-          <label class="calc-item-name" for="c5">OpenRouter for frontier model access</label>
-        </div>
-        <div class="calc-item-price">$15/mo</div>
-      </div>
-    </div>
-    <div class="calc-divider"></div>
-    <div class="calc-result">
-      <div>
-        <div class="calc-total-label">Equivalent toolchain costs</div>
-        <div class="calc-total-num" id="calc-total">$109<span id="calc-annual">&nbsp;≈ $1,308/yr</span></div>
-      </div>
-      <div class="calc-cta">
-        <div class="calc-cta-label">ClawOS replaces all of it for</div>
-        <a href="https://github.com/xbrxr03/clawos" class="btn-primary">$10 once →</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Switching from hosted OpenClaw -->
-<section id="switch" style="padding-top: 0;">
-  <div class="switch-card">
-    <div class="switch-badge">For hosted OpenClaw customers</div>
-    <div class="switch-title">Paying monthly for something that should be a one-time install?</div>
-    <p class="switch-body">Managed cloud hosting services charge $16–133/mo because setup is genuinely hard — 15+ steps, broken dependencies, no voice, no dashboard, no automations. ClawOS solves the setup problem. One command handles everything those services charge you monthly to manage.</p>
-    <div class="switch-list">
-      <div class="switch-item"><span class="check">✓</span> Same OpenClaw ecosystem — no migration</div>
-      <div class="switch-item"><span class="check">✓</span> Runs on your hardware, not someone else's VPS</div>
-      <div class="switch-item"><span class="check">✓</span> Adds voice (Piper free / ElevenLabs premium), 14-layer memory, Framework Store, and 3D brain that cloud hosts don't have — plus OMI on Mac</div>
-      <div class="switch-item"><span class="check">✓</span> $10 once vs $16–133 every month</div>
-    </div>
-    <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="margin-top: 28px; display: inline-block;">Switch to ClawOS →</a>
-  </div>
-</section>
-
-<!-- Security -->
-<section id="security">
-  <div class="section-eyebrow">Your machine, your rules</div>
-  <div class="section-title">Built for the privacy-obsessed.</div>
-  <p class="section-sub">No telemetry. No forced cloud. Local by default, cloud when you want it — you choose. Your data never leaves without your permission.</p>
-
-  <div class="security-grid">
-    <div class="security-card">
-      <div class="security-badge">You choose</div>
-      <div class="security-title">Local or cloud, on your terms</div>
-      <div class="security-body">Run Ollama locally for privacy, or connect OpenRouter / Anthropic API for better quality. Switch any time — no lock-in.</div>
-    </div>
-    <div class="security-card">
-      <div class="security-badge">Policy-gated</div>
-      <div class="security-title">Human approval queue</div>
-      <div class="security-body">Every sensitive action — file writes, shell commands, browser — requires your explicit approval before executing.</div>
-    </div>
-    <div class="security-card">
-      <div class="security-badge">Signed skills</div>
-      <div class="security-title">Ed25519 skill signing</div>
-      <div class="security-body">OpenClaw's skill store had 341 malicious packages. ClawOS signs every skill. Unsigned code cannot install.</div>
-    </div>
-    <div class="security-card">
-      <div class="security-badge">AGPL-3.0</div>
-      <div class="security-title">Fully open source</div>
-      <div class="security-body">Every line of code is public. No hidden telemetry, no black boxes. Audit it yourself.</div>
-    </div>
-  </div>
-</section>
-
-<!-- Metrics -->
-<section style="padding: 0 24px;">
-  <div class="metrics-bar">
-    <div class="metric"><div class="metric-num">22</div><div class="metric-label">Services</div></div>
-    <div class="metric"><div class="metric-num">29</div><div class="metric-label">Workflows</div></div>
-    <div class="metric"><div class="metric-num">9</div><div class="metric-label">Frameworks</div></div>
-    <div class="metric"><div class="metric-num">14</div><div class="metric-label">Memory Layers</div></div>
-    <div class="metric"><div class="metric-num">244</div><div class="metric-label">Tests passing</div></div>
-  </div>
-</section>
-
-<!-- The Stack — Architecture -->
-<section id="stack">
-  <div class="section-eyebrow">The architecture</div>
-  <div class="section-title">Three systems. One JARVIS.</div>
-  <p class="section-sub">Voice captures what you say. Nexus thinks and remembers. OpenClaw acts with 13,700+ skills. Together, they are JARVIS.</p>
-
-  <div style="
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 40px 24px;
-    margin-top: 40px;
-    text-align: center;
-  ">
-    <div style="display: flex; justify-content: center; align-items: center; gap: 24px; flex-wrap: wrap; margin-bottom: 16px;">
-      <div style="
-        background: rgba(229,57,53,0.08);
-        border: 1px solid rgba(229,57,53,0.2);
-        border-radius: 12px;
-        padding: 18px 28px;
-        min-width: 170px;
-      ">
-        <div style="font-size: 15px; font-weight: 600; color: var(--text);">Voice Pipeline</div>
-        <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Piper (free) · ElevenLabs (premium)</div>
-      </div>
-      <div style="font-size: 20px; color: var(--text-3);">&#8596;</div>
-      <div style="
-        background: rgba(229,57,53,0.15);
-        border: 1px solid rgba(229,57,53,0.4);
-        border-radius: 12px;
-        padding: 18px 28px;
-        min-width: 170px;
-      ">
-        <div style="font-size: 15px; font-weight: 600; color: var(--text);">ClawOS Nexus</div>
-        <div style="font-size: 12px; color: var(--accent-2); margin-top: 2px;">Brain + 14-Layer Memory</div>
-      </div>
-      <div style="font-size: 20px; color: var(--text-3);">&#8596;</div>
-      <div style="
-        background: rgba(229,57,53,0.08);
-        border: 1px solid rgba(229,57,53,0.2);
-        border-radius: 12px;
-        padding: 18px 28px;
-        min-width: 170px;
-      ">
-        <div style="font-size: 15px; font-weight: 600; color: var(--text);">OpenClaw</div>
-        <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Hands (13,700+ tools)</div>
-      </div>
-    </div>
-    <p style="color: var(--text-3); font-size: 13px; margin-top: 20px;">All running on your machine. No tunnels. No cloud. No ngrok. Just localhost.<br>Voice: Piper (offline, free) or ElevenLabs (premium, bring your own key). On Mac, optionally plug in the OMI app for ambient listening + wearable pendant.<br>Agent core: pi-mono (MIT) — the same lean 4-tool engine under OpenClaw. ClawOS adds 14-layer memory + orchestration on top.</p>
-  </div>
-</section>
-
-<!-- Cloud Hosting Comparison -->
-<section id="cloud-compare" style="padding-top: 0;">
-  <div class="section-eyebrow">The honest comparison</div>
-  <div class="section-title">Why pay monthly for something you can own?</div>
-  <p class="section-sub">Managed cloud hosting for OpenClaw typically runs $16&ndash;133/month. Here's what you actually get.</p>
-
-  <div style="overflow-x: auto; margin-top: 40px;">
-    <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+  <div class="compare-table-wrap">
+    <table class="compare-table">
       <thead>
         <tr>
-          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;"></th>
-          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Cloud Hosting</th>
-          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">ClawOS Core</th>
-          <th style="padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">ClawOS Premium</th>
+          <th class="other-header">Feature</th>
+          <th class="clawos-header">🦀 ClawOS</th>
+          <th class="other-header">Odysseus</th>
+          <th class="other-header">Open WebUI</th>
+          <th class="other-header">Jan</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Setup time</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">~30 seconds (managed)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">~4 minutes (one-line installer)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">~4 minutes</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Technical skill needed</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">None</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">None (copy-paste one line)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">None</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Monthly cost</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">$19 / $39 / $79 / $133+ per mo</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0/mo</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0/mo</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">One-time cost</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">&mdash;</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$10 once</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Cost after 1 year</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">$228 &ndash; $1,596+</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$0</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">$10 total</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Your data</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Provider servers (their VPS)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Your hardware</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Your hardware</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Works offline</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Yes</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Yes</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Auto-updates</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Managed for you</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Built-in (nexus update)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Built-in</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Voice (JARVIS)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Not included</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Piper (free, offline)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">ElevenLabs wired (BYO key)</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Memory system</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">Basic</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">14-layer (temporal KG + RRF)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">14-layer + CrossEncoder reranking</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Framework Store</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">9 frameworks</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">9 frameworks</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">3D Knowledge Brain</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">No</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Included</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600;">Included</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">OMI (Mac bonus)</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-3);">&mdash;</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Optional</td><td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2);">Optional</td></tr>
+        <tr>
+          <td class="feature-name">Voice activation</td>
+          <td class="clawos-col yes">✅ "Hey Claw"</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Approval gates</td>
+          <td class="clawos-col yes">✅ Native popup</td>
+          <td class="other-col no">❌ Shell access</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Agent workflows</td>
+          <td class="clawos-col yes">✅ 29 built-in</td>
+          <td class="other-col yes">✅ Skills</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Multi-agent (A2A)</td>
+          <td class="clawos-col yes">✅ Agent mesh</td>
+          <td class="other-col no">❌ Single agent</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Structured memory</td>
+          <td class="clawos-col yes">✅ 7 layers</td>
+          <td class="other-col no">⚠️ Flat vectors</td>
+          <td class="other-col no">⚠️ Flat vectors</td>
+          <td class="other-col no">⚠️ Flat</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Bootable ISO</td>
+          <td class="clawos-col yes">✅ Flash & go</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Model manager</td>
+          <td class="clawos-col coming">🚧 Cookbook</td>
+          <td class="other-col yes">✅</td>
+          <td class="other-col yes">✅</td>
+          <td class="other-col yes">✅</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Deep research</td>
+          <td class="clawos-col coming">🚧 Phase 3</td>
+          <td class="other-col yes">✅</td>
+          <td class="other-col no">❌</td>
+          <td class="other-col no">❌</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Zero telemetry</td>
+          <td class="clawos-col yes">✅ Verify it</td>
+          <td class="other-col yes">✅</td>
+          <td class="other-col yes">✅</td>
+          <td class="other-col yes">✅</td>
+        </tr>
       </tbody>
     </table>
   </div>
-  <p style="color: var(--text-3); font-size: 12.5px; max-width: 620px; margin: 24px auto 0; text-align: center; line-height: 1.7;">
-    Managed cloud hosting for OpenClaw typically runs $16&ndash;133/month. ClawOS runs on your own hardware, adds OMI, voice, and 14-layer memory that cloud hosts don't offer, and the full ecosystem is a one-time $10. That's less than most services charge for a single month.
-  </p>
-  <p style="color: var(--text-3); font-size: 12px; text-align: center; margin-top: 10px;">
-    Cloud AI providers (Anthropic, OpenAI, etc.) require their own API keys if you choose to use them &mdash; same as any local AI setup. Ollama local models are always free.
-  </p>
 </section>
 
-<!-- FAQ -->
-<section id="faq" style="padding-top: 0;">
-  <div class="section-eyebrow">Questions people ask</div>
-  <div class="section-title">The short version.</div>
-  <p class="section-sub">Everything people email us about, answered up front.</p>
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section id="features">
+  <div class="section-eyebrow">What it does</div>
+  <div class="section-title">An agent, not a chatbot.</div>
+  <p class="section-sub">ClawOS runs 29 multi-step workflows, controls 31 tools, coordinates multiple agents, and remembers everything across sessions.</p>
 
-  <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 16px;">
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        Do I need to be technical to use this?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">No. The installer is one line — copy, paste, press enter. The dashboard runs at <code style="color:var(--accent-2);font-size:12.5px;">localhost:7070</code>. If you can click a button, you can use ClawOS. For voice, say "Hey Jarvis" — no config needed.</p>
-    </details>
-
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        Does ClawOS store, share, or train on my data?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">No. Everything runs on your hardware. No telemetry. No analytics. Every line of code is AGPL-3.0 &mdash; audit it yourself on GitHub. Cloud AI models (if you enable them with your own API key) follow those providers' policies; local models (Ollama) never leave your machine.</p>
-    </details>
-
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        What hardware do I need?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Minimum: any PC, Mac, or Linux box with 8&nbsp;GB RAM (runs Ollama 3B/7B models, Piper voice, full dashboard). Recommended: 16&nbsp;GB+ for smooth larger-model inference. A spare laptop, old desktop, or mini PC works. No GPU required for basic use.</p>
-    </details>
-
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        What's the difference between free and $10 Premium?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;"><strong style="color:var(--text);">Free:</strong> Piper voice, 5 workflows, Nexus 3D brain, 14-layer memory, Framework Store, OpenClaude terminal, policy gatekeeper, 17-page dashboard &mdash; all of it, forever.<br><br><strong style="color:var(--text);">Premium ($10 once):</strong> all 29 workflows unlocked, cloud model profiles (Anthropic/OpenAI/Azure wired), ElevenLabs voice wiring (your API key), CrossEncoder reranking, premium skill packs, priority Discord.</p>
-    </details>
-
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        Do I need OMI? What if I'm on Linux or Windows?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">OMI is an optional Mac bonus. The full JARVIS voice pipeline works on any OS without it &mdash; Whisper transcribes, Piper (or ElevenLabs) speaks, wake word listens. On macOS you can also plug in the OMI app or wearable pendant for ambient listening + passive conversation capture.</p>
-    </details>
-
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        Can I get a refund?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Yes &mdash; 30-day money-back on Premium, no questions. Free tier is always free, so no risk trying it first. Core features (voice, memory, dashboard, 5 workflows) stay free forever whether you upgrade or not.</p>
-    </details>
-
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        Why one-time $10 instead of a subscription?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Because software you run on your own hardware shouldn't have a meter attached to it. Cloud hosting services charge $19&ndash;$133/mo forever because they run the servers. You run the server. You paid for your hardware once. Why would the software be different?</p>
-    </details>
-
-    <details style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;">
-      <summary style="cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-        What if ClawOS does something unexpected?
-        <span style="color: var(--accent); font-size: 18px;">+</span>
-      </summary>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7; margin-top: 14px;">Every tool call runs through policyd's risk-scoring layer. High-risk actions — shell commands, file writes, browser navigation — pause for your approval in the dashboard before they execute. You can review, approve, or cancel any pending action. One click stops any running workflow. The blast radius is limited to exactly what you've explicitly given ClawOS access to — nothing else.</p>
-    </details>
-  </div>
-</section>
-
-<!-- Premium -->
-<section id="premium">
-  <div class="premium-card">
-    <div class="premium-tag">Premium</div>
-    <div class="section-title" style="margin-bottom: 0;">Pay once. Own it forever.</div>
-    <div class="premium-price"><sup>$</sup>10</div>
-    <p style="color: var(--text-2); font-size: 14px; margin-bottom: 32px;">One-time purchase. No subscription. No renewals. Yours forever.</p>
-
-    <div class="premium-features">
-      <div class="premium-feature"><span class="check">✓</span> Cloud model profiles (Anthropic, OpenAI, Azure)</div>
-      <div class="premium-feature"><span class="check">✓</span> ElevenLabs JARVIS voice (your key — we wire it)</div>
-      <div class="premium-feature"><span class="check">✓</span> All 29 workflows (free: 5)</div>
-      <div class="premium-feature"><span class="check">✓</span> Full OpenClaw ecosystem (13,700+ skills)</div>
-      <div class="premium-feature"><span class="check">✓</span> Smart model routing (DeepSeek / Claude / Ollama)</div>
-      <div class="premium-feature"><span class="check">✓</span> Premium skill packs from ClawHub</div>
-      <div class="premium-feature"><span class="check">✓</span> Nexus Brain 3D knowledge graph</div>
-      <div class="premium-feature"><span class="check">✓</span> Browser control + A2A federation</div>
-      <div class="premium-feature"><span class="check">✓</span> Research Wiki + Advanced RAG + CrossEncoder reranking</div>
-      <div class="premium-feature"><span class="check">✓</span> Priority community access + Discord</div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🗣️</div>
+      <div class="feature-title">Voice Activation</div>
+      <div class="feature-body">"Hey Claw" wake word, Whisper STT, Piper TTS. Morning briefings voiced. Fully offline.</div>
+      <div class="feature-tech"><span>Whisper</span><span>Piper</span><span>VAD</span></div>
     </div>
-    <p style="color: var(--text-2); font-size: 12px; margin-bottom: 8px;">Free: Piper TTS — offline, private. Premium: paste your ElevenLabs key once, JARVIS sounds cinematic.</p>
-    <p style="color: var(--text-2); font-size: 13px; margin-bottom: 24px; font-weight: 500;">Why not DIY? ~60 hours, 7 repos, $35/mo API costs vs $10 once.</p>
-
-    <a href="https://github.com/xbrxr03/clawos" class="btn-primary" style="font-size: 15px; padding: 14px 36px;">Get ClawOS Premium — $10 →</a>
-    <p style="color: var(--text-3); font-size: 12px; margin-top: 16px;">Free tier always available. No credit card needed to start.</p>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Multi-Step Workflows</div>
+      <div class="feature-body">29 built-in automations: organize downloads, summarize PDFs, bulk rename, daily digests. One command.</div>
+      <div class="feature-tech"><span>29 workflows</span><span>6 categories</span></div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Approval Gates</div>
+      <div class="feature-body">Native floating popup when the agent wants to run a shell command, delete a file, or close an app. You approve. Every time.</div>
+      <div class="feature-tech"><span>Tauri</span><span>policyd</span><span>Merkle audit</span></div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <div class="feature-title">7-Layer Memory</div>
+      <div class="feature-body">Pinned facts, semantic recall, FTS5 search, knowledge graph, archive, ACE learnings, workflow state. It actually remembers.</div>
+      <div class="feature-tech"><span>ChromaDB</span><span>fastembed</span><span>braind</span><span>FTS5</span></div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">Agent Mesh (A2A)</div>
+      <div class="feature-body">Multiple agents coordinate on complex tasks. Peer discovery, inter-agent communication, per-agent policy gates.</div>
+      <div class="feature-tech"><span>a2ad</span><span>agentd</span><span>policyd</span></div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎨</div>
+      <div class="feature-title">Dashboard</div>
+      <div class="feature-body">React SPA with workflows, packs, traces, brain viewer, and settings. Mobile responsive. PWA coming.</div>
+      <div class="feature-tech"><span>React</span><span>FastAPI</span><span>WebSocket</span></div>
+    </div>
   </div>
 </section>
 
-<!-- Footer -->
+<!-- ═══════════════ VOICE DEMO ═══════════════ -->
+<section id="voice">
+  <div class="section-eyebrow">Talk to your computer</div>
+  <div class="section-title">"Hey Claw, good morning"</div>
+  <p class="section-sub">Say the wake word. Five tool calls fire in parallel. You hear a synthesized briefing — time, weather, calendar, what you did yesterday. Offline.</p>
+
+  <div class="demo-block">
+    <div class="demo-label">Live terminal session</div>
+    <div class="demo-terminal"><span class="prompt">You:</span> "Hey Claw, good morning"
+<span class="output">Claw:</span> 🔊 "Good morning. It's Tuesday, June 3rd, 72°F and clear.
+      You have 3 meetings today, starting with standup at 10.
+      Yesterday you pushed 4 commits to ClawOS and closed issue #66.
+      Reminder: dentist appointment Thursday."
+
+<span class="dim"># Behind the scenes: 5 parallel tool calls</span>
+<span class="dim">→ weather.current()  → calendar.today()  → git.recent()</span>
+<span class="dim">→ memory.search("yesterday")  → reminders.upcoming()</span></div>
+  </div>
+
+  <div class="demo-block" style="margin-top: 16px;">
+    <div class="demo-label">One-command workflows</div>
+    <div class="demo-terminal"><span class="prompt">$</span> clawctl run organize-downloads
+
+<span class="dim">→ Scanning ~/Downloads ... 47 files found</span>
+<span class="dim">→ Classifying: 12 documents, 8 images, 15 archives, 12 other</span>
+<span class="dim">→ Creating folders: Documents/, Images/, Archives/</span>
+<span class="dim">→ Moving 35 files to categories</span>
+<span class="output">✓ Organized 47 files into 4 categories in 2.3s</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════ MEMORY ═══════════════ -->
+<section id="memory">
+  <div class="section-eyebrow">It actually remembers you</div>
+  <div class="section-title">7 layers of memory.</div>
+  <p class="section-sub">Not a goldfish chatbot. ClawOS persists across sessions with structured intelligence — facts, semantics, graphs, corrections, and compressed archives.</p>
+
+  <div class="memory-grid">
+    <div class="memory-layer">
+      <div class="memory-depth">Layer 1</div>
+      <div class="memory-name">Pinned Facts</div>
+      <div class="memory-desc">Things it should always know — "I prefer dark mode", "My timezone is ET"</div>
+      <div class="memory-tech">SQLite</div>
+    </div>
+    <div class="memory-layer">
+      <div class="memory-depth">Layer 2</div>
+      <div class="memory-name">Semantic Recall</div>
+      <div class="memory-desc">Vector search over all conversations — find what you meant, not just what you said</div>
+      <div class="memory-tech">ChromaDB + fastembed</div>
+    </div>
+    <div class="memory-layer">
+      <div class="memory-depth">Layer 3</div>
+      <div class="memory-name">Full-Text Search</div>
+      <div class="memory-desc">Keyword search across every conversation you've ever had</div>
+      <div class="memory-tech">SQLite FTS5</div>
+    </div>
+    <div class="memory-layer">
+      <div class="memory-depth">Layer 4</div>
+      <div class="memory-name">Knowledge Graph</div>
+      <div class="memory-desc">Entities and relations — "Abrar works on ClawOS" — structured intelligence</div>
+      <div class="memory-tech">braind</div>
+    </div>
+    <div class="memory-layer">
+      <div class="memory-depth">Layer 5</div>
+      <div class="memory-name">Archive</div>
+      <div class="memory-desc">Old conversations, compressed with time-decay. Accessible but not in your way</div>
+      <div class="memory-tech">gzip + time-decay</div>
+    </div>
+    <div class="memory-layer">
+      <div class="memory-depth">Layer 6</div>
+      <div class="memory-name">ACE Learnings</div>
+      <div class="memory-desc">Self-improving — "When I said X, user corrected to Y" — gets smarter over time</div>
+      <div class="memory-tech">correction log</div>
+    </div>
+    <div class="memory-layer">
+      <div class="memory-depth">Layer 7</div>
+      <div class="memory-name">Workflow State</div>
+      <div class="memory-desc">Active multi-step task context — pick up where you left off</div>
+      <div class="memory-tech">taskd</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SECURITY ═══════════════ -->
+<section id="security">
+  <div class="section-eyebrow">Security first</div>
+  <div class="section-title">It asks before it acts.</div>
+  <p class="section-sub">Every sensitive action requires your approval. Every action is logged. You are always in control. This is the #1 differentiator — other local AI tools give shell access with no guard.</p>
+
+  <div class="security-grid">
+    <div class="security-card">
+      <div class="security-badge">runtime</div>
+      <div class="security-title">Approval Gates</div>
+      <div class="security-body">Native floating popup for shell commands, file deletions, app control. Approve or deny.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">policy</div>
+      <div class="security-title">Policy Engine</div>
+      <div class="security-body">Every tool call goes through policyd. Per-agent permission profiles.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">sandbox</div>
+      <div class="security-title">Workspace Sandbox</div>
+      <div class="security-body">File ops can't escape ~/clawos/workspace/. Sandboxed by default.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">audit</div>
+      <div class="security-title">Merkle Audit Trail</div>
+      <div class="security-body">Tamper-proof execution log. Every action, every approval, every denial.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">shell</div>
+      <div class="security-title">Shell Allowlist</div>
+      <div class="security-body">Only approved binaries. Blocks python3 -c injection, pipe bombs, and privilege escalation.</div>
+    </div>
+    <div class="security-card">
+      <div class="security-badge">network</div>
+      <div class="security-title">No SSRF</div>
+      <div class="security-body">Web search blocks private/loopback IPs. Your internal network stays internal.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ HARDWARE ═══════════════ -->
+<section id="hardware">
+  <div class="section-eyebrow">Runs on what you have</div>
+  <div class="section-title">Three hardware tiers.</div>
+  <p class="section-sub">From an old mini PC to a beefy workstation — ClawOS adapts to your hardware.</p>
+
+  <div class="hw-grid">
+    <div class="hw-card">
+      <div class="hw-tier">A</div>
+      <div class="hw-label">Basic</div>
+      <div class="hw-spec">8 GB RAM</div>
+      <div class="hw-spec">Any x86_64 CPU</div>
+      <div class="hw-model">qwen2.5:3b</div>
+    </div>
+    <div class="hw-card">
+      <div class="hw-tier">B</div>
+      <div class="hw-label">Full</div>
+      <div class="hw-spec">16 GB RAM</div>
+      <div class="hw-spec">Multi-core CPU</div>
+      <div class="hw-model">qwen2.5:7b</div>
+    </div>
+    <div class="hw-card">
+      <div class="hw-tier">C</div>
+      <div class="hw-label">Power</div>
+      <div class="hw-spec">32 GB+ RAM</div>
+      <div class="hw-spec">NVIDIA GPU optional</div>
+      <div class="hw-model">7b + coder:7b</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ INSTALL ═══════════════ -->
+<section id="install">
+  <div class="section-eyebrow">Get started</div>
+  <div class="section-title">Install in 2 minutes.</div>
+  <p class="section-sub">One command. 9-step browser wizard handles hardware detection, model pull, voice setup, and permissions.</p>
+
+  <div class="demo-block">
+    <div class="demo-label">Quick install</div>
+    <div class="demo-terminal"><span class="prompt">$</span> curl -fsSL https://clawos.ai/install.sh | bash
+
+<span class="dim">→ Detecting hardware ... x86_64, 16GB RAM, RTX 3060</span>
+<span class="dim">→ Pulling recommended model ... qwen2.5:7b (4.7 GB)</span>
+<span class="dim">→ Configuring voice ... Whisper STT + Piper TTS ✓</span>
+<span class="dim">→ Starting services ... 10/10 ✓</span>
+<span class="output">✓ ClawOS running at http://localhost:7070</span>
+
+<span class="prompt">$</span> clawctl health
+<span class="output">dashd ✓  clawd ✓  agentd ✓  memd ✓  policyd ✓
+modeld ✓  voiced ✓  braind ✓  a2ad ✓  workfd ✓</span></div>
+  </div>
+
+  <div class="demo-block" style="margin-top: 16px;">
+    <div class="demo-label">Manual install</div>
+    <div class="demo-terminal"><span class="prompt">$</span> git clone https://github.com/xbrxr03/clawos.git
+<span class="prompt">$</span> cd clawos && pip install -e ".[dev]"
+<span class="prompt">$</span> clawctl bootstrap   <span class="dim"># interactive setup wizard</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════ CTA ═══════════════ -->
+<section style="padding-bottom: 40px;">
+  <div class="cta-card">
+    <h2>The future of AI is local, private,<br>and yours to control.</h2>
+    <p>Join the community. Star the repo. Build with us.</p>
+    <div class="hero-cta-row" style="margin-bottom: 0;">
+      <a href="https://github.com/xbrxr03/clawos" class="btn-primary">⭐ Star on GitHub</a>
+      <a href="https://github.com/xbrxr03/clawos/discussions" class="btn-ghost">Join the discussion</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
 <footer>
   <div class="footer-links">
     <a href="https://github.com/xbrxr03/clawos">GitHub</a>
-    <a href="https://github.com/xbrxr03/clawos/blob/main/docs/ARCHITECTURE_CURRENT.md">Docs</a>
-    <a href="https://github.com/xbrxr03/clawos/blob/main/SECURITY_AUDIT.md">Security</a>
-    <a href="https://github.com/xbrxr03/clawos/blob/main/LICENSE">AGPL-3.0</a>
+    <a href="https://github.com/xbrxr03/clawos/issues">Issues</a>
+    <a href="https://github.com/xbrxr03/clawos/discussions">Discussions</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/docs/">Docs</a>
+    <a href="https://github.com/xbrxr03/clawos/blob/main/LICENSE">License</a>
   </div>
-  <div>ClawOS — Built for people who want Iron Man's JARVIS, not another chatbot.</div>
+  <p>ClawOS is licensed under AGPL-3.0-or-later. No telemetry. No cloud. Your machine, your rules.</p>
 </footer>
 
 <script>
-  // Savings calculator
-  function updateCalc() {
-    let total = 0;
-    document.querySelectorAll('.calc-checkbox:checked').forEach(el => {
-      total += parseInt(el.dataset.cost) || 0;
-    });
-    document.getElementById('calc-total').childNodes[0].textContent = '$' + total;
-    document.getElementById('calc-annual').textContent = total > 0 ? '\u00a0\u2248 $' + (total * 12).toLocaleString() + '/yr' : '';
-  }
-  document.querySelectorAll('.calc-checkbox').forEach(el => el.addEventListener('change', updateCalc));
-  updateCalc();
+function copyInstall() {
+  navigator.clipboard.writeText('curl -fsSL https://clawos.ai/install.sh | bash');
+  const btn = document.querySelector('.copy-btn');
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
 
-  // Copy install command
-  function copyInstall() {
-    const cmd = document.getElementById('install-cmd').textContent;
-    navigator.clipboard.writeText(cmd).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
-    });
-  }
-
-  // Side nav active state on scroll
-  const sections = ['hero', 'why', 'features', 'who', 'savings', 'security', 'stack', 'cloud-compare', 'faq', 'premium'];
-  const navLinks = document.querySelectorAll('.sidenav a');
-  function updateNav() {
-    const scrollY = window.scrollY || window.pageYOffset;
-    let current = 'hero';
-    sections.forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el.offsetTop - 100 <= scrollY) current = id;
-    });
-    navLinks.forEach(link => {
-      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
-    });
-  }
-  window.addEventListener('scroll', updateNav, { passive: true });
-  updateNav();
-
-  // Sidenav click → smooth scroll
-  navLinks.forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      const id = link.getAttribute('href').slice(1);
-      const el = document.getElementById(id);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
-
-  // Stats count-up on scroll
-  function animateCounter(el, target, suffix) {
-    let start = null;
-    const duration = 1200;
-    const step = ts => {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
-      const val = Math.floor(progress * target);
-      el.textContent = (val === target ? target : val) + suffix;
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
-  const statEls = document.querySelectorAll('.stat-num');
-  const statData = [
-    { target: 29, suffix: '+' },
-    { target: 9, suffix: '' },
-    { target: 14, suffix: '' },
-    { target: 0, suffix: '' },
-  ];
-  let statsAnimated = false;
-  const statsObserver = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting && !statsAnimated) {
-      statsAnimated = true;
-      statEls.forEach((el, i) => {
-        if (statData[i] && statData[i].target > 0) animateCounter(el, statData[i].target, statData[i].suffix);
-      });
+// Intersection observer for side nav
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.sidenav a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`.sidenav a[href="#${entry.target.id}"]`);
+      if (link) link.classList.add('active');
     }
-  }, { threshold: 0.5 });
-  const statsSection = document.querySelector('.hero-stats');
-  if (statsSection) statsObserver.observe(statsSection);
-
-  // Persona cards entrance animation on scroll
-  const personaObserver = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.style.opacity = '1'; });
-  }, { threshold: 0.1 });
-  document.querySelectorAll('.persona-card').forEach(c => {
-    c.style.opacity = '0';
-    personaObserver.observe(c);
   });
+}, { threshold: 0.3 });
+sections.forEach(s => observer.observe(s));
 </script>
 </body>
 </html>
