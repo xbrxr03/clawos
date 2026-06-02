@@ -17,6 +17,10 @@ Commands:
   model remove <name>       — remove a model
   model default <name>      — set default model
 
+  cookbook scan             — scan hardware, show specs
+  cookbook recommend        — score models, show top picks
+  cookbook serve            — auto-pick best model, pull + serve
+
   workspace list            — list workspaces
   workspace create <name>   — create a workspace
   workspace delete <name>   — delete a workspace
@@ -156,6 +160,28 @@ else:
     @click.argument("name")
     def model_default(name):
         from clawctl.commands.model import run_set_default; run_set_default(name)
+
+    # ── cookbook ─────────────────────────────────────────────────────────────
+    @main.group()
+    def cookbook():
+        """Hardware-aware model recommendations."""
+        pass
+
+    @cookbook.command("scan")
+    def cookbook_scan():
+        from clawctl.commands.cookbook import run_scan; run_scan()
+
+    @cookbook.command("recommend")
+    def cookbook_recommend():
+        from clawctl.commands.cookbook import run_recommend; run_recommend()
+
+    @cookbook.command("serve")
+    def cookbook_serve():
+        from clawctl.commands.cookbook import run_serve; run_serve()
+
+    @cookbook.command("json")
+    def cookbook_json():
+        from clawctl.commands.cookbook import run_json; run_json()
 
     # ── workspace ─────────────────────────────────────────────────────────────
     @main.group()

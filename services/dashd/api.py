@@ -1952,6 +1952,25 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         model_snapshot = _collect_models()
         return {"running": any(model.get("running") for model in model_snapshot), "models": model_snapshot}
 
+    # ── Cookbook (Hardware-aware model recommendations) ─────────────────
+    @app.get("/api/cookbook/scan", dependencies=[Depends(require_auth)])
+    async def cookbook_scan():
+        """Detect hardware and return profile."""
+        from clawctl.commands.cookbook import scan_hardware
+        hw = scan_hardware()
+        return {"hardware": hw.to_dict()}
+
+    @app.get("/api/cookbook/recommend", dependencies=[Depends(require_auth)])
+    async def cookbook_recommend():
+        """Score models for detected hardware and return ranked recommendations."""
+        from clawctl.commands.cookbook import scan_hardware, score_models
+        hw = scan_hardware()
+        recs = score_models(hw)
+        return {
+            "hardware": hw.to_dict(),
+            "recommendations": [r.to_dict() for r in recs if r.fits][:15],
+        }
+
     @app.get("/api/workflows/list", dependencies=[Depends(require_auth)])
     async def list_workflows(category: str = None, search: str = None):
         try:

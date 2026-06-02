@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Generate social media assets for ClawOS."""
 import os
 from pathlib import Path

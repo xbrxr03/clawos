@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Generate comparison PNG using Pillow."""
 from PIL import Image, ImageDraw, ImageFont
 
