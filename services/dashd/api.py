@@ -2004,6 +2004,33 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             raise HTTPException(status_code=404, detail="Session not found")
         return session.to_dict()
 
+    # ── Compare (Side-by-side model comparison) ────────────────────────────
+    @app.post("/api/compare", dependencies=[Depends(require_auth)])
+    async def compare_models(body: dict):
+        """Compare model responses side-by-side."""
+        from clawctl.commands.compare import run_compare_parallel
+        prompt = body.get("prompt", "")
+        models = body.get("models", [])
+        if not prompt:
+            raise HTTPException(status_code=400, detail="prompt required")
+        if not models or len(models) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 models required")
+        session = run_compare_parallel(prompt, models)
+        return session.to_dict()
+
+    @app.get("/api/compare/running", dependencies=[Depends(require_auth)])
+    async def running_models():
+        """Get list of currently running models from Ollama."""
+        import urllib.request as ur
+        import json
+        try:
+            req = ur.Request("http://127.0.0.1:11434/api/ps")
+            with ur.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read())
+            return {"models": [m.get("name", "") for m in data.get("models", [])]}
+        except Exception:
+            return {"models": [], "error": "Ollama not reachable"}
+
     @app.get("/api/workflows/list", dependencies=[Depends(require_auth)])
     async def list_workflows(category: str = None, search: str = None):
         try:

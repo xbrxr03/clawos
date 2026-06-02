@@ -27,6 +27,8 @@ Commands:
   research fetch <id>       — re-fetch sources for session
   research delete <id>      — delete a session
 
+  compare "prompt"         — compare model responses side-by-side
+
   workspace list            — list workspaces
   workspace create <name>   — create a workspace
   workspace delete <name>   — delete a workspace
@@ -55,6 +57,7 @@ Commands:
   chat                      — start Nexus
 """
 import sys
+import urllib.request
 from pathlib import Path
 
 # Ensure project root is on path
@@ -219,6 +222,61 @@ else:
     @click.argument("session_id")
     def research_delete(session_id):
         from clawctl.commands.research import run_delete; run_delete(session_id)
+
+    # ── compare ───────────────────────────────────────────────────────────────
+    @main.command("compare")
+    @click.argument("prompt")
+    @click.option("--models", default="", help="Comma-separated model names (default: all running)")
+    @click.option("--parallel/--sequential", default=True, help="Run in parallel (default) or sequential")
+    def compare_cmd(prompt, models, parallel):
+        """Compare model responses side-by-side."""
+        from clawctl.commands.compare import run_compare, run_compare_parallel, _query_ollama
+        import json
+
+        model_list = [m.strip() for m in models.split(",") if m.strip()] if models else []
+
+        # If no models specified, detect running models from Ollama
+        if not model_list:
+            try:
+                req = urllib.request.Request("http://127.0.0.1:11434/api/ps")
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    data = json.loads(resp.read())
+                model_list = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+            except Exception:
+                pass
+
+        if not model_list:
+            click.echo("No models specified or running. Use --models model1,model2")
+            return
+
+        from clawctl.ui.banner import info, success
+        print()
+        info(f"Comparing {len(model_list)} models on: {prompt[:60]}")
+        info(f"Models: {', '.join(model_list)}")
+        print()
+
+        if parallel:
+            session = run_compare_parallel(prompt, model_list)
+        else:
+            session = run_compare(prompt, model_list)
+
+        for resp in session.responses:
+            if resp.error:
+                print(f"  ❌ {resp.model}: {resp.error[:60]}")
+            else:
+                speed = f"{resp.tokens_per_sec:.1f} tok/s" if resp.tokens_per_sec > 0 else ""
+                print(f"  ┌─ {resp.model} {speed}")
+                # Truncate response for display
+                lines = resp.response.strip().split("\n")
+                for line in lines[:8]:
+                    print(f"  │ {line[:90]}")
+                if len(lines) > 8:
+                    print(f"  │ ... ({len(lines) - 8} more lines)")
+                print(f"  └─ {resp.total_tokens} tokens, {resp.duration_ms}ms")
+            print()
+
+        success("Comparison complete")
+        print()
 
     # ── workspace ─────────────────────────────────────────────────────────────
     @main.group()
