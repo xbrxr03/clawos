@@ -69,7 +69,13 @@ OBSERVABILITY_SERVICES=(
     "waketrd:7088:services.waketrd.main:Wake Word Trigger"
 )
 
-ALL_SERVICES=("${CORE_SERVICES[@]}" "${AI_SERVICES[@]}" "${AGENT_SERVICES[@]}" "${TOOL_SERVICES[@]}" "${OBSERVABILITY_SERVICES[@]}")
+PRODUCTIVITY_SERVICES=(
+    "noted:7091:services.noted.main:Notes"
+    "calendard:7092:services.calendard.main:Calendar"
+    "maild:7093:services.maild.main:Email"
+)
+
+ALL_SERVICES=("${CORE_SERVICES[@]}" "${AI_SERVICES[@]}" "${AGENT_SERVICES[@]}" "${TOOL_SERVICES[@]}" "${OBSERVABILITY_SERVICES[@]}" "${PRODUCTIVITY_SERVICES[@]}")
 
 # PID file
 PID_DIR="${CLAWOS_DIR:-$HOME/.clawos}/run"

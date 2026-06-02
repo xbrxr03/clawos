@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#7c6af5",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -30,10 +30,24 @@
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Kizuna Brain",
-      "short_name": "Kizuna",
-      "description": "3D knowledge graph",
-      "url": "/brain",
+      "name": "Cookbook",
+      "short_name": "Cookbook",
+      "description": "Hardware-aware model recommendations",
+      "url": "/cookbook",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Research",
+      "short_name": "Research",
+      "description": "Deep research with citations",
+      "url": "/research",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Compare",
+      "short_name": "Compare",
+      "description": "Side-by-side model comparison",
+      "url": "/compare",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {

@@ -2031,6 +2031,75 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         except Exception:
             return {"models": [], "error": "Ollama not reachable"}
 
+    # ── Notes ───────────────────────────────────────────────────────────────
+    @app.get("/api/notes/list", dependencies=[Depends(require_auth)])
+    async def notes_list(tag: str = None, search: str = None):
+        from services.noted.engine import list_notes
+        return list_notes(tag=tag, search=search)
+
+    @app.post("/api/notes/create", dependencies=[Depends(require_auth)])
+    async def notes_create(body: dict):
+        from services.noted.engine import create_note
+        note = create_note(title=body.get("title", ""), content=body.get("content", ""),
+                          tags=body.get("tags"))
+        return note.to_dict()
+
+    @app.get("/api/notes/{note_id}", dependencies=[Depends(require_auth)])
+    async def notes_get(note_id: str):
+        from services.noted.engine import Note
+        note = Note.load(note_id)
+        if not note:
+            raise HTTPException(status_code=404, detail="Note not found")
+        return note.to_dict()
+
+    @app.delete("/api/notes/{note_id}", dependencies=[Depends(require_auth)])
+    async def notes_delete(note_id: str):
+        from services.noted.engine import delete_note
+        ok = delete_note(note_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Note not found")
+        return {"deleted": True}
+
+    # ── Calendar ────────────────────────────────────────────────────────────
+    @app.get("/api/calendar/list", dependencies=[Depends(require_auth)])
+    async def calendar_list(from_date: str = None, to_date: str = None, tag: str = None):
+        from services.calendard.engine import list_events
+        return list_events(from_date=from_date, to_date=to_date, tag=tag)
+
+    @app.post("/api/calendar/create", dependencies=[Depends(require_auth)])
+    async def calendar_create(body: dict):
+        from services.calendard.engine import create_event
+        event = create_event(title=body.get("title", ""), description=body.get("description", ""),
+                            start_time=body.get("start_time", ""), end_time=body.get("end_time", ""),
+                            all_day=body.get("all_day", False), tags=body.get("tags"))
+        return event.to_dict()
+
+    @app.get("/api/calendar/export/ical", dependencies=[Depends(require_auth)])
+    async def calendar_export_ical():
+        from services.calendard.engine import export_ical
+        return export_ical()
+
+    # ── Mail ────────────────────────────────────────────────────────────────
+    @app.get("/api/mail/inbox", dependencies=[Depends(require_auth)])
+    async def mail_inbox(limit: int = 20):
+        from services.maild.engine import check_mail
+        messages = check_mail(limit=limit)
+        return {"messages": [m.to_dict() for m in messages]}
+
+    @app.post("/api/mail/send", dependencies=[Depends(require_auth)])
+    async def mail_send(body: dict):
+        from services.maild.engine import send_mail
+        ok = send_mail(to=body.get("to", ""), subject=body.get("subject", ""), body=body.get("body", ""))
+        if not ok:
+            raise HTTPException(status_code=500, detail="Send failed")
+        return {"sent": True}
+
+    @app.get("/api/mail/config", dependencies=[Depends(require_auth)])
+    async def mail_config():
+        from services.maild.engine import MailConfig
+        cfg = MailConfig.load()
+        return {"configured": bool(cfg.imap_host and cfg.username), "username": cfg.username}
+
     @app.get("/api/workflows/list", dependencies=[Depends(require_auth)])
     async def list_workflows(category: str = None, search: str = None):
         try:
