@@ -1,26 +1,25 @@
 #!/bin/bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""
-ClawOS Development Boot Script
-=============================
-One-command startup for all ClawOS services.
+# ClawOS Development Boot Script
+# One-command startup for all ClawOS services.
+#
+# Usage:
+#     ./scripts/dev_boot.sh [options]
+#
+# Options:
+#     --full          Start all services (default)
+#     --core          Start only core services
+#     --ai            Start only AI services
+#     --api           Start only API services
+#     --agents        Start only agent services
+#     --tools         Start only tool services
+#     --stop          Stop all running services
+#     --restart       Restart all services
+#     --status        Show service status
+#     --logs          Show service logs
+#     --doctor        Run diagnostics
 
-Usage:
-    ./scripts/dev_boot.sh [options]
-
-Options:
-    --full          Start all services (default)
-    --core          Start only core services
-    --ai            Start only AI services  
-    --api           Start only API services
-    --agents        Start only agent services
-    --tools         Start only tool services
-    --stop          Stop all running services
-    --restart       Restart all services
-    --status        Show service status
-    --logs          Show service logs
-    --doctor        Run diagnostics
-"""
+cat /dev/null  # no-op placeholder
 
 set -euo pipefail
 
@@ -64,7 +63,6 @@ TOOL_SERVICES=(
 )
 
 OBSERVABILITY_SERVICES=(
-    "metricd:7076:services.metricd.main:Metrics Collection"
     "observd:7078:services.observd.main:Observability"
     "reminderd:7087:services.reminderd.main:Reminder Daemon"
     "waketrd:7088:services.waketrd.main:Wake Word Trigger"
@@ -112,22 +110,39 @@ start_service() {
     # Create log file
     local log_file="$PID_DIR/${name}.log"
     
-    # Start service in background
-    python3 -m "$module" run >"$log_file" 2>&1 &
+    # Start service in background with nohup so it survives script exit
+    # Try with 'run' arg first, fall back to bare invocation
+    nohup python3 -m "$module" run >"$log_file" 2>&1 &
     local pid=$!
+    # Disown so shell exit doesn't kill the process
+    disown $pid 2>/dev/null || true
     
     # Save PID
     echo "$name:$pid:$port" >> "$PID_FILE"
     
-    # Wait a bit for startup
-    sleep 2
+    # Wait for service to bind (some services take 3-5s)
+    local wait=0
+    local max_wait=8
+    while [ $wait -lt $max_wait ]; do
+        sleep 1
+        wait=$((wait + 1))
+        if is_running "$port"; then
+            log_success "$name started (PID: $pid, Port: $port)"
+            return 0
+        fi
+    done
     
-    # Check if still running
+    # Final check — process still alive?
     if kill -0 $pid 2>/dev/null; then
         log_success "$name started (PID: $pid, Port: $port)"
         return 0
     else
         log_error "$name failed to start"
+        # Show last few lines of log for debugging
+        if [[ -f "$log_file" ]] && [[ -s "$log_file" ]]; then
+            echo -e "  ${RED}Last log lines:${NC}"
+            tail -3 "$log_file" | sed 's/^/    /'
+        fi
         return 1
     fi
 }

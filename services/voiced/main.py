@@ -58,7 +58,7 @@ except ImportError:
     WHISPER_AVAILABLE = False
 
 from clawos_core.constants import CLAWOS_DIR, PORT_VOICED
-from clawos_core.config.loader import get as get_config
+from clawos_core.config.loader import load as get_config
 
 log = logging.getLogger("voiced")
 
