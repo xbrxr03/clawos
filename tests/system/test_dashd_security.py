@@ -46,7 +46,10 @@ def test_dashboard_requires_login_and_sends_snapshot(monkeypatch):
     with TestClient(app) as client:
         session = client.get("/api/session")
         assert session.status_code == 200
-        assert session.json() == {"auth_required": True, "authenticated": False}
+        data = session.json()
+        assert data["auth_required"] is True
+        assert data["authenticated"] is False
+        assert "dev_mode" in data
 
         assert client.get("/api/tasks").status_code == 401
         assert client.get("/api/setup/state").status_code == 401
@@ -58,7 +61,7 @@ def test_dashboard_requires_login_and_sends_snapshot(monkeypatch):
         assert client.cookies.get("dash_session") != "dash-token"
 
         session = client.get("/api/session")
-        assert session.json() == {"auth_required": True, "authenticated": True}
+        assert session.json()["authenticated"] is True
 
         assert client.post("/api/setup/repair", headers={"X-ClawOS-Setup": "1"}).status_code == 200
 
@@ -167,6 +170,95 @@ def test_dashboard_docs_and_evolution_require_auth(monkeypatch):
 
         for path in ("/api/docs", "/api/redoc", "/api/openapi.json", "/api/evolution"):
             assert client.get(path, headers={"Authorization": "Bearer dash-token"}).status_code == 200
+
+
+def test_dev_mode_bypasses_auth_for_localhost(monkeypatch):
+    """CLAWOS_DEV_MODE=1 auto-authorizes localhost requests without token."""
+    from services.dashd.api import create_app
+
+    monkeypatch.setenv("CLAWOS_DEV_MODE", "1")
+
+    class IncompleteSetupState:
+        completion_marker = False
+
+    monkeypatch.setattr("services.dashd.api._setup_state", lambda: IncompleteSetupState())
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    with TestClient(app) as client:
+        # Without dev mode, this would be 401
+        # With dev mode + localhost, it should be 200
+        response = client.get("/api/tasks")
+        assert response.status_code == 200
+
+        # Health endpoint should show dev_mode: True
+        health = client.get("/api/health")
+        assert health.json()["dev_mode"] is True
+
+        # Session should show dev_mode + authenticated
+        session = client.get("/api/session")
+        session_data = session.json()
+        assert session_data["dev_mode"] is True
+        assert session_data["authenticated"] is True
+
+
+def test_dev_mode_does_not_bypass_auth_for_network_expose(monkeypatch):
+    """When bound to 0.0.0.0 with auth, dev mode should NOT bypass auth
+    because binding to all interfaces could expose the dashboard to the network."""
+    from services.dashd.api import create_app, _dev_mode_enabled, _is_loopback_host
+
+    monkeypatch.setenv("CLAWOS_DEV_MODE", "1")
+    assert _dev_mode_enabled() is True
+
+    # With host=0.0.0.0 and auth_required=True, the dashboard is
+    # potentially exposed to the network. Dev mode should NOT
+    # auto-authorize in this case — force auth even on localhost.
+    app = create_app({
+        "host": "0.0.0.0",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    # Settings host stays 0.0.0.0 (not forced to 127.0.0.1 because auth_required=True)
+    assert app.state.settings.host == "0.0.0.0"
+    assert not _is_loopback_host("0.0.0.0")
+
+    # So dev mode won't bypass auth for this config
+    with TestClient(app) as client:
+        response = client.get("/api/tasks")
+        assert response.status_code == 401
+
+
+def test_dev_mode_disabled_by_default(monkeypatch):
+    """Without CLAWOS_DEV_MODE, auth works normally."""
+    from services.dashd.api import create_app, _dev_mode_enabled, _is_loopback_host
+
+    monkeypatch.delenv("CLAWOS_DEV_MODE", raising=False)
+
+    assert _dev_mode_enabled() is False
+
+    class IncompleteSetupState:
+        completion_marker = False
+
+    monkeypatch.setattr("services.dashd.api._setup_state", lambda: IncompleteSetupState())
+
+    app = create_app({
+        "host": "127.0.0.1",
+        "auth_required": True,
+        "token": "dash-token",
+        "cookie_name": "dash_session",
+    })
+
+    with TestClient(app) as client:
+        # Should require auth - no dev mode bypass
+        response = client.get("/api/tasks")
+        assert response.status_code == 401
 
 
 def test_dashboard_cookie_websocket_requires_trusted_origin(monkeypatch):

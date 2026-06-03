@@ -85,6 +85,9 @@ PRODUCTIVITY_SERVICES=(
 
 ALL_SERVICES=("${CORE_SERVICES[@]}" "${AI_SERVICES[@]}" "${AGENT_SERVICES[@]}" "${TOOL_SERVICES[@]}" "${OBSERVABILITY_SERVICES[@]}" "${PRODUCTIVITY_SERVICES[@]}")
 
+# Dev mode: auto-authorize localhost dashboard access (no token needed)
+export CLAWOS_DEV_MODE="${CLAWOS_DEV_MODE:-1}"
+
 # PID file
 PID_DIR="${CLAWOS_DIR:-$HOME/.clawos}/run"
 mkdir -p "$PID_DIR"

@@ -245,6 +245,9 @@ def _set_dashboard_session_cookie(
 
 def _can_auto_bootstrap_local_session(request: Request) -> bool:
     settings: DashboardSettings = request.app.state.settings
+    # Dev mode: always auto-bootstrap for localhost requests
+    if _dev_mode_enabled() and _request_targets_loopback(request):
+        return True
     if not settings.auth_required:
         return False
     if not _request_targets_loopback(request):
@@ -363,9 +366,23 @@ def _token_matches(candidate: str, expected: str) -> bool:
     return secrets.compare_digest(candidate, expected)
 
 
+def _dev_mode_enabled() -> bool:
+    """Check if CLAWOS_DEV_MODE is set — bypasses auth for localhost requests."""
+    return _coerce_bool(os.environ.get("CLAWOS_DEV_MODE", ""), False)
+
+
 def _is_request_authorized(request: Request, authorization: str = "") -> bool:
     settings: DashboardSettings = request.app.state.settings
     if not settings.auth_required:
+        return True
+    # Dev mode: auto-authorize requests from localhost or same-process clients
+    # In dev mode on localhost, all local requests are trusted.
+    # This covers TestClient (client.host="testclient") and
+    # same-machine browsers (client.host="127.0.0.1").
+    if _dev_mode_enabled() and (
+        _request_targets_loopback(request)
+        or _is_loopback_host(settings.host)
+    ):
         return True
     bearer_token = _extract_bearer_token(authorization)
     if _token_matches(bearer_token, settings.token):
@@ -1028,6 +1045,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
         return {
             "status": overall,
             "auth_required": settings_obj.auth_required,
+            "dev_mode": _dev_mode_enabled(),
             "host": settings_obj.host,
             "port": settings_obj.port,
             "local_only": _is_loopback_host(settings_obj.host),
@@ -1047,6 +1065,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
 
         response = JSONResponse({
             "auth_required": settings_obj.auth_required,
+            "dev_mode": _dev_mode_enabled(),
             "authenticated": authenticated,
         })
         if bootstrapped:
