@@ -92,14 +92,18 @@ import sys
 import resource
 import signal
 
-# Set resource limits
+# Set resource limits (skip any that fail on this platform)
 def set_limits():
-    # CPU time limit
-    resource.setrlimit(resource.RLIMIT_CPU, ({self.config.timeout_seconds}, {self.config.timeout_seconds} + 5))
-    # Memory limit
-    resource.setrlimit(resource.RLIMIT_AS, ({self.config.memory_limit_mb * 1024 * 1024}, {self.config.memory_limit_mb * 1024 * 1024 + 1000000}))
-    # Disable core dumps
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    limits = [
+        (resource.RLIMIT_CPU, ({self.config.timeout_seconds}, {self.config.timeout_seconds} + 5)),
+        (resource.RLIMIT_AS, ({self.config.memory_limit_mb * 1024 * 1024}, {self.config.memory_limit_mb * 1024 * 1024 + 1000000})),
+        (resource.RLIMIT_CORE, (0, 0)),
+    ]
+    for res, (soft, hard) in limits:
+        try:
+            resource.setrlimit(res, (soft, hard))
+        except (ValueError, OSError):
+            pass  # Not supported or current limit exceeds requested
 
 set_limits()
 
@@ -272,6 +276,9 @@ timeout {self.config.timeout_seconds} bash -c "$code" 2>&1
         safe_name = InputValidator.sanitize_path(filename)
         if not safe_name:
             raise ValueError("Invalid filename")
+        # Reject path traversal — sanitized name must match original base name
+        if safe_name != Path(filename).name:
+            raise ValueError(f"Path traversal not allowed: {filename}")
         
         file_path = self.sandbox_path / "workspace" / safe_name
         file_path.parent.mkdir(parents=True, exist_ok=True)

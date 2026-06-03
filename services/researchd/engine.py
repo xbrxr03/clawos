@@ -8,7 +8,13 @@ and disk-persisted resumable sessions.
 Search providers (all optional, falls back gracefully):
   - Brave Search API  (env: BRAVE_API_KEY  or config: research.brave_api_key)
   - Tavily Search API (env: TAVILY_API_KEY or config: research.tavily_api_key)
-  - No-key mode: fetches user-supplied URLs directly
+  - SearXNG           (self-hosted or public instance, config: research.searxng_url)
+  - DuckDuckGo HTML   (no API key needed, always available)
+  - Wikipedia         (no API key needed, always available)
+  - Fetch-only mode   (user-supplied URLs only)
+
+Provider priority: brave > tavily > searxng > ddg > wikipedia > fetch
+No-key mode (default): ddg + wikipedia + searxng — zero API keys required.
 """
 from __future__ import annotations
 
@@ -64,7 +70,7 @@ class ResearchSession:
     id: str
     query: str
     status: str          # running | paused | done | error
-    provider: str        # brave | tavily | fetch | none
+    provider: str        # brave | tavily | searxng | ddg | wikipedia | fetch | none
     sources: List[ResearchSource] = field(default_factory=list)
     citations: List[Citation] = field(default_factory=list)
     summary: str = ""
@@ -108,7 +114,6 @@ class ResearchSession:
         for path in sorted(RESEARCH_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-                # Return lightweight summary (no full source text)
                 sessions.append({
                     "id": data.get("id"),
                     "query": data.get("query"),
@@ -156,7 +161,7 @@ def _fetch_page(url: str, timeout: int = 10) -> ResearchSource:
         return ResearchSource(url=url, title=url, snippet="", error=str(exc))
 
 
-# ── Search providers ──────────────────────────────────────────────────────────
+# ── Paid search providers ─────────────────────────────────────────────────────
 def _brave_search(query: str, api_key: str, count: int = 6) -> List[ResearchSource]:
     encoded = urllib.parse.quote(query)
     req = urllib.request.Request(
@@ -189,14 +194,232 @@ def _tavily_search(query: str, api_key: str, max_results: int = 6) -> List[Resea
     ]
 
 
+# ── Free search providers (no API keys) ───────────────────────────────────────
+def _ddg_search(query: str, max_results: int = 8) -> List[ResearchSource]:
+    """Search DuckDuckGo. No API key required.
+
+    Uses the ddgs library (pip install ddgs) which handles DDG's
+    anti-bot measures. Falls back to raw HTML scraping if unavailable.
+    This is the default free search provider for ClawOS.
+    """
+    sources: List[ResearchSource] = []
+
+    # Primary: use ddgs library (handles cookies, CAPTCHA bypass)
+    try:
+        from ddgs import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+        for r in results:
+            url = r.get("href", "") or r.get("link", "")
+            title = r.get("title", "")
+            snippet = r.get("body", "") or r.get("snippet", "")
+            if url:
+                sources.append(ResearchSource(
+                    url=url,
+                    title=title[:300],
+                    snippet=snippet[:500],
+                ))
+        if sources:
+            return sources
+    except ImportError:
+        log.debug("ddgs library not installed, falling back to HTML scraping")
+    except Exception as exc:
+        log.warning("DDG library search failed: %s", exc)
+
+    # Fallback: raw HTML scraping (less reliable due to DDG bot detection)
+    encoded = urllib.parse.quote(query)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
+    try:
+        url = f"https://html.duckduckgo.com/html/?q={encoded}"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=12) as resp:  # noqa: S310
+            html = resp.read(256 * 1024).decode("utf-8", errors="replace")
+
+        result_pattern = re.compile(
+            r'<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>'
+            r'.*?'
+            r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
+            re.DOTALL | re.IGNORECASE,
+        )
+        for match in result_pattern.finditer(html):
+            result_url = match.group(1)
+            title = re.sub(r"<[^>]+>", "", match.group(2)).strip()
+            snippet = re.sub(r"<[^>]+>", "", match.group(3)).strip()
+            if "//duckduckgo.com/l/" in result_url:
+                parsed = urllib.parse.urlparse(result_url)
+                params = urllib.parse.parse_qs(parsed.query)
+                real_url = params.get("uddg", [result_url])[0]
+            else:
+                real_url = result_url
+            if "duckduckgo.com" in real_url and "uddg" not in real_url:
+                continue
+            if real_url and title:
+                sources.append(ResearchSource(
+                    url=urllib.parse.unquote(real_url),
+                    title=title[:300],
+                    snippet=snippet[:500],
+                ))
+            if len(sources) >= max_results:
+                break
+    except (OSError, ConnectionRefusedError, TimeoutError) as exc:
+        log.warning("DDG HTML search failed: %s", exc)
+
+    return sources
+
+
+def _searxng_search(query: str, base_url: str, max_results: int = 8) -> List[ResearchSource]:
+    """Search via SearXNG instance. No API key needed, but requires a running instance.
+
+    Args:
+        query: Search query string
+        base_url: SearXNG instance URL (e.g. "http://localhost:8080" or "https://searx.be")
+        max_results: Maximum number of results to return
+
+    SearXNG returns JSON via /search?q=...&format=json.
+    Self-hosted instances work best — public instances often disable JSON API.
+    To set up: docker run -d -p 8080:8080 searxng/searxng
+    """
+    sources: List[ResearchSource] = []
+    base = base_url.rstrip("/")
+    encoded = urllib.parse.quote(query)
+
+    # Try JSON API first (works on self-hosted instances)
+    try:
+        url = f"{base}/search?q={encoded}&format=json&categories=general"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "ClawOS-Research/1.0",
+            "Accept": "application/json",
+        })
+        with urllib.request.urlopen(req, timeout=12) as resp:  # noqa: S310
+            data = json.loads(resp.read(256 * 1024))
+
+        for result in data.get("results", [])[:max_results]:
+            url_r = result.get("url", "")
+            title = result.get("title", "")
+            snippet = result.get("content", "")
+            if url_r:
+                sources.append(ResearchSource(
+                    url=url_r,
+                    title=title[:300],
+                    snippet=snippet[:500],
+                ))
+
+        if sources:
+            return sources
+    except (OSError, json.JSONDecodeError, TimeoutError) as exc:
+        log.debug("SearXNG JSON API failed (%s): %s", base_url, exc)
+
+    # Fallback: scrape HTML output
+    try:
+        url = f"{base}/search?q={encoded}&categories=general"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "text/html",
+        })
+        with urllib.request.urlopen(req, timeout=12) as resp:  # noqa: S310
+            html = resp.read(256 * 1024).decode("utf-8", errors="replace")
+
+        # SearXNG HTML uses <article class="result"> blocks
+        article_pattern = re.compile(
+            r'<article[^>]*class="result[^"]*"[^>]*>'
+            r'(.*?)'
+            r'</article>',
+            re.DOTALL | re.IGNORECASE,
+        )
+        link_pattern = re.compile(
+            r'<a[^>]*href="([^"]+)"[^>]*class="[^"]*url[^"]*"[^>]*>(.*?)</a>',
+            re.DOTALL | re.IGNORECASE,
+        )
+        snippet_pattern = re.compile(
+            r'<p[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)</p>',
+            re.DOTALL | re.IGNORECASE,
+        )
+
+        for article in article_pattern.finditer(html):
+            block = article.group(1)
+            link_match = link_pattern.search(block)
+            snippet_match = snippet_pattern.search(block)
+
+            if link_match:
+                result_url = link_match.group(1)
+                title = re.sub(r"<[^>]+>", "", link_match.group(2)).strip()
+                snippet = ""
+                if snippet_match:
+                    snippet = re.sub(r"<[^>]+>", "", snippet_match.group(1)).strip()
+
+                if result_url and not result_url.startswith("/"):
+                    sources.append(ResearchSource(
+                        url=result_url,
+                        title=title[:300],
+                        snippet=snippet[:500],
+                    ))
+            if len(sources) >= max_results:
+                break
+    except (OSError, TimeoutError) as exc:
+        log.debug("SearXNG HTML scrape failed (%s): %s", base_url, exc)
+
+    return sources
+
+
+def _wikipedia_search(query: str, max_results: int = 4) -> List[ResearchSource]:
+    """Search Wikipedia. No API key needed — uses the free MediaWiki API.
+
+    Returns high-quality encyclopedic sources. Best for factual queries.
+    """
+    sources: List[ResearchSource] = []
+    encoded = urllib.parse.quote(query)
+
+    # Step 1: Search for page titles
+    try:
+        url = (
+            f"https://en.wikipedia.org/w/api.php?"
+            f"action=query&list=search&srsearch={encoded}&srlimit={max_results}&format=json"
+        )
+        req = urllib.request.Request(url, headers={"User-Agent": "ClawOS-Research/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+            data = json.loads(resp.read())
+
+        search_results = data.get("query", {}).get("search", [])
+        page_titles = []
+
+        for result in search_results:
+            title = result.get("title", "")
+            snippet = re.sub(r"<[^>]+>", "", result.get("snippet", "")).strip()
+            page_url = f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}"
+            page_titles.append(title)
+            sources.append(ResearchSource(
+                url=page_url,
+                title=f"{title} — Wikipedia",
+                snippet=snippet[:500],
+            ))
+
+    except (OSError, json.JSONDecodeError, TimeoutError) as exc:
+        log.warning("Wikipedia search failed: %s", exc)
+
+    return sources
+
+
+# ── Provider detection ────────────────────────────────────────────────────────
 def _detect_provider() -> tuple[str, str]:
-    """Return (provider_name, api_key) using env/config. Falls back to 'none'."""
+    """Return (provider_name, api_key_or_url) using env/config.
+
+    Priority: brave > tavily > searxng > ddg
+    Free providers (ddg, wikipedia) are always available as fallback.
+    """
+    # Paid providers first (if keys are configured)
     brave_key = os.environ.get("BRAVE_API_KEY", "").strip()
     if brave_key:
         return "brave", brave_key
     tavily_key = os.environ.get("TAVILY_API_KEY", "").strip()
     if tavily_key:
         return "tavily", tavily_key
+
+    # Check config for API keys or SearXNG URL
     try:
         from clawos_core.config.loader import get as get_config
         brave_key = str(get_config("research.brave_api_key", "")).strip()
@@ -205,9 +428,77 @@ def _detect_provider() -> tuple[str, str]:
         tavily_key = str(get_config("research.tavily_api_key", "")).strip()
         if tavily_key:
             return "tavily", tavily_key
+        searxng_url = str(get_config("research.searxng_url", "")).strip()
+        if searxng_url:
+            return "searxng", searxng_url
     except (ImportError, ModuleNotFoundError) as e:
         log.debug(f"suppressed: {e}")
-    return "none", ""
+
+    # Check env for SearXNG URL
+    searxng_url = os.environ.get("SEARXNG_URL", "").strip()
+    if searxng_url:
+        return "searxng", searxng_url
+
+    # Default: free search via DuckDuckGo (always works, no keys)
+    return "ddg", ""
+
+
+def _multi_search(query: str, provider: str, api_key: str, max_results: int = 8) -> List[ResearchSource]:
+    """Run a primary search provider, then augment with free providers.
+
+    For paid providers (brave, tavily): use them as primary, add DDG + Wikipedia.
+    For free providers (ddg, searxng): use them as primary, add Wikipedia.
+    For fetch mode: no search, just seed URLs.
+    """
+    sources: List[ResearchSource] = []
+    seen_urls: set[str] = set()
+
+    def _add_unique(new_sources: List[ResearchSource]) -> None:
+        for s in new_sources:
+            if s.url not in seen_urls:
+                seen_urls.add(s.url)
+                sources.append(s)
+
+    # Primary search
+    if provider == "brave" and api_key:
+        try:
+            _add_unique(_brave_search(query, api_key, max_results))
+        except Exception as exc:
+            log.warning("Brave search failed: %s", exc)
+
+    elif provider == "tavily" and api_key:
+        try:
+            _add_unique(_tavily_search(query, api_key, max_results))
+        except Exception as exc:
+            log.warning("Tavily search failed: %s", exc)
+
+    elif provider == "searxng" and api_key:
+        try:
+            _add_unique(_searxng_search(query, api_key, max_results))
+        except Exception as exc:
+            log.warning("SearXNG search failed: %s", exc)
+
+    elif provider == "ddg":
+        try:
+            _add_unique(_ddg_search(query, max_results))
+        except Exception as exc:
+            log.warning("DDG search failed: %s", exc)
+
+    # Always add Wikipedia results for factual context (if not fetch-only)
+    if provider != "fetch":
+        try:
+            _add_unique(_wikipedia_search(query, max_results=3))
+        except Exception as exc:
+            log.warning("Wikipedia search failed: %s", exc)
+
+    # If primary search returned nothing, try DDG as fallback (unless DDG was primary)
+    if not sources and provider not in ("ddg", "fetch"):
+        try:
+            _add_unique(_ddg_search(query, max_results))
+        except Exception as exc:
+            log.warning("DDG fallback search failed: %s", exc)
+
+    return sources
 
 
 # ── Citation extraction ───────────────────────────────────────────────────────
@@ -218,7 +509,6 @@ def _extract_citations(sources: List[ResearchSource], query: str) -> List[Citati
     for source in sources:
         if not source.fetched or not source.text:
             continue
-        # Score sentences by query term overlap
         sentences = re.split(r"(?<=[.!?])\s+", source.text)
         best_score = 0
         best_excerpt = source.snippet
@@ -263,21 +553,8 @@ class ResearchEngine:
             provider, api_key = _detect_provider()
         session.provider = provider
 
-        # Search
-        if provider == "brave" and api_key:
-            try:
-                session.sources = _brave_search(query, api_key)
-            except (OSError, RuntimeError, AttributeError) as exc:
-                log.warning("Brave search failed: %s", exc)
-                session.sources = []
-        elif provider == "tavily" and api_key:
-            try:
-                session.sources = _tavily_search(query, api_key)
-            except (OSError, RuntimeError, AttributeError) as exc:
-                log.warning("Tavily search failed: %s", exc)
-                session.sources = []
-        else:
-            session.provider = "fetch"
+        # Search using multi-provider strategy
+        session.sources = _multi_search(query, provider, api_key)
 
         # Add seed URLs as sources
         for url in (seed_urls or []):
@@ -320,7 +597,7 @@ class ResearchEngine:
         )
         return "\n".join(parts)
 
-    def resume_session(self, session_id: str) -> Optional[ResearchSession]:
+    def resume_session(self, session_id: str) -> Optional["ResearchSession"]:
         session = ResearchSession.load(session_id)
         if not session:
             return None

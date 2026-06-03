@@ -31,13 +31,40 @@ log = logging.getLogger("researchd")
 router = APIRouter(prefix="/api/research", tags=["research"])
 
 
+# ── Health check (defined first to avoid /{session_id} matching "health") ───────
+
+@router.get("/health")
+async def health():
+    """Service health check."""
+    from services.researchd.engine import _detect_provider
+    provider, key = _detect_provider()
+    providers = {
+        "active": provider,
+        "available": ["ddg", "wikipedia"],  # always free
+        "configured": [],
+    }
+    # Check paid providers
+    import os
+    if os.environ.get("BRAVE_API_KEY", "").strip():
+        providers["available"].append("brave")
+        providers["configured"].append("brave")
+    if os.environ.get("TAVILY_API_KEY", "").strip():
+        providers["available"].append("tavily")
+        providers["configured"].append("tavily")
+    searxng_url = os.environ.get("SEARXNG_URL", "").strip()
+    if searxng_url:
+        providers["available"].append("searxng")
+        providers["configured"].append({"searxng": searxng_url})
+    return {"status": "ok", "engine": "ready", "providers": providers}
+
+
 # ── Request models ────────────────────────────────────────────────────────────
 
 class StartRequest(BaseModel):
     query: str = Field(..., min_length=3, max_length=500)
     seed_urls: Optional[list[str]] = Field(default=None, max_length=10)
-    provider: Optional[str] = Field(default=None, pattern="^(brave|tavily|fetch|none)$")
-    api_key: Optional[str] = None
+    provider: Optional[str] = Field(default=None, pattern="^(brave|tavily|searxng|ddg|wikipedia|fetch|none)$")
+    api_key: Optional[str] = None  # API key for brave/tavily, or SearXNG URL for searxng
 
 
 class FetchRequest(BaseModel):
@@ -139,9 +166,3 @@ async def delete_session(session_id: str):
     if not ok:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"deleted": True}
-
-
-@router.get("/health")
-async def health():
-    """Service health check."""
-    return {"status": "ok", "engine": "ready"}

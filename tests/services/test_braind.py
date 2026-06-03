@@ -13,8 +13,7 @@ from services.braind.main import (
     KnowledgeRelation,
     Memory,
     InsightEngine,
-    NodeType as BrainNodeType,
-    PortType as BrainPortType
+
 )
 
 

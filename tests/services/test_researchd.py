@@ -152,9 +152,9 @@ class TestFetchPage:
 
 class TestDetectProvider:
     def test_no_provider(self):
-        with patch.dict("os.environ", {"BRAVE_API_KEY": "", "TAVILY_API_KEY": ""}):
+        with patch.dict("os.environ", {"BRAVE_API_KEY": "", "TAVILY_API_KEY": "", "SEARXNG_URL": ""}):
             provider, key = _detect_provider()
-            assert provider in ("none", "brave", "tavily")
+            assert provider in ("ddg", "none", "brave", "tavily")
 
     def test_brave_from_env(self):
         with patch.dict("os.environ", {"BRAVE_API_KEY": "test-key-123"}, clear=False):

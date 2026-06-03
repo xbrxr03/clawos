@@ -9,8 +9,7 @@ import shutil
 
 from services.sandboxd.v2.main import (
     SecureSandbox,
-    SandboxConfig,
-    NodeType as SandboxNodeType
+    SandboxConfig
 )
 
 
