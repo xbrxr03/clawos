@@ -22,6 +22,8 @@ async def main():
 
     mgr = get_manager()
     await mgr.start()
+    # Start HTTP API for dashboard integration
+    asyncio.create_task(mgr.start_api())
     while True:
         await asyncio.sleep(3600)
 

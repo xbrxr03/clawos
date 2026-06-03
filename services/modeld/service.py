@@ -30,11 +30,16 @@ class ModelService:
     def health(self) -> dict:
         running = is_running()
         models  = list_models() if running else []
+        model_names = []
+        for m in models:
+            name = m.get("name", "") if isinstance(m, dict) else getattr(m, "model", "")
+            if name:
+                model_names.append(name)
         return {
             "ollama_running": running,
             "current_model":  self.model,
             "profile":        self.profile,
-            "models_loaded":  [m.get("name") for m in models],
+            "models_loaded":  model_names,
             "model_present":  model_exists(self.model),
         }
 

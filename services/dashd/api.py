@@ -38,7 +38,15 @@ from clawos_core.constants import (
     CONFIG_DIR,
     DEFAULT_WORKSPACE,
     MEMORY_DIR,
+    PORT_AGENTD,
+    PORT_CLAWD,
     PORT_DASHD,
+    PORT_DESKTOPD,
+    PORT_MEMD,
+    PORT_MODELD,
+    PORT_OBSERVD,
+    PORT_POLICYD,
+    PORT_VOICED,
     WORKSPACE_DIR,
 )
 from clawos_core.events.bus import EV_SERVICE_DOWN, EV_SERVICE_UP, get_bus
@@ -528,113 +536,86 @@ def _deep_health_check() -> dict:
 
 
 def _collect_service_health() -> dict[str, dict]:
+    """Check service health via HTTP /health endpoints.
+
+    Previously this used Python imports which created fresh instances
+    in the dashd process. Now each service runs its own /health endpoint,
+    so we check via HTTP for accurate runtime state.
+    """
+    import json as _json
+
+    # Service name → (port, fallback_status)
+    # Services with HTTP servers report their real status.
+    # Fallback status is used when the HTTP check fails.
+    HTTP_SERVICES: dict[str, tuple[int, str]] = {
+        "clawd":      (PORT_CLAWD,   "down"),
+        "agentd":     (PORT_AGENTD,  "down"),
+        "memd":       (PORT_MEMD,    "down"),
+        "policyd":   (PORT_POLICYD, "down"),
+        "modeld":    (PORT_MODELD,  "down"),
+        "mcpd":       (7077,          "down"),
+        "observd":   (PORT_OBSERVD, "down"),
+        "voiced":    (PORT_VOICED,  "down"),
+        "desktopd":  (PORT_DESKTOPD, "down"),
+        "agentd_v2": (7081,          "down"),
+        "braind":    (7082,          "down"),
+        "a2ad":       (7083,          "down"),
+        "sandboxd":  (7085,          "down"),
+        "visuald":  (7086,          "down"),
+        "reminderd": (7087,          "down"),
+        "waketrd":   (7088,          "down"),
+        "researchd": (7089,          "down"),
+        "noted":      (7091,          "down"),
+        "calendard": (7092,          "down"),
+        "maild":      (7093,          "down"),
+    }
+
     services: dict[str, dict] = {
         "dashd": {"status": "up", "latency_ms": 0},
     }
 
-    checks = {}
-    try:
-        from services.agentd.health import health as agentd_health
-
-        checks["agentd"] = agentd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.clawd.health import health as clawd_health
-
-        checks["clawd"] = clawd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.mcpd.health import health as mcpd_health
-
-        checks["mcpd"] = mcpd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.observd.health import health as observd_health
-
-        checks["observd"] = observd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.voiced.health import health as voiced_health
-
-        checks["voiced"] = voiced_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.desktopd.health import health as desktopd_health
-
-        checks["desktopd"] = desktopd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.memd.health import health as memd_health
-
-        checks["memd"] = memd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.modeld.health import health as modeld_health
-
-        checks["modeld"] = modeld_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.policyd.health import health as policyd_health
-
-        checks["policyd"] = policyd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.setupd.health import health as setupd_health
-
-        checks["setupd"] = setupd_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    try:
-        from services.voiced.health import health as voiced_health
-
-        checks["voiced"] = voiced_health
-    except (ImportError, ModuleNotFoundError) as e:
-        log.debug(f"suppressed: {e}")
-    # PicoClaw — check if process is running via port
-    try:
-        import urllib.request as _ur
-        _r = _ur.urlopen("http://127.0.0.1:18800/health", timeout=1)
-        checks["picoclaw"] = lambda: {"status": "up"}
-    except (OSError, ConnectionRefusedError, TimeoutError):
-        import shutil as _sh
-        checks["picoclaw"] = lambda: {"status": "installed" if _sh.which("picoclaw") else "not_installed"}
-    # OpenClaw — check if binary exists and gateway is reachable
-    try:
-        import urllib.request as _ur2
-        _r2 = _ur2.urlopen("http://127.0.0.1:18789/health", timeout=1)
-        checks["openclaw"] = lambda: {"status": "up"}
-    except (OSError, ConnectionRefusedError, TimeoutError):
-        import shutil as _sh2
-        checks["openclaw"] = lambda: {"status": "installed" if _sh2.which("openclaw") else "not_installed"}
-
-    for name, check in checks.items():
+    for name, (port, fallback) in HTTP_SERVICES.items():
         started = time.perf_counter()
         try:
-            data = check() or {}
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/health",
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                data = _json.loads(resp.read())
+                latency_ms = max(1, int((time.perf_counter() - started) * 1000))
+                status = _normalize_service_status(name, data.get("status"), data)
+                services[name] = {
+                    "status": status,
+                    "latency_ms": latency_ms,
+                    **{k: v for k, v in data.items() if k not in ("status",)},
+                }
+        except (OSError, ConnectionRefusedError, TimeoutError, _json.JSONDecodeError):
             latency_ms = max(1, int((time.perf_counter() - started) * 1000))
             services[name] = {
-                "status": _normalize_service_status(name, data.get("status"), data),
+                "status": fallback,
                 "latency_ms": latency_ms,
             }
-        except (OSError, ValueError) as exc:
-            latency_ms = max(1, int((time.perf_counter() - started) * 1000))
-            services[name] = {
-                "status": "down",
-                "latency_ms": latency_ms,
-                "error": str(exc),
-            }
+
+    # PicoClaw — check if process is running via port
+    try:
+        req = urllib.request.Request("http://127.0.0.1:18800/health", method="GET")
+        with urllib.request.urlopen(req, timeout=1) as resp:
+            services["picoclaw"] = {"status": "up", "latency_ms": 0}
+    except (OSError, ConnectionRefusedError, TimeoutError):
+        import shutil as _sh
+        services["picoclaw"] = {"status": "installed" if _sh.which("picoclaw") else "not_installed"}
+
+    # OpenClaw — check if binary exists and gateway is reachable
+    try:
+        req = urllib.request.Request("http://127.0.0.1:18789/health", method="GET")
+        with urllib.request.urlopen(req, timeout=1) as resp:
+            services["openclaw"] = {"status": "up", "latency_ms": 0}
+    except (OSError, ConnectionRefusedError, TimeoutError):
+        import shutil as _sh2
+        services["openclaw"] = {"status": "installed" if _sh2.which("openclaw") else "not_installed"}
+
     return services
-
-
 def _collect_models() -> list[dict]:
     try:
         from services.modeld.ollama_client import is_running, list_models
