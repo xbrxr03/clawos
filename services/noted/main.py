@@ -2,17 +2,8 @@
 """noted — Notes Service runner."""
 import logging
 import os
-import uvicorn
 
 log = logging.getLogger("noted")
-
-
-def run():
-    port = int(os.environ.get("NOTED_PORT", "7091"))
-    host = os.environ.get("NOTED_HOST", "127.0.0.1")
-    log.info("Starting noted on %s:%s", host, port)
-    uvicorn.run("services.noted.service:app", host=host, port=port, log_level="info", access_log=False)
-
 
 try:
     from fastapi import FastAPI
@@ -22,10 +13,22 @@ try:
     app.include_router(router)
 
     @app.get("/health")
-    async def root_health():
+    async def noted_health():
         return {"status": "ok", "service": "noted"}
 except ImportError:
-    pass
+    app = None
+
+
+def run():
+    if app is None:
+        log.error("fastapi not installed — noted unavailable")
+        return
+    import uvicorn
+    port = int(os.environ.get("NOTED_PORT", "7091"))
+    host = os.environ.get("NOTED_HOST", "127.0.0.1")
+    log.info("Starting noted on %s:%s", host, port)
+    uvicorn.run(app, host=host, port=port, log_level="info", access_log=False)
+
 
 if __name__ == "__main__":
     run()

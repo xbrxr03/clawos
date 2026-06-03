@@ -27,6 +27,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
+# Activate venv if available
+if [[ -f "$PROJECT_ROOT/.venv/bin/activate" ]]; then
+    source "$PROJECT_ROOT/.venv/bin/activate"
+fi
+
+# Use venv python
+PYTHON="${VIRTUAL_ENV:+$VIRTUAL_ENV/bin/}python3"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -37,7 +45,7 @@ NC='\033[0m' # No Color
 # Service definitions
 # Format: name:port:module:description
 CORE_SERVICES=(
-    "dashd:7070:services.dashd.api:Dashboard & Control Center"
+    "dashd:7070:services.dashd.main:Dashboard & Control Center"
     "clawd:7071:services.clawd.main:Core ClawOS Service"
     "memd:7073:services.memd.main:Memory Service"
     "policyd:7074:services.policyd.main:Policy Service"
@@ -45,7 +53,7 @@ CORE_SERVICES=(
 
 AI_SERVICES=(
     "modeld:7075:services.modeld.main:Model Management"
-    "mcpd:7077:services.mcpd.protocol:MCP Protocol Service"
+    "mcpd:7077:services.mcpd.main:MCP Protocol Service"
     "voiced:7079:services.voiced.main:Voice Pipeline"
     "researchd:7089:services.researchd.main:Deep Research"
 )
@@ -119,7 +127,7 @@ start_service() {
     
     # Start service in background with nohup so it survives script exit
     # Try with 'run' arg first, fall back to bare invocation
-    nohup python3 -m "$module" run >"$log_file" 2>&1 &
+    nohup $PYTHON -m "$module" run >"$log_file" 2>&1 &
     local pid=$!
     # Disown so shell exit doesn't kill the process
     disown $pid 2>/dev/null || true
@@ -127,9 +135,9 @@ start_service() {
     # Save PID
     echo "$name:$pid:$port" >> "$PID_FILE"
     
-    # Wait for service to bind (some services take 3-5s)
+    # Wait for service to bind (dashd needs up to 15s)
     local wait=0
-    local max_wait=8
+    local max_wait=15
     while [ $wait -lt $max_wait ]; do
         sleep 1
         wait=$((wait + 1))
@@ -175,7 +183,7 @@ stop_all() {
     fi
     
     # Kill any remaining Python processes on ClawOS ports
-    for port in 7070 7071 7072 7073 7074 7075 7076 7077 7078 7079 7080 7081 7082 7083 7085 7086; do
+    for port in 7070 7071 7072 7073 7074 7075 7076 7077 7078 7079 7080 7081 7082 7083 7085 7086 7087 7088 7089 7091 7092 7093; do
         local pids
         pids=$(lsof -Pi :"$port" -sTCP:LISTEN -t 2>/dev/null) || true
         if [[ -n "$pids" ]]; then
@@ -253,8 +261,8 @@ run_diagnostics() {
     echo ""
     
     # Check Python
-    if command -v python3 &> /dev/null; then
-        log_success "Python: $(python3 --version)"
+    if $PYTHON --version &> /dev/null; then
+        log_success "Python: $($PYTHON --version 2>&1)"
     else
         log_error "Python 3 not found"
         return 1
@@ -276,9 +284,9 @@ run_diagnostics() {
     
     # Check dependencies
     log_info "Checking Python dependencies..."
-    python3 -c "import fastapi" 2>/dev/null && log_success "FastAPI: OK" || log_warn "FastAPI: Not installed"
-    python3 -c "import uvicorn" 2>/dev/null && log_success "Uvicorn: OK" || log_warn "Uvicorn: Not installed"
-    python3 -c "import pydantic" 2>/dev/null && log_success "Pydantic: OK" || log_warn "Pydantic: Not installed"
+    $PYTHON -c "import fastapi" 2>/dev/null && log_success "FastAPI: OK" || log_warn "FastAPI: Not installed"
+    $PYTHON -c "import uvicorn" 2>/dev/null && log_success "Uvicorn: OK" || log_warn "Uvicorn: Not installed"
+    $PYTHON -c "import pydantic" 2>/dev/null && log_success "Pydantic: OK" || log_warn "Pydantic: Not installed"
     
     # Check directories
     log_info "Checking directories..."
@@ -289,7 +297,7 @@ run_diagnostics() {
     # Check port availability
     log_info "Checking port availability..."
     local ports_in_use=0
-    for port in 7070 7071 7072 7073 7074 7075 7076 7077 7078 7079 7080 7081 7082 7083 7085 7086; do
+    for port in 7070 7071 7072 7073 7074 7075 7076 7077 7078 7079 7080 7081 7082 7083 7085 7086 7087 7088 7089 7091 7092 7093; do
         if is_running "$port"; then
             log_warn "Port $port: In use"
             ((ports_in_use++)) || true

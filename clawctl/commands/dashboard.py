@@ -9,9 +9,11 @@ Usage:
     clawctl dashboard --watch
 """
 import sys
+import os
 import time
 import json
 import urllib.request
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -29,18 +31,28 @@ class Colors:
 
 # Service definitions
 SERVICES = [
-    ("dashd", 7070, "Dashboard"),
-    ("clawd", 7071, "Main"),
-    ("agentd", 7072, "Agents"),
-    ("memd", 7073, "Memory"),
-    ("policyd", 7074, "Policy"),
-    ("modeld", 7075, "Models"),
-    ("metricd", 7076, "Metrics"),
-    ("mcpd", 7077, "MCP Server"),
-    ("observd", 7078, "Observability"),
-    ("voiced", 7079, "Voice"),
-    ("desktopd", 7080, "Desktop"),
-    ("agentd_v2", 7081, "Multi-Agent"),
+    ("dashd", 7070, "Dashboard", "http"),
+    ("clawd", 7071, "Core Engine", "daemon"),
+    ("agentd", 7072, "Agent Service", "daemon"),
+    ("memd", 7073, "Memory Service", "daemon"),
+    ("policyd", 7074, "Policy Engine", "daemon"),
+    ("modeld", 7075, "Model Manager", "daemon"),
+    ("metricd", 7076, "Metrics", "daemon"),
+    ("mcpd", 7077, "MCP Server", "http"),
+    ("observd", 7078, "Observability", "http"),
+    ("voiced", 7079, "Voice Pipeline", "http"),
+    ("desktopd", 7080, "Desktop Automation", "http"),
+    ("agentd_v2", 7081, "Multi-Agent", "http"),
+    ("braind", 7082, "Second Brain", "http"),
+    ("a2ad", 7083, "A2A Protocol", "http"),
+    ("sandboxd", 7085, "Secure Sandbox", "http"),
+    ("visuald", 7086, "Visual Workflows", "http"),
+    ("reminderd", 7087, "Reminders", "http"),
+    ("waketrd", 7088, "Wake Word", "http"),
+    ("researchd", 7089, "Deep Research", "http"),
+    ("noted", 7091, "Notes", "http"),
+    ("calendard", 7092, "Calendar", "http"),
+    ("maild", 7093, "Email", "http"),
 ]
 
 
@@ -50,24 +62,62 @@ def clear_screen():
 
 
 def get_health(name: str, port: int) -> Tuple[str, Optional[Dict]]:
-    """Get health status for a service."""
+    """Get health status for a service.
+    
+    Tries HTTP health endpoints first, then falls back to PID check
+    for daemon services that don't serve HTTP.
+    """
+    # Try /api/health first (most services), then /health fallback
+    for path in ["/api/health", "/health"]:
+        try:
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}{path}",
+                method="GET",
+                headers={"User-Agent": "ClawOS-Dashboard/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                if resp.status == 200:
+                    try:
+                        data = json.loads(resp.read().decode())
+                        return "up", data
+                    except (json.JSONDecodeError, ValueError):
+                        # Got a response but not JSON — service is up
+                        return "up", {"status": "up"}
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue  # Try next path
+            return f"http_{e.code}", None
+        except urllib.error.URLError:
+            pass  # Fall through to PID check
+        except Exception:
+            pass  # Fall through to PID check
+    
+    # No HTTP response — check if process is alive via PID file
+    pid_file = Path.home() / ".clawos" / "run" / "dev_boot.pid"
+    if pid_file.exists():
+        for line in pid_file.read_text().strip().splitlines():
+            parts = line.split(":")
+            if len(parts) >= 2 and parts[0] == name:
+                try:
+                    pid = int(parts[1])
+                    os.kill(pid, 0)  # Check if process exists (raises if dead)
+                    return "up", {"status": "up", "type": "daemon", "pid": pid}
+                except (ProcessLookupError, PermissionError, ValueError):
+                    return "down", None
+    
+    # Check if port is in use by any process
     try:
-        req = urllib.request.Request(
-            f"http://127.0.0.1:{port}/health",
-            method="GET",
-            headers={"User-Agent": "ClawOS-Dashboard/1.0"}
+        import subprocess
+        result = subprocess.run(
+            ["lsof", "-i", f":{port}", "-t"],
+            capture_output=True, text=True, timeout=2
         )
-        with urllib.request.urlopen(req, timeout=2) as resp:
-            if resp.status == 200:
-                data = json.loads(resp.read().decode())
-                return "up", data
-            return "degraded", None
-    except urllib.error.HTTPError as e:
-        return f"http_{e.code}", None
-    except urllib.error.URLError:
-        return "down", None
-    except (json.JSONDecodeError, ValueError) as e:
-        return "error", None
+        if result.stdout.strip():
+            return "up", {"status": "up", "type": "daemon"}
+    except Exception:
+        pass
+    
+    return "down", None
 
 
 def format_status(status: str) -> str:
@@ -134,8 +184,12 @@ def show_dashboard(watch: bool = False, interval: float = 2.0):
             up_count = 0
             down_count = 0
             
-            for name, port, description in SERVICES:
+            for name, port, description, svc_type in SERVICES:
                 status, data = get_health(name, port)
+                # Daemon services are "up" if process is alive, even without HTTP
+                if status == "down" and svc_type == "daemon":
+                    # get_health already checks PID file and lsof
+                    pass  # keep the result from get_health which handles daemon detection
                 statuses.append((name, port, description, status, data))
                 if status == "up":
                     up_count += 1

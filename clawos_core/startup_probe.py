@@ -72,4 +72,10 @@ async def probe_and_start(service_deps, startup_fn, service_name: str, timeout_s
                 f"{service_name}: some dependencies not ready — starting anyway "
                 f"(may encounter errors until deps come online)"
             )
-    return await startup_fn()
+    if startup_fn is None:
+        return None
+    result = startup_fn()
+    # startup_fn may be sync or async — handle both
+    if asyncio.iscoroutine(result):
+        return await result
+    return result

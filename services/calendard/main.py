@@ -2,17 +2,8 @@
 """calendard — Calendar Service runner."""
 import logging
 import os
-import uvicorn
 
 log = logging.getLogger("calendard")
-
-
-def run():
-    port = int(os.environ.get("CALENDARD_PORT", "7092"))
-    host = os.environ.get("CALENDARD_HOST", "127.0.0.1")
-    log.info("Starting calendard on %s:%s", host, port)
-    uvicorn.run("services.calendard.service:app", host=host, port=port, log_level="info", access_log=False)
-
 
 try:
     from fastapi import FastAPI
@@ -22,10 +13,22 @@ try:
     app.include_router(router)
 
     @app.get("/health")
-    async def root_health():
+    async def calendard_health():
         return {"status": "ok", "service": "calendard"}
 except ImportError:
-    pass
+    app = None
+
+
+def run():
+    if app is None:
+        log.error("fastapi not installed — calendard unavailable")
+        return
+    import uvicorn
+    port = int(os.environ.get("CALENDARD_PORT", "7092"))
+    host = os.environ.get("CALENDARD_HOST", "127.0.0.1")
+    log.info("Starting calendard on %s:%s", host, port)
+    uvicorn.run(app, host=host, port=port, log_level="info", access_log=False)
+
 
 if __name__ == "__main__":
     run()

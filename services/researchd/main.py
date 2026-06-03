@@ -2,30 +2,12 @@
 """
 researchd — Deep Research Service runner
 ========================================
-Starts the FastAPI research service on port 7079.
+Starts the FastAPI research service on port 7089.
 """
 import logging
 import os
 
-import uvicorn
-
 log = logging.getLogger("researchd")
-
-
-def run():
-    """Start the researchd FastAPI server."""
-    port = int(os.environ.get("RESEARCHD_PORT", "7089"))
-    host = os.environ.get("RESEARCHD_HOST", "127.0.0.1")
-
-    log.info("Starting researchd on %s:%s", host, port)
-    uvicorn.run(
-        "services.researchd.service:app",
-        host=host,
-        port=port,
-        log_level="info",
-        access_log=False,
-    )
-
 
 # Create the ASGI app for direct import
 try:
@@ -42,11 +24,23 @@ try:
     app.include_router(router)
 
     @app.get("/health")
-    async def root_health():
+    async def researchd_health():
         return {"status": "ok", "service": "researchd"}
 
 except ImportError:
-    pass
+    app = None
+
+
+def run():
+    """Start the researchd FastAPI server."""
+    if app is None:
+        log.error("fastapi not installed — researchd unavailable")
+        return
+    import uvicorn
+    port = int(os.environ.get("RESEARCHD_PORT", "7089"))
+    host = os.environ.get("RESEARCHD_HOST", "127.0.0.1")
+    log.info("Starting researchd on %s:%s", host, port)
+    uvicorn.run(app, host=host, port=port, log_level="info", access_log=False)
 
 
 if __name__ == "__main__":
