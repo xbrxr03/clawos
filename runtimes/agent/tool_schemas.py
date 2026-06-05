@@ -288,6 +288,29 @@ RUN_COMMAND = _tool(
 )
 
 
+# ── Delegation (subagents) ───────────────────────────────────────────────────
+
+DELEGATE = _tool(
+    "delegate",
+    "Spawn an isolated subagent to handle a task. Use for parallel work or "
+    "tasks that need a fresh context window. The subagent gets its own context "
+    "but shares the workspace. Sensitive — first call per session requires approval.",
+    {
+        "task": {"type": "string", "description": "Clear description of what the subagent should do."},
+        "model": {
+            "type": "string",
+            "description": "Model for the subagent. Default: fast model.",
+            "enum": ["qwen2.5:3b", "qwen2.5:7b", "qwen2.5-coder:7b"],
+        },
+        "timeout": {
+            "type": "integer",
+            "description": "Timeout in seconds (default: 120).",
+        },
+    },
+    required=["task"],
+)
+
+
 # ── Catalog ──────────────────────────────────────────────────────────────────
 
 ALL_TOOLS: dict[str, dict] = {
@@ -331,6 +354,8 @@ ALL_TOOLS: dict[str, dict] = {
     "web_search":          WEB_SEARCH,
     # shell
     "run_command":         RUN_COMMAND,
+    # delegation
+    "delegate":            DELEGATE,
 }
 
 ALL_SCHEMAS = list(ALL_TOOLS.values())
@@ -340,6 +365,7 @@ SENSITIVE_TOOLS = frozenset({
     "close_app",
     "write_file",
     "run_command",
+    "delegate",          # spawns child agents — approval gated
 })
 
 # Tier filtering: which tools the FAST model gets to see (smaller surface area

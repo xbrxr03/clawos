@@ -20,6 +20,7 @@ from typing import Awaitable, Callable
 from runtimes.agent.tools import (
     compose, desktop, files, knowledge,
     productivity, system, web, workflows,
+    delegate,  # subagent delegation (issue #66)
 )
 
 log = logging.getLogger("agent.tools")
@@ -67,6 +68,8 @@ NATIVE_TOOLS: dict[str, ToolFn] = {
     "web_search":          web.web_search,
     # shell
     "run_command":         system.run_command,
+    # delegation
+    "delegate":            delegate.delegate,
 }
 
 

@@ -118,6 +118,7 @@ class PolicyEngine:
 
     def __init__(self):
         self._pending: dict[str, ApprovalRequest] = {}
+        self._delegate_approved_sessions: set[str] = set()  # sessions where delegate is auto-approved
         self.hooks = HookRegistry()
         self._db: Optional[sqlite3.Connection] = None
         self._init_db()
@@ -253,6 +254,21 @@ class PolicyEngine:
                         f"prompt injection detected (score={scan_result['score']})",
                         tool, target, task_id, workspace_id
                     )
+
+        # Delegate tool: first call per session requires approval;
+        # subsequent calls in the same session are auto-approved.
+        if tool == "delegate":
+            session_key = f"{workspace_id}:{task_id}"
+            if session_key in self._delegate_approved_sessions:
+                return self._record(Decision.ALLOW, "subsequent delegate auto-approved",
+                                     tool, target, task_id, workspace_id)
+            # First delegate in this session — requires human approval
+            decision, reason = await self._queue_for_approval(
+                tool, target, task_id, workspace_id, content
+            )
+            if decision == Decision.ALLOW:
+                self._delegate_approved_sessions.add(session_key)
+            return self._record(decision, reason, tool, target, task_id, workspace_id)
 
         score = TOOL_SCORES.get(tool, 50)
         if score >= TOOL_SCORE_QUEUE:

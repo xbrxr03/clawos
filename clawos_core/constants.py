@@ -152,6 +152,10 @@ TIER_D_MAX_PARALLEL    = 3
 TIER_D_VRAM_PER_AGENT  = 5.5   # GB reserved per agent session
 TIER_D_VRAM_RESERVE    = 1.0   # GB always kept free for system
 
+# ── Subagent delegation ───────────────────────────────────────────────────────
+MAX_SUBAGENTS      = 3       # max concurrent delegate subagents
+SUBAGENT_TIMEOUT   = 120    # seconds before subagent is killed
+
 # ── PicoClaw (Tier A) ────────────────────────────────────────────────────────
 PICOCLAW_GITHUB     = "sipeed/picoclaw"
 PICOCLAW_VERSION    = "v0.2.4"
