@@ -120,15 +120,42 @@ def run_list():
         print(f"  ✗ Error: {e}", file=sys.stderr)
         return
 
-    if not skills:
+    # Also load skills from skilld (including auto-generated ones)
+    from pathlib import Path
+    from clawos_core.constants import AUTO_SKILLS_DIR
+
+    auto_skills = []
+    if AUTO_SKILLS_DIR.exists():
+        for skill_dir in sorted(AUTO_SKILLS_DIR.iterdir()):
+            if not skill_dir.is_dir():
+                continue
+            skill_md = skill_dir / "SKILL.md"
+            if not skill_md.exists():
+                continue
+            auto_skills.append({
+                "id": skill_dir.name,
+                "name": skill_dir.name,
+                "version": "auto",
+                "trust_tier": "auto",
+            })
+
+    # Deduplicate: if an auto skill also appears in marketplace, keep marketplace version
+    marketplace_ids = {s.get("id") for s in skills}
+    auto_skills = [s for s in auto_skills if s["id"] not in marketplace_ids]
+
+    all_skills = skills + auto_skills
+
+    if not all_skills:
         print("  No skills installed.")
         print("  Try: clawctl skill search")
         return
 
-    print(f"  Installed skills ({len(skills)}):\n")
-    for s in skills:
+    print(f"  Installed skills ({len(all_skills)}):\n")
+    for s in all_skills:
         tier_icon = "✓" if s.get("trust_tier") == "clawos_verified" else "~"
-        print(f"  {tier_icon} {s['id']:<30} {s.get('name', ''):<25} v{s.get('version', '?')} [{s.get('trust_tier', '?')}]")
+        is_auto = s.get("trust_tier") == "auto"
+        tag = " [auto]" if is_auto else ""
+        print(f"  {tier_icon} {s['id']:<30} {s.get('name', ''):<25} v{s.get('version', '?')} [{s.get('trust_tier', '?')}]{tag}")
 
 
 def run_verify(skill_path: str):

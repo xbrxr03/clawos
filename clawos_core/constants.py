@@ -128,6 +128,11 @@ CACHE_BREAKPOINT_MARKER      = "<!-- cache_breakpoint -->"  # for prompt caching
 # ── Session search ─────────────────────────────────────────────────────────────
 AUTO_SESSION_TIMEOUT = 1800   # seconds of inactivity before session ends (30 min)
 
+# ── Auto-skill creation ────────────────────────────────────────────────────────
+AUTO_SKILLS_DIR     = Path.home() / ".claw" / "skills" / "auto"
+AUTO_SKILL_MIN_TOOLS = 3      # minimum tool calls to trigger auto-skill
+AUTO_SKILL_MIN_TURNS = 2      # minimum user turns to trigger auto-skill
+
 # ── Audio ─────────────────────────────────────────────────────────────────────
 RECORD_RATE      = 44100
 WHISPER_RATE     = 16000

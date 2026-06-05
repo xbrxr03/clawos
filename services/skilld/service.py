@@ -283,6 +283,18 @@ class SkillLoader:
             for s in self._skills
         ]
 
+    # ── Auto-skill delegation ──────────────────────────────────────────────
+
+    def save_auto_skill(self, slug: str, content: str) -> Path:
+        """Delegate to auto_skill.save_auto_skill."""
+        from services.skilld.auto_skill import save_auto_skill
+        return save_auto_skill(slug, content)
+
+    def find_similar_skill(self, trigger: str) -> Optional[str]:
+        """Delegate to auto_skill.find_similar_skill."""
+        from services.skilld.auto_skill import find_similar_skill
+        return find_similar_skill(trigger)
+
     @property
     def count(self) -> int:
         return len(self._skills)

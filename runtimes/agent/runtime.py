@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -39,6 +40,7 @@ from runtimes.agent.tool_schemas import (
     ALL_TOOLS, SENSITIVE_TOOLS, schemas_for_tier,
 )
 from services.skilld.service import get_loader, format_skills_block
+from services.skilld.auto_skill import should_auto_skill, generate_skill, save_auto_skill, find_similar_skill, update_auto_skill
 
 log = logging.getLogger("agentd")
 
@@ -571,6 +573,24 @@ class AgentRuntime:
         # Ingest into session FTS search
         self._ingest_turn("user", user_input)
         self._ingest_turn("assistant", final_text)
+
+        # Auto-skill creation — fire-and-forget, never block the agent loop
+        if should_auto_skill(self._history):
+            try:
+                slug, content = generate_skill(self._history)
+                trigger = ""
+                trigger_match = re.search(r"^trigger:\s*(.+)$", content, re.MULTILINE)
+                if trigger_match:
+                    trigger = trigger_match.group(1).strip()
+                existing = find_similar_skill(trigger) if trigger else None
+                if existing:
+                    update_auto_skill(existing, content)
+                    log.info(f"auto-skill updated: {existing}")
+                else:
+                    save_auto_skill(slug, content)
+                    log.info(f"auto-skill saved: {slug}")
+            except Exception:
+                log.warning("auto-skill generation failed, skipping")
 
         # Async post-turn writes
         if self.memory:
