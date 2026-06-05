@@ -39,6 +39,7 @@ ETC_DIR          = Path("/etc/clawos")
 AUDIT_JSONL      = LOGS_DIR / "audit.jsonl"
 POLICYD_DB       = CONFIG_DIR / "policyd.db"
 MEMORY_FTS_DB    = MEMORY_DIR / "fts.db"
+SESSION_DB_PATH  = MEMORY_DIR / "sessions.db"
 HARDWARE_JSON    = CONFIG_DIR / "hardware.json"
 CLAWOS_CONFIG    = CONFIG_DIR / "clawos.yaml"
 OTEL_JSONL       = LOGS_DIR / "otel.jsonl"
@@ -118,6 +119,9 @@ MODEL_PROFILES = {
 MAX_ITERATIONS    = 8
 MAX_HISTORY       = 12
 DEFAULT_WORKSPACE = "nexus_default"
+
+# ── Session search ─────────────────────────────────────────────────────────────
+AUTO_SESSION_TIMEOUT = 1800   # seconds of inactivity before session ends (30 min)
 
 # ── Audio ─────────────────────────────────────────────────────────────────────
 RECORD_RATE      = 44100

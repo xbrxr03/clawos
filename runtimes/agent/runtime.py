@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -150,6 +151,7 @@ class AgentRuntime:
         self._history: list[dict] = []
         self._turn = 0
         self._skills = get_loader()
+        self._session_started = False
         # Awaiting-confirmation state. Set when a pending [PENDING APPROVAL]
         # comes back from the bridge — next user input may be "yes/no".
         self._awaiting_confirmation: dict | None = None
@@ -159,6 +161,23 @@ class AgentRuntime:
     def _is_trivial(self, user_input: str) -> bool:
         stripped = user_input.strip().lower().rstrip("!.,?")
         return stripped in self._SKIP_INPUTS or len(user_input.split()) <= 2
+
+    def _ingest_turn(self, role: str, content: str) -> None:
+        """Persist a turn into session FTS search (fire-and-forget)."""
+        if not self.memory:
+            return
+        try:
+            # Lazy-start session row on first turn
+            if not self._session_started:
+                self.memory.ingest_session_start(
+                    self.session.session_id, self.workspace_id
+                )
+                self._session_started = True
+            self.memory.ingest_turn(
+                self.session.session_id, role, content, self.workspace_id
+            )
+        except (OSError, AttributeError, sqlite3.Error) as e:
+            log.debug("session ingest failed (non-fatal): %s", e)
 
     # ── context assembly ────────────────────────────────────────────────
 
@@ -515,6 +534,10 @@ class AgentRuntime:
         self._history.append({"role": "user", "content": user_input})
         self._history.append({"role": "assistant", "content": final_text})
 
+        # Ingest into session FTS search
+        self._ingest_turn("user", user_input)
+        self._ingest_turn("assistant", final_text)
+
         # Async post-turn writes
         if self.memory:
             asyncio.create_task(
@@ -573,6 +596,8 @@ class AgentRuntime:
         if r is not None:
             self._history.append({"role": "user", "content": user_input})
             self._history.append({"role": "assistant", "content": r})
+            self._ingest_turn("user", user_input)
+            self._ingest_turn("assistant", r)
             return r
 
         # Tier 1: memory fast-path
@@ -580,6 +605,8 @@ class AgentRuntime:
         if r is not None:
             self._history.append({"role": "user", "content": user_input})
             self._history.append({"role": "assistant", "content": r})
+            self._ingest_turn("user", user_input)
+            self._ingest_turn("assistant", r)
             return r
 
         # Tier 3: deterministic intents
@@ -587,6 +614,8 @@ class AgentRuntime:
         if r is not None:
             self._history.append({"role": "user", "content": user_input})
             self._history.append({"role": "assistant", "content": r})
+            self._ingest_turn("user", user_input)
+            self._ingest_turn("assistant", r)
             return r
 
         # Tier 4: full LLM turn
@@ -607,8 +636,15 @@ class AgentRuntime:
         return {"reply": reply, "tool_steps": [], "llm_used": steps_used}
 
     async def reset(self):
+        # Close out previous session in FTS search
+        if self.memory and self._session_started:
+            try:
+                self.memory.ingest_session_end(self.session.session_id)
+            except (OSError, AttributeError, sqlite3.Error):
+                pass
         self._history.clear()
         self._turn = 0
+        self._session_started = False
         self.session = Session(workspace_id=self.workspace_id)
         self._awaiting_confirmation = None
         if self.memory:

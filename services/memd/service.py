@@ -54,6 +54,7 @@ except (ImportError, ModuleNotFoundError) as e:
 
 # ── SQLite FTS5 ───────────────────────────────────────────────────────────────
 _FTS_DB_PATH = MEMORY_DIR / "fts.db"
+_SESSION_DB_PATH = MEMORY_DIR / "sessions.db"
 
 # ── taosmd singletons (initialized lazily on first use) ───────────────────────
 _taosmd_archive: "object | None" = None
@@ -105,6 +106,70 @@ def _open_fts() -> sqlite3.Connection:
             created_at   TEXT,
             lifecycle    TEXT DEFAULT 'ACTIVE'
         )
+    """)
+    db.commit()
+    return db
+
+
+def _open_session_db() -> sqlite3.Connection:
+    """Open the sessions database with FTS5 full-text search.
+
+    Uses content= mode so the FTS index stays in sync with the
+    session_turns table via triggers (no data duplication).
+    """
+    _SESSION_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(str(_SESSION_DB_PATH), check_same_thread=False)
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=5000")
+    db.execute("PRAGMA foreign_keys=ON")
+    # ── sessions table ────────────────────────────────────────────────────
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            id           TEXT PRIMARY KEY,
+            workspace_id TEXT,
+            started_at   TEXT,
+            ended_at     TEXT,
+            turn_count   INTEGER DEFAULT 0
+        )
+    """)
+    db.execute("CREATE INDEX IF NOT EXISTS ix_sessions_ws ON sessions(workspace_id)")
+    # ── session_turns table ───────────────────────────────────────────────
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS session_turns (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL REFERENCES sessions(id),
+            role       TEXT NOT NULL,
+            content    TEXT NOT NULL,
+            timestamp  TEXT NOT NULL
+        )
+    """)
+    db.execute("CREATE INDEX IF NOT EXISTS ix_turns_session ON session_turns(session_id)")
+    # ── FTS5 virtual table (content= mode) ────────────────────────────────
+    db.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS session_turns_fts USING fts5(
+            content, content='session_turns', content_rowid='id'
+        )
+    """)
+    # ── Triggers to keep FTS in sync with content table ───────────────────
+    db.execute("""
+        CREATE TRIGGER IF NOT EXISTS turns_ai AFTER INSERT ON session_turns BEGIN
+            INSERT INTO session_turns_fts(rowid, content)
+            VALUES (new.id, new.content);
+        END
+    """)
+    db.execute("""
+        CREATE TRIGGER IF NOT EXISTS turns_ad AFTER DELETE ON session_turns BEGIN
+            INSERT INTO session_turns_fts(session_turns_fts, rowid, content)
+            VALUES ('delete', old.id, old.content);
+        END
+    """)
+    db.execute("""
+        CREATE TRIGGER IF NOT EXISTS turns_au AFTER UPDATE ON session_turns BEGIN
+            INSERT INTO session_turns_fts(session_turns_fts, rowid, content)
+            VALUES ('delete', old.id, old.content);
+            INSERT INTO session_turns_fts(rowid, content)
+            VALUES (new.id, new.content);
+        END
     """)
     db.commit()
     return db
@@ -478,6 +543,136 @@ class MemoryService:
         q_path = WORKSPACE_DIR / workspace_id / ".session" / "pending_queue.json"
         if q_path.exists():
             q_path.write_text("[]", encoding="utf-8")
+
+    # ── Session search (FTS5) ──────────────────────────────────────────────────
+
+    def ingest_session_start(self, session_id: str, workspace_id: str,
+                             started_at: str | None = None) -> None:
+        """Record the start of a new session."""
+        db = None
+        try:
+            db = _open_session_db()
+            db.execute(
+                "INSERT OR IGNORE INTO sessions (id, workspace_id, started_at, turn_count) "
+                "VALUES (?, ?, ?, 0)",
+                (session_id, workspace_id, started_at or now_iso()),
+            )
+            db.commit()
+        except (sqlite3.Error, OSError) as e:
+            log.warning("ingest_session_start failed: %s", e)
+        finally:
+            if db is not None:
+                db.close()
+
+    def ingest_session_end(self, session_id: str, ended_at: str | None = None) -> None:
+        """Record session end and final turn count."""
+        db = None
+        try:
+            db = _open_session_db()
+            turn_count = db.execute(
+                "SELECT COUNT(*) FROM session_turns WHERE session_id=?",
+                (session_id,),
+            ).fetchone()[0]
+            db.execute(
+                "UPDATE sessions SET ended_at=?, turn_count=? WHERE id=?",
+                (ended_at or now_iso(), turn_count, session_id),
+            )
+            db.commit()
+        except (sqlite3.Error, OSError) as e:
+            log.warning("ingest_session_end failed: %s", e)
+        finally:
+            if db is not None:
+                db.close()
+
+    def ingest_turn(self, session_id: str, role: str, content: str,
+                    workspace_id: str, timestamp: str | None = None) -> None:
+        """Ingest a single conversation turn into the session search index.
+
+        Ensures the session row exists (auto-creates if needed), then inserts
+        the turn row. FTS5 index is updated via the AFTER INSERT trigger.
+        """
+        if not content or not content.strip():
+            return
+        # Truncate very long turns to keep the index reasonable
+        if len(content) > 4000:
+            content = content[:4000]
+        db = None
+        try:
+            db = _open_session_db()
+            # Ensure session exists (upsert)
+            db.execute(
+                "INSERT OR IGNORE INTO sessions (id, workspace_id, started_at, turn_count) "
+                "VALUES (?, ?, ?, 0)",
+                (session_id, workspace_id, timestamp or now_iso()),
+            )
+            # Insert the turn (FTS trigger fires automatically)
+            db.execute(
+                "INSERT INTO session_turns (session_id, role, content, timestamp) "
+                "VALUES (?, ?, ?, ?)",
+                (session_id, role, content, timestamp or now_iso()),
+            )
+            # Bump turn count
+            db.execute(
+                "UPDATE sessions SET turn_count = turn_count + 1 WHERE id = ?",
+                (session_id,),
+            )
+            db.commit()
+        except (sqlite3.Error, OSError) as e:
+            log.warning("ingest_turn failed: %s", e)
+        finally:
+            if db is not None:
+                db.close()
+
+    def recall_cross_session(self, query: str, workspace_id: str,
+                              n: int = 5) -> list[dict]:
+        """FTS5 search across all past session turns for a workspace.
+
+        Returns list of dicts with: session_id, role, content, timestamp, rank.
+        Uses snippet() for match highlighting.
+        """
+        if not query or not query.strip():
+            return []
+        db = None
+        try:
+            db = _open_session_db()
+            cq = re.sub(r'[^\w\s]', '', query)
+            if not cq.strip():
+                return []
+            rows = db.execute(
+                """
+                SELECT
+                    t.session_id, t.role, t.content, t.timestamp,
+                    s.workspace_id,
+                    snippet(session_turns_fts, 0, '⟫ ', ' ⟪', '…', 16) AS highlight,
+                    rank
+                FROM session_turns_fts f
+                JOIN session_turns t ON t.id = f.rowid
+                JOIN sessions s ON s.id = t.session_id
+                WHERE session_turns_fts MATCH ?
+                  AND s.workspace_id = ?
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (cq, workspace_id, n),
+            ).fetchall()
+            return [
+                {
+                    "session_id": r[0],
+                    "role": r[1],
+                    "content": r[2],
+                    "timestamp": r[3],
+                    "workspace_id": r[4],
+                    "highlight": r[5],
+                    "rank": r[6],
+                }
+                for r in rows
+            ]
+        except (sqlite3.Error, OSError) as e:
+            log.debug("recall_cross_session failed: %s", e)
+            return []
+        finally:
+            if db is not None:
+                db.close()
 
 
 # ── RAGd A2A server ───────────────────────────────────────────────────────────

@@ -278,6 +278,15 @@ else:
         success("Comparison complete")
         print()
 
+    # ── search (cross-session FTS5) ────────────────────────────────────────────
+    @main.command("search")
+    @click.argument("query")
+    @click.option("--workspace", default="nexus_default", help="Workspace to search")
+    @click.option("--limit", default=5, help="Max results to return")
+    def search_cmd(query, workspace, limit):
+        """Search across past conversation sessions."""
+        from clawctl.commands.search import run; run(query, workspace, limit)
+
     # ── workspace ─────────────────────────────────────────────────────────────
     @main.group()
     def workspace():
