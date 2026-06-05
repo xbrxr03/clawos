@@ -120,6 +120,11 @@ MAX_ITERATIONS    = 8
 MAX_HISTORY       = 12
 DEFAULT_WORKSPACE = "nexus_default"
 
+# ── Context compression ──────────────────────────────────────────────────────
+MAX_VERBATIM_TURNS          = 12    # turns kept verbatim during compression
+COMPRESSION_THRESHOLD_TOKENS = 6000 # compress when history exceeds this
+CACHE_BREAKPOINT_MARKER      = "<!-- cache_breakpoint -->"  # for prompt caching
+
 # ── Session search ─────────────────────────────────────────────────────────────
 AUTO_SESSION_TIMEOUT = 1800   # seconds of inactivity before session ends (30 min)
 

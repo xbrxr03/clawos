@@ -28,6 +28,7 @@ from typing import Any, Optional
 
 from clawos_core.constants import (
     DEFAULT_MODEL, OLLAMA_HOST, MAX_ITERATIONS, MAX_HISTORY, DEFAULT_WORKSPACE,
+    MAX_VERBATIM_TURNS, COMPRESSION_THRESHOLD_TOKENS,
 )
 from clawos_core.util.ids import task_id, session_id  # noqa: F401
 from clawos_core.models import Session
@@ -155,6 +156,7 @@ class AgentRuntime:
         # Awaiting-confirmation state. Set when a pending [PENDING APPROVAL]
         # comes back from the bridge — next user input may be "yes/no".
         self._awaiting_confirmation: dict | None = None
+        self._compression_stats = {"turns_compressed": 0, "tokens_saved": 0}
 
     # ── trivial classification ──────────────────────────────────────────
 
@@ -277,6 +279,13 @@ class AgentRuntime:
     def _history_tokens(self) -> int:
         # Rough: 4 chars per token. Used by router only.
         return sum(len(m.get("content") or "") for m in self._history) // 4
+
+    def _compress_history_tool_outputs(self, max_chars: int = 500) -> None:
+        """After each turn, compress large tool outputs in history."""
+        from runtimes.agent.compression import compress_history_tool_outputs
+        compressed = compress_history_tool_outputs(self._history, max_chars)
+        if compressed:
+            log.debug("compressed %d large tool outputs in history", compressed)
 
     # ── tier-1: memory fast-path ────────────────────────────────────────
 
@@ -443,12 +452,34 @@ class AgentRuntime:
             (block_map.get("learned", "") + ("\n\n" + block_map["graph"] if "graph" in block_map else "")).strip(),
         )
 
-        trimmed = self._history[-(MAX_HISTORY * 2):]
-        messages = (
-            [{"role": "system", "content": sys_prompt}]
-            + trimmed
-            + [{"role": "user", "content": user_msg}]
-        )
+        # ── Context compression ───────────────────────────────────
+        from runtimes.agent.compression import ContextCompressor, make_summary_message
+        compressor = ContextCompressor()
+
+        if compressor.should_compress(self._history):
+            summary, verbatim = compressor.compress(self._history)
+            # Track compression stats
+            old_tokens = sum(len(m.get("content") or "") for m in self._history) // 4
+            new_tokens = (
+                len(summary) // 4
+                + sum(len(m.get("content") or "") for m in verbatim) // 4
+            )
+            self._compression_stats["turns_compressed"] += len(self._history) - len(verbatim)
+            self._compression_stats["tokens_saved"] += max(0, old_tokens - new_tokens)
+
+            messages = (
+                [{"role": "system", "content": sys_prompt}]
+                + [make_summary_message(summary)]
+                + verbatim
+                + [{"role": "user", "content": user_msg}]
+            )
+        else:
+            trimmed = self._history[-(MAX_HISTORY * 2):]
+            messages = (
+                [{"role": "system", "content": sys_prompt}]
+                + trimmed
+                + [{"role": "user", "content": user_msg}]
+            )
 
         # Async memory write — never block the agent loop
         if self.memory:
@@ -533,6 +564,9 @@ class AgentRuntime:
         # Persist conversation tail
         self._history.append({"role": "user", "content": user_input})
         self._history.append({"role": "assistant", "content": final_text})
+
+        # Compress large tool outputs in history to keep future turns lean
+        self._compress_history_tool_outputs()
 
         # Ingest into session FTS search
         self._ingest_turn("user", user_input)
