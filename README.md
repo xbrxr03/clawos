@@ -11,7 +11,7 @@ voice activation, multi-step tool use, 7-layer memory, approval gates, zero clou
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![License: AGPL-3.0+](https://img.shields.io/badge/license-AGPL%203.0+-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Telemetry: zero](https://img.shields.io/badge/telemetry-zero-brightgreen)](#-zero-telemetry)
-[![Tests: 553 passing](https://img.shields.io/badge/tests-553%20passing-brightgreen)](https://github.com/xbrxr03/clawos/actions)
+[![Tests: 661 collected](https://img.shields.io/badge/tests-661%20collected-brightgreen)](https://github.com/xbrxr03/clawos/actions)
 [![Stars](https://img.shields.io/github/stars/xbrxr03/clawos?style=social)](https://github.com/xbrxr03/clawos/stargazers)
 
 **[Install in 2 minutes](#-quick-start)** · **[See it in action](#-see-it-in-action)** · **[Read the docs](docs/)** · **[Join the discussion](https://github.com/xbrxr03/clawos/discussions)**

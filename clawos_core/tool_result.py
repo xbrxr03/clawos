@@ -44,7 +44,7 @@ class ToolResult:
         return cls(ok=True, text=text, status="ok")
 
     @classmethod
-    def error(cls, text: str, error: str = "unknown") -> ToolResult:
+    def error(cls, text: str, error: str = "unknown") -> ToolResult:  # noqa: F811
         return cls(ok=False, text=text, status="error", error=error)
 
     @classmethod

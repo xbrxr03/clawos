@@ -3,7 +3,6 @@
 
 import os
 import json
-import shutil
 import subprocess
 import urllib.request
 from pathlib import Path

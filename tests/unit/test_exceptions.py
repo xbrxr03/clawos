@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Unit tests for clawos_core.exceptions module."""
 
-import pytest
 from clawos_core.exceptions import (
     ClawOSError,
     AuthenticationError,

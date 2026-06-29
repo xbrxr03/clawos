@@ -3,7 +3,7 @@
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from services.metricd.service import get_metrics
+from services.metricd.service import get_metrics  # noqa: E402
 
 if __name__ == "__main__":
     m = get_metrics()

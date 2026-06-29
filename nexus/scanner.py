@@ -10,7 +10,6 @@ Called by:
 """
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 # ── Injection patterns ────────────────────────────────────────────────────────
 # Ordered roughly by severity. Each pattern has a weight (1-3).

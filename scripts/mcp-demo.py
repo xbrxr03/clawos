@@ -19,7 +19,6 @@ Requirements:
   - ClawOS services running (bash scripts/dev_boot.sh)
 """
 import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -27,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
-from services.toolbridge.mcp_client import MCPClient, create_default_config
+from services.toolbridge.mcp_client import MCPClient, create_default_config  # noqa: E402
 
 
 async def main():
@@ -80,7 +79,7 @@ async def main():
                     "mcp.filesystem.list_directory",
                     {"path": str(Path.home())}
                 )
-                print(f"   ✓ Tool executed successfully")
+                print("   ✓ Tool executed successfully")
                 print(f"   Result preview: {result[:200]}...")
             except Exception as e:
                 print(f"   ⚠️  Tool execution failed: {e}")

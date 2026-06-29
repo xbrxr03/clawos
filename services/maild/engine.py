@@ -6,12 +6,8 @@ Local email integration via IMAP/SMTP.
 Reads from your existing email account, sends via SMTP.
 Credentials stored in ~/.clawos/config.yaml under the mail section.
 """
-import json
 import logging
-import time
-from dataclasses import dataclass, field, asdict
-from pathlib import Path
-from typing import Optional
+from dataclasses import dataclass, asdict
 
 log = logging.getLogger("maild")
 

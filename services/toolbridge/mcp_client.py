@@ -18,8 +18,7 @@ import json
 import logging
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
-from urllib.parse import urlparse
+from typing import Optional
 
 import httpx
 

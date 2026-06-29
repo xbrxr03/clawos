@@ -168,7 +168,7 @@ def _load_keys() -> dict:
     if KEY_FILE.exists():
         try:
             return json.loads(KEY_FILE.read_text())
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as e:
             log.debug(f"failed: {e}")
             pass
             pass
@@ -305,7 +305,7 @@ class LLMProxy:
                     f"http://localhost:{self.port}/health", timeout=2
                 ) as r:
                     reachable = r.status == 200
-            except (OSError, ConnectionRefusedError, TimeoutError):
+            except (OSError, ConnectionRefusedError, TimeoutError) as e:
                 log.debug(f"failed: {e}")
                 pass
                 pass

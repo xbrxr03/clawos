@@ -20,12 +20,10 @@ import json
 import logging
 import sqlite3
 import time
-import traceback
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
-from enum import Enum, auto
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Optional, Union
+from typing import Any, Callable, Coroutine, Optional
 from uuid import uuid4
 
 from clawos_core.constants import CLAWOS_DIR

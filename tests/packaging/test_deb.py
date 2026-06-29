@@ -7,10 +7,8 @@ Run with:
 
 If --deb is not supplied the tests are skipped.
 """
-import os
 import shutil
 import subprocess
-import tarfile
 import tempfile
 from pathlib import Path
 
@@ -204,4 +202,4 @@ class TestLintian:
             capture_output=True, text=True,
         )
         errors = [line for line in result.stdout.splitlines() if line.startswith("E:")]
-        assert not errors, f"lintian errors:\n" + "\n".join(errors)
+        assert not errors, "lintian errors:\n" + "\n".join(errors)

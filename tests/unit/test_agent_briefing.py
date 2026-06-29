@@ -5,7 +5,6 @@ fallback path. Does NOT call Ollama — we verify the orchestration code,
 fallback synthesis, and parallel tool gathering.
 """
 import asyncio
-import types
 
 from runtimes.agent.briefing import _fallback_text, _gather_briefing_data
 

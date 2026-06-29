@@ -11,10 +11,8 @@ Usage:
 import sys
 import json
 import tempfile
-import subprocess
-import shutil
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
@@ -24,12 +22,14 @@ passed = failed = 0
 
 
 def ok(name):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  \u2713  {name}")
 
 
 def fail(name, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     print(f"  \u2717  {name}" + (f" \u2014 {reason}" if reason else ""))
 
 
@@ -43,11 +43,10 @@ section("1. Compression module imports")
 try:
     from openclaw_integration.compression import (
         headroom_installed, headroom_running, headroom_stats,
-        install_headroom, start_headroom, stop_headroom,
-        rtk_installed, install_rtk, configure_rtk_hook, rtk_stats,
+        install_headroom, rtk_installed, rtk_stats,
         patch_openclaw_config_for_headroom, restore_openclaw_config,
         setup_compression, compression_status,
-        HEADROOM_PORT, HEADROOM_PID, HEADROOM_LOG, RTK_BIN,
+        HEADROOM_PORT,
     )
     assert HEADROOM_PORT == 8787
     ok("compression module imports cleanly, HEADROOM_PORT=8787")

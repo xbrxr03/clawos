@@ -6,9 +6,7 @@ All tests run without a live LLM or Ollama instance.
 
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))

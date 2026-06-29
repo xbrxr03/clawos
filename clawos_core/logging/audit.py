@@ -6,7 +6,6 @@ Every entry hashes the previous — tamper-evident chain.
 import json
 import logging
 import sqlite3
-from pathlib import Path
 from clawos_core.constants import AUDIT_JSONL, POLICYD_DB
 from clawos_core.models import AuditEntry
 
@@ -103,7 +102,7 @@ def tail(n: int = 50) -> list[dict]:
             if line.strip():
                 try:
                     result.append(json.loads(line))
-                except (json.JSONDecodeError, ValueError):
+                except (json.JSONDecodeError, ValueError) as e:
                     log.debug(f"failed: {e}")
                     pass
                     pass
@@ -117,7 +116,7 @@ def verify_chain(entries: list[dict]) -> bool:
     import hashlib
     for i in range(1, len(entries)):
         e = entries[i]
-        prev = entries[i-1]
+        entries[i-1]
         expected = hashlib.sha256(
             f"{e['prev_hash']}{e['entry_id']}{e['tool']}{e['target']}{e['decision']}{e['timestamp']}".encode()
         ).hexdigest()

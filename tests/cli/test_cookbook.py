@@ -1,10 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Tests for clawctl cookbook — hardware scanning and model recommendations."""
-import pytest
-from unittest.mock import patch, MagicMock
 from clawctl.commands.cookbook import (
-    HardwareProfile, ModelSpec, ModelRecommendation,
-    scan_hardware, score_models, MODEL_CATALOG,
+    HardwareProfile, ModelSpec, scan_hardware, score_models, MODEL_CATALOG,
 )
 
 
@@ -33,7 +30,7 @@ class TestHardwareProfile:
         assert hw.ram_gb == 8
 
     def test_tier_assignment_C(self):
-        hw = HardwareProfile(ram_gb=32, gpu_vram_gb=16)
+        HardwareProfile(ram_gb=32, gpu_vram_gb=16)
         # Tier C: >=32GB RAM or >=16GB VRAM
 
 
@@ -75,7 +72,7 @@ class TestScoreModels:
         )
         recs = score_models(hw)
         # Tier C models should not fit
-        tier_c = [r for r in recs if r.model.tier == "C" and r.fits]
+        [r for r in recs if r.model.tier == "C" and r.fits]
         # Some C-tier models may still fit if RAM is enough, but should score low
         fitting = [r for r in recs if r.fits]
         assert len(fitting) > 0
@@ -91,7 +88,7 @@ class TestScoreModels:
             gpu_vendor="none", gpu_compute="cpu", tier="B"
         )
         recs_gpu = score_models(hw_gpu)
-        recs_cpu = score_models(hw_cpu)
+        score_models(hw_cpu)
         # GPU scores should be >= CPU scores for GPU-requiring models
         gpu_requiring = [r for r in recs_gpu if r.model.min_vram_gb > 0 and r.fits]
         assert len(gpu_requiring) >= 0  # May be empty on this hardware

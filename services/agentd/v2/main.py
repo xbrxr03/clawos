@@ -15,19 +15,18 @@ Features:
 Addresses the multi-agent gap from CRITICAL_GAPS_RESEARCH.md
 """
 import asyncio
-import json
 import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Callable, AsyncIterator
+from typing import Any, Dict, List, Optional, Callable
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 import uvicorn
 
-from clawos_core.constants import CLAWOS_DIR, PORT_AGENTD_V2
+from clawos_core.constants import PORT_AGENTD_V2
 from clawos_core.config.loader import load as get_config
 
 log = logging.getLogger("agentd_v2")

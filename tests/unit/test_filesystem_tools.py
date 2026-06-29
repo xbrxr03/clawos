@@ -12,7 +12,6 @@ All tests use pytest's tmp_path fixture. No real files are touched.
 import json
 from pathlib import Path
 
-import pytest
 
 from tools.filesystem.read_file import run as read_run, _resolve as read_resolve, MAX_BYTES as READ_MAX
 from tools.filesystem.write_file import run as write_run, _resolve as write_resolve

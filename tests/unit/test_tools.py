@@ -4,9 +4,7 @@ Unit tests for ClawOS tools — filesystem (read/write), tool registry,
 and dispatch. All tests use temporary workspaces. No real files touched.
 """
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 from tools.filesystem.write_file import run as write_run, _resolve as write_resolve
 from tools.filesystem.read_file import run as read_run, _resolve as read_resolve, MAX_BYTES

@@ -12,7 +12,7 @@ import sys
 def run_activate(key: str):
     """Activate a ClawOS license key on this machine."""
     key = key.strip().upper()
-    print(f"🔑 Activating license key...")
+    print("🔑 Activating license key...")
 
     try:
         from clawos_core.license import get_license_manager
@@ -26,22 +26,22 @@ def run_activate(key: str):
         tier = result["tier"]
         email = result.get("email", "")
         tier_label = {"premium": "Premium ⭐", "pro": "Pro 🚀"}.get(tier, tier)
-        print(f"\n  ✓ License activated!")
+        print("\n  ✓ License activated!")
         print(f"    Tier:  {tier_label}")
         if email:
             print(f"    Email: {email}")
         print(f"\n  All {tier} features are now unlocked.")
-        print(f"  Run 'clawctl license status' to see what's available.")
+        print("  Run 'clawctl license status' to see what's available.")
     else:
         print(f"\n  ✗ Activation failed: {result['error']}", file=sys.stderr)
-        print(f"  Get a key at: https://clawos.dev/#premium")
+        print("  Get a key at: https://clawos.dev/#premium")
         sys.exit(1)
 
 
 def run_status():
     """Show current license status."""
     try:
-        from clawos_core.license import get_license_manager, FREE_FEATURES, PREMIUM_FEATURES
+        from clawos_core.license import get_license_manager
         mgr = get_license_manager()
         status = mgr.get_status()
     except (ImportError, ModuleNotFoundError) as e:
@@ -54,8 +54,8 @@ def run_status():
     tier_icons = {"free": "○", "premium": "⭐", "pro": "🚀"}
     icon = tier_icons.get(tier, "?")
 
-    print(f"\n  ClawOS License Status")
-    print(f"  ─────────────────────")
+    print("\n  ClawOS License Status")
+    print("  ─────────────────────")
     print(f"  Tier:   {icon}  {tier.upper()}")
     print(f"  Valid:  {'✓ Yes' if valid else '✗ No'}")
 
@@ -71,13 +71,12 @@ def run_status():
     print(f"  Machine: {status.get('machine_id', '?')}")
 
     if tier == "free":
-        print(f"\n  Free tier unlocks: core agent, Ollama, basic workflows, Piper TTS")
-        print(f"  Premium unlocks: all workflows, cloud models, ElevenLabs, Nexus Brain,")
-        print(f"                   browser control, A2A, proactive intelligence + more")
-        print(f"\n  Upgrade: https://clawos.dev/#premium  ($10 once, yours forever)")
+        print("\n  Free tier unlocks: core agent, Ollama, basic workflows, Piper TTS")
+        print("  Premium unlocks: all workflows, cloud models, ElevenLabs, Nexus Brain,")
+        print("                   browser control, A2A, proactive intelligence + more")
+        print("\n  Upgrade: https://clawos.dev/#premium  ($10 once, yours forever)")
     elif tier in ("premium", "pro"):
-        print(f"\n  Premium features active:")
-        from clawos_core.license import PREMIUM_FEATURES
+        print("\n  Premium features active:")
         feature_labels = [
             "✓ All 29 workflows",
             "✓ Cloud AI models (OpenRouter + kimi-k2)",

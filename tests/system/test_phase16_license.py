@@ -4,13 +4,11 @@ Phase 16 — Monetisation / License tests.
 Tests LicenseManager, FeatureGate, @require_premium decorator.
 All tests run offline (no Supabase connection).
 """
-import json
-import os
 import tempfile
 import time
 import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 # ── 1. LicenseManager — module loads ─────────────────────────────────────────
@@ -214,7 +212,7 @@ def test_feature_gate_has_feature_premium():
 
 def test_require_premium_allows_premium():
     """@require_premium passes when tier is premium."""
-    from clawos_core.feature_gate import require_premium, FeatureGate
+    from clawos_core.feature_gate import require_premium
 
     @require_premium
     def premium_fn():
@@ -226,7 +224,7 @@ def test_require_premium_allows_premium():
 
 def test_require_premium_blocks_free():
     """@require_premium raises FeatureNotAvailable on free tier."""
-    from clawos_core.feature_gate import require_premium, FeatureNotAvailable, FeatureGate
+    from clawos_core.feature_gate import require_premium, FeatureNotAvailable
 
     @require_premium
     def premium_fn():

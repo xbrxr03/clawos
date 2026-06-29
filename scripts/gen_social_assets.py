@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Generate social media assets for ClawOS."""
-import os
 from pathlib import Path
 
 # Generate SVG social card (1200x630 for GitHub/Twitter)
@@ -223,7 +222,7 @@ try:
         font_med = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 24)
         font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 14)
         font_mono = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 13)
-    except:
+    except Exception:
         font_large = ImageFont.load_default()
         font_med = font_small = font_mono = font_large
 

@@ -12,7 +12,7 @@ ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
 SETUP_HEADERS = {"X-ClawOS-Setup": "1"}
 

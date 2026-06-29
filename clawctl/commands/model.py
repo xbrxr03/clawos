@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl model — manage Ollama models."""
 import subprocess
-from clawctl.ui.banner import success, error, info, table
+from clawctl.ui.banner import success, error, info
 
 
 def run_list():

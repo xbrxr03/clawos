@@ -2,7 +2,6 @@
 """clawctl ace commands — ACE self-improving loop (LEARNED.md) management."""
 from __future__ import annotations
 
-import sys
 import time
 from pathlib import Path
 
@@ -28,7 +27,7 @@ def run_status(workspace: str) -> None:
         size = learned.stat().st_size
         mtime = learned.stat().st_mtime
         lines = learned.read_text(encoding="utf-8", errors="ignore").strip().splitlines()
-        entries = [l for l in lines if l.startswith("[")]
+        entries = [line for line in lines if line.startswith("[")]
         print(f"  File:      {learned}")
         print(f"  Size:      {size:,} bytes")
         print(f"  Entries:   {len(entries)}")

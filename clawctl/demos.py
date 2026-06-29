@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Clawctl demos subcommand - run the v1.0 flagship demos."""
 import asyncio
+import json
 import subprocess
 import sys
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import click
 import httpx
 
-from clawos_core.constants import PORT_REMINDERD, PORT_WAKETRD, PORT_DASHD
+from clawos_core.constants import PORT_WAKETRD, PORT_DASHD
 
 
 @click.group(name="demos")
@@ -155,7 +155,6 @@ def quirky_combo():
     click.echo("Testing multi-tool orchestration...")
     
     from runtimes.agent.runtime import build_runtime
-    import json
     
     async def run_combo():
         runtime = await build_runtime()

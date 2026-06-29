@@ -2,8 +2,6 @@
 """Tests for DevOps Notebooks skill."""
 
 import pytest
-from pathlib import Path
-import tempfile
 
 from skills.notebooks.main import (
     NotebookParser,

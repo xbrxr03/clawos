@@ -5,7 +5,6 @@ Shared Nexus presence, autonomy, briefing, mission, and voice-session state.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 

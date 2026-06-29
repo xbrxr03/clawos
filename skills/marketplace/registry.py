@@ -14,11 +14,9 @@ Trust tiers (ClawOS-specific, layered on top of ClawHub data):
   - "community"       — from ClawHub, no ClawOS signature
   - "local"           — installed from local path
 """
-import hashlib
 import json
 import logging
 import time
-from pathlib import Path
 from typing import Optional
 
 log = logging.getLogger("skill_registry")
@@ -31,7 +29,7 @@ CLAWHUB_API = "https://hub.openclaw.ai/api/v1"
 CLAWOS_SIG_INDEX_URL = "https://raw.githubusercontent.com/xbrxr03/clawos-skill-sigs/main/index.json"
 
 # Local install dir
-from clawos_core.constants import CLAWOS_DIR
+from clawos_core.constants import CLAWOS_DIR  # noqa: E402
 SKILLS_DIR = CLAWOS_DIR / "skills"
 SIG_INDEX_CACHE = CLAWOS_DIR / "config" / "skill_sig_index.json"
 INSTALLED_DB = CLAWOS_DIR / "config" / "installed_skills.json"
@@ -65,7 +63,7 @@ def _load_sig_index() -> dict:
             data = json.loads(SIG_INDEX_CACHE.read_text())
             if time.time() - data.get("_cached_at", 0) < 86400:  # 24h cache
                 return data.get("skills", {})
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as e:
             log.debug(f"failed: {e}")
             pass
             pass

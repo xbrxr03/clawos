@@ -7,7 +7,6 @@ System prompt is static (cacheable). Dynamic context goes in user message only.
 """
 import json
 import os
-from pathlib import Path
 
 try:
     from json_repair import repair_json

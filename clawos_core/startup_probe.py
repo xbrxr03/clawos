@@ -8,7 +8,6 @@ ordering. In dev mode, this prevents race conditions.
 """
 import asyncio
 import logging
-import socket
 from typing import Sequence
 
 log = logging.getLogger("clawos.startup")

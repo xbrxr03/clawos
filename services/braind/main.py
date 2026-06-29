@@ -14,23 +14,22 @@ Features:
 
 Addresses Gap #9: Second Brain Pattern from CRITICAL_GAPS_RESEARCH.md
 """
-import asyncio
 import json
 import logging
 import sqlite3
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 
 try:
-    import chromadb
-    from chromadb.utils import embedding_functions
+    import chromadb  # noqa: F401
+    from chromadb.utils import embedding_functions  # noqa: F401
     CHROMADB_AVAILABLE = True
 except ImportError:
     CHROMADB_AVAILABLE = False
@@ -253,7 +252,7 @@ class KnowledgeGraph:
         with sqlite3.connect(self.db_path) as conn:
             if tags:
                 # Search by tags
-                placeholders = ','.join('?' * len(tags))
+                ','.join('?' * len(tags))
                 sql = f"""
                     SELECT * FROM memories 
                     WHERE content LIKE ? 

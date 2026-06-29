@@ -22,7 +22,6 @@ Subcommand detection:
   Anything else is treated as a natural language shell request.
 """
 import sys
-import os
 from pathlib import Path
 
 # Ensure clawos root is on path
@@ -151,7 +150,6 @@ def cmd_memory(args: list):
     query = " ".join(args) if args else "recent"
     try:
         from services.memd.service import MemoryService
-        from clawos_core.constants import DEFAULT_WORKSPACE
         ws = _active_workspace()
         mem = MemoryService()
         print(f"\n  {_b(PURPLE, 'Memory')}  {_d('workspace: ' + ws)}\n")
@@ -202,7 +200,7 @@ def cmd_workspace(args: list):
         _set_active_workspace(name)
         print(f"\n  {_p(GREEN, '✓')}  Active workspace set to {_p(AMBER, name)}\n")
     else:
-        print(f"\n  Usage: nexus workspace [list|create|delete|switch] [name]\n")
+        print("\n  Usage: nexus workspace [list|create|delete|switch] [name]\n")
 
 
 # ── model ─────────────────────────────────────────────────────────────────────
@@ -223,7 +221,7 @@ def cmd_model(args: list):
         from clawctl.commands.model import run_set_default
         run_set_default(name)
     else:
-        print(f"\n  Usage: nexus model [list|pull|remove|default] [name]\n")
+        print("\n  Usage: nexus model [list|pull|remove|default] [name]\n")
 
 
 # ── policy ────────────────────────────────────────────────────────────────────
@@ -286,7 +284,8 @@ def cmd_setup():
 # ── use-kimi ──────────────────────────────────────────────────────────────────
 def cmd_use_kimi():
     """Authorize this device for Kimi K2.5 and reconfigure OpenClaw to use it."""
-    import subprocess, json
+    import subprocess
+    import json
     from pathlib import Path
 
     print(f"\n  {_p(CYAN, '◆')}  Switching OpenClaw to Kimi K2.5\n")
@@ -322,7 +321,8 @@ def cmd_use_kimi():
         restart_service("openclaw-gateway.service")
     except (ImportError, ModuleNotFoundError):
         pass
-    import time; time.sleep(2)
+    import time
+    time.sleep(2)
 
     print(f"  {_p(GREEN, '✓')}  Done. Launching OpenClaw...\n")
     subprocess.run(["openclaw", "tui"])
@@ -416,7 +416,7 @@ def _run_plan_mode(spec: str, agent):
         "Respond with ONLY a JSON array. No prose outside the JSON."
     )
 
-    print(f"\n  Generating plan...")
+    print("\n  Generating plan...")
     try:
         raw = asyncio.run(agent.chat(plan_prompt))
     except (EOFError, KeyboardInterrupt, OSError) as e:
@@ -482,7 +482,8 @@ def cmd_command(args: list):
     for a in args:
         if a.isdigit():
             port = int(a)
-    import subprocess, sys
+    import subprocess
+    import sys
     serve_script = _ROOT / "dashboard" / "nexus-command" / "serve.py"
     if not serve_script.exists():
         print(f"\n  {_p(RED, 'x')}  Nexus Command not found at {serve_script}\n")
@@ -579,32 +580,32 @@ def cmd_secret(args: list):
     store = get_store()
 
     if not args:
-        print(f"\n  Usage: nexus secret set <NAME> <VALUE>")
-        print(f"         nexus secret get <NAME>")
-        print(f"         nexus secret list")
-        print(f"         nexus secret remove <NAME>\n")
+        print("\n  Usage: nexus secret set <NAME> <VALUE>")
+        print("         nexus secret get <NAME>")
+        print("         nexus secret list")
+        print("         nexus secret remove <NAME>\n")
         return
 
     sub = args[0].lower()
 
     if sub == "set":
         if len(args) < 3:
-            print(f"\n  Usage: nexus secret set <NAME> <VALUE>\n")
+            print("\n  Usage: nexus secret set <NAME> <VALUE>\n")
             return
         name, value = args[1], " ".join(args[2:])
         if store.set(name, value):
-            print(f"\n  " + _p(GREEN, "✓") + f"  Secret {_b(PURPLE, name)} stored\n")
+            print("\n  " + _p(GREEN, "✓") + f"  Secret {_b(PURPLE, name)} stored\n")
         else:
-            print(f"\n  " + _p(RED, "✗") + f"  Invalid name: {name}\n")
+            print("\n  " + _p(RED, "✗") + f"  Invalid name: {name}\n")
 
     elif sub == "get":
         if len(args) < 2:
-            print(f"\n  Usage: nexus secret get <NAME>\n")
+            print("\n  Usage: nexus secret get <NAME>\n")
             return
         name  = args[1]
         value = store.get(name)
         if value is None:
-            print(f"\n  " + _p(RED, "✗") + f"  Secret not found: {name}\n")
+            print("\n  " + _p(RED, "✗") + f"  Secret not found: {name}\n")
         else:
             # Show masked by default
             masked = value[:4] + "*" * max(0, len(value) - 4)
@@ -625,13 +626,13 @@ def cmd_secret(args: list):
 
     elif sub == "remove":
         if len(args) < 2:
-            print(f"\n  Usage: nexus secret remove <NAME>\n")
+            print("\n  Usage: nexus secret remove <NAME>\n")
             return
         name = args[1]
         if store.remove(name):
-            print(f"\n  " + _p(GREEN, "✓") + f"  Secret {_b(PURPLE, name)} removed\n")
+            print("\n  " + _p(GREEN, "✓") + f"  Secret {_b(PURPLE, name)} removed\n")
         else:
-            print(f"\n  " + _p(RED, "✗") + f"  Secret not found: {name}\n")
+            print("\n  " + _p(RED, "✗") + f"  Secret not found: {name}\n")
 
     else:
         print(f"\n  Unknown subcommand: {sub}\n")
@@ -641,15 +642,14 @@ def cmd_secret(args: list):
 def cmd_project(args: list):
     from clawos_core.constants import DEFAULT_WORKSPACE, WORKSPACE_DIR
     from pathlib import Path as _Path
-    import json as _json
 
     if not args:
-        print(f"\n  Usage: nexus project start <name>")
-        print(f"         nexus project switch <name>")
-        print(f"         nexus project list")
-        print(f"         nexus project upload <file>")
-        print(f"         nexus project files")
-        print(f"         nexus project forget <filename>\n")
+        print("\n  Usage: nexus project start <name>")
+        print("         nexus project switch <name>")
+        print("         nexus project list")
+        print("         nexus project upload <file>")
+        print("         nexus project files")
+        print("         nexus project forget <filename>\n")
         return
 
     sub = args[0].lower()
@@ -673,7 +673,7 @@ def cmd_project(args: list):
 
     if sub == "start":
         if len(args) < 2:
-            print(f"\n  Usage: nexus project start <name>\n")
+            print("\n  Usage: nexus project start <name>\n")
             return
         name = "_".join(args[1:]).replace(" ", "_").lower()
         ws   = _ws_dir(name)
@@ -682,7 +682,7 @@ def cmd_project(args: list):
         # Ask for one-line description
         print(f"\n  Creating project {_b(PURPLE, name)}")
         try:
-            desc = input(f"  Describe this project in one line: ").strip()
+            desc = input("  Describe this project in one line: ").strip()
         except (EOFError, KeyboardInterrupt):
             desc = ""
         if desc:
@@ -692,23 +692,23 @@ def cmd_project(args: list):
                 with open(pinned, "a") as f:
                     f.write(f"\nProject: {name}\nDescription: {desc}\n")
         _set_current_ws(name)
-        print(f"  " + _p(GREEN, "✓") + f"  Project {_b(PURPLE, name)} created and active")
+        print("  " + _p(GREEN, "✓") + f"  Project {_b(PURPLE, name)} created and active")
         if desc:
             print(f"  {_d('Pinned: ' + desc)}")
-        print(f"\n  Upload docs: nexus project upload <file.pdf>\n")
+        print("\n  Upload docs: nexus project upload <file.pdf>\n")
 
     elif sub == "switch":
         if len(args) < 2:
-            print(f"\n  Usage: nexus project switch <name>\n")
+            print("\n  Usage: nexus project switch <name>\n")
             return
         name = args[1]
         ws   = _ws_dir(name)
         if not ws.exists():
-            print(f"\n  " + _p(RED, "✗") + f"  Project not found: {name}")
+            print("\n  " + _p(RED, "✗") + f"  Project not found: {name}")
             print(f"  Create it: nexus project start {name}\n")
             return
         _set_current_ws(name)
-        print(f"\n  " + _p(GREEN, "✓") + f"  Switched to {_b(PURPLE, name)}\n")
+        print("\n  " + _p(GREEN, "✓") + f"  Switched to {_b(PURPLE, name)}\n")
 
     elif sub == "list":
         try:
@@ -729,11 +729,11 @@ def cmd_project(args: list):
 
     elif sub == "upload":
         if len(args) < 2:
-            print(f"\n  Usage: nexus project upload <file>\n")
+            print("\n  Usage: nexus project upload <file>\n")
             return
         src  = _Path(args[1])
         if not src.exists():
-            print(f"\n  " + _p(RED, "✗") + f"  File not found: {src}\n")
+            print("\n  " + _p(RED, "✗") + f"  File not found: {src}\n")
             return
         current = _current_ws()
         ws      = _ws_dir(current)
@@ -751,7 +751,7 @@ def cmd_project(args: list):
             else:
                 kept  = stats.get("chunks_kept", 0)
                 types = stats.get("chunk_types", {})
-                print(f"  " + _p(GREEN, "✓") + f"  {kept} chunks indexed")
+                print("  " + _p(GREEN, "✓") + f"  {kept} chunks indexed")
                 if types:
                     summary = ", ".join(f"{k}={v}" for k, v in sorted(types.items()))
                     print(f"  {_d(summary)}")
@@ -781,7 +781,7 @@ def cmd_project(args: list):
 
     elif sub == "forget":
         if len(args) < 2:
-            print(f"\n  Usage: nexus project forget <filename>\n")
+            print("\n  Usage: nexus project forget <filename>\n")
             return
         current  = _current_ws()
         ws       = _ws_dir(current)
@@ -791,9 +791,9 @@ def cmd_project(args: list):
             rag = get_rag(current, ws)
             ok  = rag.forget(filename)
             if ok:
-                print(f"\n  " + _p(GREEN, "✓") + f"  Removed {filename} from index\n")
+                print("\n  " + _p(GREEN, "✓") + f"  Removed {filename} from index\n")
             else:
-                print(f"\n  " + _p(RED, "✗") + f"  Not found: {filename}\n")
+                print("\n  " + _p(RED, "✗") + f"  Not found: {filename}\n")
         except (OSError, RuntimeError, AttributeError) as e:
             print(f"\n  {_p(RED, '✗')}  {e}\n")
 
@@ -811,9 +811,11 @@ async def cmd_workflow(args: list):
         i = 1
         while i < len(args):
             if args[i] in ("--category", "-c") and i + 1 < len(args):
-                category = args[i + 1]; i += 2
+                category = args[i + 1]
+                i += 2
             elif args[i] in ("--search", "-s") and i + 1 < len(args):
-                search = args[i + 1]; i += 2
+                search = args[i + 1]
+                i += 2
             else:
                 i += 1
         from workflows.engine import get_engine
@@ -898,10 +900,10 @@ async def cmd_workflow(args: list):
         print(f"\n  {_p(CYAN, 'Try these first:')}\n")
         for s in top:
             print(f"  {_p(GREEN, s.workflow_id):<40}  {s.reason}  ({s.relevance:.0%})")
-        print(f"\n  Run: nexus workflow run <id>\n")
+        print("\n  Run: nexus workflow run <id>\n")
 
     else:
-        print(f"\n  Usage: nexus workflow [list|run|info|suggest]\n")
+        print("\n  Usage: nexus workflow [list|run|info|suggest]\n")
 
 
 def main(argv: list = None):
@@ -950,13 +952,13 @@ def main(argv: list = None):
 
     elif first == "approve":
         if len(argv) < 2:
-            print(f"\n  Usage: nexus approve <request_id>\n")
+            print("\n  Usage: nexus approve <request_id>\n")
         else:
             cmd_approve(argv[1])
 
     elif first == "deny":
         if len(argv) < 2:
-            print(f"\n  Usage: nexus deny <request_id>\n")
+            print("\n  Usage: nexus deny <request_id>\n")
         else:
             cmd_deny(argv[1])
 
@@ -969,7 +971,7 @@ def main(argv: list = None):
     elif first == "scan":
         text = " ".join(argv[1:])
         if not text:
-            print(f"\n  Usage: nexus scan <text to check>\n")
+            print("\n  Usage: nexus scan <text to check>\n")
         else:
             cmd_scan(text)
 

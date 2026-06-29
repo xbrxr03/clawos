@@ -8,10 +8,10 @@ One session per workspace_id — cached and reused.
 import asyncio
 import logging
 from typing import Optional
-from clawos_core.constants import DEFAULT_WORKSPACE, DEFAULT_MODEL
+from clawos_core.constants import DEFAULT_WORKSPACE
 from clawos_core.models import Task, TaskStatus
 from clawos_core.util.time import now_iso
-from clawos_core.events.bus import get_bus, EV_TASK_UPDATE, EV_LOG
+from clawos_core.events.bus import get_bus
 
 log = logging.getLogger("agentd")
 

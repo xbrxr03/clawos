@@ -12,7 +12,7 @@ import asyncio
 import json
 import logging
 import urllib.request
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 log = logging.getLogger("mcpd.protocol")
 

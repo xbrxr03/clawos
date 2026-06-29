@@ -53,7 +53,7 @@ class FeatureGate:
         now = time.time()
         if self._tier is None or (now - self._last_check) > self._cache_ttl:
             try:
-                from clawos_core.license import get_license_manager, PREMIUM_FEATURES, PRO_FEATURES
+                from clawos_core.license import get_license_manager
                 mgr = get_license_manager()
                 self._tier = mgr.get_tier()
             except (ImportError, ModuleNotFoundError):

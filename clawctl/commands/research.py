@@ -108,7 +108,7 @@ def run_get(session_id: str):
             print(f"     \"{c.excerpt[:150]}\"")
         print()
 
-    fetched = [s for s in session.sources if s.fetched]
+    [s for s in session.sources if s.fetched]
     unfetched = [s for s in session.sources if not s.fetched and not s.error]
     errored = [s for s in session.sources if s.error]
 

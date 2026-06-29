@@ -12,10 +12,10 @@ import threading
 import queue
 import logging
 from contextlib import contextmanager
-from typing import Optional, Dict, Any, Generator
+from typing import Optional, Dict, Generator
 from pathlib import Path
 
-from clawos_core.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
+from clawos_core.circuit_breaker import CircuitBreaker
 from clawos_core.exceptions import DatabaseError, ErrorContext
 
 logger = logging.getLogger(__name__)

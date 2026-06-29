@@ -71,4 +71,4 @@ async def api_delete_note(note_id: str):
     return {"deleted": True}
 
 
-import time
+import time  # noqa: E402

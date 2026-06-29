@@ -4,7 +4,6 @@ maild — Email API Service
 =========================
 """
 import logging
-from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from services.maild.engine import check_mail, send_mail, MailConfig

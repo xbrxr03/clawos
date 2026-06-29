@@ -10,7 +10,6 @@ Agents read from and write back to the graph.
 import asyncio
 import logging
 import threading
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -42,7 +41,6 @@ class BrainService:
             data = self._storage.load_graph()
             if data.get("nodes"):
                 # Rebuild NetworkX graph from saved render dict
-                from services.braind.graph_builder import _node_id
                 for node in data.get("nodes", []):
                     nid = node["id"]
                     if self._graph.g is not None:
@@ -273,7 +271,7 @@ class BrainService:
         context_text = ""
         if all_labels:
             context_text = (
-                f"[Kizuna Context — related knowledge]\n"
+                "[Kizuna Context — related knowledge]\n"
                 + "\n".join(f"• {label}" for label in all_labels[:20])
                 + "\n[End Brain Context]"
             )

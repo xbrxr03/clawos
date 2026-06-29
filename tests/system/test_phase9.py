@@ -6,7 +6,6 @@ Validates Phase 9 deliverables: security hardening, A2A endpoints,
 capabilityd, voice components, plan mode, dashboard tokens.
 """
 import sys
-import os
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
@@ -39,8 +38,8 @@ def fail(label: str, reason: str = ""):
 def test_no_shell_true_toolbridge():
     f = read_text(ROOT / "services" / "toolbridge" / "service.py")
     lines_with_shell_true = [
-        l for l in f.splitlines()
-        if "shell=True" in l and not l.strip().startswith("#")
+        line for line in f.splitlines()
+        if "shell=True" in line and not line.strip().startswith("#")
     ]
     if not lines_with_shell_true:
         ok("toolbridge: no shell=True")
@@ -50,7 +49,7 @@ def test_no_shell_true_toolbridge():
 
 def test_no_shell_true_runner():
     f = read_text(ROOT / "tools" / "shell" / "do" / "runner.py")
-    lines = [l for l in f.splitlines() if "shell=True" in l and not l.strip().startswith("#")]
+    lines = [line for line in f.splitlines() if "shell=True" in line and not line.strip().startswith("#")]
     if not lines:
         ok("do/runner: no shell=True")
     else:
@@ -59,7 +58,7 @@ def test_no_shell_true_runner():
 
 def test_no_shell_true_doctor():
     f = read_text(ROOT / "clawctl" / "commands" / "doctor.py")
-    lines = [l for l in f.splitlines() if "shell=True" in l and not l.strip().startswith("#")]
+    lines = [line for line in f.splitlines() if "shell=True" in line and not line.strip().startswith("#")]
     if not lines:
         ok("doctor: no shell=True")
     else:
@@ -135,7 +134,7 @@ def test_config_gen_kimi():
 def test_config_gen_ctx_cap():
     from openclaw_integration.config_gen import CTX_CAP, GOOD_MODELS
     if CTX_CAP == 8192:
-        ok(f"config_gen: CTX_CAP=8192")
+        ok("config_gen: CTX_CAP=8192")
     else:
         fail("config_gen: CTX_CAP wrong", str(CTX_CAP))
     # Ensure no local model exceeds cap

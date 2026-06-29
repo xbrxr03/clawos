@@ -42,10 +42,8 @@ print(json.dumps(config))
 ```
 """
 import re
-import json
 import logging
 import subprocess
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -390,7 +388,7 @@ class NotebookExporter:
             
             elif cell.cell_type == CellType.CODE:
                 lang = cell.language.value if cell.language else "text"
-                html.append(f'<div class="code-cell">')
+                html.append('<div class="code-cell">')
                 html.append(f'<pre><code class="language-{lang}">{cell.content}</code></pre>')
                 
                 # Add outputs

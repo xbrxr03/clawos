@@ -10,7 +10,6 @@ Usage:
   python3 tests/system/test_phase2.py --e2e
 """
 import sys
-import asyncio
 import tempfile
 from pathlib import Path
 
@@ -22,12 +21,14 @@ passed = failed = 0
 
 
 def ok(name):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  OK  {name}")
 
 
 def fail(name, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     print(f"  XX  {name}" + (f" - {reason}" if reason else ""))
 
 
@@ -136,7 +137,6 @@ try:
         constants.CLAWOS_DIR = Path(td)
         _paths.CLAWOS_DIR    = Path(td)
         # Patch module-level constants in paths
-        import importlib
         from bootstrap.workspace_init import init_all_dirs, init_workspace
         init_all_dirs()
         for sub in ("config","logs","memory","workspace","voice"):
@@ -206,7 +206,7 @@ try:
     with tempfile.TemporaryDirectory() as td:
         from clawos_core import constants
         constants.CONFIG_DIR = Path(td)
-        from bootstrap.permissions_init import write, DEVELOPER_EXTRAS
+        from bootstrap.permissions_init import write
         write("developer", "test_ws")
         from bootstrap.permissions_init import load
         policy = load()
@@ -262,7 +262,7 @@ except Exception as e:
 section("7. clawctl commands")
 
 try:
-    from clawctl.ui.banner import status_icon, success, error, info, table
+    from clawctl.ui.banner import status_icon
     assert status_icon("active")   == "[ok]"
     assert status_icon("failed")   == "[!!]"
     assert status_icon("inactive") == "[--]"
@@ -286,7 +286,7 @@ except Exception as e:
     fail("clawctl workspace import", str(e))
 
 try:
-    from clawctl.commands.openclaw import run_status, run_install, run_start, run_stop
+    from clawctl.commands.openclaw import run_status
     assert callable(run_status)
     ok("clawctl openclaw commands importable")
 except Exception as e:
@@ -349,7 +349,7 @@ try:
         content = path.read_text()
         assert "ExecStart" in content
         assert "Restart"   in content
-    ok(f"All 9 systemd unit files exist with ExecStart + Restart")
+    ok("All 9 systemd unit files exist with ExecStart + Restart")
 except Exception as e:
     fail("systemd units", str(e))
 

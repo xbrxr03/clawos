@@ -144,10 +144,8 @@ def extract_triples_llm(text: str, source_file: str = "") -> list[dict]:
                                         "source": source_file, "method": "llm",
                                     })
                         return triples
-                except (ImportError, ModuleNotFoundError):
+                except (ImportError, ModuleNotFoundError) as e:
                     log.debug(f"failed: {e}")
-                    pass
-                    pass
     except (json.JSONDecodeError, ValueError) as e:
         log.debug(f"LLM triple extraction failed: {e}")
 
@@ -238,7 +236,6 @@ class BrainGraph:
 
         try:
             import networkx.algorithms.community as nxc
-            import networkx as nx
             # Use undirected version for community detection
             ug = self._graph.to_undirected()
 
@@ -410,7 +407,6 @@ class BrainGraph:
         if self._graph is None:
             return []
 
-        import networkx as nx
         context_nodes = set(node_ids)
         frontier = set(node_ids)
 

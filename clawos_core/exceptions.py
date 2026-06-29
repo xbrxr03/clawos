@@ -14,7 +14,7 @@ This module ensures:
 """
 
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from dataclasses import dataclass, field
 import logging
 
@@ -268,7 +268,7 @@ def _get_http_status(code: ErrorCode) -> int:
 
 def register_exception_handlers(app):
     """Register exception handlers with a FastAPI application."""
-    from fastapi import Request, HTTPException
+    from fastapi import Request
     from fastapi.responses import JSONResponse
     
     @app.exception_handler(ClawOSError)

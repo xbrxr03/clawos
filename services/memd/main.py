@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """memd entry point."""
-import asyncio, logging
+import asyncio
+import logging
 logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s %(message)s")
-from services.memd.service import MemoryService, CHROMA_OK
-from clawos_core.constants import PORT_MEMD
-from clawos_core.daemon_http import serve_health
+from services.memd.service import MemoryService, CHROMA_OK  # noqa: E402
+from clawos_core.constants import PORT_MEMD  # noqa: E402
+from clawos_core.daemon_http import serve_health  # noqa: E402
 
 def _memd_health():
     return {

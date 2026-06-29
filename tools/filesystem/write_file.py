@@ -7,7 +7,6 @@ def run(target: str, content: str, workspace_root: Path, append: bool = False) -
     path = _resolve(target, workspace_root)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        mode = "a" if append else "w"
         path.write_text(content) if not append else path.open("a").write(content)
         action = "Appended to" if append else "Written"
         return f"[OK] {action} {target} ({len(content)} chars)"

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl budget — show per-workspace token usage."""
-from clawctl.ui.banner import success, error, info, table
+from clawctl.ui.banner import error, info, table
 from clawos_core.constants import DEFAULT_DAILY_TOKEN_BUDGET
 
 

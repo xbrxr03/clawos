@@ -1,15 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Integration tests for reminderd service."""
-import asyncio
-import sqlite3
-import time
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import httpx
 import pytest
 
-from clawos_core.constants import PORT_REMINDERD, CLAWOS_DIR
+from clawos_core.constants import PORT_REMINDERD
 from services.reminderd.service import ReminderService
 
 REMINDERD_URL = f"http://127.0.0.1:{PORT_REMINDERD}"
@@ -40,7 +36,7 @@ class TestReminderService:
         # Add two reminders
         due = datetime.now() + timedelta(hours=1)
         id1 = service.add_reminder("Task 1", due)
-        id2 = service.add_reminder("Task 2", due)
+        service.add_reminder("Task 2", due)
         
         # Mark one as done
         service.mark_done(id1)

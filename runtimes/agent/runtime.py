@@ -25,19 +25,18 @@ import re
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from clawos_core.constants import (
     DEFAULT_MODEL, OLLAMA_HOST, MAX_ITERATIONS, MAX_HISTORY, DEFAULT_WORKSPACE,
-    MAX_VERBATIM_TURNS, COMPRESSION_THRESHOLD_TOKENS,
 )
 from clawos_core.util.ids import task_id, session_id  # noqa: F401
 from clawos_core.models import Session
 from runtimes.agent.prompts import build_user_message
 from runtimes.agent.intents import Intent, classify
-from runtimes.agent.router import pick_model, FAST_MODEL, SMART_MODEL
+from runtimes.agent.router import pick_model
 from runtimes.agent.tool_schemas import (
-    ALL_TOOLS, SENSITIVE_TOOLS, schemas_for_tier,
+    ALL_TOOLS, schemas_for_tier,
 )
 from services.skilld.service import get_loader, format_skills_block
 from services.skilld.auto_skill import should_auto_skill, generate_skill, save_auto_skill, find_similar_skill, update_auto_skill
@@ -190,10 +189,13 @@ class AgentRuntime:
         if self.memory:
             soul   = self.memory.read_soul(self.workspace_id)
             agents = self.memory.read_agents(self.workspace_id)
-            if soul:   parts.append(f"## Your Character (SOUL)\n{soul.strip()}")
-            if agents: parts.append(f"## Operating Instructions (AGENTS)\n{agents.strip()}")
+            if soul:
+                parts.append(f"## Your Character (SOUL)\n{soul.strip()}")
+            if agents:
+                parts.append(f"## Operating Instructions (AGENTS)\n{agents.strip()}")
             identity = self._read_identity()
-            if identity: parts.append(f"## Identity (IDENTITY)\n{identity.strip()}")
+            if identity:
+                parts.append(f"## Identity (IDENTITY)\n{identity.strip()}")
         return "\n\n".join(parts)
 
     def _read_identity(self) -> str:
@@ -527,8 +529,10 @@ class AgentRuntime:
                 name = fn.get("name", "")
                 args = fn.get("arguments") or {}
                 if isinstance(args, str):
-                    try: args = json.loads(args)
-                    except (json.JSONDecodeError, ValueError): args = {}
+                    try:
+                        args = json.loads(args)
+                    except (json.JSONDecodeError, ValueError):
+                        args = {}
                 executed.append({"tool": name, "args": args, "result": result})
                 # Track pending approvals so the next turn can resolve them
                 if isinstance(result, str) and result.startswith("[PENDING APPROVAL]"):
@@ -628,8 +632,10 @@ class AgentRuntime:
             name = fn.get("name", "")
             args = fn.get("arguments") or {}
             if isinstance(args, str):
-                try: args = json.loads(args)
-                except (json.JSONDecodeError, ValueError): args = {}
+                try:
+                    args = json.loads(args)
+                except (json.JSONDecodeError, ValueError):
+                    args = {}
             try:
                 return await self._exec_tool(name, args)
             except Exception as e:  # tool execution may raise arbitrary errors
@@ -702,8 +708,10 @@ class AgentRuntime:
         self.session = Session(workspace_id=self.workspace_id)
         self._awaiting_confirmation = None
         if self.memory:
-            try: self.memory.clear_workflow(self.workspace_id)
-            except (OSError, AttributeError): pass
+            try:
+                self.memory.clear_workflow(self.workspace_id)
+            except (OSError, AttributeError):
+                pass
 
     async def _run_ace(self, task_result: str):
         """

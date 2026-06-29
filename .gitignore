@@ -66,3 +66,6 @@ Thumbs.db
 # ── Misc ──────────────────────────────────────────────────────────────────────
 services/__init__.py
 .coverage
+
+# Lock files (project uses requirements-style installs)
+uv.lock

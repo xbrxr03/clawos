@@ -7,7 +7,7 @@ owns infrastructure: which models are installed, what the current default is,
 and whether VRAM allows a new parallel session on Tier D hardware.
 """
 import logging
-from clawos_core.constants import MODEL_PROFILES, DEFAULT_MODEL
+from clawos_core.constants import MODEL_PROFILES
 from clawos_core.config.loader import get
 from services.modeld.ollama_client import is_running, list_models, model_exists
 

@@ -8,14 +8,12 @@ Usage:
     clawctl dashboard
     clawctl dashboard --watch
 """
-import sys
 import os
 import time
 import json
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass
 from datetime import datetime
 
 # Colors for terminal
@@ -201,8 +199,8 @@ def show_dashboard(watch: bool = False, interval: float = 2.0):
                 f"Services: {len(SERVICES)}",
                 f"Up: {Colors.OKGREEN}{up_count}{Colors.ENDC}",
                 f"Down: {Colors.FAIL}{down_count}{Colors.ENDC}" if down_count > 0 else "Down: 0",
-                f"",
-                f"Press Ctrl+C to exit" if watch else "",
+                "",
+                "Press Ctrl+C to exit" if watch else "",
             ]
             print(draw_box(summary_lines, "Summary", 30))
             print()
@@ -249,7 +247,7 @@ def show_dashboard(watch: bool = False, interval: float = 2.0):
                             duration = call.get("duration_ms", 0)
                             print(f"  • {model}: {duration}ms")
                         print()
-            except:
+            except Exception:
                 pass
             
             # Performance metrics
@@ -262,7 +260,7 @@ def show_dashboard(watch: bool = False, interval: float = 2.0):
                         avg = metric.get("avg_ms", 0)
                         print(f"  • {name}: {avg}ms avg")
                     print()
-            except:
+            except Exception:
                 pass
             
             if not watch:
@@ -288,7 +286,7 @@ def show_service_logs(service: str, lines: int = 50):
         if result.returncode == 0:
             print(result.stdout)
             return
-    except:
+    except Exception:
         pass
     
     # Fallback to log file
@@ -297,7 +295,7 @@ def show_service_logs(service: str, lines: int = 50):
         with open(log_file) as f:
             content = f.readlines()
             print(''.join(content[-lines:]))
-    except:
+    except Exception:
         print(f"No logs found for {service}")
 
 

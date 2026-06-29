@@ -7,11 +7,8 @@ Covers:
   - Workspace scoping
   - Performance: 10K turns search < 50ms
 """
-import os
 import sqlite3
-import tempfile
 import time
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -221,7 +218,6 @@ class TestPerformance:
 
     def test_10k_turns_search_under_50ms(self, memd, session_db):
         """Search across 10K turns should complete in < 50ms."""
-        import uuid
         sid = "perf-sess"
         memd.ingest_session_start(sid, "ws-perf")
         # Bulk insert 10K turns

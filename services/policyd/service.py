@@ -15,10 +15,9 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from clawos_core.constants import (
-    POLICYD_DB, CLAWOS_DIR, TOOL_SCORE_QUEUE, APPROVAL_TIMEOUT_S
+    POLICYD_DB, TOOL_SCORE_QUEUE, APPROVAL_TIMEOUT_S
 )
 from clawos_core.models import Decision, AuditEntry, ApprovalRequest
-from clawos_core.util.ids import entry_id, req_id
 from clawos_core.util.time import now_iso
 import clawos_core.logging.audit as audit_log
 from clawos_core.platform import blocked_paths as default_blocked_paths
@@ -107,7 +106,7 @@ class HookRegistry:
                 if asyncio.iscoroutine(r):
                     await r
                 hook["failures"] = 0
-            except Exception as e:  # async hook callback — keep broad
+            except Exception:  # async hook callback — keep broad
                     hook["enabled"] = False
 
 
@@ -311,7 +310,7 @@ class PolicyEngine:
             print(f"     Target: {target[:80]}")
             if content:
                 print(f"     Content: {content[:100]}...")
-            print(f"     Approve in dashboard or type [a]pprove/[d]eny: ", end="", flush=True)
+            print("     Approve in dashboard or type [a]pprove/[d]eny: ", end="", flush=True)
 
         # Wait for either dashboard approval (event) or timeout
         try:

@@ -6,11 +6,10 @@ Routes inbound messages from any channel to PicoClaw's HTTP API.
 import json
 import logging
 import urllib.request
-from clawos_core.constants import PORT_PICOCLAWD
 
 log = logging.getLogger("picoclawd.bridge")
 
-PICOCLAW_API = f"http://localhost:18800/chat"
+PICOCLAW_API = "http://localhost:18800/chat"
 
 
 def send(message: str, sender: str = "") -> str:

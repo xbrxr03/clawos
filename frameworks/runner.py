@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 import subprocess
 import urllib.request
-from typing import Optional
 
 from frameworks.registry import AppState, get_registry
 

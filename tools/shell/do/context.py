@@ -5,7 +5,6 @@ ClawOS /do — Context collector
 Gathers shell context injected into every LLM prompt.
 Keeps HOME-relative paths explicit so the model never hallucinates /clawos etc.
 """
-import os
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -81,8 +80,8 @@ def _pinned_facts(workspace: str = "jarvis_default") -> str:
         if pinned.exists():
             content = pinned.read_text().strip()
             # Strip comment lines, return first 300 chars
-            lines = [l for l in content.splitlines() if not l.startswith("#")]
-            return " | ".join(l.strip() for l in lines if l.strip())[:300]
+            lines = [line for line in content.splitlines() if not line.startswith("#")]
+            return " | ".join(line.strip() for line in lines if line.strip())[:300]
     except (OSError, UnicodeDecodeError):
         pass
     return ""

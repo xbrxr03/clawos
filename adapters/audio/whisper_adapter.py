@@ -9,11 +9,9 @@ Usage:
 
 Falls back to openai-whisper if faster-whisper not installed.
 """
-import io
 import logging
 import wave
-from pathlib import Path
-from clawos_core.constants import WHISPER_MODEL, WHISPER_RATE
+from clawos_core.constants import WHISPER_MODEL
 import subprocess
 
 log = logging.getLogger("whisper_adapter")
@@ -65,7 +63,8 @@ def transcribe(audio_bytes: bytes, rate: int = 44100) -> str:
         return ""
 
     # Write to temp WAV for whisper
-    import tempfile, os
+    import tempfile
+    import os
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp_path = tmp.name
         with wave.open(tmp_path, "wb") as wf:
@@ -79,7 +78,6 @@ def transcribe(audio_bytes: bytes, rate: int = 44100) -> str:
             segments, _ = _model.transcribe(tmp_path, language="en", beam_size=5)
             text = " ".join(seg.text for seg in segments).strip()
         else:
-            import numpy as np
             import soundfile as sf
             data, sr = sf.read(tmp_path, dtype="float32")
             result = _model.transcribe(data, language="en")

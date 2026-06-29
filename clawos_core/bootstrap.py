@@ -12,7 +12,6 @@ import signal
 import sys
 from typing import List, Optional, Callable, Dict, Any
 from dataclasses import dataclass
-from pathlib import Path
 
 from clawos_core.constants import PORT_BRAIND, PORT_SANDBOXD, PORT_VISUALD
 from clawos_core.service_registry import get_registry, ServiceStatus

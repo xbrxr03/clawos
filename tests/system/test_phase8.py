@@ -9,11 +9,9 @@ Usage:
   python3 tests/system/test_phase8.py --e2e   (needs Ollama + nomic-embed-text)
 """
 import sys
-import json
-import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
@@ -30,12 +28,14 @@ def close_rag(rag):
 
 
 def ok(name):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  \u2713  {name}")
 
 
 def fail(name, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     print(f"  \u2717  {name}" + (f" \u2014 {reason}" if reason else ""))
 
 
@@ -49,7 +49,7 @@ def section(title):
 section("1. Secrets store imports and basics")
 
 try:
-    from services.secretd.service import SecretsStore, get_store
+    from services.secretd.service import SecretsStore
     ok("secretd module imports cleanly")
 except Exception as e:
     fail("secretd import", str(e))
@@ -123,7 +123,7 @@ except Exception as e:
 section("2. Encryption correctness")
 
 try:
-    from services.secretd.service import _xor_encrypt, _encrypt, _decrypt, _get_or_create_key
+    from services.secretd.service import _xor_encrypt, _encrypt, _decrypt
     import secrets as _secrets
 
     key = _secrets.token_bytes(32)
@@ -153,7 +153,7 @@ except Exception as e:
 section("3. RAGService imports and text utilities")
 
 try:
-    from services.ragd.service import RAGService, get_rag
+    from services.ragd.service import RAGService
     ok("ragd module imports cleanly")
 except Exception as e:
     fail("ragd import", str(e))
@@ -206,7 +206,7 @@ try:
         good_score = rag._chunk_quality_score(good_text)
         bad_score  = rag._chunk_quality_score(bad_text)
         assert good_score > MIN_CHUNK_SCORE_VAL, f"Good text scored {good_score}"
-        assert bad_score  < good_score,          f"Bad text should score lower"
+        assert bad_score  < good_score,          "Bad text should score lower"
         ok(f"_chunk_quality_score() — good={good_score:.2f} bad={bad_score:.2f}")
 
         # detect_chunk_type
@@ -439,7 +439,8 @@ try:
 
         # Good output passes through
         good = "Answer: Revenue was 240k.\nCited Sources: [1]"
-        fallback = lambda: "Answer: Fallback.\nCited Sources: [1]"
+        def fallback():
+            return "Answer: Fallback.\nCited Sources: [1]"
         out = rag._sanitize_output(good, "query", results, fallback)
         assert "240k" in out
         ok("_sanitize_output() passes valid answer through")
@@ -582,7 +583,7 @@ print(f"  {passed}/{total} passed", end="")
 if failed:
     print(f"  |  {failed} FAILED  \u2190")
 else:
-    print(f"  \u2713  all passed")
+    print("  \u2713  all passed")
 print()
 if __name__ == "__main__":
     sys.exit(0 if failed == 0 else 1)

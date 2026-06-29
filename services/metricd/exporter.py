@@ -5,7 +5,6 @@ Optional OTLP remote export when configured.
 """
 import json
 import logging
-from pathlib import Path
 from clawos_core.constants import OTEL_JSONL
 from clawos_core.models import TokenUsage
 

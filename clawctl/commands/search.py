@@ -7,7 +7,7 @@ ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from services.memd.service import MemoryService
+from services.memd.service import MemoryService  # noqa: E402
 
 
 def run(query: str, workspace: str = "nexus_default", limit: int = 5):
@@ -34,5 +34,5 @@ def run(query: str, workspace: str = "nexus_default", limit: int = 5):
             print(f"  │ ⟫ {highlight}")
         else:
             print(f"  │ {content}")
-        print(f"  └─")
+        print("  └─")
     print()

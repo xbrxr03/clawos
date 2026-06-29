@@ -10,6 +10,7 @@ clawctl skill — ClawHub skill marketplace commands.
   clawctl skill local <path>     — install from local path (dev)
   clawctl skill sign <path>      — sign a skill (requires CLAWOS_SIGN_KEY)
 """
+import subprocess
 import sys
 
 
@@ -121,7 +122,6 @@ def run_list():
         return
 
     # Also load skills from skilld (including auto-generated ones)
-    from pathlib import Path
     from clawos_core.constants import AUTO_SKILLS_DIR
 
     auto_skills = []
@@ -189,13 +189,13 @@ def run_verify(skill_path: str):
             if sig:
                 sig_valid, sig_reason = verify_signature(path, sig)
                 if sig_valid:
-                    print(f"  ✓ Signature: VALID (ClawOS verified)")
+                    print("  ✓ Signature: VALID (ClawOS verified)")
                 else:
                     print(f"  ✗ Signature: INVALID — {sig_reason}")
             else:
-                print(f"  ~ No signature (community tier)")
+                print("  ~ No signature (community tier)")
         else:
-            print(f"  ~ No _clawos_meta.json — community or unsigned skill")
+            print("  ~ No _clawos_meta.json — community or unsigned skill")
     except (json.JSONDecodeError, ValueError) as e:
         print(f"  ✗ Verify error: {e}", file=sys.stderr)
 
@@ -235,7 +235,7 @@ def run_sign(skill_path: str):
     if result["ok"]:
         print(f"  ✓ Signature: {result['signature']}")
         print(f"  Hash: {result['skill_hash']}")
-        print(f"\n  Add this to your skill index or _clawos_meta.json:")
+        print("\n  Add this to your skill index or _clawos_meta.json:")
         print(f"    \"signature\": \"{result['signature']}\"")
     else:
         print(f"  ✗ {result['error']}", file=sys.stderr)

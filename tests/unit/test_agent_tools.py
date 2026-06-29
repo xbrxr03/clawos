@@ -6,7 +6,6 @@ non-network tool calls.
 import asyncio
 from pathlib import Path
 
-import pytest
 
 from runtimes.agent.tools import NATIVE_TOOLS, dispatch_tool
 from runtimes.agent.tool_schemas import ALL_TOOLS, schemas_for_tier, FAST_TOOL_SET, SENSITIVE_TOOLS

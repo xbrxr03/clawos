@@ -8,11 +8,9 @@ Serves: REST API + WebSocket event stream for the React frontend
 import asyncio
 import json
 import logging
-import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -353,7 +351,8 @@ async def api_services():
 
 
 async def get_services_health() -> dict:
-    import subprocess, asyncio
+    import subprocess
+    import asyncio
     result = {}
 
     # clawos.service covers policyd/memd/modeld/agentd — all run inside the daemon
@@ -525,8 +524,8 @@ async def api_system():
     # Try to get memory info
     try:
         mem = Path("/proc/meminfo").read_text()
-        total = int([l for l in mem.splitlines() if "MemTotal" in l][0].split()[1])
-        avail = int([l for l in mem.splitlines() if "MemAvailable" in l][0].split()[1])
+        total = int([line for line in mem.splitlines() if "MemTotal" in line][0].split()[1])
+        avail = int([line for line in mem.splitlines() if "MemAvailable" in line][0].split()[1])
         stats["ram_total_gb"] = round(total / 1e6, 1)
         stats["ram_used_gb"] = round((total - avail) / 1e6, 1)
         stats["ram_free_gb"] = round(avail / 1e6, 1)
@@ -699,7 +698,8 @@ async def agent_card():
 @app.get("/api/runtimes")
 async def api_runtimes():
     """Return status of all three runtimes: Nexus, PicoClaw, OpenClaw."""
-    import shutil, subprocess
+    import shutil
+    import subprocess
 
     # Nexus — always running if ClawOS daemon is running
     daemon_status = "unknown"

@@ -7,7 +7,6 @@ Linux: notify-send + paplay
 macOS: osascript (v1.1)
 """
 import asyncio
-import json
 import logging
 import sqlite3
 import subprocess
@@ -18,8 +17,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from clawos_core.constants import CLAWOS_DIR, PORT_REMINDERD
@@ -201,7 +199,7 @@ class ReminderDaemon:
 
 
 # FastAPI app for HTTP API
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager  # noqa: E402
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -44,6 +44,7 @@ async def web_search(args: dict, ctx: dict) -> str:
 
     out = []
     for i, (t, s) in enumerate(zip(titles, snippets)):
-        if i >= 5: break
+        if i >= 5:
+            break
         out.append(f"{i+1}. {_clean(t)}\n   {_clean(s)[:200]}")
     return "\n\n".join(out) if out else "No results."

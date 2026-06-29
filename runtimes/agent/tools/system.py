@@ -13,7 +13,6 @@ import re
 import shlex
 import shutil
 import subprocess
-from pathlib import Path
 
 from clawos_core.platform import is_linux, is_macos, is_windows
 
@@ -71,7 +70,7 @@ async def set_volume(args: dict, ctx: dict) -> str:
             rc, _, err = await _run(["amixer", "-q", "sset", "Master", f"{level}%"])
             if rc == 0:
                 return f"volume set to {level}%"
-        return f"[ERROR] no volume backend (need pactl or amixer)"
+        return "[ERROR] no volume backend (need pactl or amixer)"
 
     if is_macos():
         rc, _, err = await _run(["osascript", "-e", f"set volume output volume {level}"])
@@ -226,7 +225,7 @@ async def close_app(args: dict, ctx: dict) -> str:
     if is_linux():
         if _which("pkill"):
             rc, _, _ = await _run(["pkill", "-TERM", "-f", name])
-            return f"closed {name}" if rc == 0 else f"[ERROR] no matching process"
+            return f"closed {name}" if rc == 0 else "[ERROR] no matching process"
         return "[ERROR] pkill not available"
 
     if is_macos():

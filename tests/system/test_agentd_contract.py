@@ -9,7 +9,7 @@ ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
 
 def test_agentd_submit_contract_uses_submit_and_intent_only():
@@ -58,7 +58,7 @@ def test_destructive_workflow_is_gated_through_policyd(monkeypatch, workspace_tm
 
 
 def test_shell_restricted_is_the_only_shell_tool_alias():
-    from services.toolbridge.service import ALL_TOOL_DESCRIPTIONS, TOOL_ALIASES, _get_tool_descriptions
+    from services.toolbridge.service import TOOL_ALIASES, _get_tool_descriptions
 
     descs = _get_tool_descriptions()
     # shell.restricted is the canonical name; shell.run should NOT exist

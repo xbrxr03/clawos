@@ -18,7 +18,7 @@ from typing import Any
 from openclaw_integration.config_gen import CONFIG_PATH, OPENCLAW_DIR
 
 _PORT_OPENCLAW = 18789
-from openclaw_integration.launcher import is_installed, is_running, start, status
+from openclaw_integration.launcher import is_installed, is_running, start, status  # noqa: E402
 
 GATEWAY_TOKEN_PATH = OPENCLAW_DIR / "gateway.token"
 DEFAULT_AGENT_ID = "main"

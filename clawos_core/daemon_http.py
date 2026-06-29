@@ -9,7 +9,6 @@ because it can't reach them over HTTP.
 This module provides a minimal FastAPI app with /health that can be
 started alongside any daemon's async loop using asyncio.create_task().
 """
-import asyncio
 import logging
 from typing import Any, Callable, Optional
 

@@ -13,7 +13,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 
-from clawos_core.constants import DEFAULT_WORKSPACE, MAX_SUBAGENTS, SUBAGENT_TIMEOUT
+from clawos_core.constants import DEFAULT_WORKSPACE, SUBAGENT_TIMEOUT
 from runtimes.agent.router import FAST_MODEL
 
 log = logging.getLogger("agent.subagent")

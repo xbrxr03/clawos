@@ -15,12 +15,10 @@ Features:
 Uses Docker when available; falls back to subprocess with resource limits.
 """
 import asyncio
-import json
 import logging
 import os
 import shutil
 import subprocess
-import tempfile
 import time
 import uuid
 from dataclasses import dataclass
@@ -181,7 +179,7 @@ timeout {self.config.timeout_seconds} bash -c "$code" 2>&1
             return {
                 "success": False,
                 "stdout": "",
-                "stderr": f"Security violation: dangerous patterns detected",
+                "stderr": "Security violation: dangerous patterns detected",
                 "exit_code": -1,
                 "execution_time_ms": 0,
                 "security_violations": patterns

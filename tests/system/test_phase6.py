@@ -21,12 +21,14 @@ passed = failed = 0
 
 
 def ok(name):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  \u2713  {name}")
 
 
 def fail(name, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     print(f"  \u2717  {name}" + (f" \u2014 {reason}" if reason else ""))
 
 
@@ -40,7 +42,7 @@ section("1. Constants — nexus_default")
 try:
     from clawos_core.constants import DEFAULT_WORKSPACE
     assert DEFAULT_WORKSPACE == "nexus_default", f"got {DEFAULT_WORKSPACE}"
-    ok(f"DEFAULT_WORKSPACE = nexus_default")
+    ok("DEFAULT_WORKSPACE = nexus_default")
 except Exception as e:
     fail("DEFAULT_WORKSPACE", str(e))
 
@@ -255,11 +257,11 @@ try:
         # Check for user-facing jarvis strings (not in comments about history)
         if re.search(r'(?i)\bjjarvis\b', text):
             # Allow only comment lines mentioning jarvis as history
-            lines = [l for l in text.splitlines()
-                     if re.search(r'(?i)\bjarvis\b', l)
-                     and not l.strip().startswith('#')
-                     and 'was jarvis' not in l.lower()
-                     and 'jarvis.py' not in l.lower()]
+            lines = [line for line in text.splitlines()
+                     if re.search(r'(?i)\bjarvis\b', line)
+                     and not line.strip().startswith('#')
+                     and 'was jarvis' not in line.lower()
+                     and 'jarvis.py' not in line.lower()]
             if lines:
                 stale_found.append(f)
         # Only flag jarvis_default in actual code (not comments)

@@ -11,7 +11,7 @@ ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
 
 def test_a2a_settings_force_loopback_without_token():

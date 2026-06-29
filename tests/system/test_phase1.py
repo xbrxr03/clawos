@@ -10,11 +10,8 @@ Usage:
   python3 tests/system/test_phase1.py --e2e    # include e2e
 """
 import sys
-import os
 import asyncio
-import json
 import tempfile
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
@@ -50,7 +47,10 @@ section("1. Core utilities")
 
 try:
     from clawos_core.util.ids import task_id, session_id, entry_id, req_id
-    t = task_id(); s = session_id(); e = entry_id(); r = req_id()
+    t = task_id()
+    s = session_id()
+    e = entry_id()
+    r = req_id()
     assert t.startswith("task_") and len(t) == 13
     assert len(s) == 36
     ok("ids — task_id, session_id, entry_id, req_id")
@@ -69,7 +69,7 @@ except Exception as ex:
     fail("time", str(ex))
 
 try:
-    from clawos_core.util.jsonx import safe_parse, to_json
+    from clawos_core.util.jsonx import safe_parse
     assert safe_parse('{"action":"fs.read","action_input":"test.txt"}') == {"action":"fs.read","action_input":"test.txt"}
     assert safe_parse('{"final_answer": "hello"}') == {"final_answer": "hello"}
     assert safe_parse('plain text response') == {"final_answer": "plain text response"}
@@ -79,7 +79,7 @@ except Exception as ex:
     fail("jsonx", str(ex))
 
 try:
-    from clawos_core.constants import VERSION, CLAWOS_DIR, PORT_DASHD, SERVICES, DEFAULT_MODEL
+    from clawos_core.constants import VERSION, PORT_DASHD, SERVICES, DEFAULT_MODEL
     assert VERSION == "0.1.0"
     assert PORT_DASHD == 7070
     assert "policyd" in SERVICES
@@ -89,14 +89,12 @@ except Exception as ex:
     fail("constants", str(ex))
 
 try:
-    from clawos_core.util.paths import workspace_path, pinned_path, soul_path
     with tempfile.TemporaryDirectory() as td:
         # paths module uses CLAWOS_DIR, just verify the functions work
         from clawos_core import constants
         old = constants.CLAWOS_DIR
         constants.CLAWOS_DIR = Path(td)
         import clawos_core.util.paths as _p
-        import importlib
         # just check they return Path objects
         assert callable(_p.workspace_path)
         assert callable(_p.pinned_path)
@@ -150,7 +148,7 @@ except Exception as ex:
 section("3. Data models")
 
 try:
-    from clawos_core.models import Task, TaskStatus, Session, AuditEntry, Decision, ToolCall
+    from clawos_core.models import Task, TaskStatus, Session, AuditEntry
     t = Task(intent="test intent")
     assert t.status == TaskStatus.QUEUED
     assert t.task_id.startswith("task_")
@@ -160,7 +158,7 @@ except Exception as ex:
     fail("Task model", str(ex))
 
 try:
-    from clawos_core.models import AuditEntry, Decision
+    from clawos_core.models import AuditEntry
     e = AuditEntry(tool="fs.read", target="/tmp/test.txt", decision="ALLOW", reason="test")
     e.prev_hash  = "aabbcc"
     e.entry_hash = e.compute_hash()
@@ -184,7 +182,7 @@ except Exception as ex:
 section("4. Event bus")
 
 try:
-    from clawos_core.events.bus import get_bus, EV_LOG, EV_TASK_UPDATE
+    from clawos_core.events.bus import get_bus, EV_LOG
     received = []
     bus = get_bus()
     bus.subscribe(lambda ev: received.append(ev))
@@ -501,7 +499,7 @@ except Exception as ex:
     fail("openclaw model list", str(ex))
 
 try:
-    from openclaw_integration.installer import system_check, MIN_RAM_GB
+    from openclaw_integration.installer import system_check
     checks = system_check()
     assert "node" in checks
     assert "npm" in checks

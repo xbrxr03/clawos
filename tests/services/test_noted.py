@@ -1,7 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Tests for noted — Notes service."""
-import pytest
-from pathlib import Path
 from services.noted.engine import Note, create_note, list_notes, delete_note
 
 

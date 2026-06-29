@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import secrets
+import subprocess
 import time
 import urllib.request
 from collections import deque
@@ -59,7 +60,6 @@ from clawos_core.presence import (
     set_voice_mode,
     start_mission,
     sync_presence_from_setup,
-    update_autonomy_policy,
     update_presence_profile,
 )
 
@@ -867,7 +867,6 @@ def _websocket_authorized(websocket: WebSocket) -> bool:
 
 
 def _setup_websocket_authorized(websocket: WebSocket) -> bool:
-    settings: DashboardSettings = websocket.app.state.settings
     setup_signal = websocket.query_params.get("setup", "").strip() == SETUP_ACCESS_VALUE
     state = _setup_state()
     if (
@@ -2680,7 +2679,6 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
     async def brain_upload(request):
         """Upload ZIP of documents for ingestion into Kizuna."""
         import tempfile
-        from fastapi import Request
         from pathlib import Path
         try:
             from services.braind.service import get_brain
@@ -2754,7 +2752,7 @@ def create_app(settings: Optional[dict[str, Any]] = None) -> "FastAPI":
             try:
                 from services.braind.service import get_brain
                 get_brain().unregister_ws_callback(send_progress)
-            except (ImportError, ModuleNotFoundError):
+            except (ImportError, ModuleNotFoundError) as e:
                 log.debug(f"failed: {e}")
                 pass
                 pass

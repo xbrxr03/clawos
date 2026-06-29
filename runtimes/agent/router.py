@@ -69,8 +69,10 @@ def pick_model(
     """
     if explicit_tier:
         tier = explicit_tier.lower()
-        if tier == "fast":  return RouteDecision(FAST_MODEL,  "fast",  "explicit override")
-        if tier == "coder": return RouteDecision(CODER_MODEL, "coder", "explicit override")
+        if tier == "fast":
+            return RouteDecision(FAST_MODEL,  "fast",  "explicit override")
+        if tier == "coder":
+            return RouteDecision(CODER_MODEL, "coder", "explicit override")
         return RouteDecision(SMART_MODEL, "smart", "explicit override")
 
     tools = set(likely_tools or [])

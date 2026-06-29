@@ -62,6 +62,9 @@ STATIC_SCANS = (
             Path("setup/repair/doctor.py"),
             Path("tools/shell/do/safety.py"),
             Path("scripts/security_audit.py"),
+            Path("scripts/gen_comparison_png.py"),
+            Path("scripts/gen_social_assets.py"),
+            Path("clawctl/commands/cookbook.py"),
             # ISO hooks are intentional bootstrap installers — curl|bash is expected
             Path("packaging/iso/hooks/01-install-deps.sh"),
             Path("packaging/iso/hooks/02-clone-clawos.sh"),

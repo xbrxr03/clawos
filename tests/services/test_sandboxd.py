@@ -2,7 +2,6 @@
 """Tests for Secure Sandbox service (sandboxd)."""
 
 import pytest
-import asyncio
 from pathlib import Path
 import tempfile
 import shutil

@@ -14,11 +14,10 @@ Features:
 - TTL-based heartbeat management
 """
 
-import json
 import time
 import threading
 from typing import Dict, List, Optional, Set, Callable, Any
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from enum import Enum
 import logging
 

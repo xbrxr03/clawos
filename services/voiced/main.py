@@ -19,18 +19,12 @@ import base64
 import json
 import logging
 import numpy as np
-import time
-import wave
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 from typing import Optional, Callable, AsyncIterator
-import threading
-import queue
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
 import uvicorn
 
 try:
@@ -178,7 +172,6 @@ class WakeWordDetector:
             try:
                 # Use built-in keywords or custom model
                 keywords = ["jarvis", "hey computer", "bumblebee"]
-                keyword_paths = pvporcupine.KEYWORDS
                 
                 self.porcupine = pvporcupine.create(
                     keywords=keywords
@@ -581,7 +574,7 @@ async def voice_websocket(websocket: WebSocket):
 async def speak_endpoint(request: dict):
     """HTTP endpoint for text-to-speech."""
     text = request.get("text", "")
-    voice = request.get("voice", "en_US-lessac-medium")
+    request.get("voice", "en_US-lessac-medium")
     
     if not voice_pipeline or not voice_pipeline.tts.voice:
         return {"error": "TTS not available"}

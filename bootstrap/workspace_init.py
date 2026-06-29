@@ -23,7 +23,7 @@ def _copy_if_missing(src: Path, dst: Path):
 def init_workspace(workspace_id: str = "nexus_default") -> Path:
     """Create workspace, seed template files. Idempotent."""
     ws   = workspace_path(workspace_id)
-    mem  = memory_path(workspace_id)
+    memory_path(workspace_id)
 
     # Seed personality + instructions
     _copy_if_missing(PRESETS / "SOUL.md",      soul_path(workspace_id))

@@ -16,7 +16,7 @@ def run_status():
     print()
     piper_ok = shutil.which("piper") is not None
     try:
-        import whisper  # type: ignore
+        import whisper  # type: ignore  # noqa: F401
 
         whisper_ok = True
     except ImportError:

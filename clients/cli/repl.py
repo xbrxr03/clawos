@@ -5,7 +5,6 @@ Demo-ready TUI with colours, typing indicator, clean layout.
 """
 import asyncio
 import sys
-import os
 import time
 from pathlib import Path
 
@@ -118,8 +117,10 @@ class ThinkingIndicator:
         self._stop = True
         if self._task:
             self._task.cancel()
-            try: await self._task
-            except asyncio.CancelledError: pass
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
         sys.stdout.write("\r" + " " * 30 + "\r")
         sys.stdout.flush()
 

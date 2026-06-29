@@ -4,7 +4,7 @@ import asyncio
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from services.a2ad.service import start
+from services.a2ad.service import start  # noqa: E402
 
 if __name__ == "__main__":
     asyncio.run(start())

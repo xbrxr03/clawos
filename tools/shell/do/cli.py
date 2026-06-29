@@ -18,7 +18,6 @@ Flags:
   --no-audit   Skip writing to audit log
 """
 import sys
-import os
 from pathlib import Path
 
 # Ensure clawos root is on path when called as subprocess
@@ -26,15 +25,15 @@ _ROOT = Path(__file__).parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from tools.shell.do.safety   import classify, classify_plan
-from tools.shell.do.context  import collect_context
-from tools.shell.do.generator import generate
-from tools.shell.do.renderer  import (
+from tools.shell.do.safety   import classify, classify_plan  # noqa: E402
+from tools.shell.do.context  import collect_context  # noqa: E402
+from tools.shell.do.generator import generate  # noqa: E402
+from tools.shell.do.renderer  import (  # noqa: E402
     print_generating, print_context_summary, print_command,
     print_dry_run, print_success, print_audit_note, print_explain,
     confirm_run, print_history, print_undo_suggestion,
 )
-from tools.shell.do.runner import (
+from tools.shell.do.runner import (  # noqa: E402
     run_commands, dry_preview, get_history, infer_undo, _audit_path,
 )
 

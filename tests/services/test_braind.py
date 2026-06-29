@@ -152,7 +152,7 @@ class TestInsightEngine:
         for i in range(5):
             memory = Memory(
                 id=f"mem-{i}",
-                content=f"Discussion about Python",
+                content="Discussion about Python",
                 memory_type="conversation",
                 timestamp=datetime.now(),
                 source="chat",

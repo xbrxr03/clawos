@@ -11,8 +11,8 @@ ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 fastapi = pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
+from fastapi.testclient import TestClient  # noqa: E402
+from starlette.websockets import WebSocketDisconnect  # noqa: E402
 
 
 def test_dashboard_settings_force_loopback_without_auth():
@@ -237,7 +237,7 @@ def test_dev_mode_does_not_bypass_auth_for_network_expose(monkeypatch):
 
 def test_dev_mode_disabled_by_default(monkeypatch):
     """Without CLAWOS_DEV_MODE, auth works normally."""
-    from services.dashd.api import create_app, _dev_mode_enabled, _is_loopback_host
+    from services.dashd.api import create_app, _dev_mode_enabled
 
     monkeypatch.delenv("CLAWOS_DEV_MODE", raising=False)
 

@@ -2,7 +2,6 @@
 """WizardState — persisted across all wizard screens."""
 import json
 from dataclasses import dataclass, field, asdict
-from pathlib import Path
 from clawos_core.constants import CONFIG_DIR
 
 STATE_FILE = CONFIG_DIR / "wizard_state.json"

@@ -7,7 +7,6 @@ Idempotent — safe to run multiple times.
 """
 
 import json
-import os
 import re
 import shlex
 from pathlib import Path

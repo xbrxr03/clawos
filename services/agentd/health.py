@@ -6,4 +6,5 @@ def health() -> dict:
     tasks = mgr.list_tasks(5)
     return {"status": "ok", "recent_tasks": len(tasks)}
 if __name__ == "__main__":
-    import json; print(json.dumps(health()))
+    import json
+    print(json.dumps(health()))

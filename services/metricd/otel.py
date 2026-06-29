@@ -4,7 +4,6 @@ OTel span builder — GenAI semantic conventions 2026.
 Builds span dicts matching the OpenTelemetry GenAI semantic conventions.
 No external OTel SDK required for local JSONL export mode.
 """
-import time
 from clawos_core.models import TokenUsage
 
 

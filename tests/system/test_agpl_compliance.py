@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
-from clawos_core.util.git import git_check_output
+from clawos_core.util.git import git_check_output  # noqa: E402
 
 SOURCE_EXTENSIONS = {".py", ".sh", ".ts", ".tsx", ".js", ".jsx", ".css"}
 HEADER_TEXT = "SPDX-License-Identifier: AGPL-3.0-or-later"

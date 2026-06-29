@@ -15,7 +15,6 @@ Addresses the durable execution gap from CRITICAL_GAPS_RESEARCH.md
 """
 import json
 from datetime import datetime
-from typing import Optional
 
 import click
 
@@ -98,7 +97,7 @@ def durable_show(run_id, as_json):
             click.echo(json.dumps(run, indent=2, default=str))
             return
         
-        click.echo(f"\nWorkflow Run Details\n")
+        click.echo("\nWorkflow Run Details\n")
         click.echo(f"Run ID:       {run['run_id']}")
         click.echo(f"Workflow:     {run['workflow_id']}")
         click.echo(f"Workspace:    {run['workspace']}")
@@ -113,18 +112,18 @@ def durable_show(run_id, as_json):
         
         # Args
         if run.get('args'):
-            click.echo(f"\nArguments:")
+            click.echo("\nArguments:")
             for key, value in run['args'].items():
                 click.echo(f"  {key}: {value}")
         
         # Result
         if run.get('result'):
-            click.echo(f"\nResult:")
+            click.echo("\nResult:")
             click.echo(f"  {json.dumps(run['result'], indent=2)[:500]}")
         
         # Error
         if run.get('error'):
-            click.echo(f"\nError:")
+            click.echo("\nError:")
             click.echo(f"  {run['error']}")
         
         # Steps
@@ -164,7 +163,7 @@ def durable_resume(run_id):
         
         if run['status'] not in ['failed', 'running']:
             click.echo(f"✗ Cannot resume run with status '{run['status']}'")
-            click.echo(f"  Only 'failed' or 'running' runs can be resumed")
+            click.echo("  Only 'failed' or 'running' runs can be resumed")
             return
         
         workflow_id = run['workflow_id']
@@ -177,7 +176,7 @@ def durable_resume(run_id):
         # Get the workflow definition
         if workflow_id not in engine._workflows:
             click.echo(f"✗ Workflow '{workflow_id}' not found in registry")
-            click.echo(f"  Make sure the workflow is registered before resuming")
+            click.echo("  Make sure the workflow is registered before resuming")
             return
         
         wf_def = engine._workflows[workflow_id]
@@ -186,7 +185,7 @@ def durable_resume(run_id):
         result = asyncio.run(engine._resume_workflow(run_id, wf_def))
         
         if result['status'] == 'completed':
-            click.echo(f"✓ Workflow completed successfully")
+            click.echo("✓ Workflow completed successfully")
         else:
             click.echo(f"✗ Workflow failed: {result.get('error', 'Unknown error')}")
         
@@ -237,13 +236,13 @@ def durable_stats(as_json):
             click.echo(json.dumps(stats, indent=2))
             return
         
-        click.echo(f"\nWorkflow Statistics\n")
+        click.echo("\nWorkflow Statistics\n")
         click.echo(f"Total runs:           {stats['total_runs']:,}")
         click.echo(f"Runs (last 24h):      {stats['recent_runs_24h']:,}")
         click.echo(f"Avg duration:         {stats['avg_duration_seconds']:.1f}s")
         
         if stats.get('status_breakdown'):
-            click.echo(f"\nStatus breakdown:")
+            click.echo("\nStatus breakdown:")
             for status, count in stats['status_breakdown'].items():
                 icon = "✓" if status == "completed" else "✗" if status == "failed" else "○"
                 pct = (count / stats['total_runs'] * 100) if stats['total_runs'] > 0 else 0

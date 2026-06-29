@@ -14,7 +14,6 @@ Features:
 
 Addresses the Desktop Computer Use gap from CRITICAL_GAPS_RESEARCH.md
 """
-import asyncio
 import base64
 import io
 import json
@@ -58,11 +57,13 @@ except ImportError:
 
 try:
     from Xlib import display
+    import Xlib.X
     XLIB_AVAILABLE = True
 except ImportError:
+    Xlib = None
     XLIB_AVAILABLE = False
 
-from clawos_core.constants import CLAWOS_DIR, PORT_DESKTOPD
+from clawos_core.constants import PORT_DESKTOPD  # noqa: E402
 
 log = logging.getLogger("desktopd")
 
@@ -183,11 +184,11 @@ class ScreenshotCapture:
         
         if region:
             x, y, w, h = region
-            raw = root.get_image(x, y, w, h, Xlib.X.ZPixmap, 0xffffffff)
+            raw = root.get_image(x, y, w, h, Xlib.X.ZPixmap, 0xffffffff)  # noqa: F821
         else:
             width = root.get_geometry().width
             height = root.get_geometry().height
-            raw = root.get_image(0, 0, width, height, Xlib.X.ZPixmap, 0xffffffff)
+            raw = root.get_image(0, 0, width, height, Xlib.X.ZPixmap, 0xffffffff)  # noqa: F821
         
         # Convert to PIL Image
         screenshot = PIL.Image.frombytes(
@@ -406,7 +407,7 @@ class ClipboardManager:
     def _detect_backend(self) -> str:
         """Detect best clipboard backend."""
         try:
-            import pyperclip
+            import pyperclip  # noqa: F401
             return "pyperclip"
         except ImportError as e:
             log.debug(f"suppressed: {e}")
@@ -566,7 +567,7 @@ Return JSON:
                 
                 try:
                     return json.loads(data.get("response", "{}"))
-                except:
+                except Exception:
                     return {"raw": data.get("response", "")}
         
         except (json.JSONDecodeError, ValueError) as e:
@@ -607,7 +608,7 @@ class DesktopAutomation:
                 "action": action.type.value
             }
         
-        start_time = time.time()
+        time.time()
         
         try:
             if action.type == ActionType.SCREENSHOT:
@@ -821,8 +822,6 @@ async def health():
     }
 
 
-def run():
-    """Run the desktop automation service."""
 def run():
     """Run the desktop automation service."""
     from clawos_core.config.loader import load as load_config

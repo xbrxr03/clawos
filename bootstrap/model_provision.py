@@ -4,7 +4,6 @@ Pull and verify a model via Ollama.
 Shows real-time download progress in terminal.
 """
 import subprocess
-import sys
 import shutil
 import time
 import re

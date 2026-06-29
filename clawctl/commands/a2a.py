@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """clawctl a2a — A2A peer management and task delegation."""
+import json
+
 from clawctl.ui.banner import success, error, info, table
 
 
@@ -22,7 +24,6 @@ def run_peers():
 
 def run_card():
     """Print this node's A2A Agent Card JSON."""
-    import json
     try:
         from services.a2ad.agent_card import build_card
         from services.a2ad.discovery import get_local_ip
@@ -50,7 +51,7 @@ def run_delegate(task: str, peer_ip: str, workspace: str = "nexus_default"):
             result = _json.loads(resp.read().decode()).get("result", "ok")
         success("Result:")
         print(f"\n  {result}\n")
-    except (json.JSONDecodeError, ValueError) as e:
+    except (_json.JSONDecodeError, ValueError) as e:
         error(f"Delegation failed: {e}")
     print()
 

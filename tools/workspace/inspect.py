@@ -3,8 +3,7 @@
 memory.read / memory.write — read and write workspace memory layers.
 workspace.inspect — inspect workspace contents.
 """
-from pathlib import Path
-from clawos_core.util.paths import pinned_path, workflow_path
+from clawos_core.util.paths import pinned_path
 
 
 def memory_read(target: str, workspace_id: str) -> str:
@@ -22,7 +21,7 @@ def memory_read(target: str, workspace_id: str) -> str:
         p = WORKSPACE_DIR / workspace_id / "LEARNED.md"
         return p.read_text() if p.exists() else "[EMPTY] LEARNED.md is empty"
     # Generic memory search falls through to memd
-    return f"[INFO] Use memory.read with: pinned | workflow | learned"
+    return "[INFO] Use memory.read with: pinned | workflow | learned"
 
 
 def memory_write(content: str, workspace_id: str) -> str:

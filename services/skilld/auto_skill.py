@@ -212,7 +212,7 @@ def _generate_template(history: list[dict]) -> str:
     if not tools_section:
         tools_section = "- (none detected)"
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     content = f"""\
 ---

@@ -7,12 +7,10 @@ Commands:
   clawctl cookbook serve     — pick top recommendation, pull + serve
 """
 import json
+import multiprocessing
 import platform
 import subprocess
-import sys
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional
 
 # ── Hardware detection ────────────────────────────────────────────────────────
 
@@ -311,7 +309,7 @@ def run_scan():
         print(f"  GPU VRAM:     {round(hw.gpu_vram_gb, 1)} GB")
         print(f"  GPU compute:  {hw.gpu_compute}")
     else:
-        print(f"  GPU:          none detected (CPU-only mode)")
+        print("  GPU:          none detected (CPU-only mode)")
     print()
     info(f"Tier {hw.tier}: {'Basic — small models (1-4B)' if hw.tier == 'A' else 'Full — medium models (7-14B)' if hw.tier == 'B' else 'Power — large models (14B+)'}")
     print()
@@ -360,7 +358,7 @@ def run_recommend():
     best = top[0]
     info(f"Best pick: {best.model.name} — {best.model.description}")
     print(f"  Install: clawctl model pull {best.model.name}")
-    print(f"  Or run:  clawctl cookbook serve")
+    print("  Or run:  clawctl cookbook serve")
     print()
 
 

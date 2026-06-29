@@ -9,7 +9,6 @@ desktopd isn't reachable, so simple operations still work in CLI-only setups.
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 import shutil
 import subprocess
@@ -188,15 +187,19 @@ async def screenshot(args: dict, ctx: dict) -> str:
     if is_linux():
         if shutil.which("grim"):  # Wayland
             rc, _, _ = await _run(["grim", str(out_path)])
-            if rc == 0: return f"[OK] screenshot saved: {out_path}"
+            if rc == 0:
+                return f"[OK] screenshot saved: {out_path}"
         if shutil.which("gnome-screenshot"):
             rc, _, _ = await _run(["gnome-screenshot", "-f", str(out_path)])
-            if rc == 0: return f"[OK] screenshot saved: {out_path}"
+            if rc == 0:
+                return f"[OK] screenshot saved: {out_path}"
         if shutil.which("scrot"):
             rc, _, _ = await _run(["scrot", str(out_path)])
-            if rc == 0: return f"[OK] screenshot saved: {out_path}"
+            if rc == 0:
+                return f"[OK] screenshot saved: {out_path}"
     if is_macos():
         rc, _, _ = await _run(["screencapture", "-x", str(out_path)])
-        if rc == 0: return f"[OK] screenshot saved: {out_path}"
+        if rc == 0:
+            return f"[OK] screenshot saved: {out_path}"
 
     return "[ERROR] no screenshot backend"

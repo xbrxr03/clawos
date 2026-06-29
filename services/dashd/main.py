@@ -2,6 +2,6 @@
 """dashd entry point."""
 import logging
 logging.basicConfig(level=logging.WARNING, format="%(name)s %(levelname)s %(message)s")
-from services.dashd.api import run
+from services.dashd.api import run  # noqa: E402
 if __name__ == "__main__":
     run()

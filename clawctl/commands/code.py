@@ -16,11 +16,10 @@ Addresses the local coding agent gap from CRITICAL_GAPS_RESEARCH.md
 import asyncio
 import json
 from pathlib import Path
-from typing import Optional
 
 import click
 
-from skills.code_companion.main import create_companion, index_project
+from skills.code_companion.main import index_project
 
 
 @click.group(name="code", help="Code companion - developer AI assistant")
@@ -201,17 +200,17 @@ def code_status(workspace):
             files_count = index.files_collection.count()
             symbols_count = index.symbols_collection.count()
             
-            click.echo(f"\nCode Companion Status\n")
+            click.echo("\nCode Companion Status\n")
             click.echo(f"Workspace: {workspace}")
             click.echo(f"Indexed files: {files_count}")
             click.echo(f"Indexed symbols: {symbols_count}")
             
             if files_count > 0:
-                click.echo(f"\n✓ Index is ready for search")
-                click.echo(f"  Use: clawctl code search '<query>'")
+                click.echo("\n✓ Index is ready for search")
+                click.echo("  Use: clawctl code search '<query>'")
             else:
-                click.echo(f"\n⚠ No files indexed")
-                click.echo(f"  Run: clawctl code index <path>")
+                click.echo("\n⚠ No files indexed")
+                click.echo("  Run: clawctl code index <path>")
         
         except (ImportError, ModuleNotFoundError) as e:
             click.echo(f"✗ Error getting status: {e}")

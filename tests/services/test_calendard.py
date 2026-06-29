@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Tests for calendard — Calendar service."""
-import pytest
 from services.calendard.engine import CalendarEvent, create_event, list_events, delete_event, export_ical
 
 

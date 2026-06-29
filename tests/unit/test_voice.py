@@ -3,8 +3,6 @@
 Unit tests for voiced — VoiceService initialization and health checks.
 All audio/backends mocked — no hardware or external services needed.
 """
-import asyncio
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -166,5 +164,5 @@ class TestVoiceServiceSetMode:
         with patch("services.voiced.service.set_voice_mode", return_value={"mode": "off"}), \
              patch.object(svc, "_notify_session"), \
              patch.object(svc, "stop", new_callable=AsyncMock) as mock_stop:
-            result = await svc.set_mode("off")
+            await svc.set_mode("off")
             mock_stop.assert_called_once()

@@ -16,8 +16,7 @@ Addresses the observability gap from CRITICAL_GAPS_RESEARCH.md
 """
 import json
 import urllib.request
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
 
 import click
 
@@ -33,7 +32,7 @@ def _is_running() -> bool:
         req = urllib.request.Request(HEALTH_ENDPOINT, method="GET", timeout=2)
         with urllib.request.urlopen(req) as resp:
             return resp.status == 200
-    except:
+    except Exception:
         return False
 
 
@@ -160,10 +159,10 @@ def observ_stats(workspace, hours, as_json):
         if cost > 0:
             click.echo(f"  Est. cost:       ${cost:.4f}")
         else:
-            click.echo(f"  Est. cost:       $0.00 (local/ollama)")
+            click.echo("  Est. cost:       $0.00 (local/ollama)")
         
         # Latency
-        click.echo(f"\nLatency:")
+        click.echo("\nLatency:")
         click.echo(f"  Average:         {stats.get('avg_latency_ms', 0):.0f}ms")
         click.echo(f"  Min:             {stats.get('min_latency_ms', 0):.0f}ms")
         click.echo(f"  Max:             {stats.get('max_latency_ms', 0):.0f}ms")
@@ -171,14 +170,14 @@ def observ_stats(workspace, hours, as_json):
         # Top models
         top_models = stats.get('top_models', [])
         if top_models:
-            click.echo(f"\nTop Models:")
+            click.echo("\nTop Models:")
             for m in top_models:
                 click.echo(f"  {m['model'][:30]:<32} {m['count']:>6} calls")
         
         # Top services
         top_services = stats.get('top_services', [])
         if top_services:
-            click.echo(f"\nTop Services:")
+            click.echo("\nTop Services:")
             for s in top_services:
                 click.echo(f"  {s['service'][:30]:<32} {s['count']:>6} calls")
         
@@ -224,7 +223,7 @@ def observ_cost(workspace, days):
         data = series.get("data", [])
         
         if data:
-            click.echo(f"\nDaily breakdown:")
+            click.echo("\nDaily breakdown:")
             click.echo(f"{'Date':<15} {'Calls':>8} {'Tokens':>12} {'Cost':>10}")
             click.echo("-" * 50)
             for day in data:
@@ -272,7 +271,7 @@ def observ_latency(workspace, hours):
         
         # Overall stats
         stats = _api_get("/stats", params)
-        click.echo(f"\nOverall:")
+        click.echo("\nOverall:")
         click.echo(f"  Average: {stats.get('avg_latency_ms', 0):.0f}ms")
         click.echo(f"  Min:     {stats.get('min_latency_ms', 0):.0f}ms")
         click.echo(f"  Max:     {stats.get('max_latency_ms', 0):.0f}ms")
@@ -309,7 +308,7 @@ def observ_workspaces():
                 try:
                     dt = datetime.fromisoformat(last.replace('Z', '+00:00'))
                     last = dt.strftime("%Y-%m-%d %H:%M")
-                except:
+                except Exception:
                     pass
             click.echo(f"{name:<30} {calls:>10} {last}")
         

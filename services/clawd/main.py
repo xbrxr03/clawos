@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """clawd entry point."""
-import asyncio, logging
+import asyncio
+import logging
 logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s %(message)s")
-from services.clawd.service import get_daemon
-from clawos_core.constants import PORT_CLAWD
-from clawos_core.daemon_http import serve_health
+from services.clawd.service import get_daemon  # noqa: E402
+from clawos_core.constants import PORT_CLAWD  # noqa: E402
+from clawos_core.daemon_http import serve_health  # noqa: E402
 
 async def main():
     d = get_daemon()

@@ -35,7 +35,7 @@ def build_card(workspace_id: str = DEFAULT_WORKSPACE,
 
     # Add shell if granted
     try:
-        from services.policyd.service import PolicyService
+        from services.policyd.service import PolicyService  # noqa: F401
         skills.append(AgentSkill("shell", "Run allowlisted shell commands"))
     except (ImportError, ModuleNotFoundError):
         pass

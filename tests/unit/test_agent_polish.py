@@ -58,7 +58,7 @@ def test_fit_blocks_drops_low_priority_when_tight():
     big = "x" * 8000  # ~2000 tokens
     blocks = [("memory", big), ("learned", "should drop"), ("rag", "also drop")]
     out = fit_blocks(blocks, budget_tokens=2000)
-    labels = [l for l, _ in out]
+    labels = [label for label, _ in out]
     assert "memory" in labels
     # Lower-priority blocks fall off
     assert "learned" not in labels and "rag" not in labels

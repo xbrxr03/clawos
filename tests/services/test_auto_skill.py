@@ -3,8 +3,6 @@
 Tests for auto_skill module — Issue #64
 """
 import os
-import re
-import shutil
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -15,15 +13,13 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in os.sys.path:
     os.sys.path.insert(0, str(ROOT))
 
-from services.skilld.auto_skill import (
+from services.skilld.auto_skill import (  # noqa: E402
     should_auto_skill,
     generate_skill,
     save_auto_skill,
     update_auto_skill,
     find_similar_skill,
-    _generate_template,
 )
-from clawos_core.constants import AUTO_SKILLS_DIR
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Tests for compare — side-by-side model comparison."""
 import json
-import pytest
 from unittest.mock import patch, MagicMock
 from clawctl.commands.compare import (
     ModelResponse, CompareSession,
@@ -66,7 +65,7 @@ class TestQueryOllama:
 
 class TestRunCompare:
     def test_sequential(self):
-        session = CompareSession(prompt="test", models=["m1", "m2"])
+        CompareSession(prompt="test", models=["m1", "m2"])
         mock_resp = ModelResponse(model="m1", response="a1", total_tokens=10, duration_ms=100)
         mock_resp2 = ModelResponse(model="m2", response="a2", total_tokens=20, duration_ms=200)
 

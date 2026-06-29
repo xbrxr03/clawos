@@ -15,19 +15,16 @@ Features:
 Writes to a local SQLite store; endpoints expose aggregated stats to dashd.
 """
 import asyncio
-import json
 import logging
 import sqlite3
 import time
-from contextlib import asynccontextmanager
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
 import uvicorn
 
 from clawos_core.constants import CLAWOS_DIR, PORT_OBSERVD

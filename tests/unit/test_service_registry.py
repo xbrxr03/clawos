@@ -8,10 +8,8 @@ from unittest.mock import Mock
 from clawos_core.service_registry import (
     ServiceRegistry,
     ServiceRegistryConfig,
-    ServiceInstance,
     ServiceStatus,
 )
-from clawos_core.exceptions import ServiceUnavailableError
 
 
 class TestServiceRegistryConfig:

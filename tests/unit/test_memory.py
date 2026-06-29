@@ -5,10 +5,7 @@ Tests Layer 1 (PINNED.md), Layer 2 (WORKFLOW.md), Layer 4 (SQLite FTS5),
 session state, and LearnedLayer.
 All tests use temporary directories — no real ClawOS paths touched.
 """
-import json
-import sqlite3
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -158,8 +155,8 @@ class TestFTSMemory:
 
     def test_remember_updates_similar(self, mem_service):
         """remember() with similar text updates existing instead of adding new."""
-        mid1 = mem_service.remember("I love Python programming language", "ws1", force_add=True)
-        mid2 = mem_service.remember("I love Python programming languages", "ws1")
+        mem_service.remember("I love Python programming language", "ws1", force_add=True)
+        mem_service.remember("I love Python programming languages", "ws1")
         all_mems = mem_service.get_all("ws1")
         assert len(all_mems) <= 2
 
@@ -228,7 +225,6 @@ class TestLearnedLayer:
 
     def test_read_with_content(self, temp_workspace):
         from services.memd.service import LearnedLayer
-        from clawos_core.constants import WORKSPACE_DIR
         layer = LearnedLayer()
         p = layer.path("ws1")
         p.parent.mkdir(parents=True, exist_ok=True)

@@ -7,12 +7,11 @@ import json
 import logging
 import sqlite3
 import threading
-from pathlib import Path
 from typing import Optional
 
 log = logging.getLogger("braind.storage")
 
-from clawos_core.constants import CLAWOS_DIR
+from clawos_core.constants import CLAWOS_DIR  # noqa: E402
 
 BRAIN_DIR = CLAWOS_DIR / "brain"
 GRAPH_JSON = BRAIN_DIR / "graph.json"
@@ -167,7 +166,7 @@ class BrainStorage:
                 (filename, chunks, triples, time.time())
             )
             self._db.commit()
-        except (sqlite3.Error, OSError):
+        except (sqlite3.Error, OSError) as e:
             log.debug(f"failed: {e}")
             pass
             pass

@@ -12,7 +12,6 @@ Usage:
 """
 import sys
 import os
-import asyncio
 import tempfile
 import subprocess
 import json
@@ -35,12 +34,14 @@ def can_run_bash_syntax() -> bool:
 
 
 def ok(name):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  \u2713  {name}")
 
 
 def fail(name, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     print(f"  \u2717  {name}" + (f" \u2014 {reason}" if reason else ""))
 
 
@@ -52,7 +53,7 @@ def section(title):
 section("1. Profile selector — no gemma3")
 
 try:
-    from bootstrap.profile_selector import recommended_model, select, summary
+    from bootstrap.profile_selector import recommended_model, select
     from bootstrap.hardware_probe import HardwareProfile
 
     m_lowram  = recommended_model(HardwareProfile(ram_gb=8))
@@ -171,7 +172,7 @@ except Exception as e:
 section("4. claw-do safety classifier")
 
 try:
-    from tools.shell.do.safety import classify, classify_plan, is_safe, is_dangerous, is_critical
+    from tools.shell.do.safety import classify, classify_plan
 
     # Safe commands
     safe_cmds = [
@@ -294,7 +295,7 @@ except Exception as e:
 section("6. claw-do generator — response parser")
 
 try:
-    from tools.shell.do.generator import _parse, _clean_raw
+    from tools.shell.do.generator import _parse
 
     # Plain text command
     cmds = _parse("ls -la ~/clawos")
@@ -339,7 +340,7 @@ except Exception as e:
 section("7. claw-do runner")
 
 try:
-    from tools.shell.do.runner import _audit_path, get_history, infer_undo
+    from tools.shell.do.runner import _audit_path, infer_undo
     p = _audit_path()
     assert isinstance(p, Path)
     assert p.suffix == ".jsonl"
@@ -447,7 +448,8 @@ except Exception as e:
     fail("dev_boot.sh port guard", str(e))
 
 try:
-    import subprocess, shutil
+    import subprocess
+    import shutil
     dev_boot = ROOT / "scripts" / "dev_boot.sh"
     if can_run_bash_syntax():
         r = subprocess.run(["bash", "-n", str(dev_boot)], capture_output=True, text=True)
@@ -474,7 +476,8 @@ except Exception as e:
     fail("install.sh wizard call", str(e))
 
 try:
-    import subprocess, shutil
+    import subprocess
+    import shutil
     install_sh = ROOT / "install.sh"
     if can_run_bash_syntax():
         r = subprocess.run(["bash", "-n", str(install_sh)], capture_output=True, text=True)

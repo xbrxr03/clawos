@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """agentd entry point."""
-import asyncio, logging
+import asyncio
+import logging
 logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s %(message)s")
-from services.agentd.service import get_manager
+from services.agentd.service import get_manager  # noqa: E402
 
 async def main():
     # Wait for deps in dev mode (systemd/launchd handles ordering in prod)
@@ -15,7 +16,7 @@ async def main():
             timeout_s=10,
         )
         if not deps_ok:
-            import sys
+            import sys  # noqa: F401
             print("WARNING: agentd starting without all deps — some features may fail until services come online")
     except ImportError:
         pass  # startup_probe not available in minimal installs

@@ -7,8 +7,6 @@ clawctl omi — OMI ambient AI integration commands.
   clawctl omi show <id> — show full conversation detail
   clawctl omi setup    — print the URL to paste into OMI app settings
 """
-import json
-import sys
 import time
 
 
@@ -63,7 +61,7 @@ def run_history(limit: int = 20):
         title = c.get("title", "Untitled")
         cat = c.get("category", "")
         actions = len(c.get("action_items", []))
-        triples = c.get("triple_count", 0)
+        c.get("triple_count", 0)
         cat_str = f" [{cat}]" if cat else ""
         action_str = f" ({actions} actions)" if actions else ""
         print(f"  {c['id'][:16]}  {ts[:19]}  {title[:40]}{cat_str}{action_str}")
@@ -115,7 +113,7 @@ def run_show(conv_id: str):
 
     preview = conv.get("transcript_preview", "")
     if preview:
-        print(f"\n  Transcript Preview:")
+        print("\n  Transcript Preview:")
         print(f"    {preview}")
 
 

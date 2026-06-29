@@ -4,7 +4,7 @@ import logging
 
 logging.basicConfig(level=logging.WARNING, format="%(name)s %(levelname)s %(message)s")
 
-from services.setupd.service import run
+from services.setupd.service import run  # noqa: E402
 
 if __name__ == "__main__":
     run()

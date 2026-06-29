@@ -7,7 +7,6 @@ import logging
 import socket
 import threading
 import time
-from typing import List
 from clawos_core.constants import PORT_A2AD, A2A_MDNS_SERVICE, A2A_DISCOVERY_SECS
 
 log = logging.getLogger("a2ad.discovery")

@@ -19,7 +19,7 @@ import platform
 import shutil
 import subprocess
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from clawos_core.platform import (
@@ -299,13 +299,17 @@ def _detect_disk_type() -> tuple[float, str]:
         rota = parts[1] if len(parts) > 1 else "1"
         tran = parts[2] if len(parts) > 2 else ""
         if "nvme" in tran or "nvme" in name:
-            dtype = "nvme"; break
+            dtype = "nvme"
+            break
         elif "mmc" in name:
-            dtype = "emmc" if "mmcblk" in name else "sd"; break
+            dtype = "emmc" if "mmcblk" in name else "sd"
+            break
         elif rota == "0":
-            dtype = "ssd"; break
+            dtype = "ssd"
+            break
         elif rota == "1":
-            dtype = "hdd"; break
+            dtype = "hdd"
+            break
     try:
         import shutil as sh
         usage = sh.disk_usage("/")

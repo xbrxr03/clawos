@@ -2,11 +2,8 @@
 """Unit tests for clawos_core.database module."""
 
 import pytest
-import sqlite3
 import tempfile
 from pathlib import Path
-import threading
-import time
 
 from clawos_core.database import (
     ConnectionPool,
@@ -51,7 +48,7 @@ class TestConnectionPool:
         pool.initialize()
         
         # Use the only connection
-        with pool.acquire() as conn:
+        with pool.acquire():
             pass
         
         # Try to get connection immediately (should work since we returned it)

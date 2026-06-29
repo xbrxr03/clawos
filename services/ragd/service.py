@@ -303,8 +303,8 @@ class RAGService:
         alpha_ratio   = alpha_words / len(words)
         numeric_words = sum(1 for w in words if re.fullmatch(r"[\d\W]+", w))
         numeric_ratio = numeric_words / len(words)
-        lines         = [l.strip() for l in text.splitlines() if l.strip()]
-        short_lines   = sum(1 for l in lines if len(l.split()) <= 3)
+        lines         = [line.strip() for line in text.splitlines() if line.strip()]
+        short_lines   = sum(1 for line in lines if len(line.split()) <= 3)
         short_ratio   = short_lines / max(len(lines), 1)
         sent_ends     = len(re.findall(r"[.!?]", text))
         expected      = max(len(words) / 15, 1)
@@ -686,7 +686,8 @@ class RAGService:
             return []
 
         # Embed query via Ollama directly (same model used at ingest time)
-        import urllib.request as _ur, json as _json
+        import urllib.request as _ur
+        import json as _json
         try:
             _payload = _json.dumps({"model": EMBED_MODEL, "prompt": query}).encode()
             _req = _ur.Request(f"{OLLAMA_HOST}/api/embeddings", data=_payload,

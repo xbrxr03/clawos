@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Tests for researchd engine and session management."""
-import json
 import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from services.researchd.engine import (
     Citation, ResearchSource, ResearchSession, ResearchEngine,
     _extract_citations, _fetch_page, _detect_provider,

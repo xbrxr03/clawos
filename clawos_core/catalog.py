@@ -15,7 +15,7 @@ from typing import Any
 from clawos_core.constants import CONFIG_DIR, DEFAULT_MODEL, OTEL_JSONL, TRACES_JSONL
 
 _STUDIO_DIR = CONFIG_DIR / "studio" / "programs"
-from clawos_core.models import (
+from clawos_core.models import (  # noqa: E402
     EvalSuite,
     ExtensionManifest,
     OpenClawImportManifest,
@@ -24,8 +24,8 @@ from clawos_core.models import (
     UseCasePack,
     WorkflowProgram,
 )
-from clawos_core.util.ids import task_id
-from clawos_core.util.time import now_iso
+from clawos_core.util.ids import task_id  # noqa: E402
+from clawos_core.util.time import now_iso  # noqa: E402
 
 
 def _read_json(path: Path) -> dict[str, Any]:

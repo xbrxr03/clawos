@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 from frameworks.registry import (
     AppState,
@@ -181,7 +181,8 @@ def install(
     Returns True on success.
     """
     if progress is None:
-        progress = lambda msg: log.info(f"installer: {msg}")
+        def progress(msg):
+            return log.info(f"installer: {msg}")
 
     registry = get_registry()
     manifest = registry.get(name)
@@ -251,7 +252,8 @@ def install(
 def remove(name: str, progress: Callable[[str], None] | None = None) -> bool:
     """Uninstall a framework and remove its systemd unit."""
     if progress is None:
-        progress = lambda msg: log.info(f"installer: {msg}")
+        def progress(msg):
+            return log.info(f"installer: {msg}")
 
     registry = get_registry()
     manifest = registry.get(name)

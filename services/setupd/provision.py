@@ -5,7 +5,6 @@ Idempotent setup-time provisioning helpers owned by setupd.
 from __future__ import annotations
 
 import json
-import os
 import platform as py_platform
 import shutil
 import subprocess

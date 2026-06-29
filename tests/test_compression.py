@@ -2,8 +2,7 @@
 """Tests for runtimes.agent.compression — context compression with prompt caching."""
 from __future__ import annotations
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from runtimes.agent.compression import (
     ContextCompressor,
@@ -11,10 +10,6 @@ from runtimes.agent.compression import (
     compress_history_tool_outputs,
     _est_tokens,
     CACHE_BREAKPOINT_MARKER,
-)
-from clawos_core.constants import (
-    MAX_VERBATIM_TURNS,
-    COMPRESSION_THRESHOLD_TOKENS,
 )
 
 

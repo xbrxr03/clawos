@@ -9,9 +9,7 @@ Blocked: os.system, subprocess, socket, open (outside workspace),
 Skills can only call back into ClawOS via the provided `context` object.
 """
 import logging
-import types
 from pathlib import Path
-from typing import Any
 
 log = logging.getLogger("skill_sandbox")
 

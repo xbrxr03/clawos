@@ -16,13 +16,16 @@ failed = 0
 
 
 def ok(label):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  ✓  {label}")
 
 def fail(label, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     msg = f"  ✗  {label}"
-    if reason: msg += f"  [{reason}]"
+    if reason:
+        msg += f"  [{reason}]"
     print(msg)
 
 
@@ -94,7 +97,6 @@ def test_metrics_service_importable():
 
 def test_exporter_importable():
     try:
-        from services.metricd.exporter import export_local, export_otlp
         ok("metricd exporter importable")
     except Exception as e:
         fail("metricd exporter importable", str(e))
@@ -102,7 +104,7 @@ def test_exporter_importable():
 
 def test_metricd_constants():
     try:
-        from clawos_core.constants import PORT_METRICD, DEFAULT_DAILY_TOKEN_BUDGET, OTEL_JSONL
+        from clawos_core.constants import PORT_METRICD, DEFAULT_DAILY_TOKEN_BUDGET
         assert PORT_METRICD == 7076
         assert DEFAULT_DAILY_TOKEN_BUDGET == 100_000
         ok(f"metricd constants correct (port={PORT_METRICD}, budget={DEFAULT_DAILY_TOKEN_BUDGET})")

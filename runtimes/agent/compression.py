@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 from clawos_core.constants import (
     MAX_VERBATIM_TURNS,

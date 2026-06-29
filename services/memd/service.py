@@ -13,6 +13,7 @@ Lifecycle: ADD / UPDATE / DELETE / NOOP (prevents memory bloat).
 Async writes: agent loop never blocks on memory writes.
 """
 import asyncio
+import json
 import logging
 import re
 import sqlite3
@@ -23,7 +24,7 @@ from typing import Optional
 from clawos_core.constants import MEMORY_DIR
 from clawos_core.util.time import now_iso, now_stamp
 from clawos_core.util.paths import (
-    memory_path, pinned_path, workflow_path, history_path,
+    pinned_path, workflow_path, history_path,
     soul_path, agents_path, heartbeat_path
 )
 
@@ -221,7 +222,7 @@ class MemoryService:
         p = history_path(ws)
         if not p.exists():
             return ""
-        all_lines = [l for l in p.read_text().strip().split("\n") if l.strip()]
+        all_lines = [line for line in p.read_text().strip().split("\n") if line.strip()]
         return "\n".join(all_lines[-lines:])
 
     # ── SOUL / AGENTS / HEARTBEAT ─────────────────────────────────────────────
@@ -831,7 +832,7 @@ def get_learned(workspace_id: str) -> str:
 
 async def run_ace_loop(task_result: str, workspace_id: str):
     """Call after task completion. Fire-and-forget async."""
-    from clawos_core.constants import OLLAMA_HOST, DEFAULT_MODEL
+    from clawos_core.constants import OLLAMA_HOST
     await _learned.extract_and_append(task_result, workspace_id, OLLAMA_HOST)
 
 

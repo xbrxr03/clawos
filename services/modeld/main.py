@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """modeld entry point."""
-import asyncio, logging
+import asyncio
+import logging
 logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s %(message)s")
-from services.modeld.service import get_service
-from clawos_core.constants import PORT_MODELD
-from clawos_core.daemon_http import serve_health
+from services.modeld.service import get_service  # noqa: E402
+from clawos_core.constants import PORT_MODELD  # noqa: E402
+from clawos_core.daemon_http import serve_health  # noqa: E402
 
 async def main():
     svc = get_service()

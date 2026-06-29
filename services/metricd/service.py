@@ -12,7 +12,6 @@ Usage from runtime:
     metrics.record_llm(model, input_tokens, output_tokens, latency_ms, workspace_id, task_id)
     metrics.record_tool(tool, target, decision, duration_ms, workspace_id, task_id)
 """
-import asyncio
 import logging
 from typing import Optional
 from clawos_core.models import TokenUsage

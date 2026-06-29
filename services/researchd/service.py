@@ -22,7 +22,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from services.researchd.engine import (
-    ResearchEngine,
     ResearchSession,
     get_engine,
 )

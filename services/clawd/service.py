@@ -7,9 +7,7 @@ Heartbeat: reads HEARTBEAT.md and schedules proactive tasks.
 """
 import asyncio
 import logging
-from pathlib import Path
 from clawos_core.config.loader import load as load_config
-from clawos_core.constants import DEFAULT_WORKSPACE
 
 log = logging.getLogger("clawd")
 

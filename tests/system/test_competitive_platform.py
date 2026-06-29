@@ -11,7 +11,7 @@ ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
 SETUP_HEADERS = {"X-ClawOS-Setup": "1"}
 
@@ -142,7 +142,7 @@ def test_dashd_exposes_competitive_surface(monkeypatch):
     monkeypatch.setattr("services.a2ad.discovery.get_local_ip", lambda: "127.0.0.1")
     monkeypatch.setattr("services.a2ad.discovery.get_peers", lambda: [{"name": "Peer A", "url": "http://127.0.0.1:7083/a2a"}])
 
-    import contextlib, json as _json
+    import json as _json
     class _FakeResp:
         def read(self): return _json.dumps("delegated-result").encode()
         def __enter__(self): return self

@@ -11,12 +11,10 @@ Runs a quick smoke test to confirm ClawOS is ready to use:
 Designed to run at the end of install.sh or manually via `clawctl verify`.
 Total runtime: ~30 seconds.
 """
-import asyncio
 import shutil
 import socket
 import subprocess
 import sys
-import time
 
 
 def _check(label: str, ok: bool, detail: str = "") -> bool:
@@ -88,7 +86,7 @@ def run() -> bool:
             pkg_ok = True
         except ImportError:
             pkg_ok = False
-        all_ok &= _check(f"Package: {pkg}", pkg_ok, f"pip install -e .")
+        all_ok &= _check(f"Package: {pkg}", pkg_ok, "pip install -e .")
 
     # 5. Memory service smoke test
     try:

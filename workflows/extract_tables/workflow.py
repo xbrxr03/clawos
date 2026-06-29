@@ -22,7 +22,6 @@ async def run(args: dict, agent) -> WorkflowResult:
                               error="No file specified. Usage: nexus workflow run extract-tables file=/path/to/doc.pdf")
 
     path      = Path(filepath).expanduser().resolve()
-    out_dir   = path.parent
     prompt = (
         f"Extract all tables from the document: {path}\n\n"
         "1. Read the document content.\n"

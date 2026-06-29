@@ -154,7 +154,6 @@ def iter_zip_chunks(zip_path: Path) -> Iterator[dict]:
     """
     import zipfile
     import tempfile
-    import shutil
 
     SKIP_DIRS = {".git", "__pycache__", "node_modules", ".venv", "venv",
                  "dist", "build", ".next", ".nuxt"}

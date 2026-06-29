@@ -4,7 +4,6 @@ Phase 14a — ElevenLabs TTS + TTSRouter tests.
 Tests adapter backend detection, routing, fallback, and config integration.
 """
 import os
-import pytest
 from unittest.mock import patch, MagicMock
 
 

@@ -100,7 +100,8 @@ def start_headroom() -> bool:
                 start_new_session=True,
             )
         HEADROOM_PID.write_text(str(proc.pid))
-        import time; time.sleep(1.5)
+        import time
+        time.sleep(1.5)
         if headroom_running():
             log.info(f"Headroom started (pid {proc.pid}) on :{HEADROOM_PORT}")
             return True
@@ -230,7 +231,7 @@ def patch_openclaw_config_for_headroom() -> bool:
     if not headroom_running():
         return False
 
-    from openclaw_integration.config_gen import CONFIG_PATH, OPENCLAW_DIR
+    from openclaw_integration.config_gen import CONFIG_PATH
     if not CONFIG_PATH.exists():
         return False
 
@@ -303,7 +304,7 @@ def setup_compression(show_progress: bool = True) -> dict:
                 print(f"  ✓  Headroom proxy running on :{HEADROOM_PORT}")
         else:
             if show_progress:
-                print(f"  ⚠  Headroom installed but failed to start — will retry on next openclaw start")
+                print("  ⚠  Headroom installed but failed to start — will retry on next openclaw start")
 
     # RTK
     status["rtk"] = install_rtk(show_progress)

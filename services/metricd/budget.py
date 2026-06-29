@@ -4,9 +4,7 @@ Per-workspace token budgets.
 Reads from configs/defaults.yaml metricd.budget section.
 Enforced by policyd via MetricsService.is_over_budget().
 """
-import json
 import sqlite3
-from pathlib import Path
 from clawos_core.constants import LOGS_DIR, DEFAULT_DAILY_TOKEN_BUDGET
 from clawos_core.util.time import now_iso
 

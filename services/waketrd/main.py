@@ -9,19 +9,15 @@ When "Hey JARVIS" is detected:
 2. Wait for follow-up audio
 3. Route to appropriate handler
 """
-import asyncio
-import json
 import logging
 import time
 from contextlib import asynccontextmanager
 from typing import Optional
 
-import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
 
-from clawos_core.constants import CLAWOS_DIR, PORT_VOICED, PORT_WAKETRD, DEFAULT_WORKSPACE
+from clawos_core.constants import PORT_VOICED, PORT_WAKETRD, DEFAULT_WORKSPACE
 from runtimes.agent.voice_entry import speak_morning_briefing
 from adapters.audio.tts_router import speak as tts_speak
 

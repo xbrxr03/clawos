@@ -10,7 +10,6 @@ import time
 import urllib.request
 import urllib.error
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -75,7 +74,7 @@ def _query_ollama(model: str, prompt: str, host: str = "http://127.0.0.1:11434")
 
         response_text = data.get("response", "")
         eval_count = data.get("eval_count", 0)
-        eval_ms = data.get("eval_count", 0) / max(data.get("eval_duration", 1), 1) * 1e6 if data.get("eval_duration") else 0
+        data.get("eval_count", 0) / max(data.get("eval_duration", 1), 1) * 1e6 if data.get("eval_duration") else 0
         tokens_per_sec = eval_count / elapsed if elapsed > 0 and eval_count > 0 else 0
 
         return ModelResponse(

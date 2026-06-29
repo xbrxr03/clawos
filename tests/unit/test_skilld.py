@@ -5,7 +5,6 @@ Run: python -m pytest tests/unit/test_skilld.py -v
 """
 import sys
 import pytest
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -37,14 +36,14 @@ Does something useful.
     meta, body = _parse_frontmatter(raw)
     assert meta["description"] == "Summarizes documents"
     assert meta["triggers"] == ["summarize", "recap", "tldr"]
-    assert meta["pinned"] == False
+    assert not meta["pinned"]
     assert "Does something useful" in body
 
 
 def test_frontmatter_pinned_true():
     raw = "---\ndescription: Always here\npinned: true\n---\nBody."
     meta, _ = _parse_frontmatter(raw)
-    assert meta["pinned"] == True
+    assert meta["pinned"]
 
 
 def test_frontmatter_none():
@@ -133,7 +132,7 @@ def test_load_skill_basic(skill_dir):
     assert s.name == "my-skill"
     assert s.description == "Summarizes documents and text"
     assert "summarize" in s.triggers
-    assert s.pinned == False
+    assert not s.pinned
     assert s.source == "claw"
 
 
@@ -152,7 +151,7 @@ def test_load_skill_pinned(tmp_path):
     d.mkdir()
     (d / "SKILL.md").write_text("---\ndescription: Always\npinned: true\n---\nAlways on.")
     s = _load_skill("pinned", d / "SKILL.md", "claw")
-    assert s.pinned == True
+    assert s.pinned
 
 
 def test_load_skill_truncates(tmp_path):

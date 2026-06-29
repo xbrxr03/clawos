@@ -15,7 +15,6 @@ The private key lives only on the ClawOS release server.
 """
 import base64
 import hashlib
-import json
 import logging
 from pathlib import Path
 from typing import Optional
@@ -39,7 +38,7 @@ def _get_public_key():
         return _public_key
     try:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat  # noqa: F401
         key_bytes = bytes.fromhex(CLAWOS_PUBLIC_KEY_HEX)
         _public_key = Ed25519PublicKey.from_public_bytes(key_bytes)
         return _public_key

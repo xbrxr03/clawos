@@ -12,11 +12,9 @@ Responsible for:
 Only activates on ARM architecture with <= 8GB RAM.
 On x86 hardware, this service does nothing.
 """
-import asyncio
 import logging
 import platform
 import subprocess
-from pathlib import Path
 from clawos_core.constants import OLLAMA_HOST, PICOCLAW_HTTP_TIMEOUT
 
 log = logging.getLogger("picoclawd")

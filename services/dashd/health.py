@@ -8,4 +8,5 @@ def health() -> dict:
     except (OSError, ConnectionRefusedError, TimeoutError) as e:
         return {"status": "down", "error": str(e)}
 if __name__ == "__main__":
-    import json; print(json.dumps(health()))
+    import json
+    print(json.dumps(health()))

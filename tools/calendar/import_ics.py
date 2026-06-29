@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterator, List, Optional
+from typing import Iterator, List
 
 from clawos_core.constants import CLAWOS_DIR
 
@@ -101,12 +101,12 @@ def parse_ics_file(ics_path: Path) -> Iterator[CalendarEvent]:
         
         try:
             start = parse_ics_datetime(dtstart) if dtstart else datetime.now()
-        except:
+        except Exception:
             start = datetime.now()
         
         try:
             end = parse_ics_datetime(dtend) if dtend else start + timedelta(hours=1)
-        except:
+        except Exception:
             end = start + timedelta(hours=1)
         
         # All-day if no time component

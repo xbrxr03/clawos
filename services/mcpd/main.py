@@ -13,17 +13,15 @@ Capabilities:
 - workflows/ → MCP prompts
 - agent execution → MCP tools
 """
-import asyncio
 import json
 import logging
-from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from clawos_core.constants import CLAWOS_DIR, PORT_MCPD
+from clawos_core.constants import PORT_MCPD
 from clawos_core.config.loader import load as get_config
 
 log = logging.getLogger("mcpd")
@@ -454,7 +452,7 @@ class ClawOSMCPServer:
                 "content": [
                     {
                         "type": "text",
-                        "text": f"ClawOS System Information:\n\n" +
+                        "text": "ClawOS System Information:\n\n" +
                                 f"Disk: {info['disk_free_gb']}GB free of {info['disk_total_gb']}GB\n" +
                                 f"RAM: {info['ram_used_gb']}GB / {info['ram_total_gb']}GB used\n" +
                                 f"Version: {info['clawos_version']}\n" +

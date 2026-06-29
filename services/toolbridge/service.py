@@ -13,7 +13,6 @@ import re
 import subprocess
 from pathlib import Path
 
-from clawos_core.constants import CLAWOS_DIR
 from clawos_core.platform import ram_snapshot_gb
 from clawos_core.tool_result import ToolResult
 from clawos_core.util.paths import workspace_path
@@ -405,7 +404,8 @@ class ToolBridge:
 
     async def _web_fetch(self, url: str) -> str:
         try:
-            import aiohttp, re as _re
+            import aiohttp
+            import re as _re
             async with aiohttp.ClientSession() as s:
                 async with s.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
                     text = await r.text()

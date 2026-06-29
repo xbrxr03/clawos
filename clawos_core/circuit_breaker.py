@@ -21,8 +21,8 @@ Features:
 import time
 import threading
 from enum import Enum
-from typing import Callable, Optional, TypeVar, Generic, Dict, Any
-from dataclasses import dataclass, field
+from typing import Callable, Optional, TypeVar, Dict, Any
+from dataclasses import dataclass
 from functools import wraps
 import logging
 
@@ -192,7 +192,6 @@ class CircuitBreaker:
     
     def _transition_to(self, new_state: CircuitState):
         """Transition to a new state."""
-        old_state = self._state
         self._state = new_state
         self._last_state_change = time.time()
         self._metrics.state_changes += 1

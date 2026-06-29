@@ -14,16 +14,13 @@ Features:
 
 Addresses the local coding agent gap from CRITICAL_GAPS_RESEARCH.md
 """
-import asyncio
 import json
 import logging
 import os
-import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Dict, Any
-from urllib.parse import urlparse
+from typing import Optional, List, Dict
 
 try:
     import chromadb

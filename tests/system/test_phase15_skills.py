@@ -4,12 +4,10 @@ Phase 15 — Skill Marketplace tests.
 Tests ClawHub wrapper, Ed25519 verification, sandbox escape prevention.
 Network-dependent tests skip gracefully when offline.
 """
-import json
-import os
 import tempfile
 import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 # ── 1. Registry module loads ──────────────────────────────────────────────────
@@ -218,7 +216,7 @@ def test_registry_install_uninstall_cycle():
     from skills.marketplace.registry import (
         register_installed, unregister_installed, _is_installed
     )
-    with patch("skills.marketplace.registry.INSTALLED_DB") as mock_db:
+    with patch("skills.marketplace.registry.INSTALLED_DB"):
         # Use a temp file
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             tmp = Path(f.name)

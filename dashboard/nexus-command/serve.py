@@ -3,7 +3,6 @@
 import os
 import subprocess
 import sys
-from pathlib import Path
 
 
 def serve(port: int = 5180):
@@ -33,8 +32,8 @@ def serve(port: int = 5180):
         pass
 
     print(f"  Starting Nexus Command on http://localhost:{port}")
-    print(f"  Gateway: ws://localhost:18789")
-    print(f"  Press Ctrl+C to stop.\n")
+    print("  Gateway: ws://localhost:18789")
+    print("  Press Ctrl+C to stop.\n")
 
     try:
         subprocess.run(

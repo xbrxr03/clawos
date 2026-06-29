@@ -79,6 +79,21 @@ if not CLICK_OK:
             print(__doc__)
             return
         _dispatch_plain(args)
+
+    def _run_command(cmd, sub, rest):
+        """Minimal no-click command dispatch."""
+        # Map command names to their module functions
+        cmd_map = {
+            "status": lambda: __import__("clawctl.commands.health_dash", fromlist=["run"]).run(),
+            "start": lambda: __import__("clawctl.commands.start", fromlist=["run"]).run(sub, False),
+            "stop": lambda: __import__("clawctl.commands.stop", fromlist=["run"]).run(sub),
+        }
+        fn = cmd_map.get(cmd)
+        if fn:
+            fn()
+        else:
+            print(f"Unknown command: {cmd}. Run without args for help.")
+
     def _dispatch_plain(args):
         cmd = args[0]
         sub = args[1] if len(args) > 1 else None
@@ -109,20 +124,24 @@ else:
     @click.option("--dev", is_flag=True, help="Dev mode (no systemd)")
     def start(service, dev):
         """Start all services or one named service."""
-        from clawctl.commands.start import run; run(service, dev)
+        from clawctl.commands.start import run
+        run(service, dev)
 
     @main.command()
     @click.argument("service", required=False)
     def stop(service):
         """Stop services."""
-        from clawctl.commands.stop import run; run(service)
+        from clawctl.commands.stop import run
+        run(service)
 
     @main.command()
     @click.argument("service", required=False)
     def restart(service):
         """Restart services."""
-        from clawctl.commands.stop  import run as s; s(service)
-        from clawctl.commands.start import run as t; t(service)
+        from clawctl.commands.stop  import run as s
+        s(service)
+        from clawctl.commands.start import run as t
+        t(service)
 
     # ── logs ──────────────────────────────────────────────────────────────────
     @main.command()
@@ -131,19 +150,22 @@ else:
     @click.option("-n", "--lines", default=40)
     def logs(service, follow, lines):
         """Tail logs."""
-        from clawctl.commands.logs import run; run(service, follow, lines)
+        from clawctl.commands.logs import run
+        run(service, follow, lines)
 
     # ── doctor ────────────────────────────────────────────────────────────────
     @main.command()
     @click.option("--fix", is_flag=True, help="Auto-fix safe issues")
     def doctor(fix):
         """Diagnose ClawOS issues."""
-        from clawctl.commands.doctor import run; run(fix)
+        from clawctl.commands.doctor import run
+        run(fix)
 
     @main.command()
     def verify():
         """Verify ClawOS is ready to use (post-install smoke test)."""
-        from clawctl.commands.verify import run; run()
+        from clawctl.commands.verify import run
+        run()
 
     # ── model ─────────────────────────────────────────────────────────────────
     @main.group()
@@ -153,22 +175,26 @@ else:
 
     @model.command("list")
     def model_list():
-        from clawctl.commands.model import run_list; run_list()
+        from clawctl.commands.model import run_list
+        run_list()
 
     @model.command("pull")
     @click.argument("name")
     def model_pull(name):
-        from clawctl.commands.model import run_pull; run_pull(name)
+        from clawctl.commands.model import run_pull
+        run_pull(name)
 
     @model.command("remove")
     @click.argument("name")
     def model_remove(name):
-        from clawctl.commands.model import run_remove; run_remove(name)
+        from clawctl.commands.model import run_remove
+        run_remove(name)
 
     @model.command("default")
     @click.argument("name")
     def model_default(name):
-        from clawctl.commands.model import run_set_default; run_set_default(name)
+        from clawctl.commands.model import run_set_default
+        run_set_default(name)
 
     # ── cookbook ─────────────────────────────────────────────────────────────
     @main.group()
@@ -178,19 +204,23 @@ else:
 
     @cookbook.command("scan")
     def cookbook_scan():
-        from clawctl.commands.cookbook import run_scan; run_scan()
+        from clawctl.commands.cookbook import run_scan
+        run_scan()
 
     @cookbook.command("recommend")
     def cookbook_recommend():
-        from clawctl.commands.cookbook import run_recommend; run_recommend()
+        from clawctl.commands.cookbook import run_recommend
+        run_recommend()
 
     @cookbook.command("serve")
     def cookbook_serve():
-        from clawctl.commands.cookbook import run_serve; run_serve()
+        from clawctl.commands.cookbook import run_serve
+        run_serve()
 
     @cookbook.command("json")
     def cookbook_json():
-        from clawctl.commands.cookbook import run_json; run_json()
+        from clawctl.commands.cookbook import run_json
+        run_json()
 
     # ── research ──────────────────────────────────────────────────────────────
     @main.group()
@@ -202,26 +232,31 @@ else:
     @click.argument("query")
     @click.option("--urls", default="", help="Comma-separated seed URLs")
     def research_start(query, urls):
-        from clawctl.commands.research import run_start; run_start(query, urls)
+        from clawctl.commands.research import run_start
+        run_start(query, urls)
 
     @research.command("list")
     def research_list():
-        from clawctl.commands.research import run_list; run_list()
+        from clawctl.commands.research import run_list
+        run_list()
 
     @research.command("get")
     @click.argument("session_id")
     def research_get(session_id):
-        from clawctl.commands.research import run_get; run_get(session_id)
+        from clawctl.commands.research import run_get
+        run_get(session_id)
 
     @research.command("fetch")
     @click.argument("session_id")
     def research_fetch(session_id):
-        from clawctl.commands.research import run_fetch; run_fetch(session_id)
+        from clawctl.commands.research import run_fetch
+        run_fetch(session_id)
 
     @research.command("delete")
     @click.argument("session_id")
     def research_delete(session_id):
-        from clawctl.commands.research import run_delete; run_delete(session_id)
+        from clawctl.commands.research import run_delete
+        run_delete(session_id)
 
     # ── compare ───────────────────────────────────────────────────────────────
     @main.command("compare")
@@ -230,7 +265,7 @@ else:
     @click.option("--parallel/--sequential", default=True, help="Run in parallel (default) or sequential")
     def compare_cmd(prompt, models, parallel):
         """Compare model responses side-by-side."""
-        from clawctl.commands.compare import run_compare, run_compare_parallel, _query_ollama
+        from clawctl.commands.compare import run_compare, run_compare_parallel
         import json
 
         model_list = [m.strip() for m in models.split(",") if m.strip()] if models else []
@@ -285,7 +320,8 @@ else:
     @click.option("--limit", default=5, help="Max results to return")
     def search_cmd(query, workspace, limit):
         """Search across past conversation sessions."""
-        from clawctl.commands.search import run; run(query, workspace, limit)
+        from clawctl.commands.search import run
+        run(query, workspace, limit)
 
     # ── workspace ─────────────────────────────────────────────────────────────
     @main.group()
@@ -295,17 +331,20 @@ else:
 
     @workspace.command("list")
     def ws_list():
-        from clawctl.commands.workspace import run_list; run_list()
+        from clawctl.commands.workspace import run_list
+        run_list()
 
     @workspace.command("create")
     @click.argument("name")
     def ws_create(name):
-        from clawctl.commands.workspace import run_create; run_create(name)
+        from clawctl.commands.workspace import run_create
+        run_create(name)
 
     @workspace.command("delete")
     @click.argument("name")
     def ws_delete(name):
-        from clawctl.commands.workspace import run_delete; run_delete(name)
+        from clawctl.commands.workspace import run_delete
+        run_delete(name)
 
     # ── voice ─────────────────────────────────────────────────────────────────
     @main.group()
@@ -315,24 +354,29 @@ else:
 
     @voice.command("status")
     def voice_status():
-        from clawctl.commands.voice import run_status; run_status()
+        from clawctl.commands.voice import run_status
+        run_status()
 
     @voice.command("enable")
     def voice_enable():
-        from clawctl.commands.voice import run_enable; run_enable()
+        from clawctl.commands.voice import run_enable
+        run_enable()
 
     @voice.command("disable")
     def voice_disable():
-        from clawctl.commands.voice import run_disable; run_disable()
+        from clawctl.commands.voice import run_disable
+        run_disable()
 
     @voice.command("test")
     def voice_test():
-        from clawctl.commands.voice import run_test; run_test()
+        from clawctl.commands.voice import run_test
+        run_test()
 
     @voice.command("mode")
     @click.argument("mode", required=False)
     def voice_mode(mode):
-        from clawctl.commands.voice import run_mode; run_mode(mode or "")
+        from clawctl.commands.voice import run_mode
+        run_mode(mode or "")
 
     @main.group()
     def packs():
@@ -341,14 +385,16 @@ else:
 
     @packs.command("list")
     def packs_list():
-        from clawctl.commands.packs import run_list; run_list()
+        from clawctl.commands.packs import run_list
+        run_list()
 
     @packs.command("install")
     @click.argument("pack_id")
     @click.option("--primary", is_flag=True, help="Set as the primary pack")
     @click.option("--provider", default="", help="Optional provider profile to bind")
     def packs_install(pack_id, primary, provider):
-        from clawctl.commands.packs import run_install; run_install(pack_id, primary=primary, provider_profile=provider)
+        from clawctl.commands.packs import run_install
+        run_install(pack_id, primary=primary, provider_profile=provider)
 
     @main.group()
     def providers():
@@ -357,17 +403,20 @@ else:
 
     @providers.command("list")
     def providers_list():
-        from clawctl.commands.providers import run_list; run_list()
+        from clawctl.commands.providers import run_list
+        run_list()
 
     @providers.command("test")
     @click.argument("profile_id")
     def providers_test(profile_id):
-        from clawctl.commands.providers import run_test; run_test(profile_id)
+        from clawctl.commands.providers import run_test
+        run_test(profile_id)
 
     @providers.command("switch")
     @click.argument("profile_id")
     def providers_switch(profile_id):
-        from clawctl.commands.providers import run_switch; run_switch(profile_id)
+        from clawctl.commands.providers import run_switch
+        run_switch(profile_id)
 
     @main.group()
     def extensions():
@@ -376,12 +425,14 @@ else:
 
     @extensions.command("list")
     def extensions_list():
-        from clawctl.commands.extensions import run_list; run_list()
+        from clawctl.commands.extensions import run_list
+        run_list()
 
     @extensions.command("install")
     @click.argument("extension_id")
     def extensions_install(extension_id):
-        from clawctl.commands.extensions import run_install; run_install(extension_id)
+        from clawctl.commands.extensions import run_install
+        run_install(extension_id)
 
     @main.group()
     def rescue():
@@ -391,17 +442,20 @@ else:
     @rescue.command("openclaw")
     @click.option("--path", "path_hint", default="", help="Optional OpenClaw home path")
     def rescue_openclaw(path_hint):
-        from clawctl.commands.rescue import run_openclaw; run_openclaw(path_hint)
+        from clawctl.commands.rescue import run_openclaw
+        run_openclaw(path_hint)
 
     @main.command()
     def benchmark():
         """Show pack eval readiness and trace availability."""
-        from clawctl.commands.benchmark import run; run()
+        from clawctl.commands.benchmark import run
+        run()
 
     @main.command()
     def briefing():
         """Generate the current Nexus briefing."""
-        from clawctl.commands.briefing import run_now; run_now()
+        from clawctl.commands.briefing import run_now
+        run_now()
 
     # ── demos ─────────────────────────────────────────────────────────────
     @main.group()
@@ -439,13 +493,15 @@ else:
 
     @mission.command("list")
     def mission_list():
-        from clawctl.commands.mission import run_list; run_list()
+        from clawctl.commands.mission import run_list
+        run_list()
 
     @mission.command("start")
     @click.argument("title")
     @click.option("--summary", default="", help="Optional mission summary")
     def mission_start(title, summary):
-        from clawctl.commands.mission import run_start; run_start(title, summary)
+        from clawctl.commands.mission import run_start
+        run_start(title, summary)
 
     @main.group()
     def presence():
@@ -454,7 +510,8 @@ else:
 
     @presence.command("show")
     def presence_show():
-        from clawctl.commands.presence import run_show; run_show()
+        from clawctl.commands.presence import run_show
+        run_show()
 
     # ── wizard + chat ─────────────────────────────────────────────────────────
     @main.command()
@@ -484,7 +541,8 @@ else:
     @click.argument("workspace", default="nexus_default")
     def chat(workspace):
         """Start Nexus."""
-        import subprocess, sys
+        import subprocess
+        import sys
         from pathlib import Path
         root = Path(__file__).parent.parent
         subprocess.run([sys.executable, str(root / "nexus" / "cli.py")],
@@ -501,12 +559,14 @@ if CLICK_OK:
     @a2a.command("peers")
     def a2a_peers():
         """List discovered ClawOS nodes on LAN."""
-        from clawctl.commands.a2a import run_peers; run_peers()
+        from clawctl.commands.a2a import run_peers
+        run_peers()
 
     @a2a.command("card")
     def a2a_card():
         """Print this node Agent Card JSON."""
-        from clawctl.commands.a2a import run_card; run_card()
+        from clawctl.commands.a2a import run_card
+        run_card()
 
     @a2a.command("delegate")
     @click.argument("task")
@@ -514,18 +574,21 @@ if CLICK_OK:
     @click.option("--workspace", default="nexus_default")
     def a2a_delegate(task, peer, workspace):
         """Delegate a task to a remote ClawOS node."""
-        from clawctl.commands.a2a import run_delegate; run_delegate(task, peer, workspace)
+        from clawctl.commands.a2a import run_delegate
+        run_delegate(task, peer, workspace)
 
     @a2a.command("status")
     def a2a_status():
         """Check a2ad service status."""
-        from clawctl.commands.a2a import run_status; run_status()
+        from clawctl.commands.a2a import run_status
+        run_status()
 
     # ── budget ────────────────────────────────────────────────────────────────
     @main.command()
     def budget():
         """Show per-workspace token usage."""
-        from clawctl.commands.budget import run; run()
+        from clawctl.commands.budget import run
+        run()
 
 
 if CLICK_OK:
@@ -576,7 +639,8 @@ if CLICK_OK:
     @click.option("--page", default=1, help="Page number")
     def skill_search(query, page):
         """Search ClawHub for skills."""
-        from clawctl.commands.skill import run_search; run_search(query, page)
+        from clawctl.commands.skill import run_search
+        run_search(query, page)
 
     @skill.command("install")
     @click.argument("skill_id")
@@ -591,31 +655,36 @@ if CLICK_OK:
     @click.argument("skill_id")
     def skill_remove(skill_id):
         """Remove an installed skill."""
-        from clawctl.commands.skill import run_remove; run_remove(skill_id)
+        from clawctl.commands.skill import run_remove
+        run_remove(skill_id)
 
     @skill.command("list")
     def skill_list():
         """List installed skills."""
-        from clawctl.commands.skill import run_list; run_list()
+        from clawctl.commands.skill import run_list
+        run_list()
 
     @skill.command("verify")
     @click.argument("skill_path")
     def skill_verify(skill_path):
         """Verify Ed25519 signature of a local skill directory."""
-        from clawctl.commands.skill import run_verify; run_verify(skill_path)
+        from clawctl.commands.skill import run_verify
+        run_verify(skill_path)
 
     @skill.command("local")
     @click.argument("skill_path")
     @click.option("--id", "skill_id", default="", help="Override skill ID")
     def skill_local(skill_path, skill_id):
         """Install skill from local path (dev mode)."""
-        from clawctl.commands.skill import run_local; run_local(skill_path, skill_id)
+        from clawctl.commands.skill import run_local
+        run_local(skill_path, skill_id)
 
     @skill.command("sign")
     @click.argument("skill_path")
     def skill_sign(skill_path):
         """Sign a skill with Ed25519 (requires CLAWOS_SIGN_KEY env var)."""
-        from clawctl.commands.skill import run_sign; run_sign(skill_path)
+        from clawctl.commands.skill import run_sign
+        run_sign(skill_path)
 
 # ── license ────────────────────────────────────────────────────────────────────
 if CLICK_OK:
@@ -628,17 +697,20 @@ if CLICK_OK:
     @click.argument("key")
     def license_activate(key):
         """Activate a license key (CLAW-XXXX-XXXX-XXXX-XXXX)."""
-        from clawctl.commands.license import run_activate; run_activate(key)
+        from clawctl.commands.license import run_activate
+        run_activate(key)
 
     @license.command("status")
     def license_status():
         """Show current license status."""
-        from clawctl.commands.license import run_status; run_status()
+        from clawctl.commands.license import run_status
+        run_status()
 
     @license.command("deactivate")
     def license_deactivate():
         """Deactivate license on this machine."""
-        from clawctl.commands.license import run_deactivate; run_deactivate()
+        from clawctl.commands.license import run_deactivate
+        run_deactivate()
 
 
 # ── framework store ───────────────────────────────────────────────────────────
@@ -651,42 +723,49 @@ if CLICK_OK:
     @framework.command("list")
     def framework_list():
         """List all available frameworks with install status."""
-        from clawctl.commands.framework import run_list; run_list()
+        from clawctl.commands.framework import run_list
+        run_list()
 
     @framework.command("install")
     @click.argument("name")
     def framework_install(name):
         """Install a framework from the store."""
-        from clawctl.commands.framework import run_install; run_install(name)
+        from clawctl.commands.framework import run_install
+        run_install(name)
 
     @framework.command("remove")
     @click.argument("name")
     def framework_remove(name):
         """Remove an installed framework."""
-        from clawctl.commands.framework import run_remove; run_remove(name)
+        from clawctl.commands.framework import run_remove
+        run_remove(name)
 
     @framework.command("start")
     @click.argument("name")
     def framework_start(name):
         """Start an installed framework's systemd service."""
-        from clawctl.commands.framework import run_start; run_start(name)
+        from clawctl.commands.framework import run_start
+        run_start(name)
 
     @framework.command("stop")
     @click.argument("name")
     def framework_stop(name):
         """Stop a running framework."""
-        from clawctl.commands.framework import run_stop; run_stop(name)
+        from clawctl.commands.framework import run_stop
+        run_stop(name)
 
     @framework.command("use")
     @click.argument("name")
     def framework_use(name):
         """Set the active framework for agent routing."""
-        from clawctl.commands.framework import run_use; run_use(name)
+        from clawctl.commands.framework import run_use
+        run_use(name)
 
     @framework.command("status")
     def framework_status():
         """Show status of all installed frameworks."""
-        from clawctl.commands.framework import run_status; run_status()
+        from clawctl.commands.framework import run_status
+        run_status()
 
 # ── omi (ambient AI integration) ──────────────────────────────────────────────
 if CLICK_OK:
@@ -698,24 +777,28 @@ if CLICK_OK:
     @omi.command("status")
     def omi_status():
         """Show webhook URL, last event, conversation count."""
-        from clawctl.commands.omi import run_status; run_status()
+        from clawctl.commands.omi import run_status
+        run_status()
 
     @omi.command("history")
     @click.option("-n", "--limit", default=20, help="Number of conversations to show")
     def omi_history(limit):
         """List recent OMI conversations from archive."""
-        from clawctl.commands.omi import run_history; run_history(limit)
+        from clawctl.commands.omi import run_history
+        run_history(limit)
 
     @omi.command("show")
     @click.argument("conv_id")
     def omi_show(conv_id):
         """Show full conversation detail."""
-        from clawctl.commands.omi import run_show; run_show(conv_id)
+        from clawctl.commands.omi import run_show
+        run_show(conv_id)
 
     @omi.command("setup")
     def omi_setup():
         """Print webhook URLs to paste into OMI app settings."""
-        from clawctl.commands.omi import run_setup; run_setup()
+        from clawctl.commands.omi import run_setup
+        run_setup()
 
 
 # ── ace (self-improving loop) ──────────────────────────────────────────────────
@@ -729,32 +812,37 @@ if CLICK_OK:
     @click.option("--workspace", default="nexus_default")
     def ace_status(workspace):
         """Show LEARNED.md size, entry count, last write timestamp."""
-        from clawctl.commands.ace import run_status; run_status(workspace)
+        from clawctl.commands.ace import run_status
+        run_status(workspace)
 
     @ace.command("show")
     @click.option("--workspace", default="nexus_default")
     def ace_show(workspace):
         """Print current LEARNED.md content."""
-        from clawctl.commands.ace import run_show; run_show(workspace)
+        from clawctl.commands.ace import run_show
+        run_show(workspace)
 
     @ace.command("clear")
     @click.option("--workspace", default="nexus_default")
     @click.option("--yes", is_flag=True, help="Skip confirmation")
     def ace_clear(workspace, yes):
         """Truncate LEARNED.md (irreversible)."""
-        from clawctl.commands.ace import run_clear; run_clear(workspace, confirm=not yes)
+        from clawctl.commands.ace import run_clear
+        run_clear(workspace, confirm=not yes)
 
     @ace.command("pause")
     @click.option("--workspace", default="nexus_default")
     def ace_pause(workspace):
         """Stop writing new entries to LEARNED.md."""
-        from clawctl.commands.ace import run_pause; run_pause(workspace)
+        from clawctl.commands.ace import run_pause
+        run_pause(workspace)
 
     @ace.command("resume")
     @click.option("--workspace", default="nexus_default")
     def ace_resume(workspace):
         """Resume writing entries to LEARNED.md."""
-        from clawctl.commands.ace import run_resume; run_resume(workspace)
+        from clawctl.commands.ace import run_resume
+        run_resume(workspace)
 
 
 # ── wf (workflows) ────────────────────────────────────────────────────────────
@@ -1144,7 +1232,7 @@ if CLICK_OK:
     @click.argument("code_file", type=click.File('r'))
     def sandbox_execute(sandbox_id, code_file):
         """Execute code in sandbox."""
-        code = code_file.read()
+        code_file.read()
         click.echo(f"Executing in sandbox {sandbox_id}...")
 
     @sandbox.command("list")

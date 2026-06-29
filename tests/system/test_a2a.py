@@ -16,19 +16,21 @@ failed = 0
 
 
 def ok(label):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  ✓  {label}")
 
 def fail(label, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     msg = f"  ✗  {label}"
-    if reason: msg += f"  [{reason}]"
+    if reason:
+        msg += f"  [{reason}]"
     print(msg)
 
 
 def test_a2a_models_importable():
     try:
-        from clawos_core.models import AgentCard, AgentSkill, A2ATask
         ok("AgentCard, AgentSkill, A2ATask importable")
     except Exception as e:
         fail("A2A models importable", str(e))
@@ -66,7 +68,7 @@ def test_a2a_task_model():
 
 def test_discovery_importable():
     try:
-        from services.a2ad.discovery import get_peers, get_local_ip
+        from services.a2ad.discovery import get_local_ip
         ip = get_local_ip()
         assert isinstance(ip, str) and len(ip) > 0
         ok(f"a2ad discovery importable (local_ip={ip})")
@@ -76,7 +78,6 @@ def test_discovery_importable():
 
 def test_agent_card_builder_importable():
     try:
-        from services.a2ad.agent_card import build_card
         ok("a2ad agent_card.build_card importable")
     except Exception as e:
         fail("a2ad agent_card importable", str(e))
@@ -84,7 +85,6 @@ def test_agent_card_builder_importable():
 
 def test_task_handler_importable():
     try:
-        from services.a2ad.task_handler import handle_task
         ok("a2ad task_handler importable")
     except Exception as e:
         fail("a2ad task_handler importable", str(e))

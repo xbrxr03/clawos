@@ -21,7 +21,6 @@ def find_gaps(graph_builder) -> list[dict]:
         return base_gaps
 
     try:
-        import networkx as nx
         community_map = graph_builder._community_map
 
         # Find communities that share many keywords but no edges

@@ -2,9 +2,8 @@
 """Tests for subagent delegation (ClawOS issue #66)."""
 from __future__ import annotations
 
-import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from runtimes.agent.subagent import SubAgentRunner, SubAgentResult
 from clawos_core.constants import MAX_SUBAGENTS, SUBAGENT_TIMEOUT
@@ -86,7 +85,7 @@ async def test_delegate_tool_empty_task():
 @pytest.mark.asyncio
 async def test_delegate_tool_concurrency_limit():
     """delegate() refuses when MAX_SUBAGENTS are already active."""
-    from runtimes.agent.tools.delegate import delegate, _lock, _active_subagents
+    from runtimes.agent.tools.delegate import delegate
     import runtimes.agent.tools.delegate as delegate_mod
 
     # Simulate max subagents already active
@@ -104,7 +103,6 @@ async def test_delegate_tool_concurrency_limit():
 async def test_delegate_tool_success():
     """delegate() returns subagent result on success."""
     from runtimes.agent.tools.delegate import delegate
-    import runtimes.agent.tools.delegate as delegate_mod
 
     mock_result = SubAgentResult(
         success=True,

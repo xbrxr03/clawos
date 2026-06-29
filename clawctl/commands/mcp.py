@@ -24,7 +24,6 @@ from pathlib import Path
 
 import click
 
-from clawos_core.constants import CLAWOS_DIR
 
 CONFIG_PATH = Path.home() / ".clawos-runtime" / "config" / "mcp.json"
 
@@ -126,7 +125,7 @@ def mcp_list():
             try:
                 subprocess.run(["which", "npx"], capture_output=True, check=True)
                 status = "ready"
-            except:
+            except Exception:
                 status = "needs npx"
         
         click.echo(f"{name:<20} {transport:<10} {status:<15}")
@@ -223,7 +222,7 @@ def mcp_discover():
             )
             if result.returncode == 0:
                 found.append((name, package, "npm"))
-        except:
+        except Exception:
             pass
     
     if found:
@@ -260,7 +259,7 @@ def mcp_test(name):
             try:
                 subprocess.run(["which", "npx"], capture_output=True, check=True)
                 click.echo("  ✓ npx is available")
-            except:
+            except Exception:
                 click.echo("  ✗ npx not found. Install Node.js.")
                 return
         

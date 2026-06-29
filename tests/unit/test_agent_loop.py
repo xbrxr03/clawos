@@ -3,7 +3,6 @@
 Unit tests for agentd — AgentManager lifecycle and task routing.
 Mocks all external deps (Ollama, event bus, runtime, etc.).
 """
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

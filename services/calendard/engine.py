@@ -53,7 +53,6 @@ class CalendarEvent:
 
     def to_ical(self) -> str:
         """Export as iCal VEVENT."""
-        import secrets
         uid = f"{self.id}@clawos"
         dtstart = self.start_time.replace("-", "").replace(":", "").replace("+", "+")
         dtend = self.end_time.replace("-", "").replace(":", "").replace("+", "+") if self.end_time else ""

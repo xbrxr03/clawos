@@ -5,8 +5,10 @@ setupd - reusable setup backend for ClawOS Setup.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
+import subprocess
 import platform
 from pathlib import Path
 from typing import Any, Optional
@@ -1250,7 +1252,6 @@ def create_app() -> "FastAPI":
         """Install OpenClaw via frameworkd. Streams milestones via WebSocket."""
         _require_setup_access(request)
         import asyncio
-        messages: list[str] = []
 
         def _do_install():
             from services.frameworkd.service import install_framework
@@ -1325,7 +1326,10 @@ def create_app() -> "FastAPI":
     async def openclaw_start(request: Request):
         """Start the OpenClaw gateway daemon."""
         _require_setup_access(request)
-        import asyncio, shutil, subprocess, sys as _sys
+        import asyncio
+        import shutil
+        import subprocess
+        import sys as _sys
         body = await request.json()
         port = int(body.get("port", 18789))
         autostart = bool(body.get("autostart", True))
@@ -1374,7 +1378,9 @@ def create_app() -> "FastAPI":
     async def openclaw_skills(request: Request):
         """Install recommended OpenClaw skills."""
         _require_setup_access(request)
-        import asyncio, shutil, subprocess
+        import asyncio
+        import shutil
+        import subprocess
 
         openclaw_bin = shutil.which("openclaw")
         if not openclaw_bin:

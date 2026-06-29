@@ -22,7 +22,7 @@ from clawos_core.config.loader import get as cfg_get
 from clawos_core.constants import CLAWOS_CONFIG, CONFIG_DIR, PIPER_MODEL, VOICE_DIR
 from clawos_core.util.ids import entry_id
 from clawos_core.util.time import now_iso
-from openclaw_integration.responses_api import ensure_gateway_ready, gateway_health, request_response
+from openclaw_integration.responses_api import gateway_health, request_response
 from runtimes.voice.microphone import SAMPLE_RATE_HZ, available_recorder, default_device_label, record_utterance
 from runtimes.voice.stt_client import transcribe
 
@@ -77,7 +77,7 @@ def _load_state() -> dict[str, Any]:
     if JARVIS_STATE_JSON.exists():
         try:
             return json.loads(JARVIS_STATE_JSON.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as e:
             log.debug(f"failed: {e}")
             pass
             pass
@@ -473,7 +473,7 @@ class JarvisService:
             return {"status": "demo", "items": ["a product meeting at 3 PM", "a webinar at 7 PM"]}
         try:
             import icalendar  # type: ignore[import]
-            from datetime import date, datetime, timezone
+            from datetime import date, datetime
 
             with urllib.request.urlopen(ics_url, timeout=10) as resp:  # noqa: S310
                 cal = icalendar.Calendar.from_ical(resp.read())
@@ -762,7 +762,7 @@ class JarvisService:
 
         # Build 2-sentence briefing
         last_work = state.get("last_work", "")
-        ended_at = state.get("ended_at", "")
+        state.get("ended_at", "")
         parts: list[str] = []
         if last_work:
             parts.append(f"Welcome back. Last session you were working on: {last_work}.")

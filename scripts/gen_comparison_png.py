@@ -17,7 +17,7 @@ try:
     font_body = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 15)
     font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 14)
     font_mono = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 13)
-except:
+except Exception:
     font_title = font_header = font_body = font_small = font_mono = ImageFont.load_default()
 
 # Title

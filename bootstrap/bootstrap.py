@@ -10,9 +10,7 @@ Usage:
   python3 -m bootstrap.bootstrap --profile balanced
   python3 -m bootstrap.bootstrap --yes   (non-interactive)
 """
-import sys
 import argparse
-from pathlib import Path
 
 
 def _step(name: str):

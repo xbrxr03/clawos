@@ -2,9 +2,7 @@
 """Unit tests for clawos_core.circuit_breaker module."""
 
 import pytest
-import threading
 import time
-from unittest.mock import Mock
 
 from clawos_core.circuit_breaker import (
     CircuitBreaker,
@@ -12,7 +10,6 @@ from clawos_core.circuit_breaker import (
     CircuitState,
     CircuitBreakerRegistry,
 )
-from clawos_core.exceptions import CircuitBreakerError
 
 
 class TestCircuitBreakerConfig:

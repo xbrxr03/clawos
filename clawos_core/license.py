@@ -27,7 +27,7 @@ from typing import Optional
 log = logging.getLogger("license")
 
 # License cache: stored locally so 72h offline grace works
-from clawos_core.constants import CLAWOS_DIR
+from clawos_core.constants import CLAWOS_DIR  # noqa: E402
 LICENSE_CACHE_FILE = CLAWOS_DIR / "config" / "license.json"
 
 # Supabase project config — set via env or secretd

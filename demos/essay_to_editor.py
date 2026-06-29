@@ -18,7 +18,6 @@ Or via Nexus:
 """
 import argparse
 import asyncio
-import json
 import logging
 import sys
 from pathlib import Path
@@ -126,7 +125,7 @@ async def essay_to_editor(
     
     # Step 4: Copy to clipboard
     log.info("📋 Copying to clipboard...")
-    result = await set_clipboard({"text": rewritten}, {})
+    await set_clipboard({"text": rewritten}, {})
     
     log.info(f"✅ Done! {original_words} → {rewritten_words} words")
     
@@ -186,12 +185,12 @@ def main():
         print(f"Error: {result['error']}", file=sys.stderr)
         sys.exit(1)
     
-    print(f"\n🎉 Essay rewritten!")
+    print("\n🎉 Essay rewritten!")
     print(f"   Style: {result['style']}")
     print(f"   Words: {result['original_words']} → {result['rewritten_words']}")
     if result.get('grammar_fixed') and result['grammar_fixed'] != result['original']:
         print("   Grammar: Fixed")
-    print(f"\n📋 Result copied to clipboard")
+    print("\n📋 Result copied to clipboard")
 
 
 if __name__ == "__main__":

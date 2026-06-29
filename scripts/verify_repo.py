@@ -19,7 +19,7 @@ SCRIPT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
-from clawos_core.util.git import git_check_output
+from clawos_core.util.git import git_check_output  # noqa: E402
 
 
 ROOT = SCRIPT_ROOT

@@ -13,7 +13,6 @@ Install flow:
 
 Uninstall: delete skill dir + deregister.
 """
-import hashlib
 import json
 import logging
 import shutil
@@ -25,7 +24,7 @@ from typing import Callable, Optional
 
 log = logging.getLogger("skill_installer")
 
-from clawos_core.constants import CLAWOS_DIR
+from clawos_core.constants import CLAWOS_DIR  # noqa: E402
 
 SKILLS_DIR = CLAWOS_DIR / "skills"
 
@@ -45,8 +44,7 @@ def install_skill(
         get_skill_detail, register_installed, _is_installed
     )
     from skills.marketplace.verifier import (
-        verify_skill_yaml, verify_signature, check_trust_tier,
-        check_typosquatting,
+        verify_skill_yaml, verify_signature, check_typosquatting,
     )
 
     def _progress(msg: str):
@@ -140,9 +138,9 @@ def install_skill(
                 return {"ok": False, "skill_id": skill_id, "trust_tier": trust_tier,
                         "error": f"Signature verification failed: {sig_reason}. "
                                  f"Refusing to install — skill may have been tampered with."}
-            _progress(f"✓ Signature valid")
+            _progress("✓ Signature valid")
         elif trust_tier == "community":
-            _progress(f"⚠ Community skill — no ClawOS signature. Installing with caution.")
+            _progress("⚠ Community skill — no ClawOS signature. Installing with caution.")
 
         # ── 7. Sandbox smoke test ────────────────────────────────────────────
         _progress("Running sandbox check...")

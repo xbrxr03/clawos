@@ -28,7 +28,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 log = logging.getLogger("researchd")
 

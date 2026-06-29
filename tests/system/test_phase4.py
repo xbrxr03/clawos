@@ -29,12 +29,14 @@ def can_run_bash_syntax() -> bool:
 
 
 def ok(name):
-    global passed; passed += 1
+    global passed
+    passed += 1
     print(f"  ✓  {name}")
 
 
 def fail(name, reason=""):
-    global failed; failed += 1
+    global failed
+    failed += 1
     print(f"  ✗  {name}" + (f" — {reason}" if reason else ""))
 
 

@@ -11,7 +11,6 @@ News: configured RSS feeds at ~/.clawos/news_feeds.txt, cached 15 min.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import re
 import sqlite3
@@ -75,13 +74,18 @@ def _parse_when(text: str) -> datetime:
     # "in N min/hour/day"
     m = re.match(r"^in\s+(\d+)\s*(min(?:ute)?s?|hours?|hrs?|days?)$", s)
     if m:
-        n = int(m.group(1)); unit = m.group(2)
-        if unit.startswith("min"): return now + timedelta(minutes=n)
-        if unit.startswith("h"):   return now + timedelta(hours=n)
-        if unit.startswith("d"):   return now + timedelta(days=n)
+        n = int(m.group(1))
+        unit = m.group(2)
+        if unit.startswith("min"):
+            return now + timedelta(minutes=n)
+        if unit.startswith("h"):
+            return now + timedelta(hours=n)
+        if unit.startswith("d"):
+            return now + timedelta(days=n)
 
     base = now
-    if "tomorrow" in s: base = now + timedelta(days=1)
+    if "tomorrow" in s:
+        base = now + timedelta(days=1)
     elif "tonight" in s:
         base = now.replace(hour=20, minute=0, second=0, microsecond=0)
 
@@ -91,11 +95,14 @@ def _parse_when(text: str) -> datetime:
         hour = int(m.group(1))
         minute = int(m.group(2) or 0)
         ampm = (m.group(3) or "").lower()
-        if ampm == "pm" and hour < 12: hour += 12
-        if ampm == "am" and hour == 12: hour = 0
+        if ampm == "pm" and hour < 12:
+            hour += 12
+        if ampm == "am" and hour == 12:
+            hour = 0
         try:
             base = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
-            if base < now: base += timedelta(days=1)
+            if base < now:
+                base += timedelta(days=1)
         except ValueError as e:
             log.debug(f"suppressed: {e}")
 
@@ -224,8 +231,10 @@ async def get_weather(args: dict, ctx: dict) -> str:
 def _parse_ics_dt(s: str) -> datetime | None:
     s = s.strip().rstrip("Z")
     for fmt in ("%Y%m%dT%H%M%S", "%Y%m%d", "%Y-%m-%dT%H:%M:%S"):
-        try: return datetime.strptime(s, fmt)
-        except ValueError: continue
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
     return None
 
 
@@ -252,20 +261,26 @@ def _parse_ics(path: Path) -> list[dict]:
             elif line.startswith("DTSTART"):
                 _, _, val = line.partition(":")
                 dt = _parse_ics_dt(val)
-                if dt: cur["start"] = dt
+                if dt:
+                    cur["start"] = dt
             elif line.startswith("DTEND"):
                 _, _, val = line.partition(":")
                 dt = _parse_ics_dt(val)
-                if dt: cur["end"] = dt
+                if dt:
+                    cur["end"] = dt
     return events
 
 
 def _resolve_date_arg(s: str, today: datetime) -> datetime:
     s = (s or "today").lower().strip()
-    if s == "today":     return today
-    if s == "tomorrow":  return today + timedelta(days=1)
-    try:    return datetime.strptime(s, "%Y-%m-%d")
-    except ValueError: return today
+    if s == "today":
+        return today
+    if s == "tomorrow":
+        return today + timedelta(days=1)
+    try:
+        return datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        return today
 
 
 async def get_calendar_events(args: dict, ctx: dict) -> str:
@@ -312,8 +327,8 @@ def _default_feeds() -> list[str]:
 
 def _read_feed_list() -> list[str]:
     if NEWS_FEEDS_FILE.exists():
-        feeds = [l.strip() for l in NEWS_FEEDS_FILE.read_text().splitlines()
-                 if l.strip() and not l.strip().startswith("#")]
+        feeds = [line.strip() for line in NEWS_FEEDS_FILE.read_text().splitlines()
+                 if line.strip() and not line.strip().startswith("#")]
         return feeds or _default_feeds()
     return _default_feeds()
 
@@ -332,8 +347,10 @@ async def _fetch_one_feed(client: httpx.AsyncClient, url: str, limit: int) -> li
     for t in titles[1:]:  # skip the channel title
         t = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", t, flags=re.S)
         t = re.sub(r"<.*?>", "", t).strip()
-        if t: cleaned.append(t)
-        if len(cleaned) >= limit: break
+        if t:
+            cleaned.append(t)
+        if len(cleaned) >= limit:
+            break
     return cleaned
 
 
@@ -355,8 +372,10 @@ async def get_news(args: dict, ctx: dict) -> str:
         for title in h:
             if title not in headlines:
                 headlines.append(title)
-            if len(headlines) >= limit: break
-        if len(headlines) >= limit: break
+            if len(headlines) >= limit:
+                break
+        if len(headlines) >= limit:
+            break
     if not headlines:
         return "[OFFLINE] no headlines fetched"
     text = "\n".join(f"- {h}" for h in headlines[:limit])

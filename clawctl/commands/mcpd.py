@@ -19,7 +19,6 @@ The MCP server runs on port 7077 by default and exposes:
 import json
 import subprocess
 import urllib.request
-from pathlib import Path
 
 import click
 
@@ -35,7 +34,7 @@ def _is_running() -> bool:
         req = urllib.request.Request(HEALTH_ENDPOINT, method="GET", timeout=2)
         with urllib.request.urlopen(req) as resp:
             return resp.status == 200
-    except:
+    except Exception:
         return False
 
 
@@ -80,7 +79,7 @@ def mcpd_status():
             click.echo(f"⚠ MCP server responded but with error: {e}")
     else:
         click.echo(f"✗ MCP server is not running on port {PORT_MCPD}")
-        click.echo(f"  Start with: python3 -m services.mcpd.main")
+        click.echo("  Start with: python3 -m services.mcpd.main")
 
 
 @mcpd_group.command(name="start", help="Start MCP server")
@@ -99,7 +98,7 @@ def mcpd_start():
             start_new_session=True
         )
         click.echo("✓ MCP server starting...")
-        click.echo(f"  Check status: clawctl mcpd status")
+        click.echo("  Check status: clawctl mcpd status")
     except (subprocess.SubprocessError, OSError) as e:
         click.echo(f"✗ Failed to start MCP server: {e}")
 
@@ -242,8 +241,8 @@ def mcpd_clients():
 """)
     
     click.echo("Generic HTTP MCP Client:")
-    click.echo(f"  Endpoint: http://localhost:7077/mcp")
-    click.echo(f"  Health:   http://localhost:7077/health\n")
+    click.echo("  Endpoint: http://localhost:7077/mcp")
+    click.echo("  Health:   http://localhost:7077/health\n")
     
     click.echo("Available capabilities:")
     click.echo("  • Execute any ClawOS skill")
