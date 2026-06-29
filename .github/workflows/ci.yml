@@ -28,6 +28,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev
       - name: Install package + test deps
         run: |
           pip install -e ".[full]"
