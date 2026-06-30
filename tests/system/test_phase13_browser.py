@@ -140,11 +140,9 @@ async def test_toolbridge_browser_disabled_in_config():
     mock_memory = MagicMock()
     bridge = ToolBridge(mock_policy, mock_memory, "ws_test")
 
-    with patch("adapters.browser.session_manager.get_manager"):
-        # Simulate browser disabled via config
-        with patch("clawos_core.config.get", return_value=False):
-            result = await bridge._browser_dispatch("open", "https://example.com")
-    assert "DISABLED" in result or "UNAVAILABLE" in result or isinstance(result, str)
+    with patch("clawos_core.config.get", return_value=False):
+        result = await bridge._browser_dispatch("open", "https://example.com")
+    assert "DISABLED" in result
 
 
 # ── 7. Browser URL allowlist ──────────────────────────────────────────────────

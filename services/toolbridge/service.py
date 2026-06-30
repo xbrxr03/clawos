@@ -478,6 +478,10 @@ class ToolBridge:
         try:
             from adapters.browser.session_manager import get_manager
             from adapters.browser.playwright_adapter import is_available as playwright_available
+            from clawos_core.config.loader import get as config_get
+
+            if not config_get("browser.enabled", True):
+                return "[browser DISABLED] Set browser.enabled=true in config to use browser tools."
 
             if not playwright_available():
                 return "[browser UNAVAILABLE] Playwright not installed. Install with: pip install playwright && playwright install"
