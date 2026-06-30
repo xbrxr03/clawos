@@ -101,10 +101,18 @@ class KnowledgeGraph:
     
     def __init__(self, db_path: Path = BRAIN_DB):
         self.db_path = db_path
+        self._db_ready = False
         self._init_db()
     
     def _init_db(self):
         """Initialize database."""
+        # Ensure parent directory exists before connecting
+        try:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        except (OSError, PermissionError):
+            # If we can't create the directory (e.g. on CI), use a temp file
+            import tempfile
+            self.db_path = Path(tempfile.mktemp(suffix=".db"))
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS entities (
