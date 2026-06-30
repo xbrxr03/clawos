@@ -48,6 +48,7 @@ export type SetupState = {
     status?: string
     percent?: number
     eta_seconds?: number | null
+    models?: Array<{ name: string; percent: number; status: string }>
   }
   voice_test?: {
     kind?: string
